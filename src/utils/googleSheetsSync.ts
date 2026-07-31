@@ -849,74 +849,74 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
   const cfg = getGSheetConfig();
   if (!cfg.webhookUrl) return false;
 
+  const users = getUsers();
+  const shops = getShops();
+  let enrichedPayload = payload;
+
+  const leadObj = payload.type === 'lead' && payload.data ? payload.data : (payload.client_name ? payload : null);
+  const checkinObj = payload.type === 'checkin' && payload.data ? payload.data : (payload.lat !== undefined && payload.agent_id && !payload.client_name ? payload : null);
+
+  if (leadObj) {
+    const l = leadObj;
+    const agent = users.find(u => u.id === l.agent_id);
+    const shop = shops.find(s => s.id === l.shop_id);
+    
+    const leadId = (l.id && l.id.length >= 30 && l.id.includes('-') && !l.id.startsWith('ld-')) 
+      ? l.id 
+      : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-lead`);
+
+    enrichedPayload = {
+      id: leadId,
+      uuid: leadId,
+      timestamp: l.timestamp || new Date().toISOString(),
+      agent_id: l.agent_id,
+      shop_id: l.shop_id,
+      client_name: l.client_name,
+      msisdn: l.msisdn,
+      action_type: l.action_type,
+      bundle_type: '',
+      amount: 0,
+      action: 'processLead',
+      type: 'lead',
+      event: 'NEW_LEAD',
+      tab: 'Leads',
+      target_sheet: 'Leads',
+      sheet_name: 'Leads',
+      agent_name: agent?.name || '',
+      shop_name: shop?.name || '',
+      status: 'synced'
+    };
+  } else if (checkinObj) {
+    const c = checkinObj;
+    const agent = users.find(u => u.id === c.agent_id);
+
+    const checkinId = (c.id && c.id.length >= 30 && c.id.includes('-') && !c.id.startsWith('chk-')) 
+      ? c.id 
+      : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-checkin`);
+
+    enrichedPayload = {
+      id: checkinId,
+      uuid: checkinId,
+      assignment_id: c.assignment_id || '',
+      agent_id: c.agent_id,
+      type: c.type || 'IN',
+      timestamp: c.timestamp || new Date().toISOString(),
+      lat: c.lat || 0,
+      long: c.long ?? c.lng ?? 0,
+      accuracy: c.accuracy || 0,
+      photo: c.photo || '',
+      device: c.device || 'Mobile App',
+      status: c.status || '',
+      action: 'processCheckin',
+      event: 'NEW_CHECKIN',
+      tab: 'Checkins',
+      target_sheet: 'Checkins',
+      sheet_name: 'Checkins',
+      agent_name: agent?.name || ''
+    };
+  }
+
   try {
-    const users = getUsers();
-    const shops = getShops();
-    let enrichedPayload = payload;
-
-    const leadObj = payload.type === 'lead' && payload.data ? payload.data : (payload.client_name ? payload : null);
-    const checkinObj = payload.type === 'checkin' && payload.data ? payload.data : (payload.lat !== undefined && payload.agent_id && !payload.client_name ? payload : null);
-
-    if (leadObj) {
-      const l = leadObj;
-      const agent = users.find(u => u.id === l.agent_id);
-      const shop = shops.find(s => s.id === l.shop_id);
-      
-      const leadId = (l.id && l.id.length >= 30 && l.id.includes('-') && !l.id.startsWith('ld-')) 
-        ? l.id 
-        : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-lead`);
-
-      enrichedPayload = {
-        id: leadId,
-        uuid: leadId,
-        timestamp: l.timestamp || new Date().toISOString(),
-        agent_id: l.agent_id,
-        shop_id: l.shop_id,
-        client_name: l.client_name,
-        msisdn: l.msisdn,
-        action_type: l.action_type,
-        bundle_type: '',
-        amount: 0,
-        action: 'processLead',
-        type: 'lead',
-        event: 'NEW_LEAD',
-        tab: 'Leads',
-        target_sheet: 'Leads',
-        sheet_name: 'Leads',
-        agent_name: agent?.name || '',
-        shop_name: shop?.name || '',
-        status: 'synced'
-      };
-    } else if (checkinObj) {
-      const c = checkinObj;
-      const agent = users.find(u => u.id === c.agent_id);
-
-      const checkinId = (c.id && c.id.length >= 30 && c.id.includes('-') && !c.id.startsWith('chk-')) 
-        ? c.id 
-        : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-checkin`);
-
-      enrichedPayload = {
-        id: checkinId,
-        uuid: checkinId,
-        assignment_id: c.assignment_id || '',
-        agent_id: c.agent_id,
-        type: c.type || 'IN',
-        timestamp: c.timestamp || new Date().toISOString(),
-        lat: c.lat || 0,
-        long: c.long ?? c.lng ?? 0,
-        accuracy: c.accuracy || 0,
-        photo: c.photo || '',
-        device: c.device || 'Mobile App',
-        status: c.status || '',
-        action: 'processCheckin',
-        event: 'NEW_CHECKIN',
-        tab: 'Checkins',
-        target_sheet: 'Checkins',
-        sheet_name: 'Checkins',
-        agent_name: agent?.name || ''
-      };
-    }
-
     const res = await fetch(cfg.webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -941,8 +941,18 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
       } catch (e) {}
     }
     return true;
-  } catch (err) {
-    console.warn('Webhook push error:', err);
-    return false;
+  } catch (fetchErr) {
+    try {
+      await fetch(cfg.webhookUrl, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(enrichedPayload)
+      });
+      return true;
+    } catch (err2) {
+      console.warn('Webhook push error:', err2);
+      return false;
+    }
   }
 }

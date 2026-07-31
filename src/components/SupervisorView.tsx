@@ -67,7 +67,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     );
 
     return (
-      <div className="space-y-4 animate-pop pb-28">
+      <div className="space-y-4 animate-pop pb-32">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-black text-white tracking-tight">

@@ -101,6 +101,7 @@ export interface AgentMasterStatus {
   status: 'Clôturé' | 'Présent' | 'Absent';
   trend: number[];
   reportUrl?: string;
+  reportObj?: DailyReport;
   stats?: {
     priv: number;
     roam: number;

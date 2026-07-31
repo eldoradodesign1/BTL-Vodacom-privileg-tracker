@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { User, Lead, Checkin, DailyReport } from '../types';
-import { getShopById, checkDailyStatus, addCheckin, getReportPdf, getLeads, getCheckins } from '../utils/storage';
-import { formatDriveImageUrl } from '../utils/googleSheetsSync';
+import { getShopById, checkDailyStatus, addCheckin, getReportPdf, getLeads, getCheckins, isMatchAgent, toISO } from '../utils/storage';
+import { formatDriveImageUrl, getGSheetConfig, syncFromGoogleSheetUrl } from '../utils/googleSheetsSync';
 import { TabType } from './BottomNav';
-import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archive, Eye, Search, Filter } from 'lucide-react';
+import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archive, Eye, Search, Filter, RefreshCw } from 'lucide-react';
 
 interface AgentViewProps {
   currentUser: User;
@@ -37,6 +37,20 @@ export const AgentView: React.FC<AgentViewProps> = ({
   const [clientActionFilter, setClientActionFilter] = useState('ALL');
   const todayStr = new Date().toISOString().split('T')[0];
   const [clientDateFilter, setClientDateFilter] = useState<string>(todayStr);
+  const [isSyncingGSheet, setIsSyncingGSheet] = useState(false);
+
+  const handleManualSync = async () => {
+    setIsSyncingGSheet(true);
+    try {
+      const cfg = getGSheetConfig();
+      if (cfg.sheetCsvUrl) {
+        await syncFromGoogleSheetUrl(cfg.sheetCsvUrl);
+        if (onRefreshData) onRefreshData();
+      }
+    } catch {} finally {
+      setIsSyncingGSheet(false);
+    }
+  };
 
   useEffect(() => {
     const allCheckins = getCheckins();
@@ -51,13 +65,17 @@ export const AgentView: React.FC<AgentViewProps> = ({
   const shopName = shopObj ? shopObj.name : "Vodacom Flagship Gombe";
 
   // All history leads registered by this agent
-  const allAgentLeads = getLeads().filter(l => l.agent_id === currentUser.id);
+  const allAgentLeads = getLeads().filter(l => 
+    l.agent_id === currentUser.id || 
+    l.agent_id === currentUser.name || 
+    isMatchAgent(l.agent_id, currentUser)
+  );
 
   const filteredLeads = allAgentLeads.filter(l => {
     const matchesSearch = l.client_name.toLowerCase().includes(clientSearchTerm.toLowerCase()) ||
                           l.msisdn.includes(clientSearchTerm);
     const matchesFilter = clientActionFilter === 'ALL' || l.action_type.includes(clientActionFilter);
-    const matchesDate = !clientDateFilter || l.timestamp.startsWith(clientDateFilter);
+    const matchesDate = !clientDateFilter || toISO(l.timestamp) === clientDateFilter || l.timestamp.startsWith(clientDateFilter);
     return matchesSearch && matchesFilter && matchesDate;
   });
 
@@ -142,7 +160,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
   // RENDER TAB 2: MES CLIENTS
   if (activeTab === 'tab2') {
     return (
-      <div className="space-y-4 animate-pop pb-28">
+      <div className="space-y-4 animate-pop pb-32">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-black text-white tracking-tight">
@@ -153,13 +171,25 @@ export const AgentView: React.FC<AgentViewProps> = ({
             </p>
           </div>
 
-          <button
-            onClick={onOpenLeadModal}
-            className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-2xl text-xs font-black uppercase flex items-center space-x-1 shadow-md shadow-red-600/30"
-          >
-            <UserPlus className="w-4 h-4" />
-            <span>＋ Nouveau</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={handleManualSync}
+              disabled={isSyncingGSheet}
+              className="px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 rounded-2xl text-xs font-black uppercase flex items-center space-x-1.5 shadow-md transition-all"
+              title="Actualiser en direct depuis Google Sheet"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGSheet ? 'animate-spin' : ''}`} />
+              <span>{isSyncingGSheet ? 'Synchro...' : 'Live GSheet'}</span>
+            </button>
+
+            <button
+              onClick={onOpenLeadModal}
+              className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-2xl text-xs font-black uppercase flex items-center space-x-1 shadow-md shadow-red-600/30"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>＋ Nouveau</span>
+            </button>
+          </div>
         </div>
 
         {/* Search & Filter Bar */}
@@ -225,9 +255,21 @@ export const AgentView: React.FC<AgentViewProps> = ({
         {/* Clients List */}
         <div className="space-y-2">
           {filteredLeads.length === 0 ? (
-            <div className="glass-card p-8 text-center text-gray-400">
-              <Users className="w-10 h-10 mx-auto text-gray-600 mb-2" />
-              <p className="text-xs font-bold">Aucun client trouvé.</p>
+            <div className="glass-card p-6 text-center text-gray-400 space-y-3">
+              <Users className="w-10 h-10 mx-auto text-gray-500" />
+              <p className="text-xs font-bold">
+                {allAgentLeads.length > 0 && clientDateFilter
+                  ? `Aucun client trouvé pour la date sélectionnée.`
+                  : 'Aucun client trouvé.'}
+              </p>
+              {allAgentLeads.length > 0 && clientDateFilter && (
+                <button
+                  onClick={() => setClientDateFilter('')}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase transition-all shadow-md"
+                >
+                  Voir l'historique complet ({allAgentLeads.length} clients)
+                </button>
+              )}
             </div>
           ) : (
             filteredLeads.map(lead => {
@@ -263,7 +305,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
   // RENDER TAB 3: MES ARCHIVES
   if (activeTab === 'tab3') {
     return (
-      <div className="space-y-4 animate-pop pb-28">
+      <div className="space-y-4 animate-pop pb-32">
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-black text-white tracking-tight">
@@ -346,7 +388,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
 
   // RENDER TAB 1: HOME DASHBOARD
   return (
-    <div className="space-y-6 animate-pop pb-28">
+    <div className="space-y-6 animate-pop pb-32">
       {/* Welcome Banner */}
       <div className="flex justify-between items-start">
         <div>

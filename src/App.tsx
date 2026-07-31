@@ -248,7 +248,7 @@ export default function App() {
       />
 
       {/* Main View Area */}
-      <main className="flex-1 px-4 pt-4 pb-24 max-w-2xl mx-auto w-full overflow-y-auto">
+      <main className="flex-1 px-3 sm:px-4 pt-3 pb-32 max-w-2xl mx-auto w-full overflow-y-auto overflow-x-hidden">
         {renderContent()}
       </main>
 

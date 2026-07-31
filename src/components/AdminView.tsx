@@ -4,7 +4,7 @@ import { getAdminMasterList, getDashboardData, getReports, getReportPdf, getUser
 import { generateAdminBatchPDF } from '../utils/pdfGenerator';
 import { TabType } from './BottomNav';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
-import { UserPlus, Store, FileSpreadsheet, Eye, ChevronRight, UserCheck, Shield } from 'lucide-react';
+import { UserPlus, Store, FileSpreadsheet, Eye, ChevronRight, UserCheck, Shield, FileText } from 'lucide-react';
 
 interface AdminViewProps {
   shops: Shop[];
@@ -94,7 +94,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   };
 
   return (
-    <div className="space-y-6 animate-pop pb-28">
+    <div className="space-y-6 animate-pop pb-32">
       {/* Admin Title */}
       <div className="flex justify-between items-center">
         <div>
@@ -269,41 +269,87 @@ export const AdminView: React.FC<AdminViewProps> = ({
               return (
                 <div
                   key={agent.id}
-                  onClick={() => onOpenAgentProfile(agent)}
-                  className="glass-card p-4 border border-white/10 hover:border-red-500/40 transition-all flex items-center justify-between cursor-pointer"
+                  className="glass-card p-4 border border-white/10 hover:border-red-500/40 transition-all space-y-2.5"
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className="relative">
-                      <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-sm">
-                        {agent.name[0]}
+                  <div className="flex items-center justify-between">
+                    <div 
+                      onClick={() => onOpenAgentProfile(agent)}
+                      className="flex items-center space-x-3 cursor-pointer flex-1"
+                    >
+                      <div className="relative">
+                        <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-sm">
+                          {agent.name[0]}
+                        </div>
+                        <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-black ${statusDotColor}`} />
                       </div>
-                      <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-black ${statusDotColor}`} />
+
+                      <div>
+                        <p className="text-xs font-black uppercase text-white hover:text-red-400 transition-colors">{agent.name}</p>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase">
+                          {agent.shop} • <span className={agent.status === 'Absent' ? 'text-red-400' : 'text-emerald-400'}>{agent.status}</span>
+                        </p>
+                      </div>
                     </div>
 
-                    <div>
-                      <p className="text-xs font-black uppercase text-white">{agent.name}</p>
-                      <p className="text-[9px] font-bold text-gray-400 uppercase">
-                        {agent.shop} • <span className={agent.status === 'Absent' ? 'text-red-400' : 'text-emerald-400'}>{agent.status}</span>
-                      </p>
+                    <div className="flex items-center space-x-2">
+                      {/* Direct PDF Report Button if Clôturé or report exists */}
+                      {(agent.status === 'Clôturé' || agent.reportObj || agent.reportUrl) && (
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (agent.reportObj) {
+                              const pdfUrl = await getReportPdf(agent.reportObj);
+                              onOpenPdfModal(pdfUrl);
+                            } else if (agent.reportUrl) {
+                              onOpenPdfModal(agent.reportUrl);
+                            }
+                          }}
+                          className="px-2.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 rounded-xl text-[10px] font-black uppercase flex items-center space-x-1 shadow-md transition-all shrink-0"
+                          title="Télécharger / Voir le rapport de clôture PDF"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Rapport</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => onOpenAgentProfile(agent)}
+                        className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl border border-white/10 transition-all shrink-0"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
 
-                  {/* Sparkline Canvas / SVG */}
-                  <div className="flex items-center space-x-3">
-                    <div className="w-16 h-8 flex items-center justify-center">
-                      <svg width="60" height="25" className="overflow-visible">
-                        <polyline
-                          fill="none"
-                          stroke="#E60000"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          points={points}
-                        />
-                      </svg>
+                  {/* Stats Breakdown */}
+                  {agent.stats && (
+                    <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-white/5 text-center text-[9px] font-bold">
+                      <div className="bg-white/5 p-1 rounded-xl">
+                        <span className="text-[8px] text-gray-400 uppercase block">Privilège</span>
+                        <span className="text-red-400 font-black text-xs">{agent.stats.priv}</span>
+                      </div>
+                      <div className="bg-white/5 p-1 rounded-xl">
+                        <span className="text-[8px] text-gray-400 uppercase block">Roaming</span>
+                        <span className="text-amber-400 font-black text-xs">{agent.stats.roam}</span>
+                      </div>
+                      <div className="bg-white/5 p-1 rounded-xl">
+                        <span className="text-[8px] text-gray-400 uppercase block">Bundle</span>
+                        <span className="text-blue-400 font-black text-xs">{agent.stats.bund}</span>
+                      </div>
+                      <div className="bg-white/5 p-1 rounded-xl flex items-center justify-center">
+                        <svg width="45" height="18" className="overflow-visible">
+                          <polyline
+                            fill="none"
+                            stroke="#E60000"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            points={points}
+                          />
+                        </svg>
+                      </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-gray-500" />
-                  </div>
+                  )}
                 </div>
               );
             })}
@@ -316,13 +362,23 @@ export const AdminView: React.FC<AdminViewProps> = ({
         <div className="space-y-5 animate-pop">
           {/* KPI Cards */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white text-black p-5 rounded-3xl text-center shadow-lg">
-              <span className="text-[9px] font-black uppercase tracking-wider text-gray-500 block">Total Activations</span>
+            <div
+              onClick={() => setSubTab('reports')}
+              className="bg-white text-black p-5 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-gray-100 transition-all hover:scale-[1.02] active:scale-95 group"
+              title="Cliquer pour voir tous les Leads / Rapport de Synthèse"
+            >
+              <span className="text-[9px] font-black uppercase tracking-wider text-gray-500 block group-hover:text-red-600">Total Activations</span>
               <p className="text-3xl font-black text-red-600">{dashboardData.kpi.totalLeads}</p>
+              <span className="text-[8px] font-bold text-gray-400 uppercase mt-1 block group-hover:underline">→ Voir la liste</span>
             </div>
-            <div className="bg-white text-black p-5 rounded-3xl text-center shadow-lg">
-              <span className="text-[9px] font-black uppercase tracking-wider text-gray-500 block">Effectif Hôtesses</span>
+            <div
+              onClick={() => setSubTab('manage')}
+              className="bg-white text-black p-5 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-gray-100 transition-all hover:scale-[1.02] active:scale-95 group"
+              title="Cliquer pour aller au Monitoring des hôtesses"
+            >
+              <span className="text-[9px] font-black uppercase tracking-wider text-gray-500 block group-hover:text-black">Effectif Hôtesses</span>
               <p className="text-3xl font-black text-zinc-900">{dashboardData.kpi.presence}</p>
+              <span className="text-[8px] font-bold text-gray-400 uppercase mt-1 block group-hover:underline">→ Aller au Monitoring</span>
             </div>
           </div>
 
