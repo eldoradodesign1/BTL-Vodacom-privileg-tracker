@@ -1,0 +1,6 @@
+{
+  "name": "BTL Deployment Tracker",
+  "description": "Plateforme mobile-first de suivi des activations, pointages GPS, rapports PDF, monitoring superviseur et analytics par Eldorado Design.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
