@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Lead, Checkin, DailyReport } from '../types';
-import { getShopById, checkDailyStatus, addCheckin, getReportPdf, getLeads } from '../utils/storage';
+import { getShopById, checkDailyStatus, addCheckin, getReportPdf, getLeads, getCheckins } from '../utils/storage';
+import { formatDriveImageUrl } from '../utils/googleSheetsSync';
 import { TabType } from './BottomNav';
 import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archive, Eye, Search, Filter } from 'lucide-react';
 
@@ -14,6 +15,7 @@ interface AgentViewProps {
   onOpenLeadModal: () => void;
   onOpenReportModal: () => void;
   onOpenPdfModal: (url: string) => void;
+  onRefreshData?: () => void;
 }
 
 export const AgentView: React.FC<AgentViewProps> = ({
@@ -25,14 +27,23 @@ export const AgentView: React.FC<AgentViewProps> = ({
   agentReports,
   onOpenLeadModal,
   onOpenReportModal,
-  onOpenPdfModal
+  onOpenPdfModal,
+  onRefreshData
 }) => {
   const [gpsInfo, setGpsInfo] = useState('');
   const [photoPreview, setPhotoPreview] = useState<string | null>(todayCheckin?.photo || null);
+  const [checkinDoneLocal, setCheckinDoneLocal] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
   const [clientActionFilter, setClientActionFilter] = useState('ALL');
   const todayStr = new Date().toISOString().split('T')[0];
   const [clientDateFilter, setClientDateFilter] = useState<string>(todayStr);
+
+  useEffect(() => {
+    const allCheckins = getCheckins();
+    const myToday = allCheckins.find(c => c.agent_id === currentUser.id && c.timestamp.startsWith(todayStr));
+    const rawPhoto = myToday?.photo || todayCheckin?.photo || null;
+    setPhotoPreview(rawPhoto ? formatDriveImageUrl(rawPhoto) : null);
+  }, [currentUser.id, todayCheckin?.photo, todayStr]);
 
   const { checkinDone, reportDone } = checkDailyStatus(currentUser.id, todayStr);
 
@@ -100,6 +111,8 @@ export const AgentView: React.FC<AgentViewProps> = ({
               photo: base64,
               status: 'synced'
             });
+            setCheckinDoneLocal(true);
+            if (onRefreshData) onRefreshData();
           };
 
           if (navigator.geolocation) {
@@ -377,7 +390,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
       <div className="glass-card text-center p-6 border border-white/10">
         <h2 className="text-xs font-black uppercase tracking-widest text-red-500 mb-4">Pointage d'Arrivée GPS</h2>
 
-        {checkinDone ? (
+        {checkinDone || checkinDoneLocal ? (
           <div className="btn-neon bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 pointer-events-none">
             <CheckCircle2 className="w-5 h-5" />
             <span>POINTAGE EFFECTUÉ (GPS OK)</span>

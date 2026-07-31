@@ -4,8 +4,11 @@ import { getLeads, getReports, getCheckins, getUsers, getShops, saveLeads, saveR
 
 const GSHEET_CONFIG_KEY = 'vodacom_gsheet_config';
 
+const DEFAULT_WEBHOOK_URL = 'https://script.google.com/macros/s/AKfycbzjmhpRnGMsPVJjrehrHNHah3LxGKF2r7u66jamOPlQLBIb5Ol47oYfyizlySK9vbTcPw/exec';
+const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR2crRMKUqGv9ETP7Cu9urk3v7boHzRAoQGh8993yXgewam7wAQ90VwfgKJwpDZB9ySyrpy6r7BH9X_/pub?output=xlsx';
+
 export interface GSheetConfig {
-  sheetCsvUrl: string; // e.g. https://docs.google.com/spreadsheets/d/e/.../pub?output=csv or spreadsheet URL
+  sheetCsvUrl: string; // e.g. Google Sheet XLSX or CSV URL
   webhookUrl: string;  // e.g. Google Apps Script Webhook URL
   autoSync: boolean;
   lastSyncedAt?: string;
@@ -14,11 +17,19 @@ export interface GSheetConfig {
 export function getGSheetConfig(): GSheetConfig {
   try {
     const saved = localStorage.getItem(GSHEET_CONFIG_KEY);
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        sheetCsvUrl: parsed.sheetCsvUrl || DEFAULT_SHEET_URL,
+        webhookUrl: parsed.webhookUrl || DEFAULT_WEBHOOK_URL,
+        autoSync: parsed.autoSync !== undefined ? parsed.autoSync : true,
+        lastSyncedAt: parsed.lastSyncedAt
+      };
+    }
   } catch {}
   return {
-    sheetCsvUrl: '',
-    webhookUrl: '',
+    sheetCsvUrl: DEFAULT_SHEET_URL,
+    webhookUrl: DEFAULT_WEBHOOK_URL,
     autoSync: true,
     lastSyncedAt: undefined
   };
@@ -94,6 +105,19 @@ export function parseCsvRows(csvText: string): string[][] {
   });
 }
 
+export function formatDriveImageUrl(rawUrl: string | undefined | null): string {
+  if (!rawUrl) return '';
+  if (rawUrl.startsWith('data:image')) return rawUrl;
+  
+  // Extract file ID from Google Drive URL (file/d/ID or id=ID)
+  const match = rawUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || rawUrl.match(/id=([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    const fileId = match[1];
+    return `https://lh3.googleusercontent.com/d/${fileId}`;
+  }
+  return rawUrl;
+}
+
 /**
  * Clean phone numbers to DRC standard format (e.g. 0818889900)
  */
@@ -114,50 +138,58 @@ export function parseUsersFromRows(rows: string[][]): User[] {
 
   // Find header row for Users
   let headerIdx = -1;
-  for (let i = 0; i < Math.min(rows.length, 15); i++) {
-    const h = rows[i].map(c => c.toLowerCase().trim());
-    if (h.includes('password_hash') || h.includes('full_name') || (h.includes('role') && (h.includes('msisdn') || h.includes('phone')))) {
+  for (let i = 0; i < Math.min(rows.length, 20); i++) {
+    const h = rows[i].map(c => String(c).toLowerCase().trim());
+    if (
+      h.includes('password_hash') ||
+      h.includes('full_name') ||
+      h.includes('role') ||
+      h.includes('type_user') ||
+      h.includes('nom') ||
+      h.includes('agent') ||
+      (h.includes('id') && (h.includes('msisdn') || h.includes('phone') || h.includes('tel') || h.includes('nom') || h.includes('name')))
+    ) {
       headerIdx = i;
       break;
     }
   }
-  if (headerIdx === -1) return [];
+  if (headerIdx === -1) headerIdx = 0;
 
-  const headers = rows[headerIdx].map(c => c.toLowerCase().trim());
-  const idIdx = headers.findIndex(h => h === 'id' || h === 'user_id');
-  const phoneIdx = headers.findIndex(h => h === 'msisdn' || h === 'phone' || h === 'tel' || h === 'mobile');
-  const nameIdx = headers.findIndex(h => h === 'full_name' || h === 'name' || h === 'nom');
-  const passIdx = headers.findIndex(h => h === 'password_hash' || h === 'password' || h === 'pass');
-  const roleIdx = headers.findIndex(h => h === 'role' || h === 'type_user');
-  const supIdx = headers.findIndex(h => h === 'supervisor_id' || h === 'sup_id' || h === 'supervisor');
-  const shopIdx = headers.findIndex(h => h === 'permanent_shop_id' || h === 'shop_id' || h === 'shop');
+  const headers = rows[headerIdx].map(c => String(c).toLowerCase().trim());
+  const idIdx = headers.findIndex(h => h === 'id' || h === 'user_id' || h === 'id agent' || h === 'code');
+  const phoneIdx = headers.findIndex(h => h.includes('msisdn') || h.includes('phone') || h.includes('tel') || h.includes('mobile'));
+  const nameIdx = headers.findIndex(h => h.includes('full_name') || h.includes('name') || h.includes('nom') || h.includes('agent'));
+  const passIdx = headers.findIndex(h => h.includes('password') || h.includes('pass'));
+  const roleIdx = headers.findIndex(h => h.includes('role') || h.includes('type') || h.includes('fonction'));
+  const supIdx = headers.findIndex(h => h.includes('supervisor') || h.includes('sup'));
+  const shopIdx = headers.findIndex(h => h.includes('shop') || h.includes('boutique') || h.includes('permanent'));
 
   const users: User[] = [];
   for (let i = headerIdx + 1; i < rows.length; i++) {
     const row = rows[i];
     if (!row || row.length === 0 || row.every(c => !c)) continue;
 
-    // Stop if encountering a new header row for another table
-    const firstCell = (row[0] || '').toLowerCase();
-    if (firstCell === 'timestamp' || firstCell === 'id shop' || firstCell === 'shop_id' && row[1]?.toLowerCase() === 'month') {
+    const firstCell = String(row[0] || '').toLowerCase();
+    if (firstCell === 'timestamp' || firstCell === 'id shop' || (firstCell === 'shop_id' && String(row[1] || '').toLowerCase() === 'month')) {
       break;
     }
 
     const phone = normalizePhone(phoneIdx >= 0 ? row[phoneIdx] : row[1] || '');
     const name = (nameIdx >= 0 ? row[nameIdx] : row[2] || '').trim();
     if (!phone && !name) continue;
-    if (name.toLowerCase() === 'full_name' || name.toLowerCase() === 'nom agent') continue;
+    if (name.toLowerCase() === 'full_name' || name.toLowerCase() === 'nom agent' || name.toLowerCase() === 'name') continue;
 
-    const id = (idIdx >= 0 && row[idIdx]) ? row[idIdx] : `usr-${i}`;
-    const password = (passIdx >= 0 && row[passIdx]) ? row[passIdx] : undefined;
+    const id = (idIdx >= 0 && row[idIdx]) ? row[idIdx].trim() : `usr-${phone || i}`;
+    const password = (passIdx >= 0 && row[passIdx]) ? row[passIdx].trim() : undefined;
+    
     let role: UserRole = 'agent';
     const rawRole = (roleIdx >= 0 ? row[roleIdx] : '').toLowerCase();
     if (rawRole.includes('admin')) role = 'admin';
     else if (rawRole.includes('sup')) role = 'supervisor';
     else role = 'agent';
 
-    const supervisorId = (supIdx >= 0 && row[supIdx]) ? row[supIdx] : undefined;
-    const permanentShopId = (shopIdx >= 0 && row[shopIdx]) ? row[shopIdx] : 'S001';
+    const supervisorId = (supIdx >= 0 && row[supIdx]) ? row[supIdx].trim() : undefined;
+    const permanentShopId = (shopIdx >= 0 && row[shopIdx]) ? row[shopIdx].trim() : 'S001';
 
     users.push({
       id,
@@ -357,12 +389,12 @@ export function parseCheckinsFromRows(rows: string[][]): Checkin[] {
   let assignIdx = headers.findIndex(h => h === 'assignment_id');
   let agentIdx = headers.findIndex(h => h === 'agent_id' || h === 'agent');
   let typeIdx = headers.findIndex(h => h === 'type');
-  let timeIdx = headers.findIndex(h => h === 'timestamp' || h === 'date');
+  let timeIdx = headers.findIndex(h => h === 'timestamp' || h === 'date' || h === 'actual_time');
   let latIdx = headers.findIndex(h => h === 'lat' || h === 'latitude');
   let longIdx = headers.findIndex(h => h === 'long' || h === 'lng' || h === 'longitude');
   let accIdx = headers.findIndex(h => h === 'accuracy' || h === 'acc');
-  let photoIdx = headers.findIndex(h => h === 'photo' || h === 'photo_url');
-  let deviceIdx = headers.findIndex(h => h === 'device');
+  let photoIdx = headers.findIndex(h => h === 'photo' || h === 'photo_url' || h === 'photo_drive_id');
+  let deviceIdx = headers.findIndex(h => h === 'device' || h === 'device_info');
   let statusIdx = headers.findIndex(h => h === 'status');
 
   if (idIdx === -1) idIdx = 0;
@@ -389,10 +421,26 @@ export function parseCheckinsFromRows(rows: string[][]): Checkin[] {
     const id = row[idIdx] || `chk-gsheet-${i}-${Date.now()}`;
     const type = (row[typeIdx]?.toUpperCase() === 'OUT') ? 'OUT' : 'IN';
     const timestamp = row[timeIdx] || new Date().toISOString();
-    const lat = parseFloat(row[latIdx]) || 0;
-    const long = parseFloat(row[longIdx]) || 0;
-    const accuracy = parseFloat(row[accIdx]) || 0;
-    const photo = row[photoIdx] || '';
+    
+    // Convert commas to dots for robust floating point coordinate parsing
+    const rawLat = String(row[latIdx] || '').replace(',', '.').trim();
+    const rawLong = String(row[longIdx] || '').replace(',', '.').trim();
+    const rawAcc = String(row[accIdx] || '').replace(',', '.').trim();
+
+    const lat = parseFloat(rawLat) || 0;
+    const long = parseFloat(rawLong) || 0;
+    const accuracy = parseFloat(rawAcc) || 0;
+
+    let photoRaw = (row[photoIdx] || '').trim();
+    let photoUrl: string | undefined = undefined;
+
+    if (photoRaw.startsWith('http://') || photoRaw.startsWith('https://') || photoRaw.startsWith('data:image')) {
+      photoUrl = photoRaw;
+    } else if (photoRaw.length > 10 && !photoRaw.includes(' ')) {
+      // Direct Drive File ID
+      photoUrl = `https://drive.google.com/uc?id=${photoRaw}`;
+    }
+
     const device = row[deviceIdx] || 'Mobile App';
     const status = row[statusIdx] || '';
 
@@ -405,7 +453,7 @@ export function parseCheckinsFromRows(rows: string[][]): Checkin[] {
       lat,
       long,
       accuracy,
-      photo: (photo.startsWith('http') || photo.startsWith('data:')) ? photo : undefined,
+      photo: photoUrl,
       device,
       status: status.toLowerCase() === 'pending' ? 'pending' : 'synced'
     });
@@ -501,7 +549,7 @@ export function parseXlsxBuffer(buffer: ArrayBuffer): { success: boolean; count:
 
       const normName = sheetName.toLowerCase().trim();
 
-      if (normName.includes('user') || normName.includes('utilisateur')) {
+      if (normName.includes('user') || normName.includes('utilisateur') || normName.includes('agent')) {
         const users = parseUsersFromRows(rows);
         if (users.length > 0) {
           saveUsers(users);
@@ -518,12 +566,18 @@ export function parseXlsxBuffer(buffer: ArrayBuffer): { success: boolean; count:
       } else if (normName.includes('lead') || normName.includes('client') || normName.includes('opt-in') || normName.includes('activat')) {
         const leads = parseLeadsFromRows(rows);
         if (leads.length > 0) {
-          const existing = getLeads();
-          const existingKeys = new Set(existing.map(l => `${l.msisdn}_${l.client_name.toLowerCase()}`));
-          const newLeads = leads.filter(l => !existingKeys.has(`${l.msisdn}_${l.client_name.toLowerCase()}`));
-          saveLeads([...existing, ...newLeads]);
-          totalImported += newLeads.length;
-          summaryParts.push(`${newLeads.length} lead(s)`);
+          const localPending = getLeads().filter(l => l.status === 'pending');
+          saveLeads([...leads, ...localPending]);
+          totalImported += leads.length;
+          summaryParts.push(`${leads.length} lead(s)`);
+        }
+      } else if (normName.includes('checkin') || normName.includes('pointage')) {
+        const checkins = parseCheckinsFromRows(rows);
+        if (checkins.length > 0) {
+          const localPending = getCheckins().filter(c => c.status === 'pending');
+          saveCheckins([...checkins, ...localPending]);
+          totalImported += checkins.length;
+          summaryParts.push(`${checkins.length} pointage(s)`);
         }
       } else if (normName.includes('report') || normName.includes('rapport')) {
         const reports = parseReportsFromRows(rows);
@@ -539,7 +593,7 @@ export function parseXlsxBuffer(buffer: ArrayBuffer): { success: boolean; count:
       return {
         success: true,
         count: totalImported,
-        message: `Fichier Excel (.xlsx) importé avec succès : ${summaryParts.join(', ')} !`
+        message: `Fichier Excel (.xlsx) synchronisé avec succès : ${summaryParts.join(', ')} !`
       };
     }
 
@@ -549,7 +603,8 @@ export function parseXlsxBuffer(buffer: ArrayBuffer): { success: boolean; count:
     const fallbackLeads = parseLeadsFromRows(firstRows);
 
     if (fallbackLeads.length > 0) {
-      saveLeads(fallbackLeads);
+      const localPending = getLeads().filter(l => l.status === 'pending');
+      saveLeads([...fallbackLeads, ...localPending]);
       return {
         success: true,
         count: fallbackLeads.length,
@@ -560,7 +615,7 @@ export function parseXlsxBuffer(buffer: ArrayBuffer): { success: boolean; count:
     return {
       success: false,
       count: 0,
-      message: 'Fichier Excel lu mais aucune donnée valide (Users/Shops/Leads) n\'a été extraite.'
+      message: 'Fichier Excel lu mais aucune donnée valide (Users/Shops/Leads/Checkins) n\'a été extraite.'
     };
   } catch (err: any) {
     return {
@@ -584,95 +639,126 @@ export async function syncFromGoogleSheetUrl(url: string): Promise<{ success: bo
     return {
       success: false,
       count: 0,
-      message: 'Attention : L\'URL saisie est une URL Apps Script. Pour l\'import, publiez votre Google Sheet via Fichier > Partager > Publier sur le web (Format CSV).'
+      message: 'Attention : L\'URL saisie est une URL Apps Script. Pour l\'import, publiez votre Google Sheet via Fichier > Partager > Publier sur le web.'
     };
   }
 
-  // Extract Spreadsheet ID if standard Google Sheets URL format
+  // 1. Try binary XLSX fetch if URL is an XLSX link or standard spreadsheet link
+  let xlsxTargetUrl = trimmedUrl;
   let spreadsheetId: string | null = null;
   const match = trimmedUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
-  if (match && match[1]) {
+  if (match && match[1] && match[1] !== 'e') {
     spreadsheetId = match[1];
+    if (!trimmedUrl.includes('/pub?')) {
+      xlsxTargetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/export?format=xlsx`;
+    }
   }
 
+  if (xlsxTargetUrl.includes('export?format=xlsx') || xlsxTargetUrl.includes('output=xlsx') || xlsxTargetUrl.endsWith('.xlsx')) {
+    try {
+      const res = await fetch(xlsxTargetUrl, { cache: 'no-store' });
+      if (res.ok) {
+        const buf = await res.arrayBuffer();
+        const result = parseXlsxBuffer(buf);
+        if (result.success && result.count > 0) {
+          const cfg = getGSheetConfig();
+          cfg.lastSyncedAt = new Date().toISOString();
+          saveGSheetConfig(cfg);
+          return result;
+        }
+      }
+    } catch (e) {
+      console.warn('Direct XLSX fetch notice:', e);
+    }
+  }
+
+  // 2. Multi-tab gviz CSV fetch if spreadsheetId exists
   let totalSynced = 0;
   const parts: string[] = [];
 
-  try {
-    // If we have a Spreadsheet ID, fetch specific sheets directly via Google Sheets CSV API
-    if (spreadsheetId && !trimmedUrl.includes('/pub?')) {
-      const tabsToFetch = [
-        { name: 'Users', type: 'users' },
-        { name: 'Shops', type: 'shops' },
-        { name: 'Leads', type: 'leads' },
-        { name: 'Checkins', type: 'checkins' },
-        { name: 'DailyReports', type: 'reports' }
-      ];
+  if (spreadsheetId) {
+    const tabsToFetch = [
+      { name: 'Users', type: 'users' },
+      { name: 'Shops', type: 'shops' },
+      { name: 'Leads', type: 'leads' },
+      { name: 'Checkins', type: 'checkins' },
+      { name: 'DailyReports', type: 'reports' }
+    ];
 
-      for (const tab of tabsToFetch) {
-        try {
-          const tabUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab.name)}`;
-          const res = await fetch(tabUrl, { cache: 'no-store' });
-          if (res.ok) {
-            const csvText = await res.text();
-            const rows = parseCsvRows(csvText);
-            if (tab.type === 'users') {
-              const users = parseUsersFromRows(rows);
-              if (users.length > 0) {
-                saveUsers(users);
-                totalSynced += users.length;
-                parts.push(`${users.length} utilisateurs`);
-              }
-            } else if (tab.type === 'shops') {
-              const shops = parseShopsFromRows(rows);
-              if (shops.length > 0) {
-                saveShops(shops);
-                totalSynced += shops.length;
-                parts.push(`${shops.length} shops`);
-              }
-            } else if (tab.type === 'leads') {
-              const leads = parseLeadsFromRows(rows);
-              if (leads.length > 0) {
-                const existing = getLeads();
-                const existingKeys = new Set(existing.map(l => `${l.msisdn}_${l.client_name.toLowerCase()}`));
-                const newLeads = leads.filter(l => !existingKeys.has(`${l.msisdn}_${l.client_name.toLowerCase()}`));
-                saveLeads([...existing, ...newLeads]);
-                totalSynced += newLeads.length;
-                parts.push(`${newLeads.length} leads`);
-              }
-            } else if (tab.type === 'checkins') {
-              const checkins = parseCheckinsFromRows(rows);
-              if (checkins.length > 0) {
-                const existing = getCheckins();
-                const existingIds = new Set(existing.map(c => c.id));
-                const newCheckins = checkins.filter(c => !existingIds.has(c.id));
-                saveCheckins([...existing, ...newCheckins]);
-                totalSynced += newCheckins.length;
-                parts.push(`${newCheckins.length} pointages`);
-              }
-            } else if (tab.type === 'reports') {
-              const reports = parseReportsFromRows(rows);
-              if (reports.length > 0) {
-                saveReports(reports);
-                totalSynced += reports.length;
-                parts.push(`${reports.length} rapports`);
-              }
+    for (const tab of tabsToFetch) {
+      try {
+        const tabUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tab.name)}`;
+        const res = await fetch(tabUrl, { cache: 'no-store' });
+        if (res.ok) {
+          const csvText = await res.text();
+          const rows = parseCsvRows(csvText);
+          if (tab.type === 'users') {
+            const users = parseUsersFromRows(rows);
+            if (users.length > 0) {
+              saveUsers(users);
+              totalSynced += users.length;
+              parts.push(`${users.length} utilisateurs`);
+            }
+          } else if (tab.type === 'shops') {
+            const shops = parseShopsFromRows(rows);
+            if (shops.length > 0) {
+              saveShops(shops);
+              totalSynced += shops.length;
+              parts.push(`${shops.length} shops`);
+            }
+          } else if (tab.type === 'leads') {
+            const leads = parseLeadsFromRows(rows);
+            if (leads.length > 0) {
+              const localPending = getLeads().filter(l => l.status === 'pending');
+              saveLeads([...leads, ...localPending]);
+              totalSynced += leads.length;
+              parts.push(`${leads.length} leads`);
+            }
+          } else if (tab.type === 'checkins') {
+            const checkins = parseCheckinsFromRows(rows);
+            if (checkins.length > 0) {
+              const localPending = getCheckins().filter(c => c.status === 'pending');
+              saveCheckins([...checkins, ...localPending]);
+              totalSynced += checkins.length;
+              parts.push(`${checkins.length} pointages`);
+            }
+          } else if (tab.type === 'reports') {
+            const reports = parseReportsFromRows(rows);
+            if (reports.length > 0) {
+              saveReports(reports);
+              totalSynced += reports.length;
+              parts.push(`${reports.length} rapports`);
             }
           }
-        } catch (e) {
-          console.warn(`Tab fetch notice [${tab.name}]:`, e);
         }
+      } catch (e) {
+        console.warn(`Tab fetch notice [${tab.name}]:`, e);
       }
     }
+  }
 
-    // Direct published CSV fetch or fallback
+  // 3. Direct published URL fetch (CSV or XLSX buffer check)
+  try {
     const res = await fetch(trimmedUrl, { cache: 'no-store' });
     if (!res.ok) {
       if (res.status === 404) {
-        throw new Error('Lien Google Sheet introuvable (Erreur 404). Vérifiez que la feuille est bien publiée sur le Web au format CSV.');
+        throw new Error('Lien Google Sheet introuvable (Erreur 404). Vérifiez que la feuille est bien publiée sur le Web.');
       }
       throw new Error(`Google Sheet fetch error HTTP ${res.status}`);
     }
+
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('spreadsheet') || contentType.includes('excel') || contentType.includes('octet-stream') || trimmedUrl.includes('output=xlsx')) {
+      const buf = await res.arrayBuffer();
+      const result = parseXlsxBuffer(buf);
+      if (result.success && result.count > 0) {
+        const cfg = getGSheetConfig();
+        cfg.lastSyncedAt = new Date().toISOString();
+        saveGSheetConfig(cfg);
+        return result;
+      }
+    }
+
     const text = await res.text();
     const rows = parseCsvRows(text);
 
@@ -692,15 +778,18 @@ export async function syncFromGoogleSheetUrl(url: string): Promise<{ success: bo
 
     const newLeads = parseLeadsFromRows(rows);
     if (newLeads.length > 0) {
-      const existingLeads = getLeads();
-      const existingKeys = new Set(existingLeads.map(l => `${l.msisdn}_${l.client_name.toLowerCase()}`));
-      const leadsToAdd = newLeads.filter(l => !existingKeys.has(`${l.msisdn}_${l.client_name.toLowerCase()}`));
+      const localPending = getLeads().filter(l => l.status === 'pending');
+      saveLeads([...newLeads, ...localPending]);
+      totalSynced += newLeads.length;
+      parts.push(`${newLeads.length} leads`);
+    }
 
-      if (leadsToAdd.length > 0) {
-        saveLeads([...existingLeads, ...leadsToAdd]);
-        totalSynced += leadsToAdd.length;
-        parts.push(`${leadsToAdd.length} leads`);
-      }
+    const parsedCheckins = parseCheckinsFromRows(rows);
+    if (parsedCheckins.length > 0) {
+      const localPending = getCheckins().filter(c => c.status === 'pending');
+      saveCheckins([...parsedCheckins, ...localPending]);
+      totalSynced += parsedCheckins.length;
+      parts.push(`${parsedCheckins.length} pointages`);
     }
 
     const cfg = getGSheetConfig();
@@ -828,12 +917,29 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
       };
     }
 
-    await fetch(cfg.webhookUrl, {
+    const res = await fetch(cfg.webhookUrl, {
       method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(enrichedPayload)
     });
+    if (res.ok && checkinObj) {
+      try {
+        const text = await res.text();
+        if (text.includes('photoUrl') || text.includes('http')) {
+          const json = JSON.parse(text);
+          const returnedPhoto = json.photoUrl || json.photo;
+          if (returnedPhoto && returnedPhoto.startsWith('http')) {
+            const checkins = getCheckins();
+            const idx = checkins.findIndex(c => c.id === checkinObj.id || (c.agent_id === checkinObj.agent_id && c.timestamp === checkinObj.timestamp));
+            if (idx >= 0) {
+              checkins[idx].photo = returnedPhoto;
+              checkins[idx].status = 'synced';
+              saveCheckins(checkins);
+            }
+          }
+        }
+      } catch (e) {}
+    }
     return true;
   } catch (err) {
     console.warn('Webhook push error:', err);

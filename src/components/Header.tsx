@@ -69,10 +69,10 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onToggleTheme}
             className="flex items-center space-x-2 px-2.5 py-1.5 rounded-full bg-black/20 hover:bg-black/30 border border-white/10 transition-all cursor-pointer shrink-0"
-            title={theme === 'dark' ? 'Mode Sombre Activé (Cliquer pour Mode Standard)' : 'Mode Sombre Désactivé'}
+            title={theme === 'dark' ? 'Mode Sombre Activé (Cliquer pour Mode Rouge Classique)' : 'Activer le Mode Sombre'}
           >
             <span className="text-[10px] font-black uppercase tracking-wider text-gray-300 hidden sm:inline">
-              {theme === 'dark' ? 'Sombre' : 'Standard'}
+              {theme === 'dark' ? 'Sombre' : 'Rouge'}
             </span>
             {/* iOS Toggle Track */}
             <div className={`w-9 h-5 rounded-full p-0.5 transition-colors duration-300 relative flex items-center ${

@@ -55,6 +55,7 @@ export default function App() {
   const [users, setUsers] = useState<User[]>(getUsers());
   const [shops, setShops] = useState<Shop[]>(getShops());
   const [activeShopId, setActiveShopId] = useState<string>('');
+  const [, setDataRevision] = useState(0);
 
   // Modals state
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
@@ -93,6 +94,7 @@ export default function App() {
   const refreshData = () => {
     setUsers(getUsers());
     setShops(getShops());
+    setDataRevision(prev => prev + 1);
   };
 
   useEffect(() => {
@@ -213,6 +215,7 @@ export default function App() {
         onOpenLeadModal={() => setIsLeadModalOpen(true)}
         onOpenReportModal={() => setIsReportModalOpen(true)}
         onOpenPdfModal={(url) => setPdfModalUrl(url)}
+        onRefreshData={refreshData}
       />
     );
   };

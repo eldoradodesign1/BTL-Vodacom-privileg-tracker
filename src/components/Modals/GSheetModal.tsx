@@ -196,46 +196,70 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
               <span className="text-[10px] text-gray-400 group-open:rotate-180 transition-transform">▼</span>
             </summary>
             <div className="mt-3 space-y-2 text-[11px] text-gray-300">
-              <p>Copiez ce code dans votre projet <b>Google Apps Script</b> (Fichier Code.gs) pour gérer l'envoi des photos sur Google Drive et l'écriture dans la feuille Checkins :</p>
-              <pre className="p-3 bg-black/90 border border-white/10 rounded-xl text-[10px] text-emerald-300 overflow-x-auto select-all font-mono">
+              <p className="font-semibold text-white">Code <code className="text-amber-400 font-mono">Code.gs</code> à coller dans Extensions &gt; Apps Script :</p>
+              <pre className="p-3 bg-black/90 border border-white/10 rounded-xl text-[10px] text-emerald-300 overflow-x-auto select-all font-mono leading-relaxed">
 {`function doPost(e) {
   try {
+    if (!e || !e.postData || !e.postData.contents) {
+      return responseJSON({ success: false, message: "Aucune donnée reçue" });
+    }
     const data = JSON.parse(e.postData.contents);
     const action = data.action || data.event || data.type;
+
     if (action === 'processCheckin' || data.type === 'checkin' || data.tab === 'Checkins') {
-      return ContentService.createTextOutput(JSON.stringify(processCheckin(data))).setMimeType(ContentService.MimeType.JSON);
+      return responseJSON(processCheckin(data));
+    } else if (action === 'processLead' || data.type === 'lead' || data.tab === 'Leads') {
+      return responseJSON(processLead(data));
+    } else if (action === 'processReport' || data.type === 'report' || data.tab === 'DailyReports') {
+      return responseJSON(processReport(data));
     } else {
-      return ContentService.createTextOutput(JSON.stringify(processLead(data))).setMimeType(ContentService.MimeType.JSON);
+      return responseJSON({ success: true, message: "Événement reçu", data: data });
     }
   } catch (err) {
-    return ContentService.createTextOutput(JSON.stringify({ success: false, error: err.message })).setMimeType(ContentService.MimeType.JSON);
+    return responseJSON({ success: false, error: err.toString() });
   }
+}
+
+function responseJSON(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function processCheckin(d) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let photoUrl = "";
-    if (d.photo && d.photo.startsWith("data:image")) {
+
+    if (d.photo && d.photo.indexOf("data:image") === 0) {
       try {
-        const config = ss.getSheetByName("Config").getDataRange().getValues();
-        const folderRow = config.find(r => String(r[0]).trim() === "PHOTOS_FOLDER_ID");
-        if (folderRow && folderRow[1]) {
-          const folderId = String(folderRow[1]).trim();
-          const folder = DriveApp.getFolderById(folderId);
-          const contentType = d.photo.split(",")[0].split(":")[1].split(";")[0];
-          const bytes = Utilities.base64Decode(d.photo.split(",")[1]);
-          const blob = Utilities.newBlob(bytes, contentType, "Pointage_" + (d.agent_id || "agent") + "_" + Date.now() + ".jpg");
-          const file = folder.createFile(blob);
-          file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-          photoUrl = file.getUrl();
+        let folder;
+        const folders = DriveApp.getFoldersByName("Vodacom_Pointages_Photos");
+        if (folders.hasNext()) {
+          folder = folders.next();
+        } else {
+          folder = DriveApp.createFolder("Vodacom_Pointages_Photos");
         }
-      } catch (errDrive) { console.error("Drive err: " + errDrive.message); }
-    } else if (d.photo && d.photo.startsWith("http")) {
+        const parts = d.photo.split(",");
+        const contentType = parts[0].split(":")[1].split(";")[0];
+        const bytes = Utilities.base64Decode(parts[1]);
+        const fileName = "Pointage_" + (d.agent_id || "agent") + "_" + Date.now() + ".jpg";
+        const blob = Utilities.newBlob(bytes, contentType, fileName);
+        const file = folder.createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        photoUrl = "https://lh3.googleusercontent.com/d/" + file.getId();
+      } catch (errDrive) {
+        console.error("Drive error: " + errDrive.toString());
+      }
+    } else if (d.photo && d.photo.indexOf("http") === 0) {
       photoUrl = d.photo;
     }
-    const sheet = ss.getSheetByName("Checkins");
-    if (!sheet) return { success: false, message: "Onglet Checkins introuvable" };
+
+    let sheet = ss.getSheetByName("Checkins");
+    if (!sheet) {
+      sheet = ss.insertSheet("Checkins");
+      sheet.appendRow(["id", "assignment_id", "agent_id", "type", "timestamp", "lat", "long", "accuracy", "photo", "device", "status"]);
+    }
+
     sheet.appendRow([
       d.id || d.uuid || Utilities.getUuid(),
       d.assignment_id || "",
@@ -245,12 +269,65 @@ function processCheckin(d) {
       d.lat || 0,
       d.long || d.lng || 0,
       d.accuracy || 0,
-      photoUrl || d.photo || "",
+      photoUrl,
       d.device || "Mobile App",
       d.status || "synced"
     ]);
+
     return { success: true, photoUrl: photoUrl };
-  } catch (e) { return { success: false, message: e.message }; }
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function processLead(d) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName("Leads");
+    if (!sheet) {
+      sheet = ss.insertSheet("Leads");
+      sheet.appendRow(["id", "agent_id", "shop_id", "client_name", "msisdn", "action_type", "bundle_type", "timestamp", "status"]);
+    }
+    sheet.appendRow([
+      d.id || d.uuid || Utilities.getUuid(),
+      d.agent_id || "",
+      d.shop_id || "S001",
+      d.client_name || d.name || "",
+      d.msisdn || d.phone || "",
+      d.action_type || "",
+      d.bundle_type || "",
+      d.timestamp || new Date().toISOString(),
+      d.status || "synced"
+    ]);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function processReport(d) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName("DailyReports");
+    if (!sheet) {
+      sheet = ss.insertSheet("DailyReports");
+      sheet.appendRow(["id", "agent_id", "shop_name", "date", "priv", "roam", "bund", "comment", "timestamp"]);
+    }
+    sheet.appendRow([
+      d.id || d.uuid || Utilities.getUuid(),
+      d.agent_id || "",
+      d.shop_name || "",
+      d.date || new Date().toISOString().split('T')[0],
+      d.priv || 0,
+      d.roam || 0,
+      d.bund || 0,
+      d.comment || "",
+      d.timestamp || new Date().toISOString()
+    ]);
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
 }`}
               </pre>
             </div>
