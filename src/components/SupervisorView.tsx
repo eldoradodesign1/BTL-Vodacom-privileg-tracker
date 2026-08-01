@@ -637,9 +637,9 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                         trend: [4, 7, 5, 12, 18, 14, totalLeads]
                       })}
                       className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl border border-white/10 transition-all"
-                      title="Voir l'historique + clients du jour"
+                      title="Voir l'historique des rapports"
                     >
-                      <ChevronRight className="w-4 h-4" />
+                      <NotebookText className="w-4 h-4" />
                     </button>
                   )}
                 </div>
