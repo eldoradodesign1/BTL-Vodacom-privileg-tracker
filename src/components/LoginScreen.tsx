@@ -72,9 +72,25 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             />
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-[11px] font-semibold text-gray-400">
-            Connexion par numéro de téléphone uniquement. Les administrateurs utilisent le mot de passe par défaut « admin » et les superviseurs « test ».
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center space-x-1">
+              <KeyRound className="w-3 h-3 text-red-500" />
+              <span>Clé de Sécurité</span>
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-red-500 transition-all placeholder:text-gray-600"
+            />
           </div>
+
+          {/* <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-[11px] font-semibold text-gray-400">
+            Connexion par numéro de téléphone uniquement. Les administrateurs utilisent le mot de passe par défaut « admin » et les superviseurs « test ».
+            Connexion par numéro de téléphone.
+          </div> */}
 
           <button
             type="submit"
