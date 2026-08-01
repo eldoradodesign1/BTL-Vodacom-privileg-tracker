@@ -93,7 +93,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           </div>
 
           <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-[11px] font-semibold text-gray-400">
-            Utilisez votre numéro de téléphone et votre mot de passe. Les administrateurs utilisent souvent « admin » et les superviseurs « test ».
+            Utilisez votre numéro de téléphone et votre mot de passe pour vous connecter.
           </div>
 
           <button
