@@ -172,69 +172,49 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
             return (
               <div key={item.id} className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition-all">
-                <div className="flex items-start justify-between gap-2 w-full">
+                <div className="flex flex-wrap items-start justify-between gap-2 w-full">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap w-full">
-                      <h3 className="text-xs font-black uppercase text-white flex-1 min-w-[140px]">{item.name}</h3>
-                      <div className="flex items-center gap-2 flex-1 justify-end min-w-[180px]">
-                        <select
-                          value={inlineAssignShop[item.id] || ''}
-                          onChange={(e) => {
-                            const nextShopId = e.target.value;
-                            setInlineAssignShop(prev => ({ ...prev, [item.id]: nextShopId }));
-                            if (!nextShopId) return;
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-xs font-black uppercase text-white">{item.name}</h3>
+                      <select
+                        value={inlineAssignShop[item.id] || ''}
+                        onChange={(e) => {
+                          const nextShopId = e.target.value;
+                          if (!nextShopId) return;
 
-                            const confirmed = window.confirm(`Affecter ${item.name} à ce shop ?`);
-                            if (!confirmed) {
-                              setInlineAssignShop(prev => ({ ...prev, [item.id]: '' }));
-                              return;
-                            }
+                          const confirmed = window.confirm(`Affecter ${item.name} à ce shop ?`);
+                          if (!confirmed) return;
 
-                            updateUserShopAssignment(item.id, nextShopId);
-                            setInlineAssignShop(prev => ({ ...prev, [item.id]: '' }));
-                            if (onRefreshData) onRefreshData();
-                          }}
-                          className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5 text-white text-[10px] font-bold flex-1 min-w-[110px]"
-                        >
-                          <option value="">Shop</option>
-                          {shops.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
-
-                        {onOpenAgentProfile && (
-                          <button
-                            onClick={() => onOpenAgentProfile({
-                              id: item.id,
-                              name: item.name,
-                              phone: '0810000000',
-                              shop: item.shop,
-                              shopId: '',
-                              status: item.status,
-                              trend: [4, 7, 5, 12, 18, 14, totalLeads]
-                            })}
-                            className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl border border-white/10 transition-all shrink-0"
-                            title="Voir l'historique des rapports"
-                          >
-                            <NotebookText className="w-4 h-4" />
-                          </button>
-                        )}
-                      </div>
+                          updateUserShopAssignment(item.id, nextShopId);
+                          setInlineAssignShop(prev => ({ ...prev, [item.id]: '' }));
+                          if (onRefreshData) onRefreshData();
+                        }}
+                        className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5 text-white text-[10px] font-bold min-w-[120px]"
+                      >
+                        <option value="">shop...</option>
+                        {shops.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
                     </div>
 
                     <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-wrap gap-1 mt-1">
-                      <MapPin className="w-3 h-3 text-red-500" />
-                      <span>{item.shop}</span>
-                      {item.status === 'Présent' && item.reportObj?.arrival_time && (
-                        <span className="text-blue-400">• Pointé {item.reportObj.arrival_time}</span>
-                      )}
-                      {item.status === 'Clôturé' && item.reportObj?.departure_time && (
-                        <span className="text-emerald-400">• Clôturé {item.reportObj.departure_time}</span>
-                      )}
+                      {item.status === 'Présent' && item.reportObj?.arrival_time ? (
+                        <>
+                          <MapPin className="w-3 h-3 text-blue-400" />
+                          <span>Arrivée {item.reportObj.arrival_time}</span>
+                        </>
+                      ) : null}
+                      {item.status === 'Clôturé' && item.reportObj?.departure_time ? (
+                        <>
+                          <MapPin className="w-3 h-3 text-emerald-400" />
+                          <span>Clôturé {item.reportObj.departure_time}</span>
+                        </>
+                      ) : null}
                     </p>
                   </div>
 
-                  <div className="flex items-center space-x-2 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
                     <button
                       onClick={() => {
                         if (item.status === 'Présent' && onOpenTodayClientsModal) {
@@ -255,6 +235,24 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                       {item.status}
                     </button>
 
+                    {onOpenAgentProfile && (
+                      <button
+                        onClick={() => onOpenAgentProfile({
+                          id: item.id,
+                          name: item.name,
+                          phone: '0810000000',
+                          shop: item.shop,
+                          shopId: '',
+                          status: item.status,
+                          trend: [4, 7, 5, 12, 18, 14, totalLeads]
+                        })}
+                        className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
+                        title="Voir l'historique des rapports"
+                      >
+                        <NotebookText className="w-4 h-4" />
+                      </button>
+                    )}
+
                     {item.reportObj && (
                       <button
                         onClick={() => onOpenPdfModal(`report-id:${item.reportObj!.id}`)}
@@ -269,18 +267,33 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
                 {item.status !== 'Absent' && (
                   <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
-                    <div className="bg-white/5 p-2 rounded-xl">
-                      <span className="text-[8px] text-gray-400 uppercase block">Privilège</span>
-                      <span className="text-red-500 text-xs">{item.stats.priv}</span>
-                    </div>
-                    <div className="bg-white/5 p-2 rounded-xl">
-                      <span className="text-[8px] text-gray-400 uppercase block">Roaming</span>
-                      <span className="text-amber-400 text-xs">{item.stats.roam}</span>
-                    </div>
-                    <div className="bg-white/5 p-2 rounded-xl">
-                      <span className="text-[8px] text-gray-400 uppercase block">Bundles</span>
-                      <span className="text-blue-400 text-xs">{item.stats.bund}</span>
-                    </div>
+                    {[
+                      { label: 'Privilège', value: item.stats.priv, colorClass: 'text-red-500' },
+                      { label: 'Roaming', value: item.stats.roam, colorClass: 'text-amber-400' },
+                      { label: 'Bundles', value: item.stats.bund, colorClass: 'text-blue-400' }
+                    ].map(tile => (
+                      <button
+                        key={tile.label}
+                        type="button"
+                        onClick={() => {
+                          if (item.status === 'Présent' && onOpenTodayClientsModal) {
+                            onOpenTodayClientsModal({
+                              id: item.id,
+                              name: item.name,
+                              phone: '0810000000',
+                              shop: item.shop,
+                              shopId: '',
+                              status: item.status,
+                              trend: [4, 7, 5, 12, 18, 14, totalLeads]
+                            });
+                          }
+                        }}
+                        className={`bg-white/5 p-2 rounded-xl ${item.status === 'Présent' ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
+                      >
+                        <span className="text-[8px] text-gray-400 uppercase block">{tile.label}</span>
+                        <span className={`${tile.colorClass} text-xs`}>{tile.value}</span>
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
