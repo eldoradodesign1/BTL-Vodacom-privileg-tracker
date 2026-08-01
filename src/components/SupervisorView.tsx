@@ -170,18 +170,69 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
             return (
               <div key={item.id} className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition-all">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-xs font-black uppercase text-white flex items-center space-x-1.5">
-                      <span>{item.name}</span>
-                    </h3>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center space-x-1">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-xs font-black uppercase text-white">{item.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={inlineAssignShop[item.id] || ''}
+                          onChange={(e) => {
+                            const nextShopId = e.target.value;
+                            setInlineAssignShop(prev => ({ ...prev, [item.id]: nextShopId }));
+                            if (!nextShopId) return;
+
+                            const confirmed = window.confirm(`Affecter ${item.name} à ce shop ?`);
+                            if (!confirmed) {
+                              setInlineAssignShop(prev => ({ ...prev, [item.id]: '' }));
+                              return;
+                            }
+
+                            updateUserShopAssignment(item.id, nextShopId);
+                            setInlineAssignShop(prev => ({ ...prev, [item.id]: '' }));
+                            if (onRefreshData) onRefreshData();
+                          }}
+                          className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5 text-white text-[10px] font-bold min-w-[110px]"
+                        >
+                          <option value="">Shop</option>
+                          {shops.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+
+                        {onOpenAgentProfile && (
+                          <button
+                            onClick={() => onOpenAgentProfile({
+                              id: item.id,
+                              name: item.name,
+                              phone: '0810000000',
+                              shop: item.shop,
+                              shopId: '',
+                              status: item.status,
+                              trend: [4, 7, 5, 12, 18, 14, totalLeads]
+                            })}
+                            className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl border border-white/10 transition-all"
+                            title="Voir l'historique + clients du jour"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-wrap gap-1 mt-1">
                       <MapPin className="w-3 h-3 text-red-500" />
                       <span>{item.shop}</span>
+                      {item.status === 'Présent' && item.reportObj?.arrival_time && (
+                        <span className="text-blue-400">• Pointé {item.reportObj.arrival_time}</span>
+                      )}
+                      {item.status === 'Clôturé' && item.reportObj?.departure_time && (
+                        <span className="text-emerald-400">• Clôturé {item.reportObj.departure_time}</span>
+                      )}
                     </p>
                   </div>
 
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center space-x-2 shrink-0">
                     <span className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg}`}>
                       {item.status}
                     </span>
@@ -198,64 +249,22 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   </div>
                 </div>
 
-                {/* Stats Breakdown */}
-                <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
-                  <div className="bg-white/5 p-2 rounded-xl">
-                    <span className="text-[8px] text-gray-400 uppercase block">Privilège</span>
-                    <span className="text-red-500 text-xs">{item.stats.priv}</span>
+                {item.status !== 'Absent' && (
+                  <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
+                    <div className="bg-white/5 p-2 rounded-xl">
+                      <span className="text-[8px] text-gray-400 uppercase block">Privilège</span>
+                      <span className="text-red-500 text-xs">{item.stats.priv}</span>
+                    </div>
+                    <div className="bg-white/5 p-2 rounded-xl">
+                      <span className="text-[8px] text-gray-400 uppercase block">Roaming</span>
+                      <span className="text-amber-400 text-xs">{item.stats.roam}</span>
+                    </div>
+                    <div className="bg-white/5 p-2 rounded-xl">
+                      <span className="text-[8px] text-gray-400 uppercase block">Bundles</span>
+                      <span className="text-blue-400 text-xs">{item.stats.bund}</span>
+                    </div>
                   </div>
-                  <div className="bg-white/5 p-2 rounded-xl">
-                    <span className="text-[8px] text-gray-400 uppercase block">Roaming</span>
-                    <span className="text-amber-400 text-xs">{item.stats.roam}</span>
-                  </div>
-                  <div className="bg-white/5 p-2 rounded-xl">
-                    <span className="text-[8px] text-gray-400 uppercase block">Bundles</span>
-                    <span className="text-blue-400 text-xs">{item.stats.bund}</span>
-                  </div>
-                </div>
-
-                {/* Agent Profile Trigger */}
-                {onOpenAgentProfile && (
-                  <button
-                    onClick={() => onOpenAgentProfile({
-                      id: item.id,
-                      name: item.name,
-                      phone: '0810000000',
-                      shop: item.shop,
-                      shopId: '',
-                      status: item.status,
-                      trend: [4, 7, 5, 12, 18, 14, totalLeads]
-                    })}
-                    className="w-full py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase text-gray-300 border border-white/10 flex items-center justify-center space-x-1.5 transition-all"
-                  >
-                    <span>Voir Historique + Clients du jour</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
                 )}
-
-                <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-                  <select
-                    value={inlineAssignShop[item.id] || ''}
-                    onChange={(e) => setInlineAssignShop(prev => ({ ...prev, [item.id]: e.target.value }))}
-                    className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-[10px] font-bold"
-                  >
-                    <option value="">Affecter à un shop...</option>
-                    {shops.map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => {
-                      const shopId = inlineAssignShop[item.id];
-                      if (!shopId) return;
-                      updateUserShopAssignment(item.id, shopId);
-                      if (onRefreshData) onRefreshData();
-                    }}
-                    className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[10px] font-black uppercase"
-                  >
-                    Affecter
-                  </button>
-                </div>
               </div>
             );
           })}
