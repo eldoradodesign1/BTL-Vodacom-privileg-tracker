@@ -929,17 +929,19 @@ export function clearNotifications(userId: string): void {
 
 // --- CHAT ---
 export async function getChatMessages(): Promise<ChatMessage[]> {
-  const sharedMessages = await fetchChatMessagesFromSheet();
-  if (sharedMessages) {
-    syncSharedChatMessages(sharedMessages);
-    return sharedMessages.filter(message => !message.deleted);
-  }
+  try {
+    const sharedMessages = await fetchChatMessagesFromSheet();
+    if (sharedMessages && Array.isArray(sharedMessages)) {
+      const normalized = sharedMessages.filter(message => !message.deleted);
+      syncSharedChatMessages(normalized);
+      return normalized;
+    }
+  } catch {}
 
   return loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT).filter(message => !message.deleted);
 }
 
 export async function sendChatMessage(sender: User, message: string): Promise<ChatMessage> {
-  const msgs = await getChatMessages();
   const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const users = getUsers();
   const recipients = users.filter(u => u.id !== sender.id).map(u => u.id);
@@ -953,7 +955,9 @@ export async function sendChatMessage(sender: User, message: string): Promise<Ch
     created_at: new Date().toISOString(),
     read_by: [sender.id]
   };
-  const nextMsgs = [...msgs, newMsg];
+
+  const currentMsgs = await getChatMessages();
+  const nextMsgs = [...currentMsgs, newMsg];
   syncSharedChatMessages(nextMsgs);
   void pushToGoogleSheetWebhook({ type: 'chat', data: newMsg });
 

@@ -23,7 +23,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onDataChanged }
     void refreshMessages();
     const interval = window.setInterval(() => {
       void refreshMessages();
-    }, 10000);
+    }, 4000);
 
     return () => {
       active = false;
