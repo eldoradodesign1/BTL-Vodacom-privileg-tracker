@@ -24,7 +24,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [shopFilter, setShopFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'Online' | 'Absent' | 'Clôturé'>('ALL');
   const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
   const [assigningShopId, setAssigningShopId] = useState<string>('');
   const [inlineAssignShop, setInlineAssignShop] = useState<Record<string, string>>({});
@@ -94,11 +94,16 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
   // --- TAB 2: MONITORING ---
   if (activeTab === 'tab2') {
-    const filteredTeam = teamData.filter(item =>
-      (item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.shop.toLowerCase().includes(searchQuery.toLowerCase()))
-      && (shopFilter === 'ALL' || item.shop === shopFilter)
-    );
+    const filteredTeam = teamData.filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.shop.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'ALL'
+        || (statusFilter === 'Online' && item.status === 'Présent')
+        || (statusFilter === 'Absent' && item.status === 'Absent')
+        || (statusFilter === 'Clôturé' && item.status === 'Clôturé');
+
+      return matchesSearch && matchesStatus;
+    });
 
     return (
       <div className="space-y-4 animate-pop pb-32">
@@ -132,16 +137,29 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           />
         </div>
 
-        <select
-          value={shopFilter}
-          onChange={(e) => setShopFilter(e.target.value)}
-          className="w-full bg-black/60 border border-white/10 rounded-2xl px-3 py-2.5 text-white text-xs font-bold focus:outline-none focus:border-red-500"
-        >
-          <option value="ALL">Tous les shops</option>
-          {[...new Set(teamData.map(t => t.shop))].map(shopName => (
-            <option key={shopName} value={shopName}>{shopName}</option>
-          ))}
-        </select>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { key: 'ALL', label: 'Toutes' },
+            { key: 'Online', label: 'En ligne' },
+            { key: 'Absent', label: 'Absents' },
+            { key: 'Clôturé', label: 'Clôturés' }
+          ].map(option => {
+            const isActive = statusFilter === option.key;
+            return (
+              <button
+                key={option.key}
+                onClick={() => setStatusFilter(option.key as 'ALL' | 'Online' | 'Absent' | 'Clôturé')}
+                className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase transition-all ${
+                  isActive
+                    ? 'bg-red-600 text-white border-red-500 shadow-lg'
+                    : 'bg-black/60 text-gray-300 border-white/10 hover:border-red-500/40 hover:text-white'
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
 
         {/* Agent Cards */}
         <div className="space-y-3">
