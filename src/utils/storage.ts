@@ -897,24 +897,6 @@ export function getReportPreviewHtml(report: DailyReport): string {
 
 // --- NOTIFICATIONS ---
 export async function getNotifications(userId: string): Promise<NotificationItem[]> {
-  try {
-    const sharedList = await fetchSharedJson<NotificationItem[]>('/api/notifications');
-    if (Array.isArray(sharedList)) {
-      const list = sharedList.filter(n => !n.deleted);
-      syncSharedNotifications(list);
-      return list.filter(n => n.user_id === userId);
-    }
-  } catch {}
-
-  try {
-    SHARED_CHAT_STORE.load();
-    const list = SHARED_CHAT_STORE.notifications as NotificationItem[];
-    if (Array.isArray(list)) {
-      saveItem(STORAGE_KEYS.NOTIFS, list);
-      return list.filter(n => n.user_id === userId);
-    }
-  } catch {}
-
   const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
   return notifs.filter(n => n.user_id === userId);
 }
@@ -933,24 +915,6 @@ export function clearNotifications(userId: string): void {
 
 // --- CHAT ---
 export async function getChatMessages(): Promise<ChatMessage[]> {
-  try {
-    const sharedList = await fetchSharedJson<ChatMessage[]>('/api/chat');
-    if (Array.isArray(sharedList)) {
-      const list = sharedList.filter(m => !m.deleted);
-      syncSharedChatMessages(list);
-      return list;
-    }
-  } catch {}
-
-  try {
-    SHARED_CHAT_STORE.load();
-    const list = SHARED_CHAT_STORE.messages as ChatMessage[];
-    if (Array.isArray(list)) {
-      saveItem(STORAGE_KEYS.CHAT, list);
-      return list.filter(m => !m.deleted);
-    }
-  } catch {}
-
   return loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT).filter(m => !m.deleted);
 }
 
@@ -972,23 +936,13 @@ export async function sendChatMessage(sender: User, message: string): Promise<Ch
   const nextMsgs = [...msgs, newMsg];
   syncSharedChatMessages(nextMsgs);
 
-  const sharedResponse = await fetchSharedJson<ChatMessage>('/api/chat', {
-    method: 'POST',
-    body: JSON.stringify(newMsg)
-  });
-  const acceptedMsg = sharedResponse || newMsg;
-
-  try {
-    SHARED_CHAT_STORE.pushMessage(acceptedMsg);
-  } catch {}
-
   if (sender.role === 'admin') {
     recipients.forEach(uid => {
       pushNotification(uid, `Nouveau message admin de ${sender.name}.`, 'chat-admin');
     });
   }
 
-  return acceptedMsg;
+  return newMsg;
 }
 
 export async function deleteChatMessage(messageId: string, actor: User): Promise<boolean> {
@@ -998,14 +952,6 @@ export async function deleteChatMessage(messageId: string, actor: User): Promise
   if (idx === -1) return false;
   const updated = msgs.map(m => m.id === messageId ? { ...m, deleted: true, deleted_by: actor.id, deleted_at: new Date().toISOString() } : m);
   syncSharedChatMessages(updated);
-  await fetchSharedJson(`/api/chat/${messageId}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      deleted: true,
-      deleted_by: actor.id,
-      deleted_at: new Date().toISOString()
-    })
-  });
   return true;
 }
 
