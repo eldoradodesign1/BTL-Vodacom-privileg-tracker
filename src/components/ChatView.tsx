@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { User, ChatMessage } from '../types';
 import { deleteChatMessage, getChatMessages, sendChatMessage } from '../utils/storage';
-import { SHARED_CHAT_STORE } from '../sharedChatStore';
 import { Send, MessageSquare, Trash2 } from 'lucide-react';
 
 interface ChatViewProps {
@@ -31,9 +30,6 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onDataChanged }
     if (!nextValue) return;
 
     const newMsg = await sendChatMessage(currentUser, nextValue);
-    SHARED_CHAT_STORE.load();
-    SHARED_CHAT_STORE.messages = [...SHARED_CHAT_STORE.messages, newMsg];
-    SHARED_CHAT_STORE.save();
     setMessages(prev => [...prev, newMsg]);
     setInputText('');
     if (inputEl) inputEl.value = '';
