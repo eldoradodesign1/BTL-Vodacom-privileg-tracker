@@ -15,6 +15,7 @@ interface AdminViewProps {
   onOpenAgentProfile: (agent: AgentMasterStatus) => void;
   onOpenPdfModal: (url: string) => void;
   onOpenTodayClientsModal?: (agent: AgentMasterStatus) => void;
+  onOpenLocationModal?: (agent: AgentMasterStatus) => void;
   onRefreshData?: () => void;
 }
 
@@ -27,6 +28,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onOpenAgentProfile,
   onOpenPdfModal,
   onOpenTodayClientsModal,
+  onOpenLocationModal,
   onRefreshData
 }) => {
   const [subTab, setSubTab] = useState<'manage' | 'stats' | 'leads' | 'reports'>(
@@ -417,40 +419,55 @@ export const AdminView: React.FC<AdminViewProps> = ({
               return (
                 <div
                   key={agent.id}
-                  className="glass-card p-4 border border-white/10 hover:border-red-500/40 transition-all space-y-2.5"
+                  className="glass-card p-4 border border-white/10 hover:border-red-500/40 transition-all space-y-3"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2 w-full">
-                    <div className="flex items-start space-x-3 flex-1 min-w-0">
-                      <div className="shrink-0">
-                        <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-sm">
-                          {agent.name[0]}
-                        </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-xs font-black uppercase text-white">{agent.name}</h3>
+                        <select
+                          value={inlineAssignShop[agent.id] || ''}
+                          onChange={(e) => {
+                            const nextShopId = e.target.value;
+                            if (!nextShopId) return;
+
+                            const confirmed = window.confirm(`Affecter ${agent.name} à ce shop ?`);
+                            if (!confirmed) return;
+
+                            updateUserShopAssignment(agent.id, nextShopId);
+                            setInlineAssignShop(prev => ({ ...prev, [agent.id]: '' }));
+                            if (onRefreshData) onRefreshData();
+                          }}
+                          className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5 text-white text-[10px] font-bold min-w-[120px]"
+                        >
+                          <option value="">shop...</option>
+                          {shops.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
                       </div>
 
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-black uppercase text-white hover:text-red-400 transition-colors">{agent.name}</p>
-                        <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center gap-1 mt-1">
-                          <MapPin className="w-3 h-3 text-blue-400" />
-                          <span>{formatAgentLocationLine({
-                            shop: agent.shop,
-                            status: agent.status,
-                            arrivalTime: agent.reportObj?.arrival_time,
-                            departureTime: agent.reportObj?.departure_time
-                          })}</span>
-                        </p>
-                      </div>
+                      <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-wrap gap-1 mt-1">
+                        <MapPin className="w-3 h-3 text-blue-400" />
+                        <span>{formatAgentLocationLine({
+                          shop: agent.shop,
+                          status: agent.status,
+                          arrivalTime: agent.reportObj?.arrival_time,
+                          departureTime: agent.reportObj?.departure_time
+                        })}</span>
+                      </p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 shrink-0">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (agent.status === 'Présent' && onOpenTodayClientsModal) {
-                            onOpenTodayClientsModal(agent);
+                          if ((agent.status === 'Présent' || agent.status === 'Clôturé') && onOpenLocationModal) {
+                            onOpenLocationModal(agent);
                           }
                         }}
-                        className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg} ${agent.status === 'Présent' ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
-                        title={agent.status === 'Présent' ? 'Voir les clients du jour' : undefined}
+                        className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg} ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
+                        title={agent.status === 'Présent' ? 'Voir la localisation de pointage' : (agent.status === 'Clôturé' ? 'Voir la localisation de clôture' : undefined)}
                       >
                         {agent.status}
                       </button>
@@ -461,11 +478,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             e.stopPropagation();
                             onOpenPdfModal(`report-id:${agent.reportObj!.id}`);
                           }}
-                          className="px-2.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 rounded-xl text-[10px] font-black uppercase flex items-center space-x-1 shadow-md transition-all shrink-0"
-                          title="Télécharger / Voir le rapport de clôture PDF"
+                          className="p-1.5 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-xl border border-red-500/30 transition-all"
+                          title="Voir le rapport PDF"
                         >
-                          <FileText className="w-3.5 h-3.5" />
-                          <span>Rapport</span>
+                          <Eye className="w-4 h-4" />
                         </button>
                       )}
 
@@ -482,107 +498,49 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <select
-                      value={inlineAssignShop[agent.id] || ''}
-                      onChange={(e) => {
-                        const nextShopId = e.target.value;
-                        if (!nextShopId) return;
-                        const confirmed = window.confirm(`Affecter ${agent.name} à ce shop ?`);
-                        if (!confirmed) return;
-                        updateUserShopAssignment(agent.id, nextShopId);
-                        setInlineAssignShop(prev => ({ ...prev, [agent.id]: '' }));
-                        if (onRefreshData) onRefreshData();
-                      }}
-                      className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-[10px] font-bold flex-1 min-w-[140px]"
-                    >
-                      <option value="">shop...</option>
-                      {shops.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Stats Breakdown */}
                   {agent.stats && (
-                    <div className="grid grid-cols-4 gap-1.5 pt-2 border-t border-white/5 text-center text-[9px] font-bold">
+                    <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (agent.status === 'Présent' && onOpenTodayClientsModal) {
-                            onOpenTodayClientsModal(agent);
+                          if ((agent.status === 'Présent' || agent.status === 'Clôturé') && onOpenLocationModal) {
+                            onOpenLocationModal(agent);
                           }
                         }}
-                        className={`bg-white/5 p-1 rounded-xl ${agent.status === 'Présent' ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
+                        className={`bg-white/5 p-2 rounded-xl ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
                       >
                         <span className="text-[8px] text-gray-400 uppercase block">Privilège</span>
-                        <span className="text-red-400 font-black text-xs">{agent.stats.priv}</span>
+                        <span className="text-red-400 text-xs">{agent.stats.priv}</span>
                       </button>
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (agent.status === 'Présent' && onOpenTodayClientsModal) {
-                            onOpenTodayClientsModal(agent);
+                          if ((agent.status === 'Présent' || agent.status === 'Clôturé') && onOpenLocationModal) {
+                            onOpenLocationModal(agent);
                           }
                         }}
-                        className={`bg-white/5 p-1 rounded-xl ${agent.status === 'Présent' ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
+                        className={`bg-white/5 p-2 rounded-xl ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
                       >
                         <span className="text-[8px] text-gray-400 uppercase block">Roaming</span>
-                        <span className="text-amber-400 font-black text-xs">{agent.stats.roam}</span>
+                        <span className="text-amber-400 text-xs">{agent.stats.roam}</span>
                       </button>
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (agent.status === 'Présent' && onOpenTodayClientsModal) {
-                            onOpenTodayClientsModal(agent);
+                          if ((agent.status === 'Présent' || agent.status === 'Clôturé') && onOpenLocationModal) {
+                            onOpenLocationModal(agent);
                           }
                         }}
-                        className={`bg-white/5 p-1 rounded-xl ${agent.status === 'Présent' ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
+                        className={`bg-white/5 p-2 rounded-xl ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
                       >
-                        <span className="text-[8px] text-gray-400 uppercase block">Bundle</span>
-                        <span className="text-blue-400 font-black text-xs">{agent.stats.bund}</span>
+                        <span className="text-[8px] text-gray-400 uppercase block">Bundles</span>
+                        <span className="text-blue-400 text-xs">{agent.stats.bund}</span>
                       </button>
-                      <div className="bg-white/5 p-1 rounded-xl flex items-center justify-center">
-                        <svg width="45" height="18" className="overflow-visible">
-                          <polyline
-                            fill="none"
-                            stroke="#E60000"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            points={points}
-                          />
-                        </svg>
-                      </div>
                     </div>
                   )}
-
-                  <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-                    <select
-                      value={inlineAssignShop[agent.id] || ''}
-                      onChange={(e) => setInlineAssignShop(prev => ({ ...prev, [agent.id]: e.target.value }))}
-                      className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-[10px] font-bold"
-                    >
-                      <option value="">Affecter à un shop...</option>
-                      {shops.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={() => {
-                        const shopId = inlineAssignShop[agent.id];
-                        if (!shopId) return;
-                        updateUserShopAssignment(agent.id, shopId);
-                        if (onRefreshData) onRefreshData();
-                      }}
-                      className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[10px] font-black uppercase"
-                    >
-                      Affecter
-                    </button>
-                  </div>
                 </div>
               );
             })}

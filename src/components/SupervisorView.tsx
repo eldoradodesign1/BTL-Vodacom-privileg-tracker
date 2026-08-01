@@ -12,6 +12,7 @@ interface SupervisorViewProps {
   onOpenPdfModal: (url: string) => void;
   onOpenAgentProfile?: (agent: AgentMasterStatus) => void;
   onOpenTodayClientsModal?: (agent: AgentMasterStatus) => void;
+  onOpenLocationModal?: (agent: AgentMasterStatus) => void;
   onRefreshData?: () => void;
 }
 
@@ -22,6 +23,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   onOpenPdfModal,
   onOpenAgentProfile,
   onOpenTodayClientsModal,
+  onOpenLocationModal,
   onRefreshData
 }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -165,38 +167,6 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           })}
         </div>
 
-        {selectedLocationAgent && (
-          <div className="rounded-3xl border border-blue-500/30 bg-blue-500/10 p-3 space-y-3">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <p className="text-[10px] font-black uppercase text-blue-300">Localisation</p>
-                <p className="text-sm font-black text-white">{selectedLocationAgent.name}</p>
-                <p className="text-[10px] font-bold text-gray-300">{formatAgentLocationLine({
-                  shop: selectedLocationAgent.shop,
-                  status: selectedLocationAgent.status,
-                  arrivalTime: selectedLocationAgent.arrivalTime,
-                  departureTime: selectedLocationAgent.departureTime
-                })}</p>
-              </div>
-              <button
-                onClick={() => setSelectedLocationAgent(null)}
-                className="text-[10px] font-black uppercase text-gray-300 hover:text-white"
-              >
-                Fermer
-              </button>
-            </div>
-            <div className="overflow-hidden rounded-2xl border border-white/10">
-              <iframe
-                title={`Localisation ${selectedLocationAgent.name}`}
-                src={getLocationEmbedUrl(selectedLocationAgent)}
-                className="w-full h-48 border-0"
-                loading="lazy"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-          </div>
-        )}
-
         {/* Agent Cards */}
         <div className="space-y-3">
           {filteredTeam.map(item => {
@@ -247,18 +217,18 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                     <button
                       onClick={() => {
                         if (item.status === 'Présent' || item.status === 'Clôturé') {
-                          setSelectedLocationAgent({
+                          const agentForLocation: AgentMasterStatus = {
                             id: item.id,
                             name: item.name,
+                            phone: '0810000000',
                             shop: item.shop,
+                            shopId: '',
                             status: item.status,
-                            arrivalTime: item.reportObj?.arrival_time,
-                            departureTime: item.reportObj?.departure_time,
-                            mapsIn: item.reportObj?.maps_in,
-                            mapsOut: item.reportObj?.maps_out,
-                            lat: item.reportObj?.maps_in ? undefined : undefined,
-                            long: item.reportObj?.maps_out ? undefined : undefined
-                          });
+                            trend: [0, 0, 0],
+                            reportObj: item.reportObj,
+                            stats: item.stats
+                          };
+                          if (onOpenLocationModal) onOpenLocationModal(agentForLocation);
                         }
                       }}
                       className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg} ${(item.status === 'Présent' || item.status === 'Clôturé') ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
@@ -309,16 +279,18 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                         type="button"
                         onClick={() => {
                           if (item.status === 'Présent' || item.status === 'Clôturé') {
-                            setSelectedLocationAgent({
+                            const agentForLocation: AgentMasterStatus = {
                               id: item.id,
                               name: item.name,
+                              phone: '0810000000',
                               shop: item.shop,
+                              shopId: '',
                               status: item.status,
-                              arrivalTime: item.reportObj?.arrival_time,
-                              departureTime: item.reportObj?.departure_time,
-                              mapsIn: item.reportObj?.maps_in,
-                              mapsOut: item.reportObj?.maps_out
-                            });
+                              trend: [0, 0, 0],
+                              reportObj: item.reportObj,
+                              stats: item.stats
+                            };
+                            if (onOpenLocationModal) onOpenLocationModal(agentForLocation);
                           }
                         }}
                         className={`bg-white/5 p-2 rounded-xl ${(item.status === 'Présent' || item.status === 'Clôturé') ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}

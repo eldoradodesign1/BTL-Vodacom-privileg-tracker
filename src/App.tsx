@@ -33,6 +33,7 @@ import { PdfViewerModal } from './components/Modals/PdfViewerModal';
 import { AgentProfileModal } from './components/Modals/AgentProfileModal';
 import { TodayClientsModal } from './components/Modals/TodayClientsModal';
 import { GSheetModal } from './components/Modals/GSheetModal';
+import { LocationModal } from './components/Modals/LocationModal';
 import { getGSheetConfig, syncFromGoogleSheetUrl } from './utils/googleSheetsSync';
 
 export default function App() {
@@ -73,6 +74,7 @@ export default function App() {
   const [pdfModalUrl, setPdfModalUrl] = useState<string | null>(null);
   const [selectedAgentForProfile, setSelectedAgentForProfile] = useState<AgentMasterStatus | null>(null);
   const [selectedAgentForTodayClients, setSelectedAgentForTodayClients] = useState<AgentMasterStatus | null>(null);
+  const [selectedLocationAgent, setSelectedLocationAgent] = useState<AgentMasterStatus | null>(null);
   const [online, setOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [syncPendingCount, setSyncPendingCount] = useState(0);
@@ -219,6 +221,7 @@ export default function App() {
           onOpenAgentProfile={(agent) => setSelectedAgentForProfile(agent)}
           onOpenPdfModal={(url) => setPdfModalUrl(url)}
           onOpenTodayClientsModal={(agent) => setSelectedAgentForTodayClients(agent)}
+          onOpenLocationModal={(agent) => setSelectedLocationAgent(agent)}
           onRefreshData={refreshData}
         />
       );
@@ -233,6 +236,7 @@ export default function App() {
           onOpenPdfModal={(url) => setPdfModalUrl(url)}
           onOpenAgentProfile={(agent) => setSelectedAgentForProfile(agent)}
           onOpenTodayClientsModal={(agent) => setSelectedAgentForTodayClients(agent)}
+          onOpenLocationModal={(agent) => setSelectedLocationAgent(agent)}
           onRefreshData={refreshData}
         />
       );
@@ -370,6 +374,12 @@ export default function App() {
         agent={selectedAgentForTodayClients}
         dayLeads={selectedAgentTodayLeads}
         onClose={() => setSelectedAgentForTodayClients(null)}
+      />
+
+      <LocationModal
+        isOpen={!!selectedLocationAgent}
+        agent={selectedLocationAgent}
+        onClose={() => setSelectedLocationAgent(null)}
       />
 
       <GSheetModal
