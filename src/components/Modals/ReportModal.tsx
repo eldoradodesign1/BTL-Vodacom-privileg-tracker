@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Lead } from '../../types';
-import { getTargetsByShop, getShopById, addReport, addCheckin, getCheckins, toISO } from '../../utils/storage';
+import { getTargetsByShop, getShopById, addReport, addCheckin, getCheckins, toISO, resolveStoredPhotoUrl } from '../../utils/storage';
 import { generateAgentPDF } from '../../utils/pdfGenerator';
 import { FileText, Plus, X, Image as ImageIcon } from 'lucide-react';
 
@@ -80,7 +80,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     const nowIso = new Date().toISOString();
     const todayCheckins = getCheckins().filter(c => c.agent_id === currentUser.id && toISO(c.timestamp) === toISO(nowIso));
     const inCheck = todayCheckins.find(c => c.type === 'IN');
-    const pointagePhoto = inCheck?.photo || '';
+    const pointagePhoto = resolveStoredPhotoUrl(inCheck?.photo_drive_url || inCheck?.photo) || '';
 
     // Auto silent OUT check-in
     const outCheckin = addCheckin({

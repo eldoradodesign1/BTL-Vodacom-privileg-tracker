@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Shop, AgentMasterStatus } from '../types';
-import { getAdminMasterList, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor } from '../utils/storage';
+import { getAdminMasterList, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl } from '../utils/storage';
 import { TabType } from './BottomNav';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { UserPlus, Store, FileSpreadsheet, Eye, NotebookText, UserCheck, FileText, Search, Filter, MapPin } from 'lucide-react';
@@ -134,7 +134,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         msisdn: l.msisdn,
         action_type: l.action_type
       })),
-      pointagePhoto: report.pointage_photo || '',
+      pointagePhoto: resolveStoredPhotoUrl(report.pointage_photo || '') || '',
       photos: report.photos || [],
       comment: report.comment || '',
       evolutionData: [report.priv, report.priv + report.roam, report.priv + report.roam + report.bund]

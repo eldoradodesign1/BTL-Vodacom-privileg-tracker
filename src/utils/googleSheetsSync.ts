@@ -1116,6 +1116,7 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
             const idx = checkins.findIndex(c => c.id === checkinObj.id || (c.agent_id === checkinObj.agent_id && c.timestamp === checkinObj.timestamp));
             if (idx >= 0) {
               checkins[idx].photo = returnedPhoto;
+              checkins[idx].photo_drive_url = returnedPhoto;
               checkins[idx].status = 'synced';
               saveCheckins(checkins);
             }

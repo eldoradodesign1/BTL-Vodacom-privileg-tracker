@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { AgentMasterStatus, DailyReport } from '../../types';
+import { resolveStoredPhotoUrl } from '../../utils/storage';
 import { Phone, FileSpreadsheet, X, Eye, Camera } from 'lucide-react';
 
 interface AgentProfileModalProps {
@@ -27,7 +28,7 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
 
   const latestPhoto = useMemo(() => {
     const fromReport = agentReports.find(rep => rep.pointage_photo || rep.photos?.length);
-    return fromReport?.pointage_photo || fromReport?.photos?.[0] || '';
+    return resolveStoredPhotoUrl(fromReport?.pointage_photo || fromReport?.photos?.[0]) || '';
   }, [agentReports]);
 
   return (

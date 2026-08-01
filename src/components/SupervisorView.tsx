@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Shop, AgentMasterStatus } from '../types';
-import { getSupervisorLiveView, getReports, getUsers, getLeads, updateUserShopAssignment } from '../utils/storage';
+import { getSupervisorLiveView, getReports, getUsers, getLeads, updateUserShopAssignment, resolveStoredPhotoUrl } from '../utils/storage';
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
 import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera } from 'lucide-react';
@@ -75,7 +75,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
             msisdn: l.msisdn,
             action_type: l.action_type
           })),
-          pointagePhoto: item.reportObj?.pointage_photo || '',
+          pointagePhoto: resolveStoredPhotoUrl(item.reportObj?.pointage_photo || '') || '',
           photos: item.reportObj?.photos || [],
           comment: item.reportObj?.comment || '',
           evolutionData: [item.stats.priv, item.stats.priv + item.stats.roam, item.stats.priv + item.stats.roam + item.stats.bund]

@@ -677,9 +677,10 @@ export function getTodayCheckinPhoto(agentId: string): string | null {
   const checkins = getCheckins();
   const today = toISO(new Date());
   const found = checkins.find(r => r.agent_id === agentId && toISO(r.timestamp) === today && r.type === 'IN');
-  if (!found?.photo) return null;
+  const photoValue = found?.photo_drive_url || found?.photo;
+  if (!photoValue) return null;
 
-  return resolveStoredPhotoUrl(found.photo);
+  return resolveStoredPhotoUrl(photoValue);
 }
 
 // --- LEADS ---
@@ -824,7 +825,7 @@ export async function getReportPdf(report: DailyReport): Promise<string> {
   const allCheckins = getCheckins();
   const reportLeads = allLeads.filter(l => l.agent_id === report.agent_id && toISO(l.timestamp) === toISO(report.date));
   const pointageIn = allCheckins.find(c => c.agent_id === report.agent_id && toISO(c.timestamp) === toISO(report.date) && c.type === 'IN');
-  const pointagePhoto = pointageIn?.photo || report.pointage_photo || '';
+  const pointagePhoto = resolveStoredPhotoUrl(pointageIn?.photo_drive_url || pointageIn?.photo || report.pointage_photo) || '';
 
   const generatedUrl = await generateAgentPDF({
     agentName: report.agent_name,
@@ -908,7 +909,7 @@ function buildReportPreviewData(report: DailyReport): PDFReportData {
       msisdn: l.msisdn,
       action_type: l.action_type
     })),
-    pointagePhoto: report.pointage_photo || pointageIn?.photo || '',
+    pointagePhoto: resolveStoredPhotoUrl(report.pointage_photo || pointageIn?.photo_drive_url || pointageIn?.photo) || '',
     photos: report.photos || [],
     comment: report.comment || ''
   };
