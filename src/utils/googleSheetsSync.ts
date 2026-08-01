@@ -959,6 +959,7 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
   const checkinObj = payload.type === 'checkin' && payload.data ? payload.data : (payload.lat !== undefined && payload.agent_id && !payload.client_name ? payload : null);
   const reportObj = payload.type === 'report' && payload.data ? payload.data : (payload.agent_id && payload.date && payload.priv !== undefined ? payload : null);
   const chatObj = payload.type === 'chat' && payload.data ? payload.data : null;
+  const chatDeleteObj = payload.type === 'chat-delete' || payload.action === 'deleteChatMessage' ? payload : null;
   const userUpdateObj = payload.type === 'user-update' && payload.data ? payload.data : null;
 
   if (leadObj) {
@@ -1050,6 +1051,16 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
       report_folder_url: reportsFolder,
       report_photos_folder_url: reportPhotosFolder,
       folders: payload.folders || {}
+    };
+  } else if (chatDeleteObj) {
+    enrichedPayload = {
+      id: payload.id || payload.message_id || '',
+      message_id: payload.id || payload.message_id || '',
+      deleted_by: payload.deleted_by || payload.actor_id || '',
+      deleted_at: payload.deleted_at || new Date().toISOString(),
+      action: 'deleteChatMessage',
+      type: 'chat-delete',
+      tab: 'Chat'
     };
   } else if (chatObj) {
     const message = chatObj;

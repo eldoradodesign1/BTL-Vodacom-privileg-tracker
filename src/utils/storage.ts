@@ -975,17 +975,6 @@ export async function deleteChatMessage(messageId: string, actor: User): Promise
 
   const deletedAt = new Date().toISOString();
 
-  const remoteDeleted = await pushToGoogleSheetWebhook({
-    action: 'deleteChatMessage',
-    type: 'chat-delete',
-    tab: 'Chat',
-    id: messageId,
-    deleted_by: actor.id,
-    deleted_at: deletedAt
-  });
-
-  if (!remoteDeleted) return false;
-
   const msgs = await getChatMessages();
   const updated = msgs.map(message =>
     message.id === messageId
@@ -999,6 +988,18 @@ export async function deleteChatMessage(messageId: string, actor: User): Promise
   );
 
   syncSharedChatMessages(updated);
+
+  try {
+    await pushToGoogleSheetWebhook({
+      action: 'deleteChatMessage',
+      type: 'chat-delete',
+      tab: 'Chat',
+      id: messageId,
+      deleted_by: actor.id,
+      deleted_at: deletedAt
+    });
+  } catch {}
+
   return true;
 }
 
