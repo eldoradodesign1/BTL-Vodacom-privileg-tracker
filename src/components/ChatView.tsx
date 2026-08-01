@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, ChatMessage } from '../types';
 import { deleteChatMessage, getChatMessages, sendChatMessage } from '../utils/storage';
+import { SHARED_CHAT_STORE } from '../sharedChatStore';
 import { Send, MessageSquare, Trash2 } from 'lucide-react';
 
 interface ChatViewProps {
@@ -9,24 +10,42 @@ interface ChatViewProps {
 }
 
 export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onDataChanged }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>(getChatMessages());
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
 
-  const handleSend = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputText.trim()) return;
+  useEffect(() => {
+    let active = true;
+    void getChatMessages().then((list) => {
+      if (active) setMessages(list);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-    const newMsg = sendChatMessage(currentUser, inputText.trim());
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = e.currentTarget as HTMLFormElement;
+    const inputEl = form.querySelector('input') as HTMLInputElement | null;
+    const nextValue = (inputEl?.value || inputText).trim();
+    if (!nextValue) return;
+
+    const newMsg = await sendChatMessage(currentUser, nextValue);
+    SHARED_CHAT_STORE.load();
+    SHARED_CHAT_STORE.messages = [...SHARED_CHAT_STORE.messages, newMsg];
+    SHARED_CHAT_STORE.save();
     setMessages(prev => [...prev, newMsg]);
     setInputText('');
+    if (inputEl) inputEl.value = '';
     if (onDataChanged) onDataChanged();
   };
 
-  const handleDeleteMessage = (msgId: string) => {
+  const handleDeleteMessage = async (msgId: string) => {
     if (!window.confirm('Supprimer ce message pour tout le monde ?')) return;
-    const ok = deleteChatMessage(msgId, currentUser);
+    const ok = await deleteChatMessage(msgId, currentUser);
     if (!ok) return;
-    setMessages(getChatMessages());
+    const list = await getChatMessages();
+    setMessages(list);
     if (onDataChanged) onDataChanged();
   };
 

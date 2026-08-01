@@ -2,6 +2,9 @@ import { User, UserRole, Shop, Checkin, Lead, DailyReport, NotificationItem, Cha
 import { INITIAL_SHOPS, INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_REPORTS, INITIAL_NOTIFICATIONS, INITIAL_CHAT } from '../data/initialData';
 import { buildAgentReportHtml, generateAgentPDF, PDFReportData } from './pdfGenerator';
 import { pushToGoogleSheetWebhook, getGSheetConfig, syncFromGoogleSheetUrl } from './googleSheetsSync';
+import { SHARED_CHAT_STORE } from '../sharedChatStore';
+
+const API_BASE_URL = '';
 
 const STORAGE_KEYS = {
   USERS: 'vodacom_users_v6',
@@ -16,6 +19,50 @@ const STORAGE_KEYS = {
   ACTIVE_SHOP_NAME: 'active_shop_name'
 };
 
+const SHARED_API_BASE = (() => {
+  if (typeof window === 'undefined') return 'http://127.0.0.1:3001';
+  const host = window.location.hostname || '127.0.0.1';
+  return `http://${host}:3001`;
+})();
+
+async function fetchSharedJson<T>(path: string, init?: RequestInit): Promise<T | null> {
+  try {
+    const response = await fetch(`${SHARED_API_BASE}${path}`, {
+      ...init,
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init?.headers || {})
+      }
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as T;
+  } catch {
+    return null;
+  }
+}
+
+function syncSharedChatMessages(list: ChatMessage[]): void {
+  saveItem(STORAGE_KEYS.CHAT, list);
+  localStorage.setItem('vodacom_chat', JSON.stringify(list));
+  localStorage.setItem('vodacom_chat_v5', JSON.stringify(list));
+  localStorage.setItem('vodacom_chat_v4', JSON.stringify(list));
+  try {
+    SHARED_CHAT_STORE.load();
+    SHARED_CHAT_STORE.messages = list;
+    SHARED_CHAT_STORE.save();
+  } catch {}
+}
+
+function syncSharedNotifications(list: NotificationItem[]): void {
+  saveItem(STORAGE_KEYS.NOTIFS, list);
+  try {
+    SHARED_CHAT_STORE.load();
+    SHARED_CHAT_STORE.notifications = list;
+    SHARED_CHAT_STORE.save();
+  } catch {}
+}
+
 export const DRIVE_FOLDERS = {
   REPORTS_FOLDER_URL: 'https://drive.google.com/drive/folders/1gYV6G84pJ0WyrVSmmk2-969ZJt9s1LBq?usp=drive_link',
   PHOTOS_FOLDER_URL: 'https://drive.google.com/drive/folders/1AVox_j8VMle_cDdDZrM-g0x7E7GkREtv?usp=drive_link',
@@ -23,7 +70,6 @@ export const DRIVE_FOLDERS = {
 };
 
 function pushNotification(userId: string, message: string, type: string): NotificationItem {
-  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
   const item: NotificationItem = {
     id: generateUUID(),
     user_id: userId,
@@ -32,8 +78,18 @@ function pushNotification(userId: string, message: string, type: string): Notifi
     is_read: false,
     timestamp: new Date().toISOString()
   };
+
+  try {
+    SHARED_CHAT_STORE.pushNotification(item);
+  } catch {}
+
+  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
   notifs.unshift(item);
   saveItem(STORAGE_KEYS.NOTIFS, notifs);
+  void fetchSharedJson<NotificationItem>('/api/notifications', {
+    method: 'POST',
+    body: JSON.stringify(item)
+  });
   return item;
 }
 
@@ -838,7 +894,25 @@ export function getReportPreviewHtml(report: DailyReport): string {
 }
 
 // --- NOTIFICATIONS ---
-export function getNotifications(userId: string): NotificationItem[] {
+export async function getNotifications(userId: string): Promise<NotificationItem[]> {
+  try {
+    const sharedList = await fetchSharedJson<NotificationItem[]>('/api/notifications');
+    if (Array.isArray(sharedList)) {
+      const list = sharedList.filter(n => !n.deleted);
+      syncSharedNotifications(list);
+      return list.filter(n => n.user_id === userId);
+    }
+  } catch {}
+
+  try {
+    SHARED_CHAT_STORE.load();
+    const list = SHARED_CHAT_STORE.notifications as NotificationItem[];
+    if (Array.isArray(list)) {
+      saveItem(STORAGE_KEYS.NOTIFS, list);
+      return list.filter(n => n.user_id === userId);
+    }
+  } catch {}
+
   const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
   return notifs.filter(n => n.user_id === userId);
 }
@@ -856,12 +930,30 @@ export function clearNotifications(userId: string): void {
 }
 
 // --- CHAT ---
-export function getChatMessages(): ChatMessage[] {
+export async function getChatMessages(): Promise<ChatMessage[]> {
+  try {
+    const sharedList = await fetchSharedJson<ChatMessage[]>('/api/chat');
+    if (Array.isArray(sharedList)) {
+      const list = sharedList.filter(m => !m.deleted);
+      syncSharedChatMessages(list);
+      return list;
+    }
+  } catch {}
+
+  try {
+    SHARED_CHAT_STORE.load();
+    const list = SHARED_CHAT_STORE.messages as ChatMessage[];
+    if (Array.isArray(list)) {
+      saveItem(STORAGE_KEYS.CHAT, list);
+      return list.filter(m => !m.deleted);
+    }
+  } catch {}
+
   return loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT).filter(m => !m.deleted);
 }
 
-export function sendChatMessage(sender: User, message: string): ChatMessage {
-  const msgs = getChatMessages();
+export async function sendChatMessage(sender: User, message: string): Promise<ChatMessage> {
+  const msgs = await getChatMessages();
   const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const users = getUsers();
   const recipients = users.filter(u => u.id !== sender.id).map(u => u.id);
@@ -875,12 +967,18 @@ export function sendChatMessage(sender: User, message: string): ChatMessage {
     created_at: new Date().toISOString(),
     read_by: [sender.id]
   };
-  msgs.push(newMsg);
-  const nextMsgs = [...msgs];
-  localStorage.setItem(STORAGE_KEYS.CHAT, JSON.stringify(nextMsgs));
-  localStorage.setItem('vodacom_chat', JSON.stringify(nextMsgs));
-  localStorage.setItem('vodacom_chat_v5', JSON.stringify(nextMsgs));
-  localStorage.setItem('vodacom_chat_v4', JSON.stringify(nextMsgs));
+  const nextMsgs = [...msgs, newMsg];
+  syncSharedChatMessages(nextMsgs);
+
+  const sharedResponse = await fetchSharedJson<ChatMessage>('/api/chat', {
+    method: 'POST',
+    body: JSON.stringify(newMsg)
+  });
+  const acceptedMsg = sharedResponse || newMsg;
+
+  try {
+    SHARED_CHAT_STORE.pushMessage(acceptedMsg);
+  } catch {}
 
   if (sender.role === 'admin') {
     recipients.forEach(uid => {
@@ -888,21 +986,24 @@ export function sendChatMessage(sender: User, message: string): ChatMessage {
     });
   }
 
-  return newMsg;
+  return acceptedMsg;
 }
 
-export function deleteChatMessage(messageId: string, actor: User): boolean {
+export async function deleteChatMessage(messageId: string, actor: User): Promise<boolean> {
   if (actor.role !== 'admin') return false;
-  const msgs = loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT);
+  const msgs = await getChatMessages();
   const idx = msgs.findIndex(m => m.id === messageId);
   if (idx === -1) return false;
-  msgs[idx] = {
-    ...msgs[idx],
-    deleted: true,
-    deleted_by: actor.id,
-    deleted_at: new Date().toISOString()
-  };
-  saveItem(STORAGE_KEYS.CHAT, msgs);
+  const updated = msgs.map(m => m.id === messageId ? { ...m, deleted: true, deleted_by: actor.id, deleted_at: new Date().toISOString() } : m);
+  syncSharedChatMessages(updated);
+  await fetchSharedJson(`/api/chat/${messageId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      deleted: true,
+      deleted_by: actor.id,
+      deleted_at: new Date().toISOString()
+    })
+  });
   return true;
 }
 
