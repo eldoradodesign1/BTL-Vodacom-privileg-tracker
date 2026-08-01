@@ -657,20 +657,29 @@ export function checkDailyStatus(agentId: string, dateISO: string) {
   return { checkinDone: hasCheckin, reportDone: hasReport };
 }
 
+export function resolveStoredPhotoUrl(raw: string | undefined | null): string | null {
+  if (!raw) return null;
+  const value = raw.trim();
+  if (!value) return null;
+  if (value.startsWith('data:image') || value.startsWith('http://') || value.startsWith('https://')) {
+    return value;
+  }
+  if (value.includes('drive.google.com') || value.includes('googleusercontent.com')) {
+    return value;
+  }
+  if (value.length > 10 && !value.includes(' ')) {
+    return `https://lh3.googleusercontent.com/d/${value}`;
+  }
+  return value;
+}
+
 export function getTodayCheckinPhoto(agentId: string): string | null {
   const checkins = getCheckins();
   const today = toISO(new Date());
   const found = checkins.find(r => r.agent_id === agentId && toISO(r.timestamp) === today && r.type === 'IN');
   if (!found?.photo) return null;
 
-  const raw = found.photo;
-  if (raw.startsWith('data:image') || raw.startsWith('http://') || raw.startsWith('https://')) {
-    return raw;
-  }
-  if (raw.length > 10 && !raw.includes(' ')) {
-    return `https://drive.google.com/uc?id=${raw}`;
-  }
-  return raw;
+  return resolveStoredPhotoUrl(found.photo);
 }
 
 // --- LEADS ---

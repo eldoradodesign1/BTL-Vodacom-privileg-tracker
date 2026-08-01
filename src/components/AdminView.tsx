@@ -3,7 +3,8 @@ import { Shop, AgentMasterStatus } from '../types';
 import { getAdminMasterList, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor } from '../utils/storage';
 import { TabType } from './BottomNav';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
-import { UserPlus, Store, FileSpreadsheet, Eye, NotebookText, UserCheck, FileText, Search, Filter } from 'lucide-react';
+import { UserPlus, Store, FileSpreadsheet, Eye, NotebookText, UserCheck, FileText, Search, Filter, MapPin } from 'lucide-react';
+import { formatAgentLocationLine } from '../utils/location';
 
 interface AdminViewProps {
   shops: Shop[];
@@ -428,8 +429,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-black uppercase text-white hover:text-red-400 transition-colors">{agent.name}</p>
-                        <p className="text-[9px] font-bold text-gray-400 uppercase">
-                          {agent.shop}
+                        <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center gap-1 mt-1">
+                          <MapPin className="w-3 h-3 text-blue-400" />
+                          <span>{formatAgentLocationLine({
+                            shop: agent.shop,
+                            status: agent.status,
+                            arrivalTime: agent.reportObj?.arrival_time,
+                            departureTime: agent.reportObj?.departure_time
+                          })}</span>
                         </p>
                       </div>
                     </div>

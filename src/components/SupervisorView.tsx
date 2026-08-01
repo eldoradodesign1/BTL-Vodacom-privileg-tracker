@@ -246,13 +246,14 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   <div className="flex flex-wrap items-center gap-2 shrink-0">
                     <button
                       onClick={() => {
-                        if (item.status === 'Présent') {
+                        if (item.status === 'Présent' || item.status === 'Clôturé') {
                           setSelectedLocationAgent({
                             id: item.id,
                             name: item.name,
                             shop: item.shop,
                             status: item.status,
                             arrivalTime: item.reportObj?.arrival_time,
+                            departureTime: item.reportObj?.departure_time,
                             mapsIn: item.reportObj?.maps_in,
                             mapsOut: item.reportObj?.maps_out,
                             lat: item.reportObj?.maps_in ? undefined : undefined,
@@ -260,8 +261,8 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                           });
                         }
                       }}
-                      className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg} ${item.status === 'Présent' ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
-                      title={item.status === 'Présent' ? 'Voir la localisation' : undefined}
+                      className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg} ${(item.status === 'Présent' || item.status === 'Clôturé') ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
+                      title={item.status === 'Présent' ? 'Voir la localisation de pointage' : (item.status === 'Clôturé' ? 'Voir la localisation de clôture' : undefined)}
                     >
                       {item.status}
                     </button>
@@ -307,19 +308,20 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                         key={tile.label}
                         type="button"
                         onClick={() => {
-                          if (item.status === 'Présent') {
+                          if (item.status === 'Présent' || item.status === 'Clôturé') {
                             setSelectedLocationAgent({
                               id: item.id,
                               name: item.name,
                               shop: item.shop,
                               status: item.status,
                               arrivalTime: item.reportObj?.arrival_time,
+                              departureTime: item.reportObj?.departure_time,
                               mapsIn: item.reportObj?.maps_in,
                               mapsOut: item.reportObj?.maps_out
                             });
                           }
                         }}
-                        className={`bg-white/5 p-2 rounded-xl ${item.status === 'Présent' ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
+                        className={`bg-white/5 p-2 rounded-xl ${(item.status === 'Présent' || item.status === 'Clôturé') ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
                       >
                         <span className="text-[8px] text-gray-400 uppercase block">{tile.label}</span>
                         <span className={`${tile.colorClass} text-xs`}>{tile.value}</span>
