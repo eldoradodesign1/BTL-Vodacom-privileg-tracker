@@ -14,11 +14,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const phoneValue = (e.currentTarget as HTMLFormElement).elements.namedItem('phone') as HTMLInputElement | null;
+    const enteredPhone = (phoneValue?.value || phone || '').trim();
+
     setLoading(true);
     setError('');
 
     setTimeout(() => {
-      const result = authenticate(phone, '');
+      const result = authenticate(enteredPhone, '');
       setLoading(false);
       if (result.success && result.user) {
         onLoginSuccess(result.user);
@@ -57,6 +60,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               <span>Identifiant Réseau (MSISDN)</span>
             </label>
             <input
+              id="phone"
+              name="phone"
               type="text"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}

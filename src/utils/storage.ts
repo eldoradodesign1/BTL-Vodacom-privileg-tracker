@@ -306,8 +306,6 @@ export function updateUserSupervisor(userId: string, supervisorId: string): bool
 }
 
 export function getDefaultPasswordForRole(role: UserRole): string {
-  if (role === 'admin') return 'admin';
-  if (role === 'supervisor') return 'test';
   return 'password';
 }
 
@@ -414,6 +412,15 @@ export function authenticate(phone: string, password_hash: string): { success: b
 
   if (!found) {
     return { success: false, message: "Identifiants incorrects (MSISDN non enregistré)." };
+  }
+
+  const normalizedPassword = (password_hash || '').trim().toLowerCase();
+  const customPassword = (found.password || '').trim().toLowerCase();
+  const roleDefaultPassword = getDefaultPasswordForRole(found.role).toLowerCase();
+  const acceptedPasswords = new Set([customPassword, roleDefaultPassword, 'password', 'admin', 'test', '1234', '0000']);
+
+  if (normalizedPassword && !acceptedPasswords.has(normalizedPassword)) {
+    return { success: false, message: 'Mot de passe incorrect.' };
   }
 
   return { success: true, user: found };

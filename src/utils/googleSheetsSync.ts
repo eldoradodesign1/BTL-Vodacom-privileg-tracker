@@ -130,6 +130,54 @@ function normalizePhone(raw: string): string {
   return clean;
 }
 
+function buildUserLookupKey(rawPhone: string): string {
+  return normalizePhone(rawPhone).toLowerCase();
+}
+
+export function mergeUsersForLocalAuth(localUsers: User[], importedUsers: User[]): User[] {
+  const merged: User[] = [...localUsers];
+  const indexByPhone = new Map<string, number>();
+
+  merged.forEach((user, index) => {
+    const key = buildUserLookupKey(user.phone);
+    if (key) indexByPhone.set(key, index);
+  });
+
+  importedUsers.forEach((importedUser) => {
+    const key = buildUserLookupKey(importedUser.phone);
+    if (!key) {
+      merged.push(importedUser);
+      return;
+    }
+
+    const existingIndex = indexByPhone.get(key);
+    if (existingIndex === undefined) {
+      merged.push(importedUser);
+      indexByPhone.set(key, merged.length - 1);
+      return;
+    }
+
+    const existing = merged[existingIndex];
+    const mergedUser: User = {
+      ...importedUser,
+      ...existing,
+      id: existing.id || importedUser.id,
+      phone: existing.phone || importedUser.phone,
+      name: existing.name || importedUser.name,
+      role: existing.role || importedUser.role,
+      password: existing.password || importedUser.password,
+      supervisorId: existing.supervisorId || importedUser.supervisorId,
+      permanentShopId: existing.permanentShopId || importedUser.permanentShopId,
+      created_at: existing.created_at || importedUser.created_at,
+      last_login: existing.last_login || importedUser.last_login
+    };
+
+    merged[existingIndex] = mergedUser;
+  });
+
+  return merged;
+}
+
 /**
  * Parse Users table from CSV / Sheet rows
  */
@@ -552,7 +600,8 @@ export function parseXlsxBuffer(buffer: ArrayBuffer): { success: boolean; count:
       if (normName.includes('user') || normName.includes('utilisateur') || normName.includes('agent')) {
         const users = parseUsersFromRows(rows);
         if (users.length > 0) {
-          saveUsers(users);
+          const mergedUsers = mergeUsersForLocalAuth(getUsers(), users);
+          saveUsers(mergedUsers);
           totalImported += users.length;
           summaryParts.push(`${users.length} utilisateur(s)`);
         }
@@ -695,7 +744,8 @@ export async function syncFromGoogleSheetUrl(url: string): Promise<{ success: bo
           if (tab.type === 'users') {
             const users = parseUsersFromRows(rows);
             if (users.length > 0) {
-              saveUsers(users);
+              const mergedUsers = mergeUsersForLocalAuth(getUsers(), users);
+              saveUsers(mergedUsers);
               totalSynced += users.length;
               parts.push(`${users.length} utilisateurs`);
             }
@@ -764,7 +814,8 @@ export async function syncFromGoogleSheetUrl(url: string): Promise<{ success: bo
 
     const parsedUsers = parseUsersFromRows(rows);
     if (parsedUsers.length > 0) {
-      saveUsers(parsedUsers);
+      const mergedUsers = mergeUsersForLocalAuth(getUsers(), parsedUsers);
+      saveUsers(mergedUsers);
       totalSynced += parsedUsers.length;
       parts.push(`${parsedUsers.length} utilisateurs`);
     }
