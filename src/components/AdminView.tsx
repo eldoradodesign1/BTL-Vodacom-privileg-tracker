@@ -47,7 +47,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [selectedAgentId, setSelectedAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [shopFilter, setShopFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'Online' | 'Absent' | 'Clôturé'>('ALL');
   const [supFilter, setSupFilter] = useState('ALL');
   const [inlineAssignShop, setInlineAssignShop] = useState<Record<string, string>>({});
 
@@ -68,9 +68,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const matchesSearch = !searchTerm
       || agent.name.toLowerCase().includes(searchTerm.toLowerCase())
       || agent.phone.includes(searchTerm);
-    const matchesShop = shopFilter === 'ALL' || agent.shopId === shopFilter;
+    const matchesStatus = statusFilter === 'ALL'
+      || (statusFilter === 'Online' && agent.status === 'Présent')
+      || (statusFilter === 'Absent' && agent.status === 'Absent')
+      || (statusFilter === 'Clôturé' && agent.status === 'Clôturé');
     const matchesSup = supFilter === 'ALL' || supId === supFilter;
-    return matchesSearch && matchesShop && matchesSup;
+    return matchesSearch && matchesStatus && matchesSup;
   });
   const rangeStart = Math.min(leadStartOffset, leadEndOffset);
   const rangeEnd = Math.max(leadStartOffset, leadEndOffset);
@@ -356,19 +359,34 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   className="w-full bg-black/60 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <select
-                  value={shopFilter}
-                  onChange={(e) => setShopFilter(e.target.value)}
-                  className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold"
-                >
-                  <option value="ALL">Tous les shops</option>
-                  {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'ALL', label: 'Toutes' },
+                    { key: 'Online', label: 'En ligne' },
+                    { key: 'Absent', label: 'Absents' },
+                    { key: 'Clôturé', label: 'Clôturés' }
+                  ].map(option => {
+                    const isActive = statusFilter === option.key;
+                    return (
+                      <button
+                        key={option.key}
+                        onClick={() => setStatusFilter(option.key as 'ALL' | 'Online' | 'Absent' | 'Clôturé')}
+                        className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase transition-all ${
+                          isActive
+                            ? 'bg-red-600 text-white border-red-500 shadow-lg'
+                            : 'bg-black/60 text-gray-300 border-white/10 hover:border-red-500/40 hover:text-white'
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
                 <select
                   value={supFilter}
                   onChange={(e) => setSupFilter(e.target.value)}
-                  className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold"
+                  className="w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold"
                 >
                   <option value="ALL">Tous les superviseurs</option>
                   {supervisors.map(sup => <option key={sup.id} value={sup.id}>{sup.name}</option>)}
