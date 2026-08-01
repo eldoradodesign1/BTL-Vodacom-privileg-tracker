@@ -3,7 +3,7 @@ import { Shop, AgentMasterStatus } from '../types';
 import { getAdminMasterList, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor } from '../utils/storage';
 import { TabType } from './BottomNav';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
-import { UserPlus, Store, FileSpreadsheet, Eye, ChevronRight, UserCheck, FileText, Search, Filter } from 'lucide-react';
+import { UserPlus, Store, FileSpreadsheet, Eye, NotebookText, UserCheck, FileText, Search, Filter } from 'lucide-react';
 
 interface AdminViewProps {
   shops: Shop[];
@@ -13,6 +13,7 @@ interface AdminViewProps {
   onOpenShopModal: () => void;
   onOpenAgentProfile: (agent: AgentMasterStatus) => void;
   onOpenPdfModal: (url: string) => void;
+  onOpenTodayClientsModal?: (agent: AgentMasterStatus) => void;
   onRefreshData?: () => void;
 }
 
@@ -24,6 +25,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onOpenShopModal,
   onOpenAgentProfile,
   onOpenPdfModal,
+  onOpenTodayClientsModal,
   onRefreshData
 }) => {
   const [subTab, setSubTab] = useState<'manage' | 'stats' | 'leads' | 'reports'>(
@@ -415,19 +417,25 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   key={agent.id}
                   className="glass-card p-4 border border-white/10 hover:border-red-500/40 transition-all space-y-2.5"
                 >
-                  <div className="flex items-center justify-between">
-                    <div 
-                      onClick={() => onOpenAgentProfile(agent)}
-                      className="flex items-center space-x-3 cursor-pointer flex-1"
-                    >
-                      <div className="relative">
+                  <div className="flex items-start justify-between gap-2 w-full">
+                    <div className="flex items-start space-x-3 flex-1 min-w-0">
+                      <div className="relative shrink-0">
                         <div className="w-10 h-10 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center font-black text-white text-sm">
                           {agent.name[0]}
                         </div>
-                        <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-black ${statusDotColor}`} />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (agent.status === 'Présent' && onOpenTodayClientsModal) {
+                              onOpenTodayClientsModal(agent);
+                            }
+                          }}
+                          className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-black ${statusDotColor} ${agent.status === 'Présent' ? 'cursor-pointer hover:scale-110' : 'cursor-default'}`}
+                          title={agent.status === 'Présent' ? 'Voir les clients du jour' : undefined}
+                        />
                       </div>
 
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <p className="text-xs font-black uppercase text-white hover:text-red-400 transition-colors">{agent.name}</p>
                         <p className="text-[9px] font-bold text-gray-400 uppercase">
                           {agent.shop} • <span className={agent.status === 'Absent' ? 'text-red-400' : 'text-emerald-400'}>{agent.status}</span>
@@ -435,7 +443,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 shrink-0">
                       {/* Direct PDF Report Button if Clôturé or report exists */}
                       {agent.reportObj && (
                         <button
@@ -452,11 +460,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       )}
 
                       <button
-                        onClick={() => onOpenAgentProfile(agent)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenAgentProfile(agent);
+                        }}
                         className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl border border-white/10 transition-all shrink-0"
-                        title="Voir l'historique + clients du jour"
+                        title="Voir l'historique des rapports"
                       >
-                        <ChevronRight className="w-4 h-4" />
+                        <NotebookText className="w-4 h-4" />
                       </button>
                     </div>
                   </div>

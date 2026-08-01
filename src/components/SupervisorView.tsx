@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, Shop, AgentMasterStatus } from '../types';
 import { getSupervisorLiveView, getReports, getUsers, getLeads, updateUserShopAssignment } from '../utils/storage';
 import { TabType } from './BottomNav';
-import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, ChevronRight } from 'lucide-react';
+import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText } from 'lucide-react';
 
 interface SupervisorViewProps {
   currentUser: User;
@@ -10,6 +10,7 @@ interface SupervisorViewProps {
   shops: Shop[];
   onOpenPdfModal: (url: string) => void;
   onOpenAgentProfile?: (agent: AgentMasterStatus) => void;
+  onOpenTodayClientsModal?: (agent: AgentMasterStatus) => void;
   onRefreshData?: () => void;
 }
 
@@ -19,6 +20,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   shops,
   onOpenPdfModal,
   onOpenAgentProfile,
+  onOpenTodayClientsModal,
   onRefreshData
 }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -170,11 +172,11 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
             return (
               <div key={item.id} className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition-all">
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-2 w-full">
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-xs font-black uppercase text-white">{item.name}</h3>
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap w-full">
+                      <h3 className="text-xs font-black uppercase text-white flex-1 min-w-[140px]">{item.name}</h3>
+                      <div className="flex items-center gap-2 flex-1 justify-end min-w-[180px]">
                         <select
                           value={inlineAssignShop[item.id] || ''}
                           onChange={(e) => {
@@ -192,7 +194,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                             setInlineAssignShop(prev => ({ ...prev, [item.id]: '' }));
                             if (onRefreshData) onRefreshData();
                           }}
-                          className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5 text-white text-[10px] font-bold min-w-[110px]"
+                          className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5 text-white text-[10px] font-bold flex-1 min-w-[110px]"
                         >
                           <option value="">Shop</option>
                           {shops.map(s => (
@@ -211,10 +213,10 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                               status: item.status,
                               trend: [4, 7, 5, 12, 18, 14, totalLeads]
                             })}
-                            className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl border border-white/10 transition-all"
-                            title="Voir l'historique + clients du jour"
+                            className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl border border-white/10 transition-all shrink-0"
+                            title="Voir l'historique des rapports"
                           >
-                            <ChevronRight className="w-4 h-4" />
+                            <NotebookText className="w-4 h-4" />
                           </button>
                         )}
                       </div>
@@ -233,9 +235,25 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   </div>
 
                   <div className="flex items-center space-x-2 shrink-0">
-                    <span className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg}`}>
+                    <button
+                      onClick={() => {
+                        if (item.status === 'Présent' && onOpenTodayClientsModal) {
+                          onOpenTodayClientsModal({
+                            id: item.id,
+                            name: item.name,
+                            phone: '0810000000',
+                            shop: item.shop,
+                            shopId: '',
+                            status: item.status,
+                            trend: [4, 7, 5, 12, 18, 14, totalLeads]
+                          });
+                        }
+                      }}
+                      className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg} ${item.status === 'Présent' ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
+                      title={item.status === 'Présent' ? 'Voir les clients du jour' : undefined}
+                    >
                       {item.status}
-                    </span>
+                    </button>
 
                     {item.reportObj && (
                       <button

@@ -31,6 +31,7 @@ import { ShopModal } from './components/Modals/ShopModal';
 import { PasswordModal } from './components/Modals/PasswordModal';
 import { PdfViewerModal } from './components/Modals/PdfViewerModal';
 import { AgentProfileModal } from './components/Modals/AgentProfileModal';
+import { TodayClientsModal } from './components/Modals/TodayClientsModal';
 import { GSheetModal } from './components/Modals/GSheetModal';
 import { getGSheetConfig, syncFromGoogleSheetUrl } from './utils/googleSheetsSync';
 
@@ -71,6 +72,7 @@ export default function App() {
   const [isGSheetModalOpen, setIsGSheetModalOpen] = useState(false);
   const [pdfModalUrl, setPdfModalUrl] = useState<string | null>(null);
   const [selectedAgentForProfile, setSelectedAgentForProfile] = useState<AgentMasterStatus | null>(null);
+  const [selectedAgentForTodayClients, setSelectedAgentForTodayClients] = useState<AgentMasterStatus | null>(null);
   const [online, setOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [syncPendingCount, setSyncPendingCount] = useState(0);
@@ -177,8 +179,8 @@ export default function App() {
   const agentReports = getReports().filter((r) => r.agent_id === effectiveUser.id);
   const notifications = getNotifications(effectiveUser.id);
   const todayCheckinPhoto = getTodayCheckinPhoto(effectiveUser.id);
-  const selectedAgentTodayLeads = selectedAgentForProfile
-    ? getLeads().filter((l) => l.agent_id === selectedAgentForProfile.id && toISO(l.timestamp) === todayStr)
+  const selectedAgentTodayLeads = selectedAgentForTodayClients
+    ? getLeads().filter((l) => l.agent_id === selectedAgentForTodayClients.id && toISO(l.timestamp) === todayStr)
     : [];
 
   const handleSimulateUserChange = (userId: string) => {
@@ -216,6 +218,7 @@ export default function App() {
           onOpenShopModal={() => setIsShopModalOpen(true)}
           onOpenAgentProfile={(agent) => setSelectedAgentForProfile(agent)}
           onOpenPdfModal={(url) => setPdfModalUrl(url)}
+          onOpenTodayClientsModal={(agent) => setSelectedAgentForTodayClients(agent)}
           onRefreshData={refreshData}
         />
       );
@@ -229,6 +232,7 @@ export default function App() {
           shops={shops}
           onOpenPdfModal={(url) => setPdfModalUrl(url)}
           onOpenAgentProfile={(agent) => setSelectedAgentForProfile(agent)}
+          onOpenTodayClientsModal={(agent) => setSelectedAgentForTodayClients(agent)}
           onRefreshData={refreshData}
         />
       );
@@ -353,13 +357,19 @@ export default function App() {
         isOpen={!!selectedAgentForProfile}
         agent={selectedAgentForProfile}
         agentReports={getReports().filter((r) => r.agent_id === selectedAgentForProfile?.id)}
-        dayLeads={selectedAgentTodayLeads}
         onClose={() => setSelectedAgentForProfile(null)}
         onOpenPdf={(url) => setPdfModalUrl(url)}
         onCompileAgent={() => {
           setSelectedAgentForProfile(null);
           setActiveTab('admin');
         }}
+      />
+
+      <TodayClientsModal
+        isOpen={!!selectedAgentForTodayClients}
+        agent={selectedAgentForTodayClients}
+        dayLeads={selectedAgentTodayLeads}
+        onClose={() => setSelectedAgentForTodayClients(null)}
       />
 
       <GSheetModal
