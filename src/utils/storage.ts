@@ -76,7 +76,8 @@ function pushNotification(userId: string, message: string, type: string): Notifi
     message,
     type,
     is_read: false,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    deleted: undefined
   };
 
   try {

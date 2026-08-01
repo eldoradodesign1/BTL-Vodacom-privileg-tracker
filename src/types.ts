@@ -75,6 +75,7 @@ export interface DailyReport {
 }
 
 export interface NotificationItem {
+  deleted: any;
   id: string;
   user_id: string;
   message: string;
