@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Lead } from '../../types';
-import { getTargetsByShop, getShopById, addReport, addCheckin, getCheckins, toISO, resolveStoredPhotoUrl } from '../../utils/storage';
+import { getTargetsByShop, getShopById, addReport, addCheckin, getCheckins, toISO, resolveStoredPhotoUrl, getLeads, isMatchAgent } from '../../utils/storage';
 import { generateAgentPDF } from '../../utils/pdfGenerator';
 import { FileText, Plus, X, Image as ImageIcon } from 'lucide-react';
 
@@ -81,6 +81,21 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     const todayCheckins = getCheckins().filter(c => c.agent_id === currentUser.id && toISO(c.timestamp) === toISO(nowIso));
     const inCheck = todayCheckins.find(c => c.type === 'IN');
     const pointagePhoto = resolveStoredPhotoUrl(inCheck?.photo_drive_url || inCheck?.photo) || '';
+    const targetTotal = Math.max(1, (targets.privilege || 0) + (targets.roaming || 0) + (targets.bundle || 0));
+    const evolutionSeries = (() => {
+      const allLeads = getLeads();
+      const matchingLeads = allLeads.filter(l => l.agent_id === currentUser.id || l.agent_id === currentUser.name || isMatchAgent(l.agent_id, currentUser));
+      const sortedDates = Array.from(new Set(matchingLeads.map(l => toISO(l.timestamp)).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+      const datesToInclude = sortedDates.includes(reportDate) ? sortedDates : [...sortedDates, reportDate].filter(Boolean).sort((a, b) => a.localeCompare(b));
+      let cumulative = 0;
+      const evolutionActivationData = datesToInclude.map((date) => {
+        const dayLeads = matchingLeads.filter(l => toISO(l.timestamp) === date);
+        cumulative += dayLeads.length;
+        return cumulative;
+      });
+      const evolutionTargetData = datesToInclude.map((_, index) => targetTotal * (index + 1));
+      return { evolutionTargetData, evolutionActivationData };
+    })();
 
     // Auto silent OUT check-in
     const outCheckin = addCheckin({
@@ -117,7 +132,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       leads: todayLeads,
       pointagePhoto,
       photos,
-      comment
+      comment,
+      evolutionTargetData: evolutionSeries.evolutionTargetData,
+      evolutionActivationData: evolutionSeries.evolutionActivationData
     });
 
     const savedReport = addReport({

@@ -18,6 +18,8 @@ export interface PDFReportData {
   photos: string[];
   comment?: string;
   evolutionData?: number[];
+  evolutionTargetData?: number[];
+  evolutionActivationData?: number[];
 }
 
 export interface PDFSupervisorData {
@@ -53,36 +55,47 @@ function escapeHtml(value: string | number | undefined): string {
     .replace(/'/g, '&#39;');
 }
 
-function buildEvolutionSvg(values: number[]): string {
-  if (!values.length) {
+function buildEvolutionSvg(targetValues: number[], activationValues: number[]): string {
+  const targetClean = targetValues.filter(v => Number.isFinite(v));
+  const activationClean = activationValues.filter(v => Number.isFinite(v));
+  const allValues = [...targetClean, ...activationClean];
+
+  if (!targetClean.length && !activationClean.length) {
     return `<div style="margin-top:8px; font-size:10px; color:#64748b; font-style:italic;">Aucune évolution disponible pour cette période.</div>`;
   }
 
-  const clean = values.filter(v => Number.isFinite(v));
-  if (clean.length < 2) {
-    return `<div style="margin-top:8px; font-size:10px; color:#64748b; font-style:italic;">Évolution à partir du premier rapport disponible.</div>`;
-  }
-
-  const max = Math.max(...clean, 1);
+  const max = Math.max(...allValues, 1);
   const width = 260;
   const height = 90;
   const padding = 16;
-  const step = clean.length > 1 ? (width - padding * 2) / (clean.length - 1) : 0;
-  const points = clean.map((value, idx) => {
-    const x = padding + step * idx;
-    const y = height - padding - ((value / max) * (height - padding * 2));
-    return `${x},${y}`;
-  }).join(' ');
+  const count = Math.max(targetClean.length, activationClean.length, 1);
+  const step = count > 1 ? (width - padding * 2) / (count - 1) : 0;
 
-  const lastValue = clean[clean.length - 1];
+  const buildPoints = (values: number[]) => {
+    if (!values.length) return '';
+    return values.map((value, idx) => {
+      const x = padding + step * idx;
+      const y = height - padding - ((value / max) * (height - padding * 2));
+      return `${x},${y}`;
+    }).join(' ');
+  };
+
+  const targetPoints = buildPoints(targetClean);
+  const activationPoints = buildPoints(activationClean);
+  const targetLast = targetClean[targetClean.length - 1] ?? 0;
+  const activationLast = activationClean[activationClean.length - 1] ?? 0;
+
   return `
     <div style="margin-top:8px;">
       <svg width="100%" height="100" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="display:block; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
         <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#cbd5e1" stroke-width="1" />
-        <polyline fill="none" stroke="#dc2626" stroke-width="3" points="${points}" />
-        <circle cx="${padding + step * (clean.length - 1)}" cy="${height - padding - ((lastValue / max) * (height - padding * 2))}" r="4" fill="#dc2626" />
+        ${targetPoints ? `<polyline fill="none" stroke="#2563eb" stroke-width="2.2" stroke-dasharray="4 3" points="${targetPoints}" />` : ''}
+        ${activationPoints ? `<polyline fill="none" stroke="#dc2626" stroke-width="3" points="${activationPoints}" />` : ''}
       </svg>
-      <div style="font-size:10px; color:#64748b; margin-top:4px;">Dernier total: <b>${lastValue}</b></div>
+      <div style="font-size:10px; color:#e2e8f0; margin-top:4px; display:flex; gap:10px; flex-wrap:wrap;">
+        <span>🎯 Targets cum.: <b>${targetLast}</b></span>
+        <span>📈 Activations cum.: <b>${activationLast}</b></span>
+      </div>
     </div>
   `;
 }
@@ -155,7 +168,7 @@ export function buildAgentReportHtml(d: PDFReportData): string {
        </div>`
     : '';
 
-  const evolutionHtml = buildEvolutionSvg(d.evolutionData || []);
+  const evolutionHtml = buildEvolutionSvg(d.evolutionTargetData || [], d.evolutionActivationData || d.evolutionData || []);
 
   return `
     <div style="background:linear-gradient(135deg,#0f172a 0%,#111827 48%,#7f1d1d 100%); color:#fff; border-radius:20px; padding:18px; margin-bottom:16px; box-shadow:0 12px 30px rgba(2,6,23,0.35); position:relative; overflow:hidden;">

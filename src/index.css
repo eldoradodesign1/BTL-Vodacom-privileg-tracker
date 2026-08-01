@@ -319,7 +319,7 @@ body::after {
   background-repeat: no-repeat;
   background-position: center;
   background-size: 44% auto;
-  opacity: 0.035;
+  opacity: 0.30;
   pointer-events: none;
   mix-blend-mode: screen;
   z-index: 0;

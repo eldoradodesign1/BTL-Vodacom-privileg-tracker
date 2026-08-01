@@ -827,6 +827,8 @@ export async function getReportPdf(report: DailyReport): Promise<string> {
   const pointageIn = allCheckins.find(c => c.agent_id === report.agent_id && toISO(c.timestamp) === toISO(report.date) && c.type === 'IN');
   const pointagePhoto = resolveStoredPhotoUrl(pointageIn?.photo_drive_url || pointageIn?.photo || report.pointage_photo) || '';
 
+  const evolutionSeries = buildAgentEvolutionSeries(report.agent_id, report.agent_name, report.date, targets);
+
   const generatedUrl = await generateAgentPDF({
     agentName: report.agent_name,
     shopName: report.shop_name || shopObj?.name || 'Vodacom Shop',
@@ -847,7 +849,9 @@ export async function getReportPdf(report: DailyReport): Promise<string> {
     })),
     pointagePhoto,
     photos: report.photos || [],
-    comment: report.comment || ''
+    comment: report.comment || '',
+    evolutionTargetData: evolutionSeries.evolutionTargetData,
+    evolutionActivationData: evolutionSeries.evolutionActivationData
   });
 
   pdfCache.set(report.id, generatedUrl);
@@ -891,6 +895,8 @@ function buildReportPreviewData(report: DailyReport): PDFReportData {
   const reportLeads = allLeads.filter(l => l.agent_id === report.agent_id && toISO(l.timestamp) === toISO(report.date));
   const pointageIn = allCheckins.find(c => c.agent_id === report.agent_id && toISO(c.timestamp) === toISO(report.date) && c.type === 'IN');
 
+  const evolutionSeries = buildAgentEvolutionSeries(report.agent_id, report.agent_name, report.date, targets);
+
   return {
     agentName: report.agent_name,
     shopName: report.shop_name || shopObj?.name || 'Vodacom Shop',
@@ -911,7 +917,9 @@ function buildReportPreviewData(report: DailyReport): PDFReportData {
     })),
     pointagePhoto: resolveStoredPhotoUrl(report.pointage_photo || pointageIn?.photo_drive_url || pointageIn?.photo) || '',
     photos: report.photos || [],
-    comment: report.comment || ''
+    comment: report.comment || '',
+    evolutionTargetData: evolutionSeries.evolutionTargetData,
+    evolutionActivationData: evolutionSeries.evolutionActivationData
   };
 }
 
@@ -1035,6 +1043,36 @@ export function isMatchAgent(recordAgent: string | undefined, user: User | undef
   const uid = user.id.trim().toLowerCase();
   const uname = user.name.trim().toLowerCase();
   return r === uid || r === uname || r.includes(uname) || uname.includes(r);
+}
+
+function buildAgentEvolutionSeries(agentId: string, agentName: string, reportDate: string, targets: { privilege: number; roaming: number; bundle: number }): { evolutionTargetData: number[]; evolutionActivationData: number[] } {
+  const allLeads = getLeads();
+  const matchingLeads = allLeads.filter(l => {
+    const recordAgent = l.agent_id || '';
+    return recordAgent === agentId || recordAgent === agentName || isMatchAgent(recordAgent, { id: agentId, name: agentName, role: 'agent' } as User);
+  });
+
+  const sortedDates = Array.from(new Set(
+    matchingLeads.map(l => toISO(l.timestamp)).filter(Boolean)
+  )).sort((a, b) => a.localeCompare(b));
+
+  const datesToInclude = sortedDates.includes(reportDate) ? sortedDates : [...sortedDates, reportDate].filter(Boolean).sort((a, b) => a.localeCompare(b));
+
+  if (datesToInclude.length === 0) {
+    return { evolutionTargetData: [], evolutionActivationData: [] };
+  }
+
+  let cumulative = 0;
+  const evolutionActivationData = datesToInclude.map((date) => {
+    const dayLeads = matchingLeads.filter(l => toISO(l.timestamp) === date);
+    cumulative += dayLeads.length;
+    return cumulative;
+  });
+
+  const targetTotal = Math.max(1, (targets.privilege || 0) + (targets.roaming || 0) + (targets.bundle || 0));
+  const evolutionTargetData = datesToInclude.map((_, index) => targetTotal * (index + 1));
+
+  return { evolutionTargetData, evolutionActivationData };
 }
 
 // --- AGENT MASTER LIST & SUPERVISOR LIVE VIEW ---
