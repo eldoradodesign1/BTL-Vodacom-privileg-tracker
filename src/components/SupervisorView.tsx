@@ -566,10 +566,12 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   'border-slate-300/40 bg-slate-400/10 text-slate-300',
                   'border-amber-700/40 bg-amber-800/10 text-amber-600'
                 ];
+                const trophyName = idx === 0 ? 'Gold' : (idx === 1 ? 'Silver' : 'Bronze');
                 return (
                   <div
                     key={item.id}
-                    className={`p-3 rounded-2xl border flex items-center justify-between ${colors[idx] || 'border-white/10 bg-white/5'}`}
+                    className={`podium-card p-3 rounded-2xl border flex items-center justify-between ${colors[idx] || 'border-white/10 bg-white/5'}`}
+                    style={{ ['--podium-watermark' as string]: `url('/trophees/Trophee_${trophyName}.png')` }}
                   >
                     <div className="flex items-center space-x-3">
                       <span className="text-lg font-black w-6 text-center">#{idx + 1}</span>

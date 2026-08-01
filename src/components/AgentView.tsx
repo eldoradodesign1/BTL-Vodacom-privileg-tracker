@@ -77,6 +77,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
 
   const allUsers = getUsers();
   const sameTeamAgents = allUsers.filter(u => u.role === 'agent' && u.supervisorId === currentUser.supervisorId);
+  const allAgents = allUsers.filter(u => u.role === 'agent');
   const activityRanking = sameTeamAgents
     .map(agent => {
       const total = getLeads().filter(l => (l.agent_id === agent.id || l.agent_id === agent.name || isMatchAgent(l.agent_id, agent)) && toISO(l.timestamp) === todayStr).length;
@@ -84,8 +85,18 @@ export const AgentView: React.FC<AgentViewProps> = ({
     })
     .filter(agent => agent.total > 0)
     .sort((a, b) => b.total - a.total);
-  const myTodayRank = activityRanking.findIndex(agent => agent.id === currentUser.id) + 1;
-  const showPodium = activityRanking.length > 0;
+  const globalActivityRanking = allAgents
+    .map(agent => {
+      const total = getLeads().filter(l => (l.agent_id === agent.id || l.agent_id === agent.name || isMatchAgent(l.agent_id, agent)) && toISO(l.timestamp) === todayStr).length;
+      return { ...agent, total };
+    })
+    .filter(agent => agent.total > 0)
+    .sort((a, b) => b.total - a.total);
+  const myTodayTotal = globalActivityRanking.find(agent => agent.id === currentUser.id)?.total ?? todayLeads.length;
+  const myTodayRank = myTodayTotal > 0 ? globalActivityRanking.findIndex(agent => agent.id === currentUser.id) + 1 : 0;
+  const podiumTier = myTodayRank === 1 ? 'gold' : (myTodayRank === 2 ? 'silver' : (myTodayRank === 3 ? 'bronze' : null));
+  const podiumLabel = myTodayTotal > 0 ? `#${myTodayRank}` : 'Non classé';
+  const showPodium = true;
 
   // All history leads registered by this agent
   const allAgentLeads = getLeads().filter(l => 
@@ -457,21 +468,21 @@ export const AgentView: React.FC<AgentViewProps> = ({
       </div>
 
       {showPodium && (
-        <div className="rank-card-podium podium-1 animate-pop">
+        <div className={`rank-card-podium animate-pop ${podiumTier ? `podium-${podiumTier}` : 'podium-neutral'}`} style={podiumTier ? { ['--podium-watermark' as string]: `url('/trophees/Trophee_${podiumTier === 'gold' ? 'Gold' : (podiumTier === 'silver' ? 'Silver' : 'Bronze')}.png')` } : undefined}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
-                <Trophy className="w-8 h-8 text-amber-400" />
+              <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center backdrop-blur-sm">
+                <Trophy className={`w-8 h-8 ${podiumTier === 'gold' ? 'text-amber-400' : (podiumTier === 'silver' ? 'text-slate-300' : 'text-amber-700')}`} />
               </div>
               <div>
-                <span className="text-[9px] font-black uppercase tracking-wider text-amber-400">Position Équipe</span>
-                <h3 className="text-lg font-black uppercase text-white">#{myTodayRank || 1} {myTodayRank === 1 ? 'Leader' : 'Activité'}</h3>
+                <span className="text-[9px] font-black uppercase tracking-wider text-amber-400">Position</span>
+                <h3 className="text-lg font-black uppercase text-white">{podiumLabel}</h3>
               </div>
             </div>
 
             <div className="text-right">
               <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Aujourd'hui</span>
-              <span className="text-3xl font-black text-white">{activityRanking[0]?.total || todayLeads.length}</span>
+              <span className="text-3xl font-black text-white">{myTodayTotal}</span>
             </div>
           </div>
         </div>

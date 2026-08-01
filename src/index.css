@@ -296,19 +296,59 @@ body::after {
   box-shadow: 0 0 10px #3b82f6;
 }
 
+.rank-card-podium,
+.podium-card {
+  position: relative;
+  overflow: hidden;
+}
+
 .rank-card-podium {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.02) 100%);
   padding: 24px;
   border-radius: var(--radius-xl);
   border: 1px solid var(--glass-border);
-  position: relative;
-  overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5), 0 0 20px var(--voda-red-glow);
 }
 
-.podium-1 {
-  border-color: var(--voda-gold);
-  background: rgba(255, 215, 0, 0.05);
+.rank-card-podium::before,
+.podium-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--podium-watermark, none);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 44% auto;
+  opacity: 0.035;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  z-index: 0;
+}
+
+.rank-card-podium > *,
+.podium-card > * {
+  position: relative;
+  z-index: 1;
+}
+
+.podium-gold {
+  border-color: rgba(255, 215, 0, 0.45);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+}
+
+.podium-silver {
+  border-color: rgba(192, 192, 192, 0.45);
+  background: linear-gradient(135deg, rgba(192, 192, 192, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+}
+
+.podium-bronze {
+  border-color: rgba(205, 127, 50, 0.45);
+  background: linear-gradient(135deg, rgba(205, 127, 50, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
+}
+
+.podium-neutral {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
 }
 
 .modal-sheet {
