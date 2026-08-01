@@ -23,7 +23,7 @@ export const DRIVE_FOLDERS = {
 };
 
 function pushNotification(userId: string, message: string, type: string): NotificationItem {
-  const notifs = loadItem<NotificationItem[]>(STORAGE_KEYS.NOTIFS, INITIAL_NOTIFICATIONS);
+  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
   const item: NotificationItem = {
     id: generateUUID(),
     user_id: userId,
@@ -35,6 +35,35 @@ function pushNotification(userId: string, message: string, type: string): Notifi
   notifs.unshift(item);
   saveItem(STORAGE_KEYS.NOTIFS, notifs);
   return item;
+}
+
+function loadStoredArray<T>(key: string, legacyKeys: string[], fallback: T): T {
+  const tryParse = (raw: string | null): T | null => {
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as T;
+      return parsed as T;
+    } catch {
+      return null;
+    }
+  };
+
+  const currentValue = tryParse(localStorage.getItem(key));
+  if (currentValue && (Array.isArray(currentValue) ? currentValue.length > 0 : true)) {
+    return currentValue;
+  }
+
+  for (const legacyKey of legacyKeys) {
+    const legacyValue = tryParse(localStorage.getItem(legacyKey));
+    if (legacyValue) {
+      saveItem(key, legacyValue);
+      return legacyValue;
+    }
+  }
+
+  saveItem(key, fallback);
+  return fallback;
 }
 
 function mergeUsersWithSeedData(storedUsers: User[]): User[] {
@@ -810,25 +839,25 @@ export function getReportPreviewHtml(report: DailyReport): string {
 
 // --- NOTIFICATIONS ---
 export function getNotifications(userId: string): NotificationItem[] {
-  const notifs: NotificationItem[] = loadItem(STORAGE_KEYS.NOTIFS, INITIAL_NOTIFICATIONS);
+  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
   return notifs.filter(n => n.user_id === userId);
 }
 
 export function markNotifsAsRead(userId: string): void {
-  const notifs: NotificationItem[] = loadItem(STORAGE_KEYS.NOTIFS, INITIAL_NOTIFICATIONS);
+  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
   const updated = notifs.map(n => n.user_id === userId ? { ...n, is_read: true } : n);
   saveItem(STORAGE_KEYS.NOTIFS, updated);
 }
 
 export function clearNotifications(userId: string): void {
-  const notifs: NotificationItem[] = loadItem(STORAGE_KEYS.NOTIFS, INITIAL_NOTIFICATIONS);
+  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
   const updated = notifs.filter(n => n.user_id !== userId);
   saveItem(STORAGE_KEYS.NOTIFS, updated);
 }
 
 // --- CHAT ---
 export function getChatMessages(): ChatMessage[] {
-  return loadItem(STORAGE_KEYS.CHAT, INITIAL_CHAT).filter(m => !m.deleted);
+  return loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT).filter(m => !m.deleted);
 }
 
 export function sendChatMessage(sender: User, message: string): ChatMessage {
@@ -847,7 +876,11 @@ export function sendChatMessage(sender: User, message: string): ChatMessage {
     read_by: [sender.id]
   };
   msgs.push(newMsg);
-  saveItem(STORAGE_KEYS.CHAT, msgs);
+  const nextMsgs = [...msgs];
+  localStorage.setItem(STORAGE_KEYS.CHAT, JSON.stringify(nextMsgs));
+  localStorage.setItem('vodacom_chat', JSON.stringify(nextMsgs));
+  localStorage.setItem('vodacom_chat_v5', JSON.stringify(nextMsgs));
+  localStorage.setItem('vodacom_chat_v4', JSON.stringify(nextMsgs));
 
   if (sender.role === 'admin') {
     recipients.forEach(uid => {
@@ -860,7 +893,7 @@ export function sendChatMessage(sender: User, message: string): ChatMessage {
 
 export function deleteChatMessage(messageId: string, actor: User): boolean {
   if (actor.role !== 'admin') return false;
-  const msgs = loadItem<ChatMessage[]>(STORAGE_KEYS.CHAT, INITIAL_CHAT);
+  const msgs = loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT);
   const idx = msgs.findIndex(m => m.id === messageId);
   if (idx === -1) return false;
   msgs[idx] = {
@@ -874,7 +907,7 @@ export function deleteChatMessage(messageId: string, actor: User): boolean {
 }
 
 export function markChatAsRead(userId: string): void {
-  const msgs = loadItem<ChatMessage[]>(STORAGE_KEYS.CHAT, INITIAL_CHAT);
+  const msgs = loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT);
   const updated = msgs.map(m => {
     if (m.sender_id === userId || m.deleted) return m;
     const readBy = m.read_by || [];
@@ -885,7 +918,7 @@ export function markChatAsRead(userId: string): void {
 }
 
 export function getUnreadChatCount(userId: string): number {
-  const msgs = loadItem<ChatMessage[]>(STORAGE_KEYS.CHAT, INITIAL_CHAT);
+  const msgs = loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT);
   return msgs.filter(m => !m.deleted && m.sender_id !== userId && !(m.read_by || []).includes(userId)).length;
 }
 
