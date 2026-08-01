@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { User, Shop, AgentMasterStatus } from '../types';
-import { getSupervisorLiveView, getReportPdf, getReports, getUsers, updateUserShopAssignment } from '../utils/storage';
-import { generateSupervisorPDF } from '../utils/pdfGenerator';
+import { getSupervisorLiveView, getReports, getUsers, getLeads, updateUserShopAssignment } from '../utils/storage';
 import { TabType } from './BottomNav';
 import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, ChevronRight } from 'lucide-react';
 
@@ -25,8 +24,10 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [shopFilter, setShopFilter] = useState('ALL');
   const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
   const [assigningShopId, setAssigningShopId] = useState<string>('');
+  const [inlineAssignShop, setInlineAssignShop] = useState<Record<string, string>>({});
 
   const teamData = getSupervisorLiveView(currentUser.id, selectedDate);
   const allUsers = getUsers();
@@ -35,22 +36,54 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const activeCount = teamData.filter(t => t.status !== 'Absent').length;
   const closedCount = teamData.filter(t => t.status === 'Clôturé').length;
 
-  // Podium sorting
-  const sortedPodium = [...teamData].sort((a, b) => {
-    const totalA = a.stats.priv + a.stats.roam + a.stats.bund;
-    const totalB = b.stats.priv + b.stats.roam + b.stats.bund;
-    return totalB - totalA;
-  });
+  // Podium sorting only when there is real activity
+  const sortedPodium = [...teamData]
+    .filter(item => (item.stats.priv + item.stats.roam + item.stats.bund) > 0)
+    .sort((a, b) => {
+      const totalA = a.stats.priv + a.stats.roam + a.stats.bund;
+      const totalB = b.stats.priv + b.stats.roam + b.stats.bund;
+      return totalB - totalA;
+    });
 
   const handleGenerateSupervisorReport = async () => {
     setLoading(true);
-    const pdfUrl = await generateSupervisorPDF({
+    const reports = teamData
+      .filter(item => item.reportObj)
+      .map(item => {
+        const reportLeads = getLeads().filter(l => l.agent_id === item.id && l.timestamp.startsWith(selectedDate));
+        return {
+          agentName: item.name,
+          shopName: item.shop,
+          date: selectedDate,
+          arrivalTime: item.reportObj?.arrival_time || '08:00',
+          departureTime: item.reportObj?.departure_time || '17:30',
+          mapsIn: item.reportObj?.maps_in || '',
+          mapsOut: item.reportObj?.maps_out || '',
+          totalPrivilege: item.reportObj?.priv ?? item.stats.priv,
+          totalRoaming: item.reportObj?.roam ?? item.stats.roam,
+          totalBundles: item.reportObj?.bund ?? item.stats.bund,
+          targets: { privilege: 20, roaming: 20, bundle: 20 },
+          leads: reportLeads.map(l => ({
+            timestamp: l.timestamp,
+            client_name: l.client_name,
+            msisdn: l.msisdn,
+            action_type: l.action_type
+          })),
+          pointagePhoto: item.reportObj?.pointage_photo || '',
+          photos: item.reportObj?.photos || [],
+          comment: item.reportObj?.comment || '',
+          evolutionData: [item.stats.priv, item.stats.priv + item.stats.roam, item.stats.priv + item.stats.roam + item.stats.bund]
+        };
+      });
+
+    const payload = {
       supName: currentUser.name,
       date: selectedDate,
-      team: teamData
-    });
+      team: teamData,
+      reports
+    };
     setLoading(false);
-    onOpenPdfModal(pdfUrl);
+    onOpenPdfModal(`preview-supervisor:${encodeURIComponent(JSON.stringify(payload))}`);
   };
 
   const handleAssignShopSubmit = (userId: string, shopId: string) => {
@@ -62,8 +95,9 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   // --- TAB 2: MONITORING ---
   if (activeTab === 'tab2') {
     const filteredTeam = teamData.filter(item =>
-      item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.shop.toLowerCase().includes(searchQuery.toLowerCase())
+      (item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.shop.toLowerCase().includes(searchQuery.toLowerCase()))
+      && (shopFilter === 'ALL' || item.shop === shopFilter)
     );
 
     return (
@@ -98,6 +132,17 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           />
         </div>
 
+        <select
+          value={shopFilter}
+          onChange={(e) => setShopFilter(e.target.value)}
+          className="w-full bg-black/60 border border-white/10 rounded-2xl px-3 py-2.5 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+        >
+          <option value="ALL">Tous les shops</option>
+          {[...new Set(teamData.map(t => t.shop))].map(shopName => (
+            <option key={shopName} value={shopName}>{shopName}</option>
+          ))}
+        </select>
+
         {/* Agent Cards */}
         <div className="space-y-3">
           {filteredTeam.map(item => {
@@ -125,10 +170,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
                     {item.reportObj && (
                       <button
-                        onClick={async () => {
-                          const url = await getReportPdf(item.reportObj!);
-                          onOpenPdfModal(url);
-                        }}
+                        onClick={() => onOpenPdfModal(`report-id:${item.reportObj!.id}`)}
                         className="p-1.5 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-xl border border-red-500/30 transition-all"
                         title="Voir le rapport PDF"
                       >
@@ -168,10 +210,34 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                     })}
                     className="w-full py-2 bg-white/5 hover:bg-white/10 rounded-xl text-[10px] font-black uppercase text-gray-300 border border-white/10 flex items-center justify-center space-x-1.5 transition-all"
                   >
-                    <span>Voir Historique & Profil Complet</span>
+                    <span>Voir Historique + Clients du jour</span>
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 )}
+
+                <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                  <select
+                    value={inlineAssignShop[item.id] || ''}
+                    onChange={(e) => setInlineAssignShop(prev => ({ ...prev, [item.id]: e.target.value }))}
+                    className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-[10px] font-bold"
+                  >
+                    <option value="">Affecter à un shop...</option>
+                    {shops.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => {
+                      const shopId = inlineAssignShop[item.id];
+                      if (!shopId) return;
+                      updateUserShopAssignment(item.id, shopId);
+                      if (onRefreshData) onRefreshData();
+                    }}
+                    className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[10px] font-black uppercase"
+                  >
+                    Affecter
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -233,10 +299,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   </div>
 
                   <button
-                    onClick={async () => {
-                      const url = await getReportPdf(rep);
-                      onOpenPdfModal(url);
-                    }}
+                    onClick={() => onOpenPdfModal(`report-id:${rep.id}`)}
                     className="px-3.5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[10px] font-black uppercase flex items-center space-x-1.5 shadow-md shadow-red-600/30 transition-all"
                   >
                     <Eye className="w-3.5 h-3.5" />
@@ -429,32 +492,49 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
         </div>
 
         <div className="space-y-2">
-          {sortedPodium.slice(0, 3).map((item, idx) => {
-            const total = item.stats.priv + item.stats.roam + item.stats.bund;
-            const colors = [
-              'border-amber-400/60 bg-amber-500/10 text-amber-400',
-              'border-slate-300/40 bg-slate-400/10 text-slate-300',
-              'border-amber-700/40 bg-amber-800/10 text-amber-600'
-            ];
-            return (
-              <div
-                key={item.id}
-                className={`p-3 rounded-2xl border flex items-center justify-between ${colors[idx] || 'border-white/10 bg-white/5'}`}
-              >
-                <div className="flex items-center space-x-3">
-                  <span className="text-lg font-black w-6 text-center">#{idx + 1}</span>
-                  <div>
-                    <p className="text-xs font-black uppercase text-white">{item.name}</p>
-                    <p className="text-[9px] text-gray-400 font-bold uppercase">{item.shop}</p>
+          {sortedPodium.length === 0 ? (
+            <div className="text-[10px] text-gray-400 italic">Aucune activité réelle aujourd'hui pour le podium.</div>
+          ) : (
+            <>
+              {sortedPodium.slice(0, 3).map((item, idx) => {
+                const total = item.stats.priv + item.stats.roam + item.stats.bund;
+                const colors = [
+                  'border-amber-400/60 bg-amber-500/10 text-amber-400',
+                  'border-slate-300/40 bg-slate-400/10 text-slate-300',
+                  'border-amber-700/40 bg-amber-800/10 text-amber-600'
+                ];
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-3 rounded-2xl border flex items-center justify-between ${colors[idx] || 'border-white/10 bg-white/5'}`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <span className="text-lg font-black w-6 text-center">#{idx + 1}</span>
+                      <div>
+                        <p className="text-xs font-black uppercase text-white">{item.name}</p>
+                        <p className="text-[9px] text-gray-400 font-bold uppercase">{item.shop}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-black text-white">{total}</span>
+                      <span className="text-[8px] text-gray-400 font-bold uppercase block">Leads</span>
+                    </div>
+                  </div>
+                );
+              })}
+              {sortedPodium.length > 3 && (
+                <div className="p-3 rounded-2xl border border-white/10 bg-white/5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase text-white">4e+ position</p>
+                      <p className="text-[9px] text-gray-400 font-bold uppercase">Autres agents actifs</p>
+                    </div>
+                    <span className="text-sm font-black text-white">{sortedPodium.length - 3}</span>
                   </div>
                 </div>
-                <div className="text-right">
-                  <span className="text-sm font-black text-white">{total}</span>
-                  <span className="text-[8px] text-gray-400 font-bold uppercase block">Leads</span>
-                </div>
-              </div>
-            );
-          })}
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -475,6 +555,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
         {teamData.map(item => {
           const statusBg = item.status === 'Clôturé' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
             : (item.status === 'Présent' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' : 'bg-red-500/20 text-red-400 border-red-500/40');
+          const totalLeads = item.stats.priv + item.stats.roam + item.stats.bund;
 
           return (
             <div key={item.id} className="glass-card p-4 border border-white/10 space-y-3">
@@ -491,14 +572,29 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
                   {item.reportObj && (
                     <button
-                      onClick={async () => {
-                        const url = await getReportPdf(item.reportObj!);
-                        onOpenPdfModal(url);
-                      }}
+                      onClick={() => onOpenPdfModal(`report-id:${item.reportObj!.id}`)}
                       className="p-1.5 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-xl border border-red-500/30 transition-all"
                       title="Voir le rapport PDF"
                     >
                       <Eye className="w-4 h-4" />
+                    </button>
+                  )}
+
+                  {onOpenAgentProfile && (
+                    <button
+                      onClick={() => onOpenAgentProfile({
+                        id: item.id,
+                        name: item.name,
+                        phone: '0810000000',
+                        shop: item.shop,
+                        shopId: '',
+                        status: item.status,
+                        trend: [4, 7, 5, 12, 18, 14, totalLeads]
+                      })}
+                      className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl border border-white/10 transition-all"
+                      title="Voir l'historique + clients du jour"
+                    >
+                      <ChevronRight className="w-4 h-4" />
                     </button>
                   )}
                 </div>
@@ -517,6 +613,30 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   <span className="text-[8px] text-gray-400 uppercase block">Bundles</span>
                   <span className="text-blue-400 text-xs">{item.stats.bund}</span>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                <select
+                  value={inlineAssignShop[item.id] || ''}
+                  onChange={(e) => setInlineAssignShop(prev => ({ ...prev, [item.id]: e.target.value }))}
+                  className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-[10px] font-bold"
+                >
+                  <option value="">Affecter à un shop...</option>
+                  {shops.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => {
+                    const shopId = inlineAssignShop[item.id];
+                    if (!shopId) return;
+                    updateUserShopAssignment(item.id, shopId);
+                    if (onRefreshData) onRefreshData();
+                  }}
+                  className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[10px] font-black uppercase"
+                >
+                  Affecter
+                </button>
               </div>
             </div>
           );

@@ -40,26 +40,157 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-body.light-theme {
+body.theme-classic {
   background-color: #550000 !important;
   background-image: linear-gradient(135deg, #4d0000 0%, #8c0000 35%, #ca0000 70%, #300000 100%) !important;
   background-attachment: fixed !important;
   color: #ffffff !important;
 }
 
-body.light-theme::after {
+body.theme-classic::after {
   background: rgba(255, 255, 255, 0.12);
 }
 
-body.light-theme .glass-card {
+body.theme-classic .glass-card {
   background: rgba(0, 0, 0, 0.35);
   border-color: rgba(255, 255, 255, 0.2);
   box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(230, 0, 0, 0.3);
 }
 
-body.light-theme .modal-sheet {
+body.theme-classic .modal-sheet {
   background: #2a0000;
   border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.theme-dark {
+  background-color: #09090b !important;
+  background-image: radial-gradient(circle at top right, #3d0000 0%, #09090b 60%) !important;
+  color: #ffffff !important;
+}
+
+body.theme-light {
+  background-color: #f3f4f6 !important;
+  background-image: linear-gradient(145deg, #f8fafc 0%, #eef2ff 38%, #fdecec 100%) !important;
+  color: #111827 !important;
+}
+
+body.theme-light .glass-card {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(15, 23, 42, 0.12);
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.09);
+}
+
+body.theme-light .modal-sheet {
+  background: #ffffff;
+  border-color: rgba(17, 24, 39, 0.1);
+}
+
+body.theme-light .brand-text {
+  background: linear-gradient(180deg, #0f172a 0%, #334155 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+body.theme-light .text-white {
+  color: #0f172a !important;
+}
+
+body.theme-light .text-gray-400,
+body.theme-light .text-gray-500,
+body.theme-light .text-zinc-400,
+body.theme-light .text-zinc-500 {
+  color: #475569 !important;
+}
+
+body.theme-light .bg-black\/60,
+body.theme-light .bg-black\/40,
+body.theme-light .bg-zinc-900,
+body.theme-light .bg-zinc-900\/90,
+body.theme-light .bg-white\/5,
+body.theme-light .bg-white\/10 {
+  background-color: #f8fafc !important;
+}
+
+body.theme-light .border-white\/10,
+body.theme-light .border-white\/20 {
+  border-color: rgba(15, 23, 42, 0.14) !important;
+}
+
+body.theme-light input,
+body.theme-light select,
+body.theme-light textarea {
+  color: #0f172a !important;
+  border-color: rgba(15, 23, 42, 0.18) !important;
+  background-color: #ffffff !important;
+}
+
+body.theme-light input::placeholder,
+body.theme-light textarea::placeholder {
+  color: #64748b !important;
+}
+
+body.theme-light nav {
+  background: rgba(255, 255, 255, 0.95) !important;
+  border-color: rgba(15, 23, 42, 0.12) !important;
+}
+
+body.theme-light .btn-dark {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: rgba(15, 23, 42, 0.14);
+}
+
+body.theme-light .btn-dark:hover {
+  background: #e2e8f0;
+}
+
+/* Light theme chat readability */
+body.theme-light .chat-view .chat-title {
+  color: #0f172a !important;
+}
+
+body.theme-light .chat-view .chat-subtitle {
+  color: #64748b !important;
+}
+
+body.theme-light .chat-view .chat-meta-name {
+  color: #334155 !important;
+}
+
+body.theme-light .chat-view .chat-meta-time,
+body.theme-light .chat-view .chat-delete-btn {
+  color: #64748b !important;
+}
+
+body.theme-light .chat-view .chat-delete-btn:hover {
+  color: #dc2626 !important;
+}
+
+body.theme-light .chat-view .chat-bubble-other {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+body.theme-light .chat-view .chat-bubble-me {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.25);
+}
+
+body.theme-light .chat-view .chat-input-shell {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+body.theme-light .chat-view .chat-input {
+  color: #0f172a !important;
+}
+
+body.theme-light .chat-view .chat-input::placeholder {
+  color: #64748b !important;
 }
 
 /* Dynamic halo glow */

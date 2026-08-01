@@ -38,8 +38,6 @@ export interface PDFSupervisorData {
 export interface PDFAdminBatchData {
   period: string;
   title?: string;
-  rows?: Array<{ date: string; agent: string; priv: number; roam: number; bund: number }>;
-  totals?: { privilege: number; roaming: number; bundles: number };
   reports?: PDFReportData[];
   groups?: Array<{ supervisor: string; agentCount: number; totalLeads: number; totalPrivilege: number; totalRoaming: number; totalBundles: number }>;
 }
@@ -142,10 +140,10 @@ export function buildAgentReportHtml(d: PDFReportData): string {
   const gpsOutUrl = makeGpsLink(d.mapsOut);
   const gpsInHtml = gpsInUrl
     ? `<a href="${gpsInUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:6px; font-size:9px; color:#E60000; font-weight:bold; text-decoration:none; border:1px solid #E60000; padding:4px 10px; border-radius:6px; background:#fff;">📍 Vérifier GPS (Carte)</a>`
-    : `<span style="display:inline-block; margin-top:6px; font-size:9px; color:#999; font-weight:bold; border:1px solid #ddd; padding:4px 10px; border-radius:6px; background:#fafafa;">Données GPS non disponible</span>`;
+    : `<span style="display:inline-block; margin-top:6px; font-size:9px; color:#999; font-weight:bold; border:1px solid #ddd; padding:4px 10px; border-radius:6px; background:#fafafa;">Donnees GPS non disponible</span>`;
   const gpsOutHtml = gpsOutUrl
     ? `<a href="${gpsOutUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:6px; font-size:9px; color:#E60000; font-weight:bold; text-decoration:none; border:1px solid #E60000; padding:4px 10px; border-radius:6px; background:#fff;">📍 Vérifier GPS (Carte)</a>`
-    : `<span style="display:inline-block; margin-top:6px; font-size:9px; color:#999; font-weight:bold; border:1px solid #ddd; padding:4px 10px; border-radius:6px; background:#fafafa;">Données GPS non disponible</span>`;
+    : `<span style="display:inline-block; margin-top:6px; font-size:9px; color:#999; font-weight:bold; border:1px solid #ddd; padding:4px 10px; border-radius:6px; background:#fafafa;">Donnees GPS non disponible</span>`;
 
   const photosHtml = d.photos && d.photos.length > 1
     ? `<div style="margin-top:20px; font-size:10px; font-weight:800; color:#999; text-transform:uppercase; border-bottom:1px solid #eee; padding-bottom:5px;">PREUVES TERRAIN / BOUTIQUE (PHOTOS)</div>
@@ -291,57 +289,19 @@ async function renderHtmlToPdfDataUrl(htmlContent: string): Promise<string> {
   }
 }
 
-async function renderPagesToPdfDataUrl(pageContents: string[]): Promise<string> {
-  const pdf = new jsPDF('p', 'mm', 'a4');
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-
-  for (let index = 0; index < pageContents.length; index += 1) {
-    const container = document.createElement('div');
-    container.style.position = 'fixed';
-    container.style.left = '-9999px';
-    container.style.top = '0px';
-    container.style.width = '794px';
-    container.style.backgroundColor = '#ffffff';
-    container.style.color = '#1a1a1a';
-    container.style.fontFamily = 'Helvetica, Arial, sans-serif';
-    container.style.padding = '30px';
-    container.style.boxSizing = 'border-box';
-    container.innerHTML = pageContents[index];
-
-    document.body.appendChild(container);
-
-    try {
-      const canvas = await html2canvas(container, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#ffffff'
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pageHeight = (canvas.height * pdfWidth) / canvas.width;
-      if (index > 0) pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pageHeight);
-    } finally {
-      document.body.removeChild(container);
-    }
-  }
-
-  return pdf.output('datauristring');
-}
-
 export async function generateAgentPDF(d: PDFReportData): Promise<string> {
   return renderHtmlToPdfDataUrl(buildAgentReportHtml(d));
 }
 
 export async function generateSupervisorPDF(d: PDFSupervisorData): Promise<string> {
-  return renderPagesToPdfDataUrl(buildSupervisorReportPages(d));
+  return renderHtmlToPdfDataUrl(buildSupervisorReportHtml(d));
 }
 
-function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
+export function buildSupervisorReportHtml(d: PDFSupervisorData): string {
   const activeCount = d.team.filter(a => a.status !== 'Absent').length;
   const closedCount = d.team.filter(a => a.status === 'Clôturé').length;
   const totalLeads = d.team.reduce((acc, a) => acc + a.stats.priv + a.stats.roam + a.stats.bund, 0);
+
   const cover = `
     <div style="background:linear-gradient(140deg,#111827 0%,#312e81 48%,#991b1b 100%); border-radius:24px; padding:24px; color:#fff; margin-bottom:18px;">
       <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#c4b5fd; font-weight:800;">Rapport de supervision</div>
@@ -388,10 +348,7 @@ function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
     `;
   }).join('');
 
-  const pages = [cover + summary + cards];
-  if (d.reports && d.reports.length) {
-    pages.push(...d.reports.map((report) => buildAgentReportHtml(report)));
-  }
+  const reportPages = (d.reports || []).map((report) => wrapPage(buildAgentReportHtml(report))).join('');
   const closing = `
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:18px; padding:20px;">
       <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#64748b; font-weight:800;">Clôture de compilation</div>
@@ -399,22 +356,20 @@ function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
       <div style="font-size:11px; color:#475569; margin-top:8px;">La compilation regroupe désormais les rapports journaliers des agents de la période choisie.</div>
     </div>
   `;
-  pages.push(closing);
-  return pages.map((page) => wrapPage(page));
-}
 
-export function buildSupervisorReportHtml(d: PDFSupervisorData): string {
-  return buildSupervisorReportPages(d).join('');
+  return [
+    wrapPage(cover + summary + cards),
+    ...reportPages ? [reportPages] : [],
+    wrapPage(closing)
+  ].join('');
 }
 
 export async function generateAdminBatchPDF(d: PDFAdminBatchData): Promise<string> {
-  return renderPagesToPdfDataUrl(buildAdminBatchReportPages(d));
+  return renderHtmlToPdfDataUrl(buildAdminBatchReportHtml(d));
 }
 
-function buildAdminBatchReportPages(d: PDFAdminBatchData): string[] {
+export function buildAdminBatchReportHtml(d: PDFAdminBatchData): string {
   const title = d.title || 'Compilation périodique';
-  const rows = d.rows || [];
-  const totals = d.totals || { privilege: 0, roaming: 0, bundles: 0 };
   const cover = `
     <div style="background:linear-gradient(135deg,#111827 0%,#1d4ed8 46%,#dc2626 100%); color:#fff; border-radius:24px; padding:24px; margin-bottom:18px;">
       <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#dbeafe; font-weight:800;">Compilation de période</div>
@@ -423,62 +378,25 @@ function buildAdminBatchReportPages(d: PDFAdminBatchData): string[] {
     </div>
   `;
 
-  const summary = `
-    <table style="width:100%; border-spacing:10px; margin-left:-10px; margin-bottom:10px;">
-      <tr>
-        <td style="width:25%;"><div style="background:#fff5f5; border:1px solid #fecaca; border-radius:12px; text-align:center; padding:10px;"><div style="font-size:8px; color:#991b1b; text-transform:uppercase; font-weight:800;">Privilège</div><div style="font-size:20px; font-weight:900; color:#7f1d1d;">${totals.privilege}</div></div></td>
-        <td style="width:25%;"><div style="background:#fffbeb; border:1px solid #fde68a; border-radius:12px; text-align:center; padding:10px;"><div style="font-size:8px; color:#92400e; text-transform:uppercase; font-weight:800;">Roaming</div><div style="font-size:20px; font-weight:900; color:#78350f;">${totals.roaming}</div></div></td>
-        <td style="width:25%;"><div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; text-align:center; padding:10px;"><div style="font-size:8px; color:#1e3a8a; text-transform:uppercase; font-weight:800;">Bundles</div><div style="font-size:20px; font-weight:900; color:#1d4ed8;">${totals.bundles}</div></div></td>
-        <td style="width:25%;"><div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; text-align:center; padding:10px;"><div style="font-size:8px; color:#334155; text-transform:uppercase; font-weight:800;">Lignes</div><div style="font-size:20px; font-weight:900; color:#0f172a;">${rows.length}</div></div></td>
-      </tr>
-    </table>
-  `;
+  const reportPages = (d.reports || []).map((report) => wrapPage(buildAgentReportHtml(report))).join('');
+  const groupsHtml = (d.groups || []).map((group) => `
+    <div style="border:1px solid #e2e8f0; border-radius:12px; padding:10px; margin-bottom:8px; background:#fff;">
+      <div style="font-size:11px; font-weight:900; color:#111827; text-transform:uppercase;">${escapeHtml(group.supervisor)}</div>
+      <div style="font-size:10px; color:#64748b; margin-top:4px;">Agents: <b>${group.agentCount}</b> • Leads: <b>${group.totalLeads}</b></div>
+    </div>
+  `).join('');
 
-  const rowsHtml = rows.length > 0 ? `
-    <table style="width:100%; border-collapse:collapse; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
-      <thead>
-        <tr style="background:#0f172a; color:#ffffff; border-bottom:1px solid #1e293b;">
-          <th style="text-align:left; font-size:10px; padding:10px;">Date</th>
-          <th style="text-align:left; font-size:10px; padding:10px;">Agent</th>
-          <th style="text-align:center; font-size:10px; padding:10px;">PRV</th>
-          <th style="text-align:center; font-size:10px; padding:10px;">ROA</th>
-          <th style="text-align:center; font-size:10px; padding:10px;">BND</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map((r, idx) => `
-          <tr style="border-bottom:1px solid #e5e7eb; font-size:11px; background:${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-            <td style="padding:9px;">${escapeHtml(r.date)}</td>
-            <td style="padding:9px;"><b>${escapeHtml(r.agent)}</b></td>
-            <td style="padding:9px; text-align:center; color:#991b1b; font-weight:800;">${r.priv}</td>
-            <td style="padding:9px; text-align:center; color:#92400e; font-weight:800;">${r.roam}</td>
-            <td style="padding:9px; text-align:center; color:#1e3a8a; font-weight:800;">${r.bund}</td>
-          </tr>
-        `).join('')}
-      </tbody>
-    </table>
-  ` : '<div style="font-size:11px; color:#64748b;">Aucune ligne disponible pour cette période.</div>';
-
-  const pages = [cover + summary + rowsHtml];
-  if (d.reports && d.reports.length) {
-    pages.push(...d.reports.map((report) => buildAgentReportHtml(report)));
-  }
   const closing = `
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; padding:20px;">
       <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#64748b; font-weight:800;">Clôture de compilation</div>
       <div style="font-size:24px; font-weight:900; color:#111827; margin-top:4px;">${(d.reports || []).length} rapports journaliers inclus</div>
-      <div style="margin-top:10px;">${(d.groups || []).map((group) => `
-        <div style="border:1px solid #e2e8f0; border-radius:12px; padding:10px; margin-bottom:8px; background:#fff;">
-          <div style="font-size:11px; font-weight:900; color:#111827; text-transform:uppercase;">${escapeHtml(group.supervisor)}</div>
-          <div style="font-size:10px; color:#64748b; margin-top:4px;">Agents: <b>${group.agentCount}</b> • Leads: <b>${group.totalLeads}</b></div>
-        </div>
-      `).join('') || '<div style="font-size:10px; color:#64748b;">Aucun regroupement disponible pour cette période.</div>'}</div>
+      <div style="margin-top:10px;">${groupsHtml || '<div style="font-size:10px; color:#64748b;">Aucun regroupement disponible pour cette période.</div>'}</div>
     </div>
   `;
-  pages.push(closing);
-  return pages.map((page) => wrapPage(page));
-}
 
-export function buildAdminBatchReportHtml(d: PDFAdminBatchData): string {
-  return buildAdminBatchReportPages(d).join('');
+  return [
+    wrapPage(cover),
+    reportPages,
+    wrapPage(closing)
+  ].join('');
 }

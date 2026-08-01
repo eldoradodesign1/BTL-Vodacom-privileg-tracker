@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { User, ChatMessage } from '../types';
-import { getChatMessages, sendChatMessage } from '../utils/storage';
-import { Send, MessageSquare } from 'lucide-react';
+import { deleteChatMessage, getChatMessages, sendChatMessage } from '../utils/storage';
+import { Send, MessageSquare, Trash2 } from 'lucide-react';
 
 interface ChatViewProps {
   currentUser: User;
+  onDataChanged?: () => void;
 }
 
-export const ChatView: React.FC<ChatViewProps> = ({ currentUser }) => {
+export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onDataChanged }) => {
   const [messages, setMessages] = useState<ChatMessage[]>(getChatMessages());
   const [inputText, setInputText] = useState('');
 
@@ -18,16 +19,25 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser }) => {
     const newMsg = sendChatMessage(currentUser, inputText.trim());
     setMessages(prev => [...prev, newMsg]);
     setInputText('');
+    if (onDataChanged) onDataChanged();
+  };
+
+  const handleDeleteMessage = (msgId: string) => {
+    if (!window.confirm('Supprimer ce message pour tout le monde ?')) return;
+    const ok = deleteChatMessage(msgId, currentUser);
+    if (!ok) return;
+    setMessages(getChatMessages());
+    if (onDataChanged) onDataChanged();
   };
 
   return (
-    <div className="h-[calc(100vh-180px)] flex flex-col animate-pop pb-24">
+    <div className="chat-view h-[calc(100vh-180px)] flex flex-col animate-pop pb-24">
       {/* Header */}
       <div className="flex items-center space-x-2 pb-3 border-b border-white/10 shrink-0">
         <MessageSquare className="w-5 h-5 text-red-500" />
         <div>
-          <h1 className="text-lg font-black uppercase text-white tracking-tight">Messagerie Équipe</h1>
-          <p className="text-[10px] text-gray-400 font-bold">Discussion en direct avec le réseau terrain</p>
+          <h1 className="chat-title text-lg font-black uppercase text-white tracking-tight">Messagerie Équipe</h1>
+          <p className="chat-subtitle text-[10px] text-gray-400 font-bold">Discussion en direct avec le réseau terrain</p>
         </div>
       </div>
 
@@ -42,15 +52,24 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser }) => {
               className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
             >
               <div className="flex items-center space-x-1.5 mb-1 px-1">
-                <span className="text-[9px] font-black text-gray-400 uppercase">{msg.sender_name}</span>
-                <span className="text-[8px] font-bold text-gray-500">{msg.timestamp}</span>
+                <span className="chat-meta-name text-[9px] font-black text-gray-400 uppercase">{msg.sender_name}</span>
+                <span className="chat-meta-time text-[8px] font-bold text-gray-500">{msg.timestamp}</span>
+                {currentUser.role === 'admin' && (
+                  <button
+                    onClick={() => handleDeleteMessage(msg.id)}
+                    className="chat-delete-btn p-0.5 rounded text-gray-500 hover:text-red-400"
+                    title="Supprimer le message"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                )}
               </div>
 
               <div
                 className={`max-w-[82%] px-4 py-3 rounded-2xl text-xs font-semibold leading-relaxed shadow-md ${
                   isMe
-                    ? 'bg-red-600 text-white rounded-br-none shadow-red-600/30'
-                    : 'bg-white/10 text-gray-100 rounded-bl-none border border-white/10'
+                    ? 'chat-bubble-me bg-red-600 text-white rounded-br-none shadow-red-600/30'
+                    : 'chat-bubble-other bg-white/10 text-gray-100 rounded-bl-none border border-white/10'
                 }`}
               >
                 {msg.message}
@@ -61,13 +80,13 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser }) => {
       </div>
 
       {/* Input Area */}
-      <form onSubmit={handleSend} className="shrink-0 flex items-center space-x-2 bg-white/5 border border-white/10 rounded-2xl p-2">
+      <form onSubmit={handleSend} className="chat-input-shell shrink-0 flex items-center space-x-2 bg-white/5 border border-white/10 rounded-2xl p-2">
         <input
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           placeholder="Écrire à l'équipe terrain..."
-          className="flex-1 bg-transparent border-0 px-3 py-2 text-white text-xs font-medium focus:outline-none placeholder:text-gray-500"
+          className="chat-input flex-1 bg-transparent border-0 px-3 py-2 text-white text-xs font-medium focus:outline-none placeholder:text-gray-500"
         />
         <button
           type="submit"

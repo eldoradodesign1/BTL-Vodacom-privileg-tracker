@@ -29,6 +29,16 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     }, 400);
   };
 
+  const handleEnterSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const form = (e.currentTarget as HTMLInputElement).form;
+      if (form) {
+        form.requestSubmit();
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen w-full flex flex-col justify-center items-center p-6 relative overflow-hidden bg-[#09090b]">
       {/* Background glowing effects */}
@@ -51,6 +61,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               type="text"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
+              onKeyDown={handleEnterSubmit}
               placeholder="081XXXXXXX"
               required
               className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-red-500 transition-all placeholder:text-gray-600"
@@ -66,6 +77,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={handleEnterSubmit}
               placeholder="••••••••"
               required
               className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-red-500 transition-all placeholder:text-gray-600"

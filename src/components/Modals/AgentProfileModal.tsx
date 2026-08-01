@@ -1,12 +1,12 @@
 import React from 'react';
-import { AgentMasterStatus, DailyReport } from '../../types';
-import { getReportPdf } from '../../utils/storage';
+import { AgentMasterStatus, DailyReport, Lead } from '../../types';
 import { Phone, FileSpreadsheet, X, Eye } from 'lucide-react';
 
 interface AgentProfileModalProps {
   isOpen: boolean;
   agent: AgentMasterStatus | null;
   agentReports: DailyReport[];
+  dayLeads?: Lead[];
   onClose: () => void;
   onOpenPdf: (url: string) => void;
   onCompileAgent: (agentId: string) => void;
@@ -16,6 +16,7 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
   isOpen,
   agent,
   agentReports,
+  dayLeads = [],
   onClose,
   onOpenPdf,
   onCompileAgent
@@ -64,6 +65,26 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
         </div>
 
         <div>
+          <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-2">
+            Clients du Jour ({dayLeads.length})
+          </h3>
+
+          <div className="space-y-1.5 max-h-32 overflow-y-auto pr-1 mb-4">
+            {dayLeads.length === 0 ? (
+              <p className="text-center text-xs text-gray-500 italic py-2">Aucun client saisi aujourd'hui.</p>
+            ) : (
+              dayLeads.map(ld => (
+                <div key={ld.id} className="p-2 bg-white/5 border border-white/10 rounded-xl flex items-center justify-between">
+                  <div>
+                    <p className="text-[11px] font-black text-white">{ld.client_name}</p>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase">{ld.action_type}</p>
+                  </div>
+                  <span className="text-[10px] font-black text-red-400">{ld.msisdn}</span>
+                </div>
+              ))
+            )}
+          </div>
+
           <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-3">
             Historique des Rapports ({agentReports.length})
           </h3>
@@ -82,10 +103,7 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
                   </div>
 
                   <button
-                    onClick={async () => {
-                      const url = await getReportPdf(rep);
-                      onOpenPdf(url);
-                    }}
+                    onClick={() => onOpenPdf(`report-id:${rep.id}`)}
                     className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl text-[10px] font-black uppercase flex items-center space-x-1 transition-all"
                   >
                     <Eye className="w-3 h-3" />

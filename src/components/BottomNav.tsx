@@ -7,12 +7,14 @@ export type TabType = 'home' | 'tab2' | 'tab3' | 'chat' | 'admin';
 interface BottomNavProps {
   userRole: UserRole;
   activeTab: TabType;
+  unreadChatCount?: number;
   onTabChange: (tab: TabType) => void;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
   userRole,
   activeTab,
+  unreadChatCount = 0,
   onTabChange
 }) => {
   const getTab2Label = () => {
@@ -76,7 +78,14 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           activeTab === 'chat' ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'
         }`}
       >
+        <div className="relative">
         <MessageSquare className={`w-6 h-6 transition-transform ${activeTab === 'chat' ? '-translate-y-1 scale-110' : ''}`} />
+          {unreadChatCount > 0 && activeTab !== 'chat' && (
+            <span className="absolute -top-1.5 -right-2 min-w-4 h-4 px-1 bg-red-600 text-white rounded-full text-[9px] font-black flex items-center justify-center border border-black">
+              {unreadChatCount > 99 ? '99+' : unreadChatCount}
+            </span>
+          )}
+        </div>
         <span className="text-[9px] font-black uppercase tracking-wider">Chat</span>
         {activeTab === 'chat' && (
           <div className="w-1.5 h-1.5 bg-red-500 rounded-full shadow-[0_0_8px_#E60000]" />

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Lead, Checkin, DailyReport } from '../types';
-import { getShopById, checkDailyStatus, addCheckin, getReportPdf, getLeads, getCheckins, isMatchAgent, toISO } from '../utils/storage';
+import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSyncPendingCount, isMatchAgent, toISO, getUsers } from '../utils/storage';
 import { formatDriveImageUrl, getGSheetConfig, syncFromGoogleSheetUrl } from '../utils/googleSheetsSync';
 import { TabType } from './BottomNav';
 import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archive, Eye, Search, Filter, RefreshCw } from 'lucide-react';
@@ -31,6 +31,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
   onRefreshData
 }) => {
   const [gpsInfo, setGpsInfo] = useState('');
+  const [geoBadge, setGeoBadge] = useState<{ text: string; status: 'ok' | 'warn' | 'unknown' } | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(todayCheckin?.photo || null);
   const [checkinDoneLocal, setCheckinDoneLocal] = useState(false);
   const [clientSearchTerm, setClientSearchTerm] = useState('');
@@ -38,6 +39,16 @@ export const AgentView: React.FC<AgentViewProps> = ({
   const todayStr = new Date().toISOString().split('T')[0];
   const [clientDateFilter, setClientDateFilter] = useState<string>(todayStr);
   const [isSyncingGSheet, setIsSyncingGSheet] = useState(false);
+  const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
+  const pendingCount = getSyncPendingCount();
+  const syncState: 'ok' | 'progress' | 'late' = isSyncingGSheet
+    ? 'progress'
+    : (online && pendingCount === 0 ? 'ok' : (online ? 'progress' : (pendingCount > 0 ? 'late' : 'progress')));
+  const syncBtnClass = syncState === 'ok'
+    ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-500 border-emerald-500/40'
+    : (syncState === 'progress'
+      ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 border-amber-500/40'
+      : 'bg-red-500/20 hover:bg-red-500/30 text-red-500 border-red-500/40');
 
   const handleManualSync = async () => {
     setIsSyncingGSheet(true);
@@ -63,6 +74,18 @@ export const AgentView: React.FC<AgentViewProps> = ({
 
   const shopObj = getShopById(activeShopId || currentUser.permanentShopId);
   const shopName = shopObj ? shopObj.name : "Vodacom Flagship Gombe";
+
+  const allUsers = getUsers();
+  const sameTeamAgents = allUsers.filter(u => u.role === 'agent' && u.supervisorId === currentUser.supervisorId);
+  const activityRanking = sameTeamAgents
+    .map(agent => {
+      const total = getLeads().filter(l => (l.agent_id === agent.id || l.agent_id === agent.name || isMatchAgent(l.agent_id, agent)) && toISO(l.timestamp) === todayStr).length;
+      return { ...agent, total };
+    })
+    .filter(agent => agent.total > 0)
+    .sort((a, b) => b.total - a.total);
+  const myTodayRank = activityRanking.findIndex(agent => agent.id === currentUser.id) + 1;
+  const showPodium = activityRanking.length > 0;
 
   // All history leads registered by this agent
   const allAgentLeads = getLeads().filter(l => 
@@ -93,6 +116,16 @@ export const AgentView: React.FC<AgentViewProps> = ({
     }
   };
 
+  const haversineDistanceMeters = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const toRad = (d: number) => (d * Math.PI) / 180;
+    const R = 6371000;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return Math.round(R * c);
+  };
+
   const handleCameraChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -119,6 +152,13 @@ export const AgentView: React.FC<AgentViewProps> = ({
           setPhotoPreview(base64);
 
           const recordCheckin = (lat: number, long: number, accuracy: number) => {
+            const shopLat = shopObj?.lat;
+            const shopLong = shopObj?.long;
+            const distance = (typeof shopLat === 'number' && typeof shopLong === 'number')
+              ? haversineDistanceMeters(lat, long, shopLat, shopLong)
+              : -1;
+            const isConforme = distance >= 0 && distance <= 200;
+
             addCheckin({
               agent_id: currentUser.id,
               type: 'IN',
@@ -127,8 +167,19 @@ export const AgentView: React.FC<AgentViewProps> = ({
               long,
               accuracy,
               photo: base64,
+              distance_m: distance >= 0 ? distance : undefined,
+              geo_status: distance < 0 ? 'inconnu' : (isConforme ? 'conforme' : 'hors_zone'),
               status: 'synced'
             });
+
+            if (distance < 0) {
+              setGeoBadge({ text: 'Donnees GPS non disponible', status: 'unknown' });
+            } else if (isConforme) {
+              setGeoBadge({ text: `A ${distance}m du shop - Conforme`, status: 'ok' });
+            } else {
+              setGeoBadge({ text: `Hors zone > 200m (actuel ${distance}m)`, status: 'warn' });
+            }
+
             setCheckinDoneLocal(true);
             if (onRefreshData) onRefreshData();
           };
@@ -175,7 +226,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
             <button
               onClick={handleManualSync}
               disabled={isSyncingGSheet}
-              className="px-3 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 rounded-2xl text-xs font-black uppercase flex items-center space-x-1.5 shadow-md transition-all"
+              className={`px-3 py-2 border rounded-2xl text-xs font-black uppercase flex items-center space-x-1.5 shadow-md transition-all ${syncBtnClass}`}
               title="Actualiser en direct depuis Google Sheet"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGSheet ? 'animate-spin' : ''}`} />
@@ -346,10 +397,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
                   </div>
 
                   <button
-                    onClick={async () => {
-                      const url = await getReportPdf(rep);
-                      onOpenPdfModal(url);
-                    }}
+                    onClick={() => onOpenPdfModal(`report-id:${rep.id}`)}
                     className="px-3.5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[10px] font-black uppercase flex items-center space-x-1.5 shadow-md shadow-red-600/30 transition-all"
                   >
                     <Eye className="w-3.5 h-3.5" />
@@ -408,25 +456,26 @@ export const AgentView: React.FC<AgentViewProps> = ({
         </div>
       </div>
 
-      {/* Podium National Rank */}
-      <div className="rank-card-podium podium-1 animate-pop">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
-              <Trophy className="w-8 h-8 text-amber-400" />
+      {showPodium && (
+        <div className="rank-card-podium podium-1 animate-pop">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center">
+                <Trophy className="w-8 h-8 text-amber-400" />
+              </div>
+              <div>
+                <span className="text-[9px] font-black uppercase tracking-wider text-amber-400">Position Équipe</span>
+                <h3 className="text-lg font-black uppercase text-white">#{myTodayRank || 1} {myTodayRank === 1 ? 'Leader' : 'Activité'}</h3>
+              </div>
             </div>
-            <div>
-              <span className="text-[9px] font-black uppercase tracking-wider text-amber-400">Position National</span>
-              <h3 className="text-lg font-black uppercase text-white">#1 Hôtesse du Mois</h3>
-            </div>
-          </div>
 
-          <div className="text-right">
-            <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Aujourd'hui</span>
-            <span className="text-3xl font-black text-white">{todayLeads.length}</span>
+            <div className="text-right">
+              <span className="text-[9px] font-black uppercase tracking-wider text-gray-400 block">Aujourd'hui</span>
+              <span className="text-3xl font-black text-white">{activityRanking[0]?.total || todayLeads.length}</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Pointage Unique Arrivée */}
       <div className="glass-card text-center p-6 border border-white/10">
@@ -464,6 +513,18 @@ export const AgentView: React.FC<AgentViewProps> = ({
               alt="Photo de pointage"
               className="w-32 h-32 object-cover rounded-2xl border-2 border-red-500/50 shadow-lg"
             />
+          </div>
+        )}
+
+        {geoBadge && (
+          <div className={`mt-3 inline-flex items-center px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase ${
+            geoBadge.status === 'ok'
+              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+              : (geoBadge.status === 'warn'
+                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                : 'bg-zinc-500/10 text-zinc-300 border-zinc-500/30')
+          }`}>
+            {geoBadge.text}
           </div>
         )}
       </div>

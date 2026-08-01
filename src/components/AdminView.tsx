@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { User, Shop, DailyReport, AgentMasterStatus } from '../types';
-import { getAdminMasterList, getDashboardData, getReports, getReportPdf, getUsers, updateUserShopAssignment, updateUserSupervisor } from '../utils/storage';
-import { generateAdminBatchPDF } from '../utils/pdfGenerator';
+import { Shop, AgentMasterStatus } from '../types';
+import { getAdminMasterList, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor } from '../utils/storage';
 import { TabType } from './BottomNav';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
-import { UserPlus, Store, FileSpreadsheet, Eye, ChevronRight, UserCheck, Shield, FileText } from 'lucide-react';
+import { UserPlus, Store, FileSpreadsheet, Eye, ChevronRight, UserCheck, FileText, Search, Filter } from 'lucide-react';
 
 interface AdminViewProps {
   shops: Shop[];
@@ -27,13 +26,30 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onOpenPdfModal,
   onRefreshData
 }) => {
-  const [subTab, setSubTab] = useState<'manage' | 'stats' | 'reports'>(
+  const [subTab, setSubTab] = useState<'manage' | 'stats' | 'leads' | 'reports'>(
     activeTab === 'home' ? 'stats' : (activeTab === 'tab3' ? 'reports' : 'manage')
   );
   const [startDate, setStartDate] = useState('2026-07-01');
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const allLeads = getLeads();
+  const todayIso = toISO(new Date());
+  const allLeadDates = [...new Set(allLeads.map(l => toISO(l.timestamp)))].sort();
+  const firstLeadDate = allLeadDates[0] || todayIso;
+  const dayMs = 86400000;
+  const minTs = new Date(`${firstLeadDate}T00:00:00`).getTime();
+  const maxTs = new Date(`${todayIso}T00:00:00`).getTime();
+  const maxOffset = Math.max(0, Math.floor((maxTs - minTs) / dayMs));
+  const offsetToDate = (offset: number) => toISO(new Date(minTs + (Math.max(0, Math.min(maxOffset, offset)) * dayMs)));
+  const [leadFilterMode, setLeadFilterMode] = useState<'range' | 'day'>('range');
+  const [leadStartOffset, setLeadStartOffset] = useState(0);
+  const [leadEndOffset, setLeadEndOffset] = useState(maxOffset);
+  const [leadExactDate, setLeadExactDate] = useState(todayIso);
   const [selectedAgentId, setSelectedAgentId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [shopFilter, setShopFilter] = useState('ALL');
+  const [supFilter, setSupFilter] = useState('ALL');
+  const [inlineAssignShop, setInlineAssignShop] = useState<Record<string, string>>({});
 
   // User Assignment State
   const [assignUser, setAssignUser] = useState('');
@@ -46,7 +62,25 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const allUsers = getUsers();
   const supervisors = allUsers.filter(u => u.role === 'supervisor');
   const agents = allUsers.filter(u => u.role === 'agent');
-
+  const filteredMasterList = masterList.filter(agent => {
+    const srcUser = allUsers.find(u => u.id === agent.id);
+    const supId = srcUser?.supervisorId || '';
+    const matchesSearch = !searchTerm
+      || agent.name.toLowerCase().includes(searchTerm.toLowerCase())
+      || agent.phone.includes(searchTerm);
+    const matchesShop = shopFilter === 'ALL' || agent.shopId === shopFilter;
+    const matchesSup = supFilter === 'ALL' || supId === supFilter;
+    return matchesSearch && matchesShop && matchesSup;
+  });
+  const rangeStart = Math.min(leadStartOffset, leadEndOffset);
+  const rangeEnd = Math.max(leadStartOffset, leadEndOffset);
+  const leadRangeStartDate = offsetToDate(rangeStart);
+  const leadRangeEndDate = offsetToDate(rangeEnd);
+  const filteredLeads = allLeads.filter(ld => {
+    const d = toISO(ld.timestamp);
+    if (leadFilterMode === 'day') return d === leadExactDate;
+    return d >= leadRangeStartDate && d <= leadRangeEndDate;
+  });
   // Sync internal subTab when activeTab changes
   React.useEffect(() => {
     if (activeTab === 'home') setSubTab('stats');
@@ -56,7 +90,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   const handleGenerateBatchPDF = async () => {
     setLoading(true);
-    const rows = allReports.map(r => ({
+    const selectedReports = allReports.filter(r => r.date >= startDate && r.date <= endDate);
+    const rows = selectedReports.map(r => ({
       date: r.date,
       agent: r.agent_name,
       priv: r.priv,
@@ -73,14 +108,62 @@ export const AdminView: React.FC<AdminViewProps> = ({
       { privilege: 0, roaming: 0, bundles: 0 }
     );
 
-    const pdfUrl = await generateAdminBatchPDF({
+    const reports = selectedReports.map(report => ({
+      agentName: report.agent_name,
+      shopName: report.shop_name || 'Vodacom Shop',
+      date: report.date,
+      arrivalTime: report.arrival_time || '08:00',
+      departureTime: report.departure_time || '17:30',
+      mapsIn: report.maps_in || '',
+      mapsOut: report.maps_out || '',
+      totalPrivilege: report.priv,
+      totalRoaming: report.roam,
+      totalBundles: report.bund,
+      targets: { privilege: 20, roaming: 20, bundle: 20 },
+      leads: allLeads.filter(l => l.agent_id === report.agent_id && toISO(l.timestamp) === report.date).map(l => ({
+        timestamp: l.timestamp,
+        client_name: l.client_name,
+        msisdn: l.msisdn,
+        action_type: l.action_type
+      })),
+      pointagePhoto: report.pointage_photo || '',
+      photos: report.photos || [],
+      comment: report.comment || '',
+      evolutionData: [report.priv, report.priv + report.roam, report.priv + report.roam + report.bund]
+    }));
+
+    const groups = selectedReports.reduce<Array<{ supervisor: string; agentCount: number; totalLeads: number; totalPrivilege: number; totalRoaming: number; totalBundles: number }>>((acc, report) => {
+      const existing = acc.find(group => group.supervisor === (report.shop_name || 'Administration'));
+      if (existing) {
+        existing.agentCount += 1;
+        existing.totalLeads += report.priv + report.roam + report.bund;
+        existing.totalPrivilege += report.priv;
+        existing.totalRoaming += report.roam;
+        existing.totalBundles += report.bund;
+      } else {
+        acc.push({
+          supervisor: report.shop_name || 'Administration',
+          agentCount: 1,
+          totalLeads: report.priv + report.roam + report.bund,
+          totalPrivilege: report.priv,
+          totalRoaming: report.roam,
+          totalBundles: report.bund
+        });
+      }
+      return acc;
+    }, []);
+
+    const payload = {
       period: `${startDate} au ${endDate}`,
+      title: `Compilation ${startDate} → ${endDate}`,
       rows,
-      totals
-    });
+      totals,
+      reports,
+      groups
+    };
 
     setLoading(false);
-    onOpenPdfModal(pdfUrl);
+    onOpenPdfModal(`preview-admin-batch:${encodeURIComponent(JSON.stringify(payload))}`);
   };
 
   const handleSaveAssignments = () => {
@@ -124,6 +207,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
           }`}
         >
           Analyses
+        </button>
+        <button
+          onClick={() => setSubTab('leads')}
+          className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
+            subTab === 'leads' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          Leads
         </button>
         <button
           onClick={() => setSubTab('reports')}
@@ -251,10 +342,45 @@ export const AdminView: React.FC<AdminViewProps> = ({
           {/* Master User Directory with Live Sparklines */}
           <div className="space-y-2">
             <h2 className="text-xs font-black uppercase tracking-wider text-gray-400 px-1">
-              Annuaire Master Hôtesses ({masterList.length})
+              Annuaire Master Hôtesses ({filteredMasterList.length})
             </h2>
 
-            {masterList.map(agent => {
+            <div className="glass-card p-3 border border-white/10 space-y-2">
+              <div className="relative">
+                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Recherche nom ou numero..."
+                  className="w-full bg-black/60 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={shopFilter}
+                  onChange={(e) => setShopFilter(e.target.value)}
+                  className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold"
+                >
+                  <option value="ALL">Tous les shops</option>
+                  {shops.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                </select>
+                <select
+                  value={supFilter}
+                  onChange={(e) => setSupFilter(e.target.value)}
+                  className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold"
+                >
+                  <option value="ALL">Tous les superviseurs</option>
+                  {supervisors.map(sup => <option key={sup.id} value={sup.id}>{sup.name}</option>)}
+                </select>
+              </div>
+              <div className="text-[10px] font-black uppercase text-gray-400 flex items-center space-x-1">
+                <Filter className="w-3 h-3" />
+                <span>Filtres instantanes actifs</span>
+              </div>
+            </div>
+
+            {filteredMasterList.map(agent => {
               const statusDotColor = agent.status === 'Clôturé' ? 'bg-emerald-500'
                 : (agent.status === 'Présent' ? 'bg-blue-500' : 'bg-red-500');
 
@@ -293,16 +419,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                     <div className="flex items-center space-x-2">
                       {/* Direct PDF Report Button if Clôturé or report exists */}
-                      {(agent.status === 'Clôturé' || agent.reportObj || agent.reportUrl) && (
+                      {agent.reportObj && (
                         <button
-                          onClick={async (e) => {
+                          onClick={(e) => {
                             e.stopPropagation();
-                            if (agent.reportObj) {
-                              const pdfUrl = await getReportPdf(agent.reportObj);
-                              onOpenPdfModal(pdfUrl);
-                            } else if (agent.reportUrl) {
-                              onOpenPdfModal(agent.reportUrl);
-                            }
+                            onOpenPdfModal(`report-id:${agent.reportObj!.id}`);
                           }}
                           className="px-2.5 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 rounded-xl text-[10px] font-black uppercase flex items-center space-x-1 shadow-md transition-all shrink-0"
                           title="Télécharger / Voir le rapport de clôture PDF"
@@ -315,6 +436,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       <button
                         onClick={() => onOpenAgentProfile(agent)}
                         className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl border border-white/10 transition-all shrink-0"
+                        title="Voir l'historique + clients du jour"
                       >
                         <ChevronRight className="w-4 h-4" />
                       </button>
@@ -350,6 +472,30 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       </div>
                     </div>
                   )}
+
+                  <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                    <select
+                      value={inlineAssignShop[agent.id] || ''}
+                      onChange={(e) => setInlineAssignShop(prev => ({ ...prev, [agent.id]: e.target.value }))}
+                      className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-[10px] font-bold"
+                    >
+                      <option value="">Affecter à un shop...</option>
+                      {shops.map(s => (
+                        <option key={s.id} value={s.id}>{s.name}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={() => {
+                        const shopId = inlineAssignShop[agent.id];
+                        if (!shopId) return;
+                        updateUserShopAssignment(agent.id, shopId);
+                        if (onRefreshData) onRefreshData();
+                      }}
+                      className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[10px] font-black uppercase"
+                    >
+                      Affecter
+                    </button>
+                  </div>
                 </div>
               );
             })}
@@ -363,7 +509,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           {/* KPI Cards */}
           <div className="grid grid-cols-2 gap-3">
             <div
-              onClick={() => setSubTab('reports')}
+              onClick={() => setSubTab('leads')}
               className="bg-white text-black p-5 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-gray-100 transition-all hover:scale-[1.02] active:scale-95 group"
               title="Cliquer pour voir tous les Leads / Rapport de Synthèse"
             >
@@ -446,6 +592,88 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </div>
       )}
 
+      {/* --- SUB-TAB 3: LEADS TABLE --- */}
+      {subTab === 'leads' && (
+        <div className="space-y-4">
+          <div className="glass-card p-4 border border-white/10 space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] font-black uppercase text-gray-400">Filtre temporel des leads</p>
+              <button
+                onClick={() => setLeadFilterMode(leadFilterMode === 'range' ? 'day' : 'range')}
+                className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase bg-white/10 text-white border border-white/20"
+              >
+                {leadFilterMode === 'range' ? 'Date précise' : 'Plage'}
+              </button>
+            </div>
+
+            {leadFilterMode === 'range' ? (
+              <div className="space-y-2">
+                <div className="text-[10px] text-gray-300 font-bold">{leadRangeStartDate} → {leadRangeEndDate}</div>
+                <input
+                  type="range"
+                  min={0}
+                  max={maxOffset}
+                  value={leadStartOffset}
+                  onChange={(e) => setLeadStartOffset(parseInt(e.target.value, 10))}
+                  className="w-full"
+                />
+                <input
+                  type="range"
+                  min={0}
+                  max={maxOffset}
+                  value={leadEndOffset}
+                  onChange={(e) => setLeadEndOffset(parseInt(e.target.value, 10))}
+                  className="w-full"
+                />
+              </div>
+            ) : (
+              <input
+                type="date"
+                min={firstLeadDate}
+                max={todayIso}
+                value={leadExactDate}
+                onChange={(e) => setLeadExactDate(e.target.value)}
+                className="bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold"
+              />
+            )}
+          </div>
+
+          <div className="glass-card p-3 border border-white/10 overflow-x-auto">
+            <h2 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-2">Tableau des Leads ({filteredLeads.length})</h2>
+            <table className="w-full text-left text-[10px] min-w-[760px]">
+              <thead>
+                <tr className="uppercase text-gray-400 border-b border-white/10">
+                  <th className="py-2 pr-3">Date</th>
+                  <th className="py-2 pr-3">Agent</th>
+                  <th className="py-2 pr-3">Shop</th>
+                  <th className="py-2 pr-3">Client</th>
+                  <th className="py-2 pr-3">MSISDN</th>
+                  <th className="py-2 pr-3">Action</th>
+                  <th className="py-2">Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredLeads.map(ld => {
+                  const usr = allUsers.find(u => u.id === ld.agent_id);
+                  const shp = shops.find(s => s.id === ld.shop_id);
+                  return (
+                    <tr key={ld.id} className="border-b border-white/5 text-white">
+                      <td className="py-2 pr-3">{toISO(ld.timestamp)}</td>
+                      <td className="py-2 pr-3">{usr?.name || ld.agent_id}</td>
+                      <td className="py-2 pr-3">{shp?.name || ld.shop_id}</td>
+                      <td className="py-2 pr-3">{ld.client_name}</td>
+                      <td className="py-2 pr-3">{ld.msisdn}</td>
+                      <td className="py-2 pr-3">{ld.action_type}</td>
+                      <td className="py-2">{ld.status || 'synced'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* --- SUB-TAB 3: ARCHIVES & COMPILATION --- */}
       {subTab === 'reports' && (
         <div className="space-y-4 animate-pop">
@@ -492,10 +720,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </div>
 
                 <button
-                  onClick={async () => {
-                    const pdfUrl = await getReportPdf(rep);
-                    onOpenPdfModal(pdfUrl);
-                  }}
+                  onClick={() => onOpenPdfModal(`report-id:${rep.id}`)}
                   className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[10px] font-black uppercase flex items-center space-x-1 shadow-md"
                 >
                   <Eye className="w-3.5 h-3.5" />

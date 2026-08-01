@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Lead } from '../../types';
-import { getTargetsByShop, getShopById, addReport, addCheckin } from '../../utils/storage';
+import { getTargetsByShop, getShopById, addReport, addCheckin, getCheckins, toISO } from '../../utils/storage';
 import { generateAgentPDF } from '../../utils/pdfGenerator';
 import { FileText, Plus, X, Image as ImageIcon } from 'lucide-react';
 
@@ -77,11 +77,16 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const handleSendReport = async () => {
     setLoading(true);
 
+    const nowIso = new Date().toISOString();
+    const todayCheckins = getCheckins().filter(c => c.agent_id === currentUser.id && toISO(c.timestamp) === toISO(nowIso));
+    const inCheck = todayCheckins.find(c => c.type === 'IN');
+    const pointagePhoto = inCheck?.photo || '';
+
     // Auto silent OUT check-in
-    addCheckin({
+    const outCheckin = addCheckin({
       agent_id: currentUser.id,
       type: 'OUT',
-      timestamp: new Date().toISOString(),
+      timestamp: nowIso,
       lat: shopObj?.lat || -4.3033,
       long: shopObj?.long || 15.3015,
       accuracy: 5,
@@ -90,24 +95,32 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
     const nowTimeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
+    const mapsIn = inCheck && typeof inCheck.lat === 'number' && typeof inCheck.long === 'number'
+      ? `https://www.google.com/maps/search/?api=1&query=${inCheck.lat},${inCheck.long}`
+      : 'donnees gps non disponible';
+    const mapsOut = outCheckin && typeof outCheckin.lat === 'number' && typeof outCheckin.long === 'number'
+      ? `https://www.google.com/maps/search/?api=1&query=${outCheckin.lat},${outCheckin.long}`
+      : 'donnees gps non disponible';
+
     const pdfDataUrl = await generateAgentPDF({
       agentName: currentUser.name,
       shopName,
       date: reportDate,
-      arrivalTime: '08:00',
+      arrivalTime: inCheck ? new Date(inCheck.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '00:00',
       departureTime: nowTimeStr,
-      mapsIn: `https://www.google.com/maps/search/?api=1&query=${shopObj?.lat || -4.3033},${shopObj?.long || 15.3015}`,
-      mapsOut: `https://www.google.com/maps/search/?api=1&query=${shopObj?.lat || -4.3033},${shopObj?.long || 15.3015}`,
+      mapsIn,
+      mapsOut,
       totalPrivilege: privCount,
       totalRoaming: roamCount,
       totalBundles: bundCount,
       targets,
       leads: todayLeads,
+      pointagePhoto,
       photos,
       comment
     });
 
-    addReport({
+    const savedReport = addReport({
       date: reportDate,
       agent_id: currentUser.id,
       agent_name: currentUser.name,
@@ -119,11 +132,16 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       amount: 0,
       comment,
       pdf_url: pdfDataUrl,
-      photos
+      photos,
+      pointage_photo: pointagePhoto,
+      arrival_time: inCheck ? new Date(inCheck.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '00:00',
+      departure_time: nowTimeStr,
+      maps_in: mapsIn,
+      maps_out: mapsOut
     });
 
     setLoading(false);
-    onReportGenerated(pdfDataUrl);
+    onReportGenerated(`report-id:${savedReport.id}`);
     onClose();
   };
 

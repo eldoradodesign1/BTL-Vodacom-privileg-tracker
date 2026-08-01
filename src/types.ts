@@ -31,6 +31,9 @@ export interface Checkin {
   long: number;
   accuracy: number;
   photo?: string;
+  photo_drive_url?: string;
+  distance_m?: number;
+  geo_status?: 'conforme' | 'hors_zone' | 'inconnu';
   device?: string;
   status: 'pending' | 'synced';
 }
@@ -64,8 +67,11 @@ export interface DailyReport {
   photos?: string[];
   arrival_time?: string;
   departure_time?: string;
+  pointage_photo?: string;
   maps_in?: string;
   maps_out?: string;
+  drive_pdf_url?: string;
+  report_photos_drive_urls?: string[];
 }
 
 export interface NotificationItem {
@@ -84,6 +90,11 @@ export interface ChatMessage {
   sender_role: UserRole;
   message: string;
   timestamp: string;
+  created_at?: string;
+  deleted?: boolean;
+  deleted_at?: string;
+  deleted_by?: string;
+  read_by?: string[];
 }
 
 export interface ShopTargets {

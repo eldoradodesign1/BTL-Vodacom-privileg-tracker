@@ -8,7 +8,13 @@ import {
   getReports,
   getNotifications,
   markNotifsAsRead,
-  toISO
+  clearNotifications,
+  toISO,
+  getUnreadChatCount,
+  markChatAsRead,
+  runScheduledDailyReminders,
+  getSyncPendingCount,
+  getTodayCheckinPhoto
 } from './utils/storage';
 import { SimulationBar } from './components/SimulationBar';
 import { Header } from './components/Header';
@@ -43,11 +49,13 @@ export default function App() {
   const [simulatedRole, setSimulatedRole] = useState<UserRole | null>(null);
   const [simulatedUserId, setSimulatedUserId] = useState<string | null>(null);
 
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+  const [theme, setTheme] = useState<'classic' | 'dark' | 'light'>(() => {
     try {
-      return (localStorage.getItem('vodacom_theme') as 'dark' | 'light') || 'dark';
+      const saved = localStorage.getItem('vodacom_theme') as 'classic' | 'dark' | 'light' | null;
+      if (saved === 'classic' || saved === 'dark' || saved === 'light') return saved;
+      return 'classic';
     } catch {
-      return 'dark';
+      return 'classic';
     }
   });
 
@@ -66,6 +74,9 @@ export default function App() {
   const [isGSheetModalOpen, setIsGSheetModalOpen] = useState(false);
   const [pdfModalUrl, setPdfModalUrl] = useState<string | null>(null);
   const [selectedAgentForProfile, setSelectedAgentForProfile] = useState<AgentMasterStatus | null>(null);
+  const [online, setOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
+  const [chatUnreadCount, setChatUnreadCount] = useState(0);
+  const [syncPendingCount, setSyncPendingCount] = useState(0);
 
   useEffect(() => {
     if (currentUser) {
@@ -80,15 +91,12 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('vodacom_theme', theme);
-    if (theme === 'light') {
-      document.body.classList.add('light-theme');
-    } else {
-      document.body.classList.remove('light-theme');
-    }
+    document.body.classList.remove('theme-classic', 'theme-dark', 'theme-light');
+    document.body.classList.add(`theme-${theme}`);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  const setThemeMode = (nextTheme: 'classic' | 'dark' | 'light') => {
+    setTheme(nextTheme);
   };
 
   const refreshData = () => {
@@ -120,6 +128,33 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const refreshStatus = () => {
+      runScheduledDailyReminders(new Date());
+      setOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
+      setChatUnreadCount(currentUser ? getUnreadChatCount(currentUser.id) : 0);
+      setSyncPendingCount(getSyncPendingCount());
+    };
+    refreshStatus();
+    const interval = setInterval(refreshStatus, 30000);
+    const onOnline = () => setOnline(true);
+    const onOffline = () => setOnline(false);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, [currentUser?.id]);
+
+  useEffect(() => {
+    if (activeTab === 'chat' && currentUser) {
+      markChatAsRead(currentUser.id);
+      setChatUnreadCount(getUnreadChatCount(currentUser.id));
+    }
+  }, [activeTab, currentUser?.id]);
+
   if (!currentUser) {
     return <LoginScreen onLoginSuccess={(u) => { setCurrentUser(u); setMasterUser(u); }} />;
   }
@@ -148,6 +183,10 @@ export default function App() {
   const todayCheckin = getCheckins().find(c => c.agent_id === effectiveUser.id && toISO(c.timestamp) === todayStr && c.type === 'IN') || null;
   const agentReports = getReports().filter(r => r.agent_id === effectiveUser.id);
   const notifications = getNotifications(effectiveUser.id);
+  const todayCheckinPhoto = getTodayCheckinPhoto(effectiveUser.id);
+  const selectedAgentTodayLeads = selectedAgentForProfile
+    ? getLeads().filter(l => l.agent_id === selectedAgentForProfile.id && toISO(l.timestamp) === todayStr)
+    : [];
 
   const handleSimulateUserChange = (userId: string) => {
     setSimulatedUserId(userId);
@@ -172,7 +211,7 @@ export default function App() {
   // Render view based on role & active tab
   const renderContent = () => {
     if (activeTab === 'chat') {
-      return <ChatView currentUser={effectiveUser} />;
+      return <ChatView currentUser={effectiveUser} onDataChanged={refreshData} />;
     }
 
     if (effectiveRole === 'admin') {
@@ -222,7 +261,9 @@ export default function App() {
 
   return (
     <div className={`min-h-screen flex flex-col relative overflow-hidden font-sans select-none transition-colors ${
-      theme === 'light' ? 'bg-gradient-to-br from-[#4d0000] via-[#8c0000] to-[#2d0000] text-white' : 'bg-[#09090b] text-white'
+      theme === 'classic'
+        ? 'bg-gradient-to-br from-[#4d0000] via-[#8c0000] to-[#2d0000] text-white'
+        : (theme === 'light' ? 'bg-gradient-to-br from-[#f8fafc] via-[#eef2ff] to-[#ffe4e6] text-zinc-900' : 'bg-[#09090b] text-white')
     }`}>
       {/* Persistent Master Admin Simulation Bar */}
       <SimulationBar
@@ -239,9 +280,21 @@ export default function App() {
       <Header
         user={effectiveUser}
         notifications={notifications}
+        unreadChatCount={chatUnreadCount}
+        online={online}
+        syncPendingCount={syncPendingCount}
+        profilePhotoUrl={todayCheckinPhoto || undefined}
         theme={theme}
-        onToggleTheme={toggleTheme}
-        onMarkNotifsRead={() => markNotifsAsRead(effectiveUser.id)}
+        onSetTheme={setThemeMode}
+        onMarkNotifsRead={() => {
+          markNotifsAsRead(effectiveUser.id);
+          markChatAsRead(effectiveUser.id);
+          refreshData();
+        }}
+        onClearNotifications={() => {
+          clearNotifications(effectiveUser.id);
+          refreshData();
+        }}
         onLogout={handleLogout}
         onOpenPasswordModal={() => setIsPasswordModalOpen(true)}
         onOpenGSheetModal={realMasterUser.role === 'admin' ? () => setIsGSheetModalOpen(true) : undefined}
@@ -256,6 +309,7 @@ export default function App() {
       <BottomNav
         userRole={effectiveRole}
         activeTab={activeTab}
+        unreadChatCount={chatUnreadCount}
         onTabChange={(tab) => setActiveTab(tab)}
       />
 
@@ -309,6 +363,7 @@ export default function App() {
         isOpen={!!selectedAgentForProfile}
         agent={selectedAgentForProfile}
         agentReports={getReports().filter(r => r.agent_id === selectedAgentForProfile?.id)}
+        dayLeads={selectedAgentTodayLeads}
         onClose={() => setSelectedAgentForProfile(null)}
         onOpenPdf={(url) => setPdfModalUrl(url)}
         onCompileAgent={(agentId) => {

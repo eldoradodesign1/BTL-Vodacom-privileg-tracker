@@ -855,6 +855,8 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
 
   const leadObj = payload.type === 'lead' && payload.data ? payload.data : (payload.client_name ? payload : null);
   const checkinObj = payload.type === 'checkin' && payload.data ? payload.data : (payload.lat !== undefined && payload.agent_id && !payload.client_name ? payload : null);
+  const reportObj = payload.type === 'report' && payload.data ? payload.data : (payload.agent_id && payload.date && payload.priv !== undefined ? payload : null);
+  const userUpdateObj = payload.type === 'user-update' && payload.data ? payload.data : null;
 
   if (leadObj) {
     const l = leadObj;
@@ -907,12 +909,64 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
       photo: c.photo || '',
       device: c.device || 'Mobile App',
       status: c.status || '',
+      folders: payload.folders || {},
       action: 'processCheckin',
       event: 'NEW_CHECKIN',
       tab: 'Checkins',
       target_sheet: 'Checkins',
       sheet_name: 'Checkins',
       agent_name: agent?.name || ''
+    };
+  } else if (reportObj) {
+    const r = reportObj;
+    const reportsFolder = payload?.folders?.reports || '';
+    const reportPhotosFolder = payload?.folders?.reportPhotos || '';
+    enrichedPayload = {
+      id: r.id,
+      uuid: r.id,
+      action: 'processReport',
+      type: 'report',
+      event: 'NEW_REPORT',
+      tab: 'DailyReports',
+      target_sheet: 'DailyReports',
+      sheet_name: 'DailyReports',
+      date: r.date,
+      agent_id: r.agent_id,
+      agent_name: r.agent_name,
+      shop_id: r.shop_id,
+      shop_name: r.shop_name,
+      privilege_count: r.priv,
+      roaming_count: r.roam,
+      bundle_count: r.bund,
+      comment: r.comment || '',
+      pdf_data_url: r.pdf_url || '',
+      pointage_photo: r.pointage_photo || '',
+      report_photos: r.photos || [],
+      maps_in: r.maps_in || '',
+      maps_out: r.maps_out || '',
+      report_folder_url: reportsFolder,
+      report_photos_folder_url: reportPhotosFolder,
+      folders: payload.folders || {}
+    };
+  } else if (userUpdateObj) {
+    const u = userUpdateObj;
+    enrichedPayload = {
+      id: u.id,
+      user_id: u.id,
+      msisdn: u.phone || '',
+      full_name: u.name || '',
+      role: u.role || 'agent',
+      type_user: u.role || 'agent',
+      password_hash: u.password || '',
+      supervisor_id: u.supervisorId || '',
+      permanent_shop_id: u.permanentShopId || '',
+      updated_at: u.updated_at || new Date().toISOString(),
+      action: 'processUserUpdate',
+      type: 'user-update',
+      event: 'USER_PASSWORD_UPDATED',
+      tab: 'Users',
+      target_sheet: 'Users',
+      sheet_name: 'Users'
     };
   }
 
@@ -936,6 +990,35 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
               checkins[idx].status = 'synced';
               saveCheckins(checkins);
             }
+          }
+        }
+      } catch (e) {}
+    }
+    if (res.ok && reportObj) {
+      try {
+        const text = await res.text();
+        let drivePdf = '';
+        let reportPhotos: string[] | undefined;
+
+        try {
+          const json = JSON.parse(text);
+          drivePdf = json.pdfUrl || json.reportUrl || json.drivePdfUrl || json.drive_url || json.fileUrl || '';
+          reportPhotos = Array.isArray(json.reportPhotoUrls) ? json.reportPhotoUrls : reportPhotos;
+        } catch {
+          const foundUrl = text.match(/https?:\/\/[^\s"']+/i);
+          if (foundUrl) drivePdf = foundUrl[0];
+        }
+
+        if (drivePdf) {
+          const reports = getReports();
+          const idx = reports.findIndex(r => r.id === reportObj.id);
+          if (idx >= 0) {
+            reports[idx] = {
+              ...reports[idx],
+              drive_pdf_url: drivePdf,
+              report_photos_drive_urls: reportPhotos || reports[idx].report_photos_drive_urls
+            };
+            saveReports(reports);
           }
         }
       } catch (e) {}
