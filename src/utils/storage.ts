@@ -1,7 +1,7 @@
 import { User, UserRole, Shop, Checkin, Lead, DailyReport, NotificationItem, ChatMessage, ShopTargets, AgentMasterStatus } from '../types';
 import { INITIAL_SHOPS, INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_REPORTS, INITIAL_NOTIFICATIONS, INITIAL_CHAT } from '../data/initialData';
 import { buildAgentReportHtml, generateAgentPDF, PDFReportData } from './pdfGenerator';
-import { pushToGoogleSheetWebhook, getGSheetConfig, syncFromGoogleSheetUrl } from './googleSheetsSync';
+import { pushToGoogleSheetWebhook, getGSheetConfig, syncFromGoogleSheetUrl, fetchChatMessagesFromSheet } from './googleSheetsSync';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
 
 const API_BASE_URL = '';
@@ -929,7 +929,13 @@ export function clearNotifications(userId: string): void {
 
 // --- CHAT ---
 export async function getChatMessages(): Promise<ChatMessage[]> {
-  return loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT).filter(m => !m.deleted);
+  const sharedMessages = await fetchChatMessagesFromSheet();
+  if (sharedMessages) {
+    syncSharedChatMessages(sharedMessages);
+    return sharedMessages.filter(message => !message.deleted);
+  }
+
+  return loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT).filter(message => !message.deleted);
 }
 
 export async function sendChatMessage(sender: User, message: string): Promise<ChatMessage> {
@@ -949,6 +955,7 @@ export async function sendChatMessage(sender: User, message: string): Promise<Ch
   };
   const nextMsgs = [...msgs, newMsg];
   syncSharedChatMessages(nextMsgs);
+  void pushToGoogleSheetWebhook({ type: 'chat', data: newMsg });
 
   if (sender.role === 'admin') {
     recipients.forEach(uid => {

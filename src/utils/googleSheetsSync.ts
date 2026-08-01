@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { Lead, DailyReport, Checkin, User, Shop, UserRole } from '../types';
+import { Lead, DailyReport, Checkin, User, Shop, UserRole, ChatMessage } from '../types';
 import { getLeads, getReports, getCheckins, getUsers, getShops, saveLeads, saveReports, saveCheckins, saveUsers, saveShops } from './storage';
 
 const GSHEET_CONFIG_KEY = 'vodacom_gsheet_config';
@@ -37,6 +37,26 @@ export function getGSheetConfig(): GSheetConfig {
 
 export function saveGSheetConfig(cfg: GSheetConfig) {
   localStorage.setItem(GSHEET_CONFIG_KEY, JSON.stringify(cfg));
+}
+
+/** Read the shared team-chat history from the Apps Script web app. */
+export async function fetchChatMessagesFromSheet(): Promise<ChatMessage[] | null> {
+  const cfg = getGSheetConfig();
+  if (!cfg.webhookUrl) return null;
+
+  try {
+    const separator = cfg.webhookUrl.includes('?') ? '&' : '?';
+    const response = await fetch(`${cfg.webhookUrl}${separator}action=getChatMessages&_=${Date.now()}`, {
+      cache: 'no-store'
+    });
+    if (!response.ok) return null;
+
+    const payload = await response.json();
+    if (!payload?.success || !Array.isArray(payload.messages)) return null;
+    return payload.messages as ChatMessage[];
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -907,6 +927,7 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
   const leadObj = payload.type === 'lead' && payload.data ? payload.data : (payload.client_name ? payload : null);
   const checkinObj = payload.type === 'checkin' && payload.data ? payload.data : (payload.lat !== undefined && payload.agent_id && !payload.client_name ? payload : null);
   const reportObj = payload.type === 'report' && payload.data ? payload.data : (payload.agent_id && payload.date && payload.priv !== undefined ? payload : null);
+  const chatObj = payload.type === 'chat' && payload.data ? payload.data : null;
   const userUpdateObj = payload.type === 'user-update' && payload.data ? payload.data : null;
 
   if (leadObj) {
@@ -998,6 +1019,21 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
       report_folder_url: reportsFolder,
       report_photos_folder_url: reportPhotosFolder,
       folders: payload.folders || {}
+    };
+  } else if (chatObj) {
+    const message = chatObj;
+    enrichedPayload = {
+      id: message.id,
+      sender_id: message.sender_id,
+      sender_name: message.sender_name,
+      sender_role: message.sender_role,
+      message: message.message,
+      timestamp: message.timestamp,
+      created_at: message.created_at || new Date().toISOString(),
+      read_by: message.read_by || [],
+      action: 'processChat',
+      type: 'chat',
+      tab: 'Chat'
     };
   } else if (userUpdateObj) {
     const u = userUpdateObj;

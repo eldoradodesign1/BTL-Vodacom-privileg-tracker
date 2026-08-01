@@ -14,11 +14,20 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onDataChanged }
 
   useEffect(() => {
     let active = true;
-    void getChatMessages().then((list) => {
+
+    const refreshMessages = async () => {
+      const list = await getChatMessages();
       if (active) setMessages(list);
-    });
+    };
+
+    void refreshMessages();
+    const interval = window.setInterval(() => {
+      void refreshMessages();
+    }, 10000);
+
     return () => {
       active = false;
+      window.clearInterval(interval);
     };
   }, []);
 
