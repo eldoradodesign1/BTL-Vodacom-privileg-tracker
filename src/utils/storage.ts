@@ -37,6 +37,48 @@ function pushNotification(userId: string, message: string, type: string): Notifi
   return item;
 }
 
+function mergeUsersWithSeedData(storedUsers: User[]): User[] {
+  const merged: User[] = [...INITIAL_USERS];
+  const indexByPhone = new Map<string, number>();
+
+  merged.forEach((user, index) => {
+    const key = normalizePhoneMSISDN(user.phone).toLowerCase();
+    if (key) indexByPhone.set(key, index);
+  });
+
+  (Array.isArray(storedUsers) ? storedUsers : []).forEach((candidate) => {
+    const key = normalizePhoneMSISDN(candidate.phone).toLowerCase();
+    if (!key) {
+      merged.push(candidate);
+      return;
+    }
+
+    const existingIndex = indexByPhone.get(key);
+    if (existingIndex === undefined) {
+      merged.push(candidate);
+      indexByPhone.set(key, merged.length - 1);
+      return;
+    }
+
+    const existing = merged[existingIndex];
+    merged[existingIndex] = {
+      ...candidate,
+      ...existing,
+      id: existing.id || candidate.id,
+      phone: existing.phone || candidate.phone,
+      name: existing.name || candidate.name,
+      role: existing.role || candidate.role,
+      password: existing.password || candidate.password,
+      supervisorId: existing.supervisorId || candidate.supervisorId,
+      permanentShopId: existing.permanentShopId || candidate.permanentShopId,
+      created_at: existing.created_at || candidate.created_at,
+      last_login: existing.last_login || candidate.last_login
+    };
+  });
+
+  return merged;
+}
+
 function findSupervisorForAgent(agentId: string): User | undefined {
   const users = getUsers();
   const agent = users.find(u => u.id === agentId);
@@ -219,7 +261,13 @@ export function getUsers(): User[] {
     saveItem(STORAGE_KEYS.USERS, INITIAL_USERS);
     return INITIAL_USERS;
   }
-  return storedUsers;
+
+  const mergedUsers = mergeUsersWithSeedData(storedUsers);
+  const needsWrite = JSON.stringify(mergedUsers) !== JSON.stringify(storedUsers);
+  if (needsWrite) {
+    saveItem(STORAGE_KEYS.USERS, mergedUsers);
+  }
+  return mergedUsers;
 }
 
 export function saveUsers(users: User[]): void {
