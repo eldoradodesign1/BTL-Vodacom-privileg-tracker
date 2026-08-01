@@ -546,15 +546,15 @@ export function authenticate(phone: string, password_hash: string): { success: b
   });
 
   if (!found) {
-    return { success: false, message: "Identifiants incorrects (MSISDN non enregistré)." };
+    return { success: false, message: 'Identifiants incorrects (MSISDN non enregistré).' };
   }
 
-  const normalizedPassword = (password_hash || '').trim().toLowerCase();
+  const provided = (password_hash || '').trim().toLowerCase();
   const customPassword = (found.password || '').trim().toLowerCase();
   const roleDefaultPassword = getDefaultPasswordForRole(found.role).toLowerCase();
-  const acceptedPasswords = new Set([customPassword, roleDefaultPassword, 'password', 'admin', 'test', '1234', '0000']);
+  const acceptedPasswords = [customPassword, roleDefaultPassword, 'password', 'admin', 'test', '1234', '0000'];
 
-  if (normalizedPassword && !acceptedPasswords.has(normalizedPassword)) {
+  if (provided && !acceptedPasswords.some(candidate => candidate && candidate === provided)) {
     return { success: false, message: 'Mot de passe incorrect.' };
   }
 
