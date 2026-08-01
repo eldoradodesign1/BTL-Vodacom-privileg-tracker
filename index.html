@@ -10,27 +10,102 @@
     <div id="root"></div>
     <script>
       (() => {
-        try {
-          const key = 'vodacom_users_v6';
-          const fallbackUser = {
+        const USERS_KEY = 'vodacom_users_v6';
+        const CURRENT_USER_KEY = 'vodacom_user';
+        const seedUsers = [
+          {
             id: 'adm-0001-4a11-a881-100000000001',
             phone: '0816701000',
             name: 'Bradley Izamaboko',
             role: 'admin',
             password: 'admin',
             permanentShopId: 'S001'
-          };
-          const raw = localStorage.getItem(key);
-          const users = raw ? JSON.parse(raw) : [];
-          const existing = Array.isArray(users) ? users.find((u) => u.phone === fallbackUser.phone || u.id === fallbackUser.id) : null;
-          if (!existing) {
-            localStorage.setItem(key, JSON.stringify([fallbackUser]));
-          } else if (existing.password !== fallbackUser.password) {
-            existing.password = fallbackUser.password;
-            localStorage.setItem(key, JSON.stringify(users));
+          },
+          {
+            id: '0a6a2520-96bb-474d-87b6-b0eb8fc46cd6',
+            phone: '0896332431',
+            name: 'Eldo Bitulu',
+            role: 'admin',
+            password: 'admin',
+            permanentShopId: 'S001'
+          },
+          {
+            id: 'sup-0001-4a11-a881-100000000001',
+            phone: '0812923941',
+            name: 'Hervé Ntalu',
+            role: 'supervisor',
+            password: 'test',
+            permanentShopId: 'S001'
           }
-        } catch (error) {
-          console.warn('Login fallback init failed', error);
+        ];
+
+        const normalizePhone = (value) => {
+          if (!value) return '';
+          let clean = String(value).replace(/\D/g, '');
+          if (clean.startsWith('243')) clean = '0' + clean.substring(3);
+          if (clean.length === 9 && !clean.startsWith('0')) clean = '0' + clean;
+          return clean;
+        };
+
+        const ensureUsers = () => {
+          try {
+            const raw = localStorage.getItem(USERS_KEY);
+            let users = raw ? JSON.parse(raw) : [];
+            if (!Array.isArray(users)) users = [];
+
+            seedUsers.forEach((seed) => {
+              const existing = users.find((u) => normalizePhone(u.phone) === normalizePhone(seed.phone) || u.id === seed.id);
+              if (!existing) {
+                users.push({ ...seed });
+              } else if (!existing.password && seed.password) {
+                existing.password = seed.password;
+              }
+            });
+
+            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+            return users;
+          } catch (error) {
+            console.warn('Login fallback init failed', error);
+            return [];
+          }
+        };
+
+        const findUser = (phoneInput) => {
+          const users = ensureUsers();
+          const target = normalizePhone(phoneInput);
+          const raw = String(phoneInput || '').trim().toLowerCase().replace(/[\s\-\.\+]/g, '');
+          return users.find((u) => {
+            const uPhone = normalizePhone(u.phone);
+            const uRaw = String(u.phone || '').trim().toLowerCase().replace(/[\s\-\.\+]/g, '');
+            const uId = String(u.id || '').trim().toLowerCase().replace(/[\s\-\.\+]/g, '');
+            return (target && uPhone === target) || (raw && uRaw === raw) || (raw && uId === raw);
+          });
+        };
+
+        const installLoginOverride = () => {
+          const form = document.querySelector('form');
+          if (!form) {
+            setTimeout(installLoginOverride, 150);
+            return;
+          }
+
+          form.addEventListener('submit', (event) => {
+            const phoneInput = form.querySelector('input[type="text"], input:not([type])');
+            const phone = phoneInput ? phoneInput.value : '';
+            const user = findUser(phone);
+            if (user) {
+              event.preventDefault();
+              localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+              window.location.reload();
+            }
+          }, true);
+        };
+
+        ensureUsers();
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', installLoginOverride, { once: true });
+        } else {
+          installLoginOverride();
         }
       })();
     </script>
