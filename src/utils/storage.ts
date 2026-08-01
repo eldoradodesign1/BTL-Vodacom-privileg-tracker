@@ -20,12 +20,13 @@ const STORAGE_KEYS = {
 };
 
 const SHARED_API_BASE = (() => {
-  if (typeof window === 'undefined') return 'http://127.0.0.1:3001';
+  if (typeof window === 'undefined') return '';
   const host = window.location.hostname || '127.0.0.1';
-  return `http://${host}:3001`;
+  return host === 'localhost' || host === '127.0.0.1' ? 'http://127.0.0.1:3001' : '';
 })();
 
 async function fetchSharedJson<T>(path: string, init?: RequestInit): Promise<T | null> {
+  if (!SHARED_API_BASE) return null;
   try {
     const response = await fetch(`${SHARED_API_BASE}${path}`, {
       ...init,

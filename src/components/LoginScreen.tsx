@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { authenticate, purgeAndResetEverything } from '../utils/storage';
-import { Lock, Phone, Trash2 } from 'lucide-react';
+import { Lock, Phone, Trash2, KeyRound } from 'lucide-react';
 
 interface LoginScreenProps {
   onLoginSuccess: (user: User) => void;
@@ -9,19 +9,22 @@ interface LoginScreenProps {
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const phoneValue = (e.currentTarget as HTMLFormElement).elements.namedItem('phone') as HTMLInputElement | null;
+    const passwordValue = (e.currentTarget as HTMLFormElement).elements.namedItem('password') as HTMLInputElement | null;
     const enteredPhone = (phoneValue?.value || phone || '').trim();
+    const enteredPassword = (passwordValue?.value || password || '').trim();
 
     setLoading(true);
     setError('');
 
     setTimeout(() => {
-      const result = authenticate(enteredPhone, '');
+      const result = authenticate(enteredPhone, enteredPassword);
       setLoading(false);
       if (result.success && result.user) {
         onLoginSuccess(result.user);
@@ -78,6 +81,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               <span>Clé de Sécurité</span>
             </label>
             <input
+              id="password"
+              name="password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -87,10 +92,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             />
           </div>
 
-          {/* <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-[11px] font-semibold text-gray-400">
-            Connexion par numéro de téléphone uniquement. Les administrateurs utilisent le mot de passe par défaut « admin » et les superviseurs « test ».
-            Connexion par numéro de téléphone.
-          </div> */}
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-[11px] font-semibold text-gray-400">
+            Utilisez votre numéro de téléphone et votre mot de passe. Les administrateurs utilisent souvent « admin » et les superviseurs « test ».
+          </div>
 
           <button
             type="submit"
