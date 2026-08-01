@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { User, Shop, Lead, Checkin, DailyReport, NotificationItem, AgentMasterStatus, UserRole } from './types';
+import React, { useEffect, useState } from 'react';
+import { User, Shop, AgentMasterStatus, UserRole } from './types';
 import {
   getUsers,
   getShops,
@@ -24,7 +24,6 @@ import { AgentView } from './components/AgentView';
 import { SupervisorView } from './components/SupervisorView';
 import { AdminView } from './components/AdminView';
 import { ChatView } from './components/ChatView';
-
 import { LeadModal } from './components/Modals/LeadModal';
 import { ReportModal } from './components/Modals/ReportModal';
 import { UserModal } from './components/Modals/UserModal';
@@ -39,7 +38,7 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
       const saved = localStorage.getItem('vodacom_user');
-      return saved ? JSON.parse(saved) : null;
+      return saved ? (JSON.parse(saved) as User) : null;
     } catch {
       return null;
     }
@@ -48,7 +47,6 @@ export default function App() {
   const [masterUser, setMasterUser] = useState<User | null>(currentUser);
   const [simulatedRole, setSimulatedRole] = useState<UserRole | null>(null);
   const [simulatedUserId, setSimulatedUserId] = useState<string | null>(null);
-
   const [theme, setTheme] = useState<'classic' | 'dark' | 'light'>(() => {
     try {
       const saved = localStorage.getItem('vodacom_theme') as 'classic' | 'dark' | 'light' | null;
@@ -60,12 +58,11 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState<TabType>('home');
-  const [users, setUsers] = useState<User[]>(getUsers());
-  const [shops, setShops] = useState<Shop[]>(getShops());
+  const [users, setUsers] = useState<User[]>(() => getUsers());
+  const [shops, setShops] = useState<Shop[]>(() => getShops());
   const [activeShopId, setActiveShopId] = useState<string>('');
   const [, setDataRevision] = useState(0);
 
-  // Modals state
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -87,7 +84,7 @@ export default function App() {
       localStorage.removeItem('vodacom_user');
       setMasterUser(null);
     }
-  }, [currentUser]);
+  }, [currentUser, masterUser]);
 
   useEffect(() => {
     localStorage.setItem('vodacom_theme', theme);
@@ -102,30 +99,32 @@ export default function App() {
   const refreshData = () => {
     setUsers(getUsers());
     setShops(getShops());
-    setDataRevision(prev => prev + 1);
+    setDataRevision((prev) => prev + 1);
   };
 
   useEffect(() => {
     const doAutoSync = () => {
       const cfg = getGSheetConfig();
       if (cfg.sheetCsvUrl) {
-        syncFromGoogleSheetUrl(cfg.sheetCsvUrl).then((res) => {
-          if (res.success && res.count > 0) {
-            refreshData();
-          }
-        }).catch(() => {});
+        syncFromGoogleSheetUrl(cfg.sheetCsvUrl)
+          .then((res) => {
+            if (res.success && res.count > 0) {
+              refreshData();
+            }
+          })
+          .catch(() => undefined);
       }
     };
 
     doAutoSync();
-    const interval = setInterval(() => {
+    const interval = window.setInterval(() => {
       const cfg = getGSheetConfig();
       if (cfg.autoSync && cfg.sheetCsvUrl) {
         doAutoSync();
       }
     }, 60000);
 
-    return () => clearInterval(interval);
+    return () => window.clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -136,13 +135,13 @@ export default function App() {
       setSyncPendingCount(getSyncPendingCount());
     };
     refreshStatus();
-    const interval = setInterval(refreshStatus, 30000);
+    const interval = window.setInterval(refreshStatus, 30000);
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);
     window.addEventListener('online', onOnline);
     window.addEventListener('offline', onOffline);
     return () => {
-      clearInterval(interval);
+      window.clearInterval(interval);
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
     };
@@ -159,17 +158,13 @@ export default function App() {
     return <LoginScreen onLoginSuccess={(u) => { setCurrentUser(u); setMasterUser(u); }} />;
   }
 
-  // Base user account is master user if available, or current logged user
   const realMasterUser = masterUser || currentUser;
-
-  // Resolve simulated user profile if selected by Admin
   let baseUser = currentUser;
   if (simulatedUserId) {
-    const foundU = users.find(u => u.id === simulatedUserId);
+    const foundU = users.find((u) => u.id === simulatedUserId);
     if (foundU) baseUser = foundU;
   }
 
-  // Determine effective user & role (handling master simulation mode)
   const effectiveRole = simulatedRole || baseUser.role;
   const effectiveUser: User = {
     ...baseUser,
@@ -177,20 +172,18 @@ export default function App() {
   };
 
   const todayStr = toISO(new Date());
-
-  // Filter today's data for active effective agent
-  const todayLeads = getLeads().filter(l => l.agent_id === effectiveUser.id && toISO(l.timestamp) === todayStr);
-  const todayCheckin = getCheckins().find(c => c.agent_id === effectiveUser.id && toISO(c.timestamp) === todayStr && c.type === 'IN') || null;
-  const agentReports = getReports().filter(r => r.agent_id === effectiveUser.id);
+  const todayLeads = getLeads().filter((l) => l.agent_id === effectiveUser.id && toISO(l.timestamp) === todayStr);
+  const todayCheckin = getCheckins().find((c) => c.agent_id === effectiveUser.id && toISO(c.timestamp) === todayStr && c.type === 'IN') || null;
+  const agentReports = getReports().filter((r) => r.agent_id === effectiveUser.id);
   const notifications = getNotifications(effectiveUser.id);
   const todayCheckinPhoto = getTodayCheckinPhoto(effectiveUser.id);
   const selectedAgentTodayLeads = selectedAgentForProfile
-    ? getLeads().filter(l => l.agent_id === selectedAgentForProfile.id && toISO(l.timestamp) === todayStr)
+    ? getLeads().filter((l) => l.agent_id === selectedAgentForProfile.id && toISO(l.timestamp) === todayStr)
     : [];
 
   const handleSimulateUserChange = (userId: string) => {
     setSimulatedUserId(userId);
-    const found = users.find(u => u.id === userId);
+    const found = users.find((u) => u.id === userId);
     if (found) {
       setSimulatedRole(found.role);
     }
@@ -208,7 +201,6 @@ export default function App() {
     setSimulatedUserId(null);
   };
 
-  // Render view based on role & active tab
   const renderContent = () => {
     if (activeTab === 'chat') {
       return <ChatView currentUser={effectiveUser} onDataChanged={refreshData} />;
@@ -242,7 +234,6 @@ export default function App() {
       );
     }
 
-    // Default Agent View
     return (
       <AgentView
         currentUser={effectiveUser}
@@ -260,12 +251,15 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen flex flex-col relative overflow-hidden font-sans select-none transition-colors ${
-      theme === 'classic'
-        ? 'bg-gradient-to-br from-[#4d0000] via-[#8c0000] to-[#2d0000] text-white'
-        : (theme === 'light' ? 'bg-gradient-to-br from-[#f8fafc] via-[#eef2ff] to-[#ffe4e6] text-zinc-900' : 'bg-[#09090b] text-white')
-    }`}>
-      {/* Persistent Master Admin Simulation Bar */}
+    <div
+      className={`min-h-screen flex flex-col relative overflow-hidden font-sans select-none transition-colors ${
+        theme === 'classic'
+          ? 'bg-gradient-to-br from-[#4d0000] via-[#8c0000] to-[#2d0000] text-white'
+          : theme === 'light'
+            ? 'bg-gradient-to-br from-[#f8fafc] via-[#eef2ff] to-[#ffe4e6] text-zinc-900'
+            : 'bg-[#09090b] text-white'
+      }`}
+    >
       <SimulationBar
         masterUser={realMasterUser}
         effectiveUser={effectiveUser}
@@ -276,7 +270,6 @@ export default function App() {
         onResetSimulation={handleResetSimulation}
       />
 
-      {/* Main App Header */}
       <Header
         user={effectiveUser}
         notifications={notifications}
@@ -300,12 +293,10 @@ export default function App() {
         onOpenGSheetModal={realMasterUser.role === 'admin' ? () => setIsGSheetModalOpen(true) : undefined}
       />
 
-      {/* Main View Area */}
       <main className="flex-1 px-3 sm:px-4 pt-3 pb-32 max-w-2xl mx-auto w-full overflow-y-auto overflow-x-hidden">
         {renderContent()}
       </main>
 
-      {/* Bottom Mobile Navigation */}
       <BottomNav
         userRole={effectiveRole}
         activeTab={activeTab}
@@ -313,7 +304,6 @@ export default function App() {
         onTabChange={(tab) => setActiveTab(tab)}
       />
 
-      {/* App Modals */}
       <LeadModal
         isOpen={isLeadModalOpen}
         currentUser={effectiveUser}
@@ -362,11 +352,11 @@ export default function App() {
       <AgentProfileModal
         isOpen={!!selectedAgentForProfile}
         agent={selectedAgentForProfile}
-        agentReports={getReports().filter(r => r.agent_id === selectedAgentForProfile?.id)}
+        agentReports={getReports().filter((r) => r.agent_id === selectedAgentForProfile?.id)}
         dayLeads={selectedAgentTodayLeads}
         onClose={() => setSelectedAgentForProfile(null)}
         onOpenPdf={(url) => setPdfModalUrl(url)}
-        onCompileAgent={(agentId) => {
+        onCompileAgent={() => {
           setSelectedAgentForProfile(null);
           setActiveTab('admin');
         }}
