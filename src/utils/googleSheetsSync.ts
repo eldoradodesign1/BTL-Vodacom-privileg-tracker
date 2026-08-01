@@ -44,19 +44,50 @@ export async function fetchChatMessagesFromSheet(): Promise<ChatMessage[] | null
   const cfg = getGSheetConfig();
   if (!cfg.webhookUrl) return null;
 
-  try {
-    const separator = cfg.webhookUrl.includes('?') ? '&' : '?';
-    const response = await fetch(`${cfg.webhookUrl}${separator}action=getChatMessages&_=${Date.now()}`, {
-      cache: 'no-store'
-    });
-    if (!response.ok) return null;
+  return new Promise((resolve) => {
+    const callbackName = `vodacomChat_${Date.now()}_${Math.random()
+      .toString(36)
+      .slice(2)}`;
 
-    const payload = await response.json();
-    if (!payload?.success || !Array.isArray(payload.messages)) return null;
-    return payload.messages as ChatMessage[];
-  } catch {
-    return null;
-  }
+    const separator = cfg.webhookUrl.includes('?') ? '&' : '?';
+    const script = document.createElement('script');
+
+    const cleanup = () => {
+      delete (window as any)[callbackName];
+      script.remove();
+    };
+
+    const timeout = window.setTimeout(() => {
+      cleanup();
+      resolve(null);
+    }, 10000);
+
+    (window as any)[callbackName] = (payload: {
+      success?: boolean;
+      messages?: ChatMessage[];
+    }) => {
+      window.clearTimeout(timeout);
+      cleanup();
+
+      if (payload?.success && Array.isArray(payload.messages)) {
+        resolve(payload.messages);
+      } else {
+        resolve(null);
+      }
+    };
+
+    script.onerror = () => {
+      window.clearTimeout(timeout);
+      cleanup();
+      resolve(null);
+    };
+
+    script.src =
+      `${cfg.webhookUrl}${separator}` +
+      `action=getChatMessages&callback=${callbackName}&_=${Date.now()}`;
+
+    document.head.appendChild(script);
+  });
 }
 
 /**
