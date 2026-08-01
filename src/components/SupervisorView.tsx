@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { User, Shop, AgentMasterStatus } from '../types';
 import { getSupervisorLiveView, getReports, getUsers, getLeads, updateUserShopAssignment } from '../utils/storage';
+import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
-import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText } from 'lucide-react';
+import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera } from 'lucide-react';
 
 interface SupervisorViewProps {
   currentUser: User;
@@ -30,6 +31,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
   const [assigningShopId, setAssigningShopId] = useState<string>('');
   const [inlineAssignShop, setInlineAssignShop] = useState<Record<string, string>>({});
+  const [selectedLocationAgent, setSelectedLocationAgent] = useState<{ id: string; name: string; shop: string; status?: 'Présent' | 'Clôturé' | 'Absent'; arrivalTime?: string; departureTime?: string; mapsIn?: string; mapsOut?: string; lat?: number; long?: number } | null>(null);
 
   const teamData = getSupervisorLiveView(currentUser.id, selectedDate);
   const allUsers = getUsers();
@@ -163,6 +165,38 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           })}
         </div>
 
+        {selectedLocationAgent && (
+          <div className="rounded-3xl border border-blue-500/30 bg-blue-500/10 p-3 space-y-3">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <p className="text-[10px] font-black uppercase text-blue-300">Localisation</p>
+                <p className="text-sm font-black text-white">{selectedLocationAgent.name}</p>
+                <p className="text-[10px] font-bold text-gray-300">{formatAgentLocationLine({
+                  shop: selectedLocationAgent.shop,
+                  status: selectedLocationAgent.status,
+                  arrivalTime: selectedLocationAgent.arrivalTime,
+                  departureTime: selectedLocationAgent.departureTime
+                })}</p>
+              </div>
+              <button
+                onClick={() => setSelectedLocationAgent(null)}
+                className="text-[10px] font-black uppercase text-gray-300 hover:text-white"
+              >
+                Fermer
+              </button>
+            </div>
+            <div className="overflow-hidden rounded-2xl border border-white/10">
+              <iframe
+                title={`Localisation ${selectedLocationAgent.name}`}
+                src={getLocationEmbedUrl(selectedLocationAgent)}
+                className="w-full h-48 border-0"
+                loading="lazy"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          </div>
+        )}
+
         {/* Agent Cards */}
         <div className="space-y-3">
           {filteredTeam.map(item => {
@@ -199,38 +233,35 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                     </div>
 
                     <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-wrap gap-1 mt-1">
-                      {item.status === 'Présent' && item.reportObj?.arrival_time ? (
-                        <>
-                          <MapPin className="w-3 h-3 text-blue-400" />
-                          <span>Arrivée {item.reportObj.arrival_time}</span>
-                        </>
-                      ) : null}
-                      {item.status === 'Clôturé' && item.reportObj?.departure_time ? (
-                        <>
-                          <MapPin className="w-3 h-3 text-emerald-400" />
-                          <span>Clôturé {item.reportObj.departure_time}</span>
-                        </>
-                      ) : null}
+                      <MapPin className="w-3 h-3 text-blue-400" />
+                      <span>{formatAgentLocationLine({
+                        shop: item.shop,
+                        status: item.status,
+                        arrivalTime: item.reportObj?.arrival_time,
+                        departureTime: item.reportObj?.departure_time
+                      })}</span>
                     </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 shrink-0">
                     <button
                       onClick={() => {
-                        if (item.status === 'Présent' && onOpenTodayClientsModal) {
-                          onOpenTodayClientsModal({
+                        if (item.status === 'Présent') {
+                          setSelectedLocationAgent({
                             id: item.id,
                             name: item.name,
-                            phone: '0810000000',
                             shop: item.shop,
-                            shopId: '',
                             status: item.status,
-                            trend: [4, 7, 5, 12, 18, 14, totalLeads]
+                            arrivalTime: item.reportObj?.arrival_time,
+                            mapsIn: item.reportObj?.maps_in,
+                            mapsOut: item.reportObj?.maps_out,
+                            lat: item.reportObj?.maps_in ? undefined : undefined,
+                            long: item.reportObj?.maps_out ? undefined : undefined
                           });
                         }
                       }}
                       className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg} ${item.status === 'Présent' ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
-                      title={item.status === 'Présent' ? 'Voir les clients du jour' : undefined}
+                      title={item.status === 'Présent' ? 'Voir la localisation' : undefined}
                     >
                       {item.status}
                     </button>
@@ -276,15 +307,15 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                         key={tile.label}
                         type="button"
                         onClick={() => {
-                          if (item.status === 'Présent' && onOpenTodayClientsModal) {
-                            onOpenTodayClientsModal({
+                          if (item.status === 'Présent') {
+                            setSelectedLocationAgent({
                               id: item.id,
                               name: item.name,
-                              phone: '0810000000',
                               shop: item.shop,
-                              shopId: '',
                               status: item.status,
-                              trend: [4, 7, 5, 12, 18, 14, totalLeads]
+                              arrivalTime: item.reportObj?.arrival_time,
+                              mapsIn: item.reportObj?.maps_in,
+                              mapsOut: item.reportObj?.maps_out
                             });
                           }
                         }}

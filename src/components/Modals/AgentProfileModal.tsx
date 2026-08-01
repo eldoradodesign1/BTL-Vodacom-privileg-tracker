@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { AgentMasterStatus, DailyReport } from '../../types';
-import { Phone, FileSpreadsheet, X, Eye } from 'lucide-react';
+import { Phone, FileSpreadsheet, X, Eye, Camera } from 'lucide-react';
 
 interface AgentProfileModalProps {
   isOpen: boolean;
@@ -25,6 +25,11 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
     ? agent.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
     : 'AG';
 
+  const latestPhoto = useMemo(() => {
+    const fromReport = agentReports.find(rep => rep.pointage_photo || rep.photos?.length);
+    return fromReport?.pointage_photo || fromReport?.photos?.[0] || '';
+  }, [agentReports]);
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-pop">
       <div className="modal-sheet relative w-full max-w-lg">
@@ -37,8 +42,12 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
         </button>
 
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-16 h-16 rounded-3xl bg-red-600/20 border-2 border-red-500/40 text-red-500 font-black text-xl flex items-center justify-center mb-3">
-            {initials}
+          <div className="w-16 h-16 rounded-3xl bg-red-600/20 border-2 border-red-500/40 text-red-500 font-black text-xl flex items-center justify-center mb-3 overflow-hidden">
+            {latestPhoto ? (
+              <img src={latestPhoto} alt={`Pointage ${agent.name}`} className="w-full h-full object-cover" />
+            ) : (
+              initials
+            )}
           </div>
           <h2 className="text-xl font-black uppercase text-white tracking-wider">{agent.name}</h2>
           <p className="text-xs text-gray-400 font-bold uppercase">{agent.shop} • MSISDN: {agent.phone}</p>
@@ -61,6 +70,13 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
             <span>APPELER</span>
           </a>
         </div>
+
+        {latestPhoto && (
+          <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-3 flex items-center gap-2 text-left">
+            <Camera className="w-4 h-4 text-red-400" />
+            <p className="text-[10px] font-bold uppercase text-gray-300">Photo de pointage visible dans le profil</p>
+          </div>
+        )}
 
         <div>
           <h3 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-3">

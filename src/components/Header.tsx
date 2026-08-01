@@ -36,6 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [photoError, setPhotoError] = useState(false);
+  const photoSrc = profilePhotoUrl && !photoError ? profilePhotoUrl : '';
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const unreadCount = safeNotifications.filter(n => !n.is_read).length + unreadChatCount;
   const roleLabel = user.role === 'admin' ? 'Admin' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent');
@@ -61,9 +62,9 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
         {/* Vodacom / Eldorado Badge */}
         <div className="relative w-11 h-11 bg-red-600 rounded-2xl flex items-center justify-center font-black text-white text-base shadow-lg shadow-red-600/30 overflow-hidden shrink-0 border border-white/20">
-          {profilePhotoUrl && !photoError ? (
+          {photoSrc ? (
             <img
-              src={profilePhotoUrl}
+              src={photoSrc}
               alt="Photo pointage"
               className="w-full h-full object-cover object-center"
               style={{ objectPosition: 'center center' }}
