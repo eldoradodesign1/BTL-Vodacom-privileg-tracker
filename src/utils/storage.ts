@@ -96,28 +96,35 @@ function pushNotification(userId: string, message: string, type: string): Notifi
 }
 
 function loadStoredArray<T>(key: string, legacyKeys: string[], fallback: T): T {
-  const tryParse = (raw: string | null): T | null => {
+  const tryParse = (raw: string | null): unknown => {
     if (!raw) return null;
     try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed as T;
-      return parsed as T;
+      return JSON.parse(raw);
     } catch {
       return null;
     }
   };
 
   const currentValue = tryParse(localStorage.getItem(key));
-  if (currentValue && (Array.isArray(currentValue) ? currentValue.length > 0 : true)) {
-    return currentValue;
+  if (Array.isArray(currentValue)) {
+    return currentValue as T;
   }
 
-  for (const legacyKey of legacyKeys) {
-    const legacyValue = tryParse(localStorage.getItem(legacyKey));
-    if (legacyValue) {
-      saveItem(key, legacyValue);
-      return legacyValue;
+  if (Array.isArray(fallback)) {
+    for (const legacyKey of legacyKeys) {
+      const legacyValue = tryParse(localStorage.getItem(legacyKey));
+      if (Array.isArray(legacyValue)) {
+        saveItem(key, legacyValue);
+        return legacyValue as T;
+      }
     }
+
+    saveItem(key, fallback);
+    return fallback;
+  }
+
+  if (currentValue !== null) {
+    return currentValue as T;
   }
 
   saveItem(key, fallback);
@@ -267,7 +274,14 @@ function loadItem<T>(key: string, fallback: T): T {
       localStorage.setItem(key, JSON.stringify(fallback));
       return fallback;
     }
-    return JSON.parse(raw);
+
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(fallback) && !Array.isArray(parsed)) {
+      saveItem(key, fallback);
+      return fallback;
+    }
+
+    return parsed as T;
   } catch {
     return fallback;
   }

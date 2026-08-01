@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { authenticate, purgeAndResetEverything } from '../utils/storage';
-import { Lock, Phone, Trash2, KeyRound } from 'lucide-react';
+import { Lock, Phone, Trash2 } from 'lucide-react';
 
 interface LoginScreenProps {
   onLoginSuccess: (user: User) => void;
@@ -77,7 +77,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
           <div className="space-y-1">
             <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center space-x-1">
-              <KeyRound className="w-3 h-3 text-red-500" />
+              <Lock className="w-3 h-3 text-red-500" />
               <span>Clé de Sécurité</span>
             </label>
             <input

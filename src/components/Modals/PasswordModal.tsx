@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../../types';
 import { updateUserPassword } from '../../utils/storage';
-import { KeyRound, X, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Lock, X, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 interface PasswordModalProps {
   isOpen: boolean;
@@ -82,7 +82,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUse
           )}
 
           <button type="submit" className="btn-neon btn-red w-full">
-            <KeyRound className="w-4 h-4" />
+            <Lock className="w-4 h-4" />
             <span>Mettre à jour ma clé</span>
           </button>
         </form>

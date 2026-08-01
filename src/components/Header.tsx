@@ -36,7 +36,8 @@ export const Header: React.FC<HeaderProps> = ({
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [photoError, setPhotoError] = useState(false);
-  const unreadCount = notifications.filter(n => !n.is_read).length + unreadChatCount;
+  const safeNotifications = Array.isArray(notifications) ? notifications : [];
+  const unreadCount = safeNotifications.filter(n => !n.is_read).length + unreadChatCount;
   const roleLabel = user.role === 'admin' ? 'Admin' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent');
   const syncState: 'ok' | 'progress' | 'late' = (() => {
     if (online && syncPendingCount === 0) return 'ok';
@@ -211,10 +212,10 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  {notifications.length === 0 ? (
+                  {safeNotifications.length === 0 ? (
                     <p className="text-center text-xs text-gray-500 italic py-4">Aucune notification.</p>
                   ) : (
-                    notifications.map(n => (
+                    safeNotifications.map(n => (
                       <div key={n.id} className="p-3 bg-red-500/10 border-l-4 border-red-600 rounded-xl text-xs font-semibold">
                         {n.message}
                       </div>
