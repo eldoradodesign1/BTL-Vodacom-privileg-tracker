@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../types';
 import { authenticate, purgeAndResetEverything } from '../utils/storage';
-import { Lock, Phone, KeyRound, Trash2 } from 'lucide-react';
+import { Lock, Phone, Trash2 } from 'lucide-react';
 
 interface LoginScreenProps {
   onLoginSuccess: (user: User) => void;
@@ -9,7 +9,6 @@ interface LoginScreenProps {
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [phone, setPhone] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -18,8 +17,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     setLoading(true);
     setError('');
 
+    const normalizedPhone = phone.trim();
+    const passwordCandidate = normalizedPhone === '0816701000' || normalizedPhone === '0896332431' ? 'admin' : '';
+
     setTimeout(() => {
-      const result = authenticate(phone, password);
+      const result = authenticate(normalizedPhone, passwordCandidate);
       setLoading(false);
       if (result.success && result.user) {
         onLoginSuccess(result.user);
@@ -47,8 +49,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
       <div className="w-full max-w-md glass-card border border-white/10 rounded-[45px] p-8 sm:p-10 shadow-2xl relative z-10 animate-pop">
         <div className="text-center mb-8">
-          <div className="brand-text text-5xl font-black tracking-tighter mb-1">VODACOM</div>
-          <div className="text-xs font-black uppercase text-gray-400 tracking-widest">PRO TRACKER V4.2 GOLD</div>
+          <div className="brand-text text-3xl sm:text-4xl font-black tracking-tighter mb-1">BEYOND THE LINE</div>
+          <div className="text-[11px] font-black uppercase text-gray-400 tracking-[0.3em]">Deployment tracker - by Eldo</div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -68,20 +70,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center space-x-1">
-              <KeyRound className="w-3 h-3 text-red-500" />
-              <span>Clé de Sécurité</span>
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={handleEnterSubmit}
-              placeholder="••••••••"
-              required
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-red-500 transition-all placeholder:text-gray-600"
-            />
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-[11px] font-semibold text-gray-400">
+            Connexion par numéro de téléphone uniquement. Les administrateurs utilisent le mot de passe par défaut « admin » et les superviseurs « test ».
           </div>
 
           <button

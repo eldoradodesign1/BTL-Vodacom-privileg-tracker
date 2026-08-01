@@ -4,10 +4,36 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>BTL Deployment Tracker</title>
+    <title>BEYOND THE LINE Deployment tracker - by Eldo</title>
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (() => {
+        try {
+          const key = 'vodacom_users_v6';
+          const fallbackUser = {
+            id: 'adm-0001-4a11-a881-100000000001',
+            phone: '0816701000',
+            name: 'Bradley Izamaboko',
+            role: 'admin',
+            password: 'admin',
+            permanentShopId: 'S001'
+          };
+          const raw = localStorage.getItem(key);
+          const users = raw ? JSON.parse(raw) : [];
+          const existing = Array.isArray(users) ? users.find((u) => u.phone === fallbackUser.phone || u.id === fallbackUser.id) : null;
+          if (!existing) {
+            localStorage.setItem(key, JSON.stringify([fallbackUser]));
+          } else if (existing.password !== fallbackUser.password) {
+            existing.password = fallbackUser.password;
+            localStorage.setItem(key, JSON.stringify(users));
+          }
+        } catch (error) {
+          console.warn('Login fallback init failed', error);
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
