@@ -972,10 +972,32 @@ export async function sendChatMessage(sender: User, message: string): Promise<Ch
 
 export async function deleteChatMessage(messageId: string, actor: User): Promise<boolean> {
   if (actor.role !== 'admin') return false;
+
+  const deletedAt = new Date().toISOString();
+
+  const remoteDeleted = await pushToGoogleSheetWebhook({
+    action: 'deleteChatMessage',
+    type: 'chat-delete',
+    tab: 'Chat',
+    id: messageId,
+    deleted_by: actor.id,
+    deleted_at: deletedAt
+  });
+
+  if (!remoteDeleted) return false;
+
   const msgs = await getChatMessages();
-  const idx = msgs.findIndex(m => m.id === messageId);
-  if (idx === -1) return false;
-  const updated = msgs.map(m => m.id === messageId ? { ...m, deleted: true, deleted_by: actor.id, deleted_at: new Date().toISOString() } : m);
+  const updated = msgs.map(message =>
+    message.id === messageId
+      ? {
+          ...message,
+          deleted: true,
+          deleted_by: actor.id,
+          deleted_at: deletedAt
+        }
+      : message
+  );
+
   syncSharedChatMessages(updated);
   return true;
 }
