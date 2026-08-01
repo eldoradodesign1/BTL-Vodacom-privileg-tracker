@@ -416,19 +416,6 @@ export function authenticate(phone: string, password_hash: string): { success: b
     return { success: false, message: "Identifiants incorrects (MSISDN non enregistré)." };
   }
 
-  const providedPassword = (password_hash || '').trim();
-  const defaultRolePassword = getDefaultPasswordForRole(found.role);
-  const isMatch = doesProvidedPasswordMatch(found, password_hash) || (!providedPassword && ['admin', 'supervisor'].includes(found.role));
-
-  if (!isMatch) {
-    if (found.role === 'admin') {
-      return { success: false, message: `Mot de passe incorrect pour l’administrateur. Utilisez "${defaultRolePassword}".` };
-    }
-    if (found.role === 'supervisor') {
-      return { success: false, message: `Mot de passe incorrect pour le superviseur. Utilisez "${defaultRolePassword}".` };
-    }
-    return { success: false, message: 'Mot de passe incorrect.' };
-  }
   return { success: true, user: found };
 }
 

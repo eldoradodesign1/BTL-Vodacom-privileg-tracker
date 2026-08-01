@@ -17,11 +17,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     setLoading(true);
     setError('');
 
-    const normalizedPhone = phone.trim();
-    const passwordCandidate = normalizedPhone === '0816701000' || normalizedPhone === '0896332431' ? 'admin' : '';
-
     setTimeout(() => {
-      const result = authenticate(normalizedPhone, passwordCandidate);
+      const result = authenticate(phone, '');
       setLoading(false);
       if (result.success && result.user) {
         onLoginSuccess(result.user);
