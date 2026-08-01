@@ -197,7 +197,7 @@ export function buildAgentReportHtml(d: PDFReportData): string {
         <td style="width:33%;">
           <div style="background:linear-gradient(140deg,#111827 0%,#1f2937 100%); border-radius:14px; padding:12px; color:white; min-height:120px; position:relative; overflow:hidden;">
             <div style="position:absolute; right:-10px; top:-8px; font-size:42px; opacity:0.16;">↗</div>
-            <div style="font-size:9px; font-weight:800; text-transform:uppercase; opacity:0.85;">📈 Évolution depuis le début</div>
+            <div style="font-size:9px; font-weight:800; text-transform:uppercase; opacity:0.85;">📈 Évolution</div>
             ${evolutionHtml}
           </div>
         </td>
