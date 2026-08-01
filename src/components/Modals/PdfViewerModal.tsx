@@ -279,11 +279,14 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
 
         {/* View Content */}
         <div className="flex-1 bg-zinc-900 relative overflow-hidden flex flex-col">
-          {activeReport && previewHtml ? (
+          {(activeReport || activeSupervisorPreview || activeAdminPreview) && previewHtml ? (
             <div className="flex-1 overflow-y-auto p-3 sm:p-5 bg-zinc-100">
-              <div className="max-w-4xl mx-auto rounded-2xl shadow-2xl border border-zinc-200 bg-white p-4 sm:p-6">
-                <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
-              </div>
+              <iframe
+                title="Aperçu HTML du rapport"
+                srcDoc={previewHtml}
+                className="w-full h-full min-h-[70vh] rounded-2xl border border-zinc-200 bg-white"
+                sandbox="allow-same-origin allow-popups"
+              />
             </div>
           ) : (useFallbackView || !previewUrl) ? (
             /* Fallback formatted preview if PDF iframe isn't supported by browser sandbox */

@@ -93,12 +93,13 @@ function buildDonutSvg(value: number, maxValue: number, color: string, track: st
   const radius = 24;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - percent / 100);
+  const ratioText = `${value}/${safeMax}`;
   return `
     <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; width:33%; min-width:0;">
       <svg width="70" height="70" viewBox="0 0 70 70" style="display:block;">
         <circle cx="35" cy="35" r="24" fill="none" stroke="${track}" stroke-width="8" />
         <circle cx="35" cy="35" r="24" fill="none" stroke="${color}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}" transform="rotate(-90 35 35)" />
-        <text x="35" y="40" text-anchor="middle" style="font-size:10px; font-weight:900; fill:#111827;">${value}</text>
+        <text x="35" y="40" text-anchor="middle" style="font-size:9px; font-weight:900; fill:#111827;">${ratioText}</text>
       </svg>
       <span style="font-size:9px; font-weight:800; color:#475569; text-transform:uppercase; margin-top:4px;">${label}</span>
     </div>
@@ -364,7 +365,7 @@ function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
     const maxValue = Math.max(1, ...[a.stats.priv, a.stats.roam, a.stats.bund]);
     const badge = a.status === 'Clôturé' ? 'Clôturé' : (a.status === 'Présent' ? 'Présent' : 'Absent');
     return `
-      <div style="border:1px solid #e5e7eb; border-radius:14px; padding:12px; margin-bottom:10px; background:#ffffff;">
+      <div style="border:1px solid #e5e7eb; border-radius:14px; padding:12px; background:#ffffff; height:100%;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
           <div>
             <div style="font-size:13px; font-weight:900; text-transform:uppercase; color:#111827;">${escapeHtml(a.name)}</div>
@@ -388,7 +389,8 @@ function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
     `;
   }).join('');
 
-  const pages = [cover + summary + cards];
+  const cardsGrid = `<div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px;">${cards}</div>`;
+  const pages = [cover + summary + cardsGrid];
   if (d.reports && d.reports.length) {
     pages.push(...d.reports.map((report) => buildAgentReportHtml(report)));
   }
