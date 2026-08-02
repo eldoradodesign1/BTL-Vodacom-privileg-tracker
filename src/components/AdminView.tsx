@@ -216,18 +216,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   return (
     <div className="space-y-6 animate-pop pb-32">
-      {/* Admin Title */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-black text-white tracking-tight">
-            Poste de <span className="text-red-500">Pilotage</span>
-          </h1>
-          <p className="text-xs font-semibold text-gray-400 mt-1">
-            Administration globale & Analytics Vodacom Privilège Pro
-          </p>
-        </div>
-      </div>
-
       {subTab === 'manage' && (
         <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
           <button
