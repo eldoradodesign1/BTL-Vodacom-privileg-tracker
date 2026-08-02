@@ -227,41 +227,42 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </div>
       </div>
 
-      {/* Admin Sub-Tabs */}
-      <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
-        <button
-          onClick={() => setSubTab('manage')}
-          className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
-            subTab === 'manage' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Gestion
-        </button>
-        <button
-          onClick={() => setSubTab('stats')}
-          className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
-            subTab === 'stats' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Analyses
-        </button>
-        <button
-          onClick={() => setSubTab('leads')}
-          className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
-            subTab === 'leads' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Leads
-        </button>
-        <button
-          onClick={() => setSubTab('reports')}
-          className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
-            subTab === 'reports' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
-          }`}
-        >
-          Archives
-        </button>
-      </div>
+      {subTab === 'manage' && (
+        <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
+          <button
+            onClick={() => setSubTab('manage')}
+            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
+              subTab === 'manage' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Gestion
+          </button>
+          <button
+            onClick={() => setSubTab('stats')}
+            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
+              subTab === 'stats' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Analyses
+          </button>
+          <button
+            onClick={() => setSubTab('leads')}
+            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
+              subTab === 'leads' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Leads
+          </button>
+          <button
+            onClick={() => setSubTab('reports')}
+            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
+              subTab === 'reports' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Archives
+          </button>
+        </div>
+      )}
 
       {/* --- SUB-TAB 1: GESTION / MONITORING --- */}
       {subTab === 'manage' && (
