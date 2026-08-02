@@ -4,7 +4,7 @@ import { User, Shop, AgentMasterStatus } from '../types';
 import { getSupervisorLiveView, getReports, getUsers, getLeads, getCheckins, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate } from '../utils/storage';
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
-import { Trophy, FileCheck, Eye, Search, Store, UserCheck, User as UserIcon, MapPin, Archive, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight, X, Check, Circle, FileX2, NotebookText } from 'lucide-react';
+import { Trophy, FileCheck, Eye, Search, Store, UserCheck, User as UserIcon, MapPin, Archive, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight, X, Check, Circle, FileX2 } from 'lucide-react';
 import { DateIconPicker } from './DateIconPicker';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 
@@ -1244,107 +1244,6 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
         </div>
       </div>
 
-      {/* Live Monitoring Summary Cards */}
-      <div className="space-y-3">
-        <div className="flex justify-between items-center px-1">
-          <h2 className="text-xs font-black uppercase text-gray-400 tracking-wider">
-            Monitoring en direct ({teamData.length} Hôtesses)
-          </h2>
-          <span className="text-[10px] font-black uppercase text-amber-200">
-            {selectedDateLabel}
-          </span>
-        </div>
-
-        {teamData.map(item => {
-          const statusBg = item.status === 'Clôturé' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-            : (item.status === 'Présent' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' : 'bg-red-500/20 text-red-400 border-red-500/40');
-          const totalLeads = item.stats.priv + item.stats.roam + item.stats.bund;
-
-          return (
-            <div key={item.id} className="glass-card p-4 border border-white/10 space-y-3">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h3 className="text-xs font-black uppercase text-white">{item.name}</h3>
-                  <p className="text-[9px] font-bold text-gray-400 uppercase">{item.shop}</p>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <span className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg}`}>
-                    {item.status}
-                  </span>
-
-                  {item.reportObj && (
-                    <button
-                      onClick={() => onOpenPdfModal(`report-id:${item.reportObj!.id}`)}
-                      className="p-1.5 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-xl border border-red-500/30 transition-all"
-                      title="Voir le rapport PDF"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  )}
-
-                  {onOpenAgentProfile && (
-                    <button
-                      onClick={() => onOpenAgentProfile({
-                        id: item.id,
-                        name: item.name,
-                        phone: '0810000000',
-                        shop: item.shop,
-                        shopId: '',
-                        status: item.status,
-                        trend: [4, 7, 5, 12, 18, 14, totalLeads]
-                      })}
-                      className="p-1.5 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl border border-white/10 transition-all"
-                      title="Voir l'historique des rapports"
-                    >
-                      <NotebookText className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
-                <div className="bg-white/5 p-2 rounded-xl">
-                  <span className="text-[8px] text-gray-400 uppercase block">Privilège</span>
-                  <span className="text-white text-xs">{item.stats.priv}</span>
-                </div>
-                <div className="bg-white/5 p-2 rounded-xl">
-                  <span className="text-[8px] text-gray-400 uppercase block">Roaming</span>
-                  <span className="text-amber-400 text-xs">{item.stats.roam}</span>
-                </div>
-                <div className="bg-white/5 p-2 rounded-xl">
-                  <span className="text-[8px] text-gray-400 uppercase block">Bundles</span>
-                  <span className="text-blue-400 text-xs">{item.stats.bund}</span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-                <select
-                  value={inlineAssignShop[item.id] || ''}
-                  onChange={(e) => setInlineAssignShop(prev => ({ ...prev, [item.id]: e.target.value }))}
-                  className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-[10px] font-bold"
-                >
-                  <option value="">Affecter à un shop...</option>
-                  {shops.map(s => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={() => {
-                    const shopId = inlineAssignShop[item.id];
-                    if (!shopId) return;
-                    updateUserShopAssignment(item.id, shopId);
-                    if (onRefreshData) onRefreshData();
-                  }}
-                  className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[10px] font-black uppercase"
-                >
-                  Affecter
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 };
