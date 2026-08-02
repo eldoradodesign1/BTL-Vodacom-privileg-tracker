@@ -3,8 +3,9 @@ import { Shop, AgentMasterStatus, User } from '../types';
 import { getAdminMasterList, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl, saveTargetDefinition } from '../utils/storage';
 import { TabType } from './BottomNav';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
-import { UserPlus, Store, FileSpreadsheet, Eye, NotebookText, UserCheck, FileText, Search, Filter, MapPin, Clock3, Pencil, X } from 'lucide-react';
+import { UserPlus, Store, FileSpreadsheet, Eye, User as UserIcon, UserCheck, FileText, Search, Filter, MapPin, Clock3, Pencil, X } from 'lucide-react';
 import { formatAgentLocationLine } from '../utils/location';
+import { SupervisorProfileModal, SupervisorHostessSummary } from './Modals/SupervisorProfileModal';
 
 interface AdminViewProps {
   currentUser: User;
@@ -36,6 +37,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [subTab, setSubTab] = useState<'manage' | 'monitoring' | 'stats' | 'leads' | 'reports'>(
     activeTab === 'home' ? 'stats' : (activeTab === 'tab3' ? 'reports' : (activeTab === 'admin' ? 'manage' : 'monitoring'))
   );
+  const [manageSection, setManageSection] = useState<'hostess' | 'supervisors' | 'shops' | 'targets'>('hostess');
   const [startDate, setStartDate] = useState('2026-07-01');
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const allLeads = getLeads();
@@ -58,6 +60,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [supFilter, setSupFilter] = useState('ALL');
   const [inlineAssignShop, setInlineAssignShop] = useState<Record<string, string>>({});
   const [shopAssignmentModal, setShopAssignmentModal] = useState<{ agentId: string; agentName: string; currentShopId: string; selectedShopId: string } | null>(null);
+  const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
 
   const getStatusPalette = (status: string) => {
     if (status === 'Clôturé') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
@@ -82,6 +85,54 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const allUsers = getUsers();
   const supervisors = allUsers.filter(u => u.role === 'supervisor');
   const agents = allUsers.filter(u => u.role === 'agent');
+  const hostessList = [...masterList].sort((a, b) => a.name.localeCompare(b.name));
+  const supervisorsById = supervisors.reduce<Record<string, string>>((acc, sup) => {
+    acc[sup.id] = sup.name;
+    return acc;
+  }, {});
+  const usersById = allUsers.reduce<Record<string, User>>((acc, user) => {
+    acc[user.id] = user;
+    return acc;
+  }, {});
+  const agentTotalsById = allReports.reduce<Record<string, { priv: number; roam: number; bund: number }>>((acc, report) => {
+    if (!acc[report.agent_id]) {
+      acc[report.agent_id] = { priv: 0, roam: 0, bund: 0 };
+    }
+    acc[report.agent_id].priv += report.priv || 0;
+    acc[report.agent_id].roam += report.roam || 0;
+    acc[report.agent_id].bund += report.bund || 0;
+    return acc;
+  }, {});
+  const sortedSupervisors = [...supervisors].sort((a, b) => a.name.localeCompare(b.name));
+  const supervisorSummaries = sortedSupervisors.map((supervisor) => {
+    const assignedAgents = hostessList.filter((agent) => usersById[agent.id]?.supervisorId === supervisor.id);
+    const assignedAgentIds = new Set(assignedAgents.map((agent) => agent.id));
+    const lastReport = allReports.find((report) => assignedAgentIds.has(report.agent_id));
+    return {
+      supervisor,
+      assignedAgents,
+      lastReportDate: lastReport?.date || ''
+    };
+  });
+  const selectedSupervisor = selectedSupervisorId
+    ? supervisors.find((sup) => sup.id === selectedSupervisorId) || null
+    : null;
+  const selectedSupervisorHostesses: SupervisorHostessSummary[] = selectedSupervisor
+    ? hostessList
+      .filter((agent) => usersById[agent.id]?.supervisorId === selectedSupervisor.id)
+      .map((agent) => {
+        const totals = agentTotalsById[agent.id] || { priv: 0, roam: 0, bund: 0 };
+        return {
+          id: agent.id,
+          name: agent.name,
+          shop: agent.shop,
+          totalPriv: totals.priv,
+          totalRoam: totals.roam,
+          totalBund: totals.bund
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
+    : [];
   const filteredMasterList = masterList.filter(agent => {
     const srcUser = allUsers.find(u => u.id === agent.id);
     const supId = srcUser?.supervisorId || '';
@@ -111,6 +162,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
     else if (activeTab === 'admin') setSubTab('manage');
     else if (activeTab === 'tab2') setSubTab('monitoring');
   }, [activeTab]);
+
+  React.useEffect(() => {
+    if (subTab !== 'manage') {
+      setSelectedSupervisorId(null);
+    }
+  }, [subTab]);
 
   const handleGenerateBatchPDF = async () => {
     setLoading(true);
@@ -215,6 +272,81 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (onRefreshData) onRefreshData();
   };
 
+  const handleCompileSupervisor = (supervisor: User) => {
+    const assignedAgentIds = new Set(
+      hostessList
+        .filter((agent) => usersById[agent.id]?.supervisorId === supervisor.id)
+        .map((agent) => agent.id)
+    );
+
+    const selectedReports = allReports
+      .filter((report) => assignedAgentIds.has(report.agent_id))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const rows = selectedReports.map((report) => ({
+      date: report.date,
+      agent: report.agent_name,
+      priv: report.priv,
+      roam: report.roam,
+      bund: report.bund
+    }));
+
+    const totals = rows.reduce(
+      (acc, row) => ({
+        privilege: acc.privilege + row.priv,
+        roaming: acc.roaming + row.roam,
+        bundles: acc.bundles + row.bund
+      }),
+      { privilege: 0, roaming: 0, bundles: 0 }
+    );
+
+    const reports = selectedReports.map((report) => ({
+      agentName: report.agent_name,
+      shopName: report.shop_name || 'Vodacom Shop',
+      date: report.date,
+      arrivalTime: report.arrival_time || '08:00',
+      departureTime: report.departure_time || '17:30',
+      mapsIn: report.maps_in || '',
+      mapsOut: report.maps_out || '',
+      totalPrivilege: report.priv,
+      totalRoaming: report.roam,
+      totalBundles: report.bund,
+      targets: { privilege: 20, roaming: 20, bundle: 20 },
+      leads: allLeads
+        .filter((lead) => lead.agent_id === report.agent_id && toISO(lead.timestamp) === report.date)
+        .map((lead) => ({
+          timestamp: lead.timestamp,
+          client_name: lead.client_name,
+          msisdn: lead.msisdn,
+          action_type: lead.action_type
+        })),
+      pointagePhoto: resolveStoredPhotoUrl(report.pointage_photo || '') || '',
+      photos: report.photos || [],
+      comment: report.comment || '',
+      evolutionData: [report.priv, report.priv + report.roam, report.priv + report.roam + report.bund]
+    }));
+
+    const payload = {
+      period: `${selectedReports[0]?.date || '-'} au ${selectedReports[selectedReports.length - 1]?.date || '-'}`,
+      title: `Compilation Superviseur ${supervisor.name}`,
+      rows,
+      totals,
+      reports,
+      groups: [
+        {
+          supervisor: supervisor.name,
+          agentCount: assignedAgentIds.size,
+          totalLeads: totals.privilege + totals.roaming + totals.bundles,
+          totalPrivilege: totals.privilege,
+          totalRoaming: totals.roaming,
+          totalBundles: totals.bundles
+        }
+      ]
+    };
+
+    onOpenPdfModal(`preview-admin-batch:${encodeURIComponent(JSON.stringify(payload))}`);
+  };
+
   const openShopAssignmentModal = (agent: AgentMasterStatus) => {
     setShopAssignmentModal({
       agentId: agent.id,
@@ -236,9 +368,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
       {subTab === 'manage' && (
         <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
           <button
-            onClick={() => setSubTab('manage')}
+            onClick={() => setManageSection('hostess')}
             className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
-              subTab === 'manage' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
+              manageSection === 'hostess' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
             <span className="inline-flex items-center justify-center gap-1">
@@ -247,9 +379,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </span>
           </button>
           <button
-            onClick={() => setSubTab('stats')}
+            onClick={() => setManageSection('supervisors')}
             className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
-              subTab === 'stats' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
+              manageSection === 'supervisors' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
             <span className="inline-flex items-center justify-center gap-1">
@@ -258,9 +390,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </span>
           </button>
           <button
-            onClick={() => setSubTab('leads')}
+            onClick={() => setManageSection('shops')}
             className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
-              subTab === 'leads' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
+              manageSection === 'shops' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
             <span className="inline-flex items-center justify-center gap-1">
@@ -269,9 +401,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </span>
           </button>
           <button
-            onClick={() => setSubTab('reports')}
+            onClick={() => setManageSection('targets')}
             className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
-              subTab === 'reports' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
+              manageSection === 'targets' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
             <span className="inline-flex items-center justify-center gap-1">
@@ -285,95 +417,228 @@ export const AdminView: React.FC<AdminViewProps> = ({
       {/* --- SUB-TAB 1: GESTION --- */}
       {subTab === 'manage' && (
         <div className="space-y-4 animate-pop">
-          <div className="glass-card p-5 border border-white/10 space-y-4">
-            <div className="space-y-1">
-              <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Gestion de l'administration</h2>
-              <p className="text-[10px] text-gray-400 font-semibold">Les outils de gestion restent concentrés ici.</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={onOpenUserModal}
-                className="btn-neon btn-dark py-3.5 text-xs flex items-center justify-center space-x-1.5"
-              >
-                <UserPlus className="w-4 h-4 text-red-500" />
-                <span>＋ Agent / Sup</span>
-              </button>
-              <button
-                onClick={onOpenShopModal}
-                className="btn-neon btn-dark py-3.5 text-xs flex items-center justify-center space-x-1.5"
-              >
-                <Store className="w-4 h-4 text-amber-400" />
-                <span>＋ Shop</span>
-              </button>
-            </div>
-
+          {manageSection === 'hostess' && (
             <div className="glass-card p-4 border border-white/10 space-y-3">
-              <h2 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center space-x-1.5">
-                <UserCheck className="w-4 h-4" />
-                <span>Affectations Shop & Superviseur</span>
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-[11px] font-black uppercase tracking-wider text-amber-400">Hôtesses ({hostessList.length})</h2>
+              </div>
 
               <div className="space-y-2">
-                <div>
-                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Sélectionner un utilisateur</label>
-                  <select
-                    value={assignUser}
-                    onChange={(e) => setAssignUser(e.target.value)}
-                    className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
-                  >
-                    <option value="">-- Choisir un utilisateur --</option>
-                    {allUsers.map(u => (
-                      <option key={u.id} value={u.id}>
-                        {u.name} ({u.role.toUpperCase()})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {hostessList.map(agent => {
+                  const srcUser = allUsers.find(u => u.id === agent.id);
+                  const supervisorName = srcUser?.supervisorId ? (supervisorsById[srcUser.supervisorId] || 'Non assigné') : 'Non assigné';
+                  const statusBg = getStatusPalette(agent.status);
 
-                {assignUser && (
-                  <div className="grid grid-cols-2 gap-2 pt-1">
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Affecter au Shop</label>
-                      <select
-                        value={assignShop}
-                        onChange={(e) => setAssignShop(e.target.value)}
-                        className="w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
-                      >
-                        <option value="">-- Conserver shop --</option>
-                        {shops.map(s => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
+                  return (
+                    <div key={agent.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-[11px] font-black uppercase text-white">{agent.name}</p>
+                        <p className="truncate text-[9px] font-bold uppercase text-gray-400">
+                          {agent.shop} • SUP: {supervisorName}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`px-2 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg}`}>
+                          {agent.status}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onOpenAgentProfile(agent)}
+                          className={`p-1.5 rounded-xl border transition-all ${statusBg} hover:opacity-90`}
+                          title={`Voir l'historique de ${agent.name}`}
+                        >
+                          <UserIcon className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
-
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Affecter au Superviseur</label>
-                      <select
-                        value={assignSupervisor}
-                        onChange={(e) => setAssignSupervisor(e.target.value)}
-                        className="w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
-                      >
-                        <option value="">-- Conserver sup --</option>
-                        {supervisors.map(sup => (
-                          <option key={sup.id} value={sup.id}>{sup.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {assignUser && (
-                  <button
-                    onClick={handleSaveAssignments}
-                    className="w-full mt-2 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase shadow-md transition-all"
-                  >
-                    Enregistrer l'affectation
-                  </button>
-                )}
+                  );
+                })}
               </div>
             </div>
-          </div>
+          )}
+
+          {manageSection === 'supervisors' && (
+            <div className="glass-card p-4 border border-white/10 space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-[11px] font-black uppercase tracking-wider text-amber-400">Superviseurs ({supervisorSummaries.length})</h2>
+              </div>
+
+              <div className="space-y-2">
+                {supervisorSummaries.map((item) => (
+                  <div key={item.supervisor.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-[11px] font-black uppercase text-white">{item.supervisor.name}</p>
+                      <p className="truncate text-[9px] font-bold uppercase text-gray-400">
+                        {item.assignedAgents.length} hôtesse(s)
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="px-2 py-1 rounded-xl text-[9px] font-black uppercase border border-blue-500/40 bg-blue-500/20 text-blue-300">
+                        {item.lastReportDate ? `Dernier ${item.lastReportDate}` : 'Aucun rapport'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSupervisorId(item.supervisor.id)}
+                        className="p-1.5 rounded-xl border border-white/15 bg-black/30 text-gray-200 hover:text-white hover:bg-white/10"
+                        title={`Voir le détail de ${item.supervisor.name}`}
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {manageSection === 'shops' && (
+            <div className="glass-card p-5 border border-white/10 space-y-4">
+              <div className="space-y-1">
+                <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Gestion des shops</h2>
+                <p className="text-[10px] text-gray-400 font-semibold">Création et affectation des ressources.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={onOpenUserModal}
+                  className="btn-neon btn-dark py-3.5 text-xs flex items-center justify-center space-x-1.5"
+                >
+                  <UserPlus className="w-4 h-4 text-red-500" />
+                  <span>＋ Agent / Sup</span>
+                </button>
+                <button
+                  onClick={onOpenShopModal}
+                  className="btn-neon btn-dark py-3.5 text-xs flex items-center justify-center space-x-1.5"
+                >
+                  <Store className="w-4 h-4 text-amber-400" />
+                  <span>＋ Shop</span>
+                </button>
+              </div>
+
+              <div className="glass-card p-4 border border-white/10 space-y-3">
+                <h2 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center space-x-1.5">
+                  <UserCheck className="w-4 h-4" />
+                  <span>Affectations Shop & Superviseur</span>
+                </h2>
+
+                <div className="space-y-2">
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Sélectionner un utilisateur</label>
+                    <select
+                      value={assignUser}
+                      onChange={(e) => setAssignUser(e.target.value)}
+                      className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+                    >
+                      <option value="">-- Choisir un utilisateur --</option>
+                      {allUsers.map(u => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} ({u.role.toUpperCase()})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {assignUser && (
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Affecter au Shop</label>
+                        <select
+                          value={assignShop}
+                          onChange={(e) => setAssignShop(e.target.value)}
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+                        >
+                          <option value="">-- Conserver shop --</option>
+                          {shops.map(s => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Affecter au Superviseur</label>
+                        <select
+                          value={assignSupervisor}
+                          onChange={(e) => setAssignSupervisor(e.target.value)}
+                          className="w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+                        >
+                          <option value="">-- Conserver sup --</option>
+                          {supervisors.map(sup => (
+                            <option key={sup.id} value={sup.id}>{sup.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {assignUser && (
+                    <button
+                      onClick={handleSaveAssignments}
+                      className="w-full mt-2 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase shadow-md transition-all"
+                    >
+                      Enregistrer l'affectation
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {manageSection === 'targets' && (
+            <div className="glass-card p-5 border border-white/10 space-y-4">
+              <div className="space-y-1">
+                <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Targets</h2>
+                <p className="text-[10px] text-gray-400 font-semibold">Définition des objectifs standards et aéroport.</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-[10px] font-black uppercase text-gray-400">Privilege STD
+                  <input type="number" value={targetPrivilegeStd} onChange={(e) => setTargetPrivilegeStd(parseInt(e.target.value || '0', 10))} className="mt-1 w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold" />
+                </label>
+                <label className="text-[10px] font-black uppercase text-gray-400">Privilege AIR
+                  <input type="number" value={targetPrivilegeAir} onChange={(e) => setTargetPrivilegeAir(parseInt(e.target.value || '0', 10))} className="mt-1 w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold" />
+                </label>
+                <label className="text-[10px] font-black uppercase text-gray-400">Roaming STD
+                  <input type="number" value={targetRoamingStd} onChange={(e) => setTargetRoamingStd(parseInt(e.target.value || '0', 10))} className="mt-1 w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold" />
+                </label>
+                <label className="text-[10px] font-black uppercase text-gray-400">Roaming AIR
+                  <input type="number" value={targetRoamingAir} onChange={(e) => setTargetRoamingAir(parseInt(e.target.value || '0', 10))} className="mt-1 w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold" />
+                </label>
+                <label className="text-[10px] font-black uppercase text-gray-400">Bundle STD
+                  <input type="number" value={targetBundleStd} onChange={(e) => setTargetBundleStd(parseInt(e.target.value || '0', 10))} className="mt-1 w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold" />
+                </label>
+                <label className="text-[10px] font-black uppercase text-gray-400">Bundle AIR
+                  <input type="number" value={targetBundleAir} onChange={(e) => setTargetBundleAir(parseInt(e.target.value || '0', 10))} className="mt-1 w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold" />
+                </label>
+              </div>
+
+              <button
+                onClick={handleSaveTarget}
+                className="w-full mt-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase shadow-md transition-all"
+              >
+                Enregistrer les targets
+              </button>
+            </div>
+          )}
+
+          <SupervisorProfileModal
+            isOpen={!!selectedSupervisor}
+            supervisor={selectedSupervisor}
+            hostesses={selectedSupervisorHostesses}
+            onClose={() => setSelectedSupervisorId(null)}
+            onCompile={() => {
+              if (selectedSupervisor) {
+                handleCompileSupervisor(selectedSupervisor);
+              }
+            }}
+            onOpenHostessDetails={(hostessId) => {
+              const hostess = hostessList.find((agent) => agent.id === hostessId);
+              if (hostess) {
+                onOpenAgentProfile(hostess);
+              }
+            }}
+          />
         </div>
       )}
 
@@ -484,7 +749,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
                           title="Voir l'historique des rapports"
                         >
-                          <NotebookText className="w-4 h-4" />
+                          <UserIcon className="w-4 h-4" />
                         </button>
                       )}
 
