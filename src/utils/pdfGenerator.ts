@@ -156,10 +156,10 @@ export function buildAgentReportHtml(d: PDFReportData): string {
   const gpsOutUrl = makeGpsLink(d.mapsOut);
   const gpsInHtml = gpsInUrl
     ? `<a href="${gpsInUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:6px; font-size:9px; color:#E60000; font-weight:bold; text-decoration:none; border:1px solid #E60000; padding:4px 10px; border-radius:6px; background:#fff;">📍 Vérifier GPS (Carte)</a>`
-    : `<span style="display:inline-block; margin-top:6px; font-size:9px; color:#999; font-weight:bold; border:1px solid #ddd; padding:4px 10px; border-radius:6px; background:#fafafa;">Données GPS non disponible</span>`;
+    : `<span style="display:inline-block; margin-top:6px; font-size:9px; color:#999; font-weight:bold; border:1px solid #ddd; padding:4px 10px; border-radius:6px; background:#fafafa;">Coordonnées non disponibles</span>`;
   const gpsOutHtml = gpsOutUrl
     ? `<a href="${gpsOutUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:6px; font-size:9px; color:#E60000; font-weight:bold; text-decoration:none; border:1px solid #E60000; padding:4px 10px; border-radius:6px; background:#fff;">📍 Vérifier GPS (Carte)</a>`
-    : `<span style="display:inline-block; margin-top:6px; font-size:9px; color:#999; font-weight:bold; border:1px solid #ddd; padding:4px 10px; border-radius:6px; background:#fafafa;">Données GPS non disponible</span>`;
+    : `<span style="display:inline-block; margin-top:6px; font-size:9px; color:#999; font-weight:bold; border:1px solid #ddd; padding:4px 10px; border-radius:6px; background:#fafafa;">Coordonnées non disponibles</span>`;
 
   const photosHtml = d.photos && d.photos.length > 1
     ? `<div style="margin-top:20px; font-size:10px; font-weight:800; color:#999; text-transform:uppercase; border-bottom:1px solid #eee; padding-bottom:5px;">PREUVES TERRAIN / BOUTIQUE (PHOTOS)</div>
@@ -171,7 +171,11 @@ export function buildAgentReportHtml(d: PDFReportData): string {
   const evolutionHtml = buildEvolutionSvg(d.evolutionTargetData || [], d.evolutionActivationData || d.evolutionData || []);
 
   return `
-    <div style="background:linear-gradient(135deg,#0f172a 0%,#111827 48%,#7f1d1d 100%); color:#fff; border-radius:20px; padding:18px; margin-bottom:16px; box-shadow:0 12px 30px rgba(2,6,23,0.35); position:relative; overflow:hidden;">
+    <style>
+      body { font-family: 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+      * { box-sizing: border-box; }
+    </style>
+    <div style="background:linear-gradient(135deg,#0f172a 0%,#111827 48%,#7f1d1d 100%); color:#fff; border-radius:20px; padding:18px; margin-bottom:16px; box-shadow:0 12px 30px rgba(2,6,23,0.35); position:relative; overflow:hidden; font-family:'Inter','Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
       <div style="position:absolute; inset:0; opacity:0.08; background-image:repeating-linear-gradient(45deg, #ffffff 0px, #ffffff 1px, transparent 1px, transparent 10px); pointer-events:none;"></div>
       <table style="width:100%; border-collapse:collapse;">
         <tr>

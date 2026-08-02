@@ -70,6 +70,30 @@ export const DRIVE_FOLDERS = {
   REPORTS_PHOTOS_URL: 'https://drive.google.com/drive/folders/1Xer27VuJuhd1C3DNJ9nyWhzDLaYPKRIS?usp=drive_link'
 };
 
+function requestBrowserNotificationPermission(): Promise<'granted' | 'denied' | 'default'> {
+  if (typeof window === 'undefined' || !('Notification' in window)) {
+    return Promise.resolve('denied');
+  }
+
+  if (window.Notification.permission === 'granted') {
+    return Promise.resolve('granted');
+  }
+
+  if (window.Notification.permission === 'denied') {
+    return Promise.resolve('denied');
+  }
+
+  return window.Notification.requestPermission();
+}
+
+function maybeShowBrowserNotification(message: string): void {
+  if (typeof window === 'undefined' || !('Notification' in window)) return;
+  if (window.Notification.permission !== 'granted') return;
+  try {
+    new window.Notification('Vodacom Tracker', { body: message, icon: '/favicon.svg' });
+  } catch {}
+}
+
 function pushNotification(userId: string, message: string, type: string): NotificationItem {
   const item: NotificationItem = {
     id: generateUUID(),
@@ -88,6 +112,7 @@ function pushNotification(userId: string, message: string, type: string): Notifi
   const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
   notifs.unshift(item);
   saveItem(STORAGE_KEYS.NOTIFS, notifs);
+  maybeShowBrowserNotification(message);
   void fetchSharedJson<NotificationItem>('/api/notifications', {
     method: 'POST',
     body: JSON.stringify(item)

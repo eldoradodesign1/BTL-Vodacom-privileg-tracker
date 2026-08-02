@@ -37,8 +37,8 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUse
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-pop">
-      <div className="modal-sheet relative w-full max-w-md text-center">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-pop" onClick={onClose}>
+      <div className="modal-sheet relative w-full max-w-md text-center" onClick={(e) => e.stopPropagation()}>
         <div className="modal-handle" />
         <button
           onClick={onClose}

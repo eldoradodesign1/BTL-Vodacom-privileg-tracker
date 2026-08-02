@@ -36,6 +36,12 @@ import { GSheetModal } from './components/Modals/GSheetModal';
 import { LocationModal } from './components/Modals/LocationModal';
 import { getGSheetConfig, syncFromGoogleSheetUrl } from './utils/googleSheetsSync';
 
+async function ensureNotificationsPermission(): Promise<void> {
+  if (typeof window === 'undefined' || !('Notification' in window)) return;
+  if (window.Notification.permission === 'granted' || window.Notification.permission === 'denied') return;
+  await window.Notification.requestPermission();
+}
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     try {
@@ -157,6 +163,12 @@ export default function App() {
       setChatUnreadCount(getUnreadChatCount(currentUser.id));
     }
   }, [activeTab, currentUser?.id]);
+
+  useEffect(() => {
+    if (currentUser) {
+      void ensureNotificationsPermission();
+    }
+  }, [currentUser?.id]);
 
   if (!currentUser) {
     return <LoginScreen onLoginSuccess={(u) => { setCurrentUser(u); setMasterUser(u); }} />;

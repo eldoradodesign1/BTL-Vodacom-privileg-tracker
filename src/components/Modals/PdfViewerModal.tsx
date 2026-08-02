@@ -213,8 +213,8 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-2 sm:p-6 animate-pop">
-      <div className="w-full max-w-4xl h-[92vh] bg-zinc-950 border border-white/10 rounded-3xl overflow-hidden flex flex-col shadow-2xl relative">
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-50 flex items-center justify-center p-2 sm:p-6 animate-pop" onClick={onClose}>
+      <div className="w-full max-w-4xl h-[92vh] bg-zinc-950 border border-white/10 rounded-3xl overflow-hidden flex flex-col shadow-2xl relative" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="px-6 py-4 bg-zinc-900 border-b border-white/10 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-2">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { User, NotificationItem } from '../types';
 import { Bell, LogOut, Shield, FileSpreadsheet, Palette } from 'lucide-react';
 
@@ -38,9 +38,10 @@ export const Header: React.FC<HeaderProps> = ({
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [photoError, setPhotoError] = useState(false);
+  const [notificationPermission, setNotificationPermission] = useState<'default' | 'granted' | 'denied'>(typeof window !== 'undefined' && 'Notification' in window ? window.Notification.permission : 'denied');
   const photoSrc = profilePhotoUrl && !photoError ? profilePhotoUrl : '';
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
-  const unreadCount = safeNotifications.filter(n => !n.is_read).length + unreadChatCount;
+  const unreadCount = safeNotifications.filter(n => !n.is_read).length;
   const roleLabel = user.role === 'admin' ? 'Admin' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent');
   const syncState: 'ok' | 'progress' | 'late' = (() => {
     if (online && syncPendingCount === 0) return 'ok';
@@ -48,6 +49,24 @@ export const Header: React.FC<HeaderProps> = ({
     if (!online && syncPendingCount > 0) return 'late';
     return 'progress';
   })();
+
+  useEffect(() => {
+    if (!showNotifPanel && !showThemeMenu) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.closest('[data-header-actions]')) return;
+      setShowNotifPanel(false);
+      setShowThemeMenu(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showNotifPanel, showThemeMenu]);
+
+  const handleRequestNotifications = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) return;
+    const permission = await window.Notification.requestPermission();
+    setNotificationPermission(permission);
+  };
 
   const syncDotClass = syncState === 'ok'
     ? 'bg-emerald-500 shadow-emerald-500/60'
@@ -104,7 +123,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0">
+        <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0" data-header-actions>
           {onSetTheme && (
             <div className="relative">
               <button
@@ -148,6 +167,15 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               )}
             </div>
+          )}
+
+          {typeof window !== 'undefined' && 'Notification' in window && notificationPermission !== 'granted' && notificationPermission !== 'denied' && (
+            <button
+              onClick={handleRequestNotifications}
+              className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-[10px] font-black uppercase text-amber-400"
+            >
+              Autoriser notif
+            </button>
           )}
 
           {/* Google Sheets Sync Button (Only provided for Admin) */}
