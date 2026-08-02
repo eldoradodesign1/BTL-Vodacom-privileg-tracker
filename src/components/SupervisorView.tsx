@@ -5,6 +5,7 @@ import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location'
 import { TabType } from './BottomNav';
 import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DateIconPicker } from './DateIconPicker';
+import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 
 interface SupervisorViewProps {
   currentUser: User;
@@ -30,6 +31,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [reportsFilterTerm, setReportsFilterTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Online' | 'Absent' | 'Clôturé'>('ALL');
   const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
   const [assigningShopId, setAssigningShopId] = useState<string>('');
@@ -45,6 +47,9 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [dragOverShopId, setDragOverShopId] = useState<string | null>(null);
   const [selectedLocationAgent, setSelectedLocationAgent] = useState<{ id: string; name: string; shop: string; status?: 'Présent' | 'Clôturé' | 'Absent'; arrivalTime?: string; departureTime?: string; mapsIn?: string; mapsOut?: string; lat?: number; long?: number } | null>(null);
   const [showHomeCalendar, setShowHomeCalendar] = useState(false);
+  const todayIso = new Date().toISOString().split('T')[0];
+  const [reportsStartDate, setReportsStartDate] = useState(todayIso);
+  const [reportsEndDate, setReportsEndDate] = useState(todayIso);
   const [homeCalendarMonth, setHomeCalendarMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -72,8 +77,29 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   }, [showHomeCalendar]);
 
   const teamData = getSupervisorLiveView(currentUser.id, selectedDate);
+  const allReports = getReports();
   const allUsers = getUsers();
   const supervisedAgents = allUsers.filter(u => u.role === 'agent' && u.supervisorId === currentUser.id);
+  const teamAgentIds = supervisedAgents.map((a) => a.id);
+  const teamReports = allReports.filter((report) => teamAgentIds.includes(report.agent_id));
+  const reportDateList = [...new Set(teamReports.map((r) => r.date))].sort();
+  const consolidationMinDate = reportDateList[0] || todayIso;
+  const consolidationMaxDate = reportDateList[reportDateList.length - 1] || todayIso;
+  const consolidationStartDate = reportsStartDate < consolidationMinDate
+    ? consolidationMinDate
+    : (reportsStartDate > consolidationMaxDate ? consolidationMaxDate : reportsStartDate);
+  const consolidationEndDate = reportsEndDate < consolidationMinDate
+    ? consolidationMinDate
+    : (reportsEndDate > consolidationMaxDate ? consolidationMaxDate : reportsEndDate);
+  const filteredReportsForPeriod = teamReports
+    .filter((report) => report.date >= consolidationStartDate && report.date <= consolidationEndDate)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const filteredReportsDisplay = filteredReportsForPeriod.filter((report) => {
+    const q = reportsFilterTerm.trim().toLowerCase();
+    if (!q) return true;
+    const haystack = `${report.agent_name} ${report.shop_name || ''} ${report.date}`.toLowerCase();
+    return haystack.includes(q);
+  });
 
   const activeCount = teamData.filter(t => t.status !== 'Absent').length;
   const closedCount = teamData.filter(t => t.status === 'Clôturé').length;
@@ -211,6 +237,75 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     updateUserShopAssignment(userId, shopId);
     setAssigningUserId(null);
     if (onRefreshData) onRefreshData();
+  };
+
+  const handleGenerateBatchPDF = async () => {
+    setLoading(true);
+    const selectedReports = filteredReportsForPeriod;
+    const rows = selectedReports.map((r) => ({
+      date: r.date,
+      agent: r.agent_name,
+      priv: r.priv,
+      roam: r.roam,
+      bund: r.bund
+    }));
+
+    const totals = rows.reduce(
+      (acc, r) => ({
+        privilege: acc.privilege + r.priv,
+        roaming: acc.roaming + r.roam,
+        bundles: acc.bundles + r.bund
+      }),
+      { privilege: 0, roaming: 0, bundles: 0 }
+    );
+
+    const reports = selectedReports.map((report) => {
+      const reportLeads = getLeads().filter((l) => l.agent_id === report.agent_id && l.timestamp.startsWith(report.date));
+      return {
+        agentName: report.agent_name,
+        shopName: report.shop_name || 'Vodacom Shop',
+        date: report.date,
+        arrivalTime: report.arrival_time || '08:00',
+        departureTime: report.departure_time || '17:30',
+        mapsIn: report.maps_in || '',
+        mapsOut: report.maps_out || '',
+        totalPrivilege: report.priv,
+        totalRoaming: report.roam,
+        totalBundles: report.bund,
+        targets: { privilege: 20, roaming: 20, bundle: 20 },
+        leads: reportLeads.map((l) => ({
+          timestamp: l.timestamp,
+          client_name: l.client_name,
+          msisdn: l.msisdn,
+          action_type: l.action_type
+        })),
+        pointagePhoto: resolveStoredPhotoUrl(report.pointage_photo || '') || '',
+        photos: report.photos || [],
+        comment: report.comment || '',
+        evolutionData: [report.priv, report.priv + report.roam, report.priv + report.roam + report.bund]
+      };
+    });
+
+    const payload = {
+      period: `${consolidationStartDate} au ${consolidationEndDate}`,
+      title: `Compilation Superviseur ${currentUser.name}`,
+      rows,
+      totals,
+      reports,
+      groups: [
+        {
+          supervisor: currentUser.name,
+          agentCount: teamAgentIds.length,
+          totalLeads: totals.privilege + totals.roaming + totals.bundles,
+          totalPrivilege: totals.privilege,
+          totalRoaming: totals.roaming,
+          totalBundles: totals.bundles
+        }
+      ]
+    };
+
+    setLoading(false);
+    onOpenPdfModal(`preview-admin-batch:${encodeURIComponent(JSON.stringify(payload))}`);
   };
 
   const handleDropHostessOnShop = (targetShopId: string, payload?: { agentId: string; fromShopId: string } | null) => {
@@ -471,89 +566,83 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
   // --- TAB 3: ARCHIVES ---
   if (activeTab === 'tab3') {
-    const allReports = getReports();
-    const teamAgentIds = supervisedAgents.map(a => a.id);
-    const teamReports = allReports.filter(r => teamAgentIds.includes(r.agent_id));
-
-    const filteredReports = teamReports.filter(r =>
-      r.agent_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.shop_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.date.includes(searchQuery)
-    );
-
     return (
-      <div className="space-y-4 animate-pop pb-28">
-        <div>
-          <h1 className="text-2xl font-black text-white tracking-tight">
-            Archives <span className="text-amber-400">Rapports</span>
-          </h1>
-          <p className="text-xs font-semibold text-gray-400 mt-0.5">
-            Historique de tous les rapports présentés par vos hôtesses ({teamReports.length})
-          </p>
-        </div>
-
-        {/* Filter Input */}
-        <div className="relative">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
-          <input
-            type="text"
-            placeholder="Filtrer par nom, date ou shop..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-black/60 border border-white/10 rounded-2xl pl-9 pr-3 py-2.5 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+      <div className="space-y-4 animate-pop">
+        <div className="glass-card p-4 border border-white/10 space-y-3">
+          <p className="text-[10px] font-black uppercase text-gray-400">Filtres de Consolidation Périodique</p>
+          <DateRangeKnobSlider
+            minDate={consolidationMinDate}
+            maxDate={consolidationMaxDate}
+            startDate={consolidationStartDate}
+            endDate={consolidationEndDate}
+            onChange={({ startDate: nextStart, endDate: nextEnd }) => {
+              setReportsStartDate(nextStart);
+              setReportsEndDate(nextEnd);
+            }}
           />
+          <div className="relative">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+            <input
+              type="text"
+              value={reportsFilterTerm}
+              onChange={(e) => setReportsFilterTerm(e.target.value)}
+              placeholder="Filtre par nom, date ou shop..."
+              className="w-full bg-black/60 border border-white/10 rounded-2xl pl-9 pr-3 py-2.5 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+            />
+          </div>
         </div>
 
-        {/* Reports List */}
-        <div className="space-y-3">
-          {filteredReports.length === 0 ? (
-            <div className="glass-card p-8 text-center text-gray-400">
-              <Archive className="w-10 h-10 mx-auto text-gray-600 mb-2" />
-              <p className="text-xs font-bold">Aucun rapport d'équipe archivé.</p>
-            </div>
-          ) : (
-            filteredReports.map(rep => (
-              <div key={rep.id} className="glass-card p-4 border border-white/10 space-y-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <span className="text-[9px] font-black uppercase text-red-500 block">Agent : {rep.agent_name}</span>
-                    <h3 className="text-xs font-black uppercase text-white">{rep.date}</h3>
-                    <p className="text-[10px] text-gray-400 font-bold uppercase">{rep.shop_name}</p>
-                  </div>
+        <button
+          onClick={handleGenerateBatchPDF}
+          disabled={loading}
+          className="btn-neon btn-red w-full flex items-center justify-center space-x-2"
+        >
+          <FileCheck className="w-4 h-4" />
+          <span>{loading ? 'COMPILATION EN COURS...' : '📥 Compilation de Période (PDF Batch)'}</span>
+        </button>
 
-                  <button
-                    onClick={() => onOpenPdfModal(`report-id:${rep.id}`)}
-                    className="px-3.5 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[10px] font-black uppercase flex items-center space-x-1.5 shadow-md shadow-red-600/30 transition-all"
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    <span>VOIR PDF</span>
-                  </button>
+        <div className="space-y-2 pt-2">
+          <h2 className="text-xs font-black uppercase tracking-wider text-gray-400 px-1">
+            Rapports Soumis ({filteredReportsDisplay.length})
+          </h2>
+
+          {filteredReportsDisplay.map(rep => (
+            <div key={rep.id} className="glass-card p-4 border border-white/10 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs font-black uppercase text-white">{rep.agent_name}</p>
+                  <p className="text-[9px] font-bold text-gray-400 uppercase">{rep.shop_name} • {rep.date}</p>
                 </div>
 
-                {/* Stats Breakdown */}
-                <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
-                  <div className="bg-white/5 p-2 rounded-xl">
-                    <span className="text-[8px] text-gray-400 uppercase block">Privilège</span>
-                    <span className="text-red-500 text-xs">{rep.priv}</span>
-                  </div>
-                  <div className="bg-white/5 p-2 rounded-xl">
-                    <span className="text-[8px] text-gray-400 uppercase block">Roaming</span>
-                    <span className="text-amber-400 text-xs">{rep.roam}</span>
-                  </div>
-                  <div className="bg-white/5 p-2 rounded-xl">
-                    <span className="text-[8px] text-gray-400 uppercase block">Bundles</span>
-                    <span className="text-blue-400 text-xs">{rep.bund}</span>
-                  </div>
-                </div>
-
-                {rep.comment && (
-                  <p className="text-[10px] text-gray-300 italic bg-black/40 p-2 rounded-xl border border-white/5">
-                    "{rep.comment}"
-                  </p>
-                )}
+                <button
+                  onClick={() => onOpenPdfModal(`report-id:${rep.id}`)}
+                  className="h-9 w-9 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-xl border border-red-500/30 transition-all flex items-center justify-center shrink-0"
+                  title="Ouvrir PDF"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
               </div>
-            ))
-          )}
+
+              <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
+                <div className="bg-white/5 p-2 rounded-xl border border-white/10">
+                  <span className="text-[8px] text-gray-400 uppercase block">Privilège</span>
+                  <span className="text-red-500 text-xs">{rep.priv}</span>
+                </div>
+                <div className="bg-white/5 p-2 rounded-xl border border-white/10">
+                  <span className="text-[8px] text-gray-400 uppercase block">Roaming</span>
+                  <span className="text-amber-400 text-xs">{rep.roam}</span>
+                </div>
+                <div className="bg-white/5 p-2 rounded-xl border border-white/10">
+                  <span className="text-[8px] text-gray-400 uppercase block">Bundles</span>
+                  <span className="text-blue-400 text-xs">{rep.bund}</span>
+                </div>
+              </div>
+
+              {rep.comment && (
+                <p className="text-[10px] italic text-gray-300 border-l-2 border-red-500/40 pl-2">"{rep.comment}"</p>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     );
