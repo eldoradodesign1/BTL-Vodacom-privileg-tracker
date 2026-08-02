@@ -334,11 +334,21 @@ body::after {
 .modal-sheet {
   width: 100%;
   max-width: 520px;
+  max-height: min(92vh, 760px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: #0f0f13;
   border-top: 1px solid var(--glass-border);
   border-radius: 36px 36px 0 0;
   padding: 32px 24px;
   box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8);
+}
+
+@media (min-width: 640px) {
+  .modal-sheet {
+    max-height: min(88vh, 760px);
+    border-radius: 32px;
+  }
 }
 
 .modal-handle {
