@@ -1085,7 +1085,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             }}
                           >
                             <div
-                              className="absolute w-80 rounded-2xl border border-white/10 bg-zinc-950/95 p-3 shadow-2xl"
+                              className="presence-registry-modal-in absolute w-80 rounded-2xl border border-white/10 bg-zinc-950/95 p-3 shadow-2xl"
                               style={{ top: `${presenceCalendarPosition.top}px`, left: `${presenceCalendarPosition.left}px` }}
                               onClick={(e) => e.stopPropagation()}
                             >

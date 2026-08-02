@@ -244,7 +244,7 @@ export const DateRangeKnobSlider: React.FC<DateRangeKnobSliderProps> = ({
       </div>
 
       {calendarTarget && (
-        <div className="absolute right-3 top-11 z-50 w-72 rounded-2xl border border-white/15 bg-zinc-950/95 p-3 shadow-2xl backdrop-blur-xl">
+        <div className="calendar-dock-stretch absolute right-3 top-11 z-50 w-72 rounded-2xl border border-white/15 bg-zinc-950/95 p-3 shadow-2xl backdrop-blur-xl">
           <div className="mb-2 flex items-center justify-between">
             <button
               type="button"

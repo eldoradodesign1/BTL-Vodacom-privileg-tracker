@@ -147,8 +147,12 @@ export const DateIconPicker: React.FC<DateIconPickerProps> = ({
       {isOpen && popoverPosition && createPortal(
         <div
           ref={popoverRef}
-          className="fixed z-[10000] w-72 max-w-[calc(100vw-1rem)] rounded-2xl border border-white/15 bg-zinc-950/95 p-3 shadow-2xl backdrop-blur-xl"
-          style={{ top: `${popoverPosition.top}px`, left: `${popoverPosition.left}px` }}
+          className="calendar-dock-stretch fixed z-[10000] w-72 max-w-[calc(100vw-1rem)] rounded-2xl border border-white/15 bg-zinc-950/95 p-3 shadow-2xl backdrop-blur-xl"
+          style={{
+            top: `${popoverPosition.top}px`,
+            left: `${popoverPosition.left}px`,
+            transformOrigin: popoverAlign === 'left' ? 'top left' : 'top right'
+          }}
         >
           <div className="mb-2 flex items-center justify-between">
             <button

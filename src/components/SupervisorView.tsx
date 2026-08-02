@@ -666,7 +666,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
               }}
             >
               <div
-                className="absolute w-80 rounded-2xl border border-white/10 bg-zinc-950/95 p-3 shadow-2xl"
+                className="presence-registry-modal-in absolute w-80 rounded-2xl border border-white/10 bg-zinc-950/95 p-3 shadow-2xl"
                 style={{ top: `${presenceCalendarPosition.top}px`, left: `${presenceCalendarPosition.left}px` }}
                 onClick={(e) => e.stopPropagation()}
               >
@@ -1108,7 +1108,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
             </div>
 
             {showHomeCalendar && (
-              <div className="absolute right-0 top-16 z-40 w-80 rounded-2xl border border-white/10 bg-zinc-950/95 p-3 shadow-2xl backdrop-blur">
+              <div className="calendar-dock-stretch absolute right-0 top-16 z-40 w-80 rounded-2xl border border-white/10 bg-zinc-950/95 p-3 shadow-2xl backdrop-blur">
                 <div className="mb-3 flex items-center justify-between">
                   <button
                     type="button"
