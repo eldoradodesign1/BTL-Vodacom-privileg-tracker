@@ -1165,24 +1165,24 @@ function buildAgentEvolutionSeries(agentId: string, agentName: string, reportDat
 }
 
 // --- AGENT MASTER LIST & SUPERVISOR LIVE VIEW ---
-export function getAdminMasterList(): AgentMasterStatus[] {
+export function getAdminMasterList(dateISO?: string): AgentMasterStatus[] {
   const users = getUsers();
   const checkins = getCheckins();
   const reports = getReports();
   const leads = getLeads();
   const shops = getShops();
-  const today = toISO(new Date());
+  const targetDate = dateISO || toISO(new Date());
 
   const agents = users.filter(u => u.role === 'agent');
 
   return agents.map(agent => {
-    const hasIn = checkins.some(c => (c.agent_id === agent.id || c.agent_id === agent.name || isMatchAgent(c.agent_id, agent)) && toISO(c.timestamp) === today && c.type === 'IN');
-    const todayReport = reports.find(r => (r.agent_id === agent.id || r.agent_id === agent.name || isMatchAgent(r.agent_id, agent)) && toISO(r.date) === today);
+    const hasIn = checkins.some(c => (c.agent_id === agent.id || c.agent_id === agent.name || isMatchAgent(c.agent_id, agent)) && toISO(c.timestamp) === targetDate && c.type === 'IN');
+    const todayReport = reports.find(r => (r.agent_id === agent.id || r.agent_id === agent.name || isMatchAgent(r.agent_id, agent)) && toISO(r.date) === targetDate);
 
     const shopObj = shops.find(s => s.id === agent.permanentShopId);
     const shopName = shopObj ? shopObj.name : 'Non affecté';
 
-    const agentTodayLeads = leads.filter(l => (l.agent_id === agent.id || l.agent_id === agent.name || isMatchAgent(l.agent_id, agent)) && toISO(l.timestamp) === today);
+    const agentTodayLeads = leads.filter(l => (l.agent_id === agent.id || l.agent_id === agent.name || isMatchAgent(l.agent_id, agent)) && toISO(l.timestamp) === targetDate);
     const priv = agentTodayLeads.filter(l => String(l.action_type).includes('Privil')).length;
     const roam = agentTodayLeads.filter(l => String(l.action_type).includes('Roam')).length;
     const bund = agentTodayLeads.filter(l => String(l.action_type).includes('Bund') || String(l.action_type).includes('Pack')).length;

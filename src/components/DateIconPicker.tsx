@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface DateIconPickerProps {
@@ -9,6 +10,7 @@ interface DateIconPickerProps {
   className?: string;
   buttonClassName?: string;
   labelClassName?: string;
+  popoverAlign?: 'left' | 'right';
 }
 
 const toIsoDate = (date: Date): string => {
@@ -32,31 +34,65 @@ export const DateIconPicker: React.FC<DateIconPickerProps> = ({
   max,
   className = '',
   buttonClassName = 'h-10 w-10 rounded-xl bg-white/5 text-gray-200 hover:bg-white/10 border border-white/10',
-  labelClassName = 'text-[11px] font-black uppercase text-gray-200'
+  labelClassName = 'text-[11px] font-black uppercase text-gray-200',
+  popoverAlign = 'right'
 }) => {
   const selectedDate = parseIsoDate(value);
   const initialMonth = selectedDate || new Date();
   const [isOpen, setIsOpen] = useState(false);
+  const [popoverPosition, setPopoverPosition] = useState<{ top: number; left: number } | null>(null);
   const [monthCursor, setMonthCursor] = useState(new Date(initialMonth.getFullYear(), initialMonth.getMonth(), 1));
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const popoverRef = useRef<HTMLDivElement | null>(null);
+
+  const updatePopoverPosition = () => {
+    if (!buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const popoverWidth = 288;
+    const popoverHeight = 340;
+    const margin = 8;
+
+    const preferredLeft = popoverAlign === 'left' ? rect.left : rect.right - popoverWidth;
+    const left = Math.max(margin, Math.min(preferredLeft, window.innerWidth - popoverWidth - margin));
+
+    const belowTop = rect.bottom + margin;
+    const aboveTop = rect.top - popoverHeight - margin;
+    let top = belowTop;
+    if (belowTop + popoverHeight > window.innerHeight - margin && aboveTop >= margin) {
+      top = aboveTop;
+    } else {
+      top = Math.max(margin, Math.min(top, window.innerHeight - popoverHeight - margin));
+    }
+
+    setPopoverPosition({ top, left });
+  };
 
   useEffect(() => {
     if (!isOpen) return;
     const onClickOutside = (event: MouseEvent) => {
-      if (!rootRef.current) return;
-      if (!rootRef.current.contains(event.target as Node)) setIsOpen(false);
+      const target = event.target as Node;
+      const inRoot = !!rootRef.current && rootRef.current.contains(target);
+      const inPopover = !!popoverRef.current && popoverRef.current.contains(target);
+      if (!inRoot && !inPopover) setIsOpen(false);
     };
     const onEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setIsOpen(false);
     };
+    const onViewportChange = () => updatePopoverPosition();
 
     document.addEventListener('mousedown', onClickOutside);
     document.addEventListener('keydown', onEscape);
+    window.addEventListener('resize', onViewportChange);
+    window.addEventListener('scroll', onViewportChange, true);
+    updatePopoverPosition();
     return () => {
       document.removeEventListener('mousedown', onClickOutside);
       document.removeEventListener('keydown', onEscape);
+      window.removeEventListener('resize', onViewportChange);
+      window.removeEventListener('scroll', onViewportChange, true);
     };
-  }, [isOpen]);
+  }, [isOpen, popoverAlign]);
 
   useEffect(() => {
     if (selectedDate) {
@@ -90,8 +126,17 @@ export const DateIconPicker: React.FC<DateIconPickerProps> = ({
   return (
     <div className={`relative ${className}`} ref={rootRef}>
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={() => {
+          setIsOpen((open) => {
+            const next = !open;
+            if (next) {
+              requestAnimationFrame(() => updatePopoverPosition());
+            }
+            return next;
+          });
+        }}
         className={`inline-flex items-center justify-center ${buttonClassName}`}
         title="Choisir la date"
       >
@@ -99,8 +144,12 @@ export const DateIconPicker: React.FC<DateIconPickerProps> = ({
       </button>
       <span className={`ml-2 ${labelClassName}`}>{displayLabel}</span>
 
-      {isOpen && (
-        <div className="absolute right-0 z-50 mt-2 w-72 rounded-2xl border border-white/15 bg-zinc-950/95 p-3 shadow-2xl backdrop-blur-xl">
+      {isOpen && popoverPosition && createPortal(
+        <div
+          ref={popoverRef}
+          className="fixed z-[10000] w-72 max-w-[calc(100vw-1rem)] rounded-2xl border border-white/15 bg-zinc-950/95 p-3 shadow-2xl backdrop-blur-xl"
+          style={{ top: `${popoverPosition.top}px`, left: `${popoverPosition.left}px` }}
+        >
           <div className="mb-2 flex items-center justify-between">
             <button
               type="button"
@@ -160,7 +209,8 @@ export const DateIconPicker: React.FC<DateIconPickerProps> = ({
               );
             })}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

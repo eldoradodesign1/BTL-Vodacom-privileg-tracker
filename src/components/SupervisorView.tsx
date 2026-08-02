@@ -5,6 +5,7 @@ import { getSupervisorLiveView, getReports, getUsers, getLeads, getCheckins, upd
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
 import { Trophy, FileCheck, Eye, Search, Store, UserCheck, User as UserIcon, MapPin, Archive, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight, X, Check, Circle, FileX2 } from 'lucide-react';
+import { DateIconPicker } from './DateIconPicker';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 
 interface SupervisorViewProps {
@@ -411,16 +412,27 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           </div>
         </div>
 
-        {/* Search Input */}
-        <div className="relative">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
-          <input
-            type="text"
-            placeholder="Rechercher une hôtesse ou un shop..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-black/60 border border-white/10 rounded-2xl pl-9 pr-3 py-2.5 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+        <div className="glass-card p-4 border border-white/10 space-y-3">
+          <DateIconPicker
+            value={selectedDate}
+            onChange={setSelectedDate}
+            className="inline-flex items-center"
+            buttonClassName="h-11 w-11 rounded-2xl bg-black/60 border border-white/10 text-gray-200 hover:bg-white/10"
+            labelClassName="text-xs sm:text-sm font-black uppercase text-gray-100"
+            popoverAlign="left"
           />
+
+          {/* Search Input */}
+          <div className="relative">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+            <input
+              type="text"
+              placeholder="Rechercher une hôtesse ou un shop..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-black/60 border border-white/10 rounded-2xl pl-9 pr-3 py-2.5 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+            />
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">

@@ -56,6 +56,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [leadStartOffset, setLeadStartOffset] = useState(0);
   const [leadEndOffset, setLeadEndOffset] = useState(maxOffset);
   const [leadExactDate, setLeadExactDate] = useState(todayIso);
+  const [monitoringDate, setMonitoringDate] = useState(todayIso);
   const [selectedAgentId, setSelectedAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -126,6 +127,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [assignSupervisor, setAssignSupervisor] = useState('');
 
   const masterList = getAdminMasterList();
+  const monitoringMasterList = getAdminMasterList(monitoringDate);
   const allCheckins = getCheckins();
   const dashboardData = getDashboardData({ start: startDate, end: endDate, agentId: selectedAgentId });
   const allReports = getReports();
@@ -198,7 +200,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       })
       .sort((a, b) => a.name.localeCompare(b.name))
     : [];
-  const filteredMasterList = masterList.filter(agent => {
+  const filteredMasterList = monitoringMasterList.filter(agent => {
     const srcUser = allUsers.find(u => u.id === agent.id);
     const supId = srcUser?.supervisorId || '';
     const matchesSearch = !searchTerm
@@ -877,15 +879,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
           </div>
 
-          <div className="relative">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
-            <input
-              type="text"
-              placeholder="Rechercher une hôtesse ou un shop..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-black/60 border border-white/10 rounded-2xl pl-9 pr-3 py-2.5 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+          <div className="glass-card p-4 border border-white/10 space-y-3">
+            <DateIconPicker
+              value={monitoringDate}
+              onChange={setMonitoringDate}
+              className="inline-flex items-center"
+              buttonClassName="h-11 w-11 rounded-2xl bg-black/60 border border-white/10 text-gray-200 hover:bg-white/10"
+              labelClassName="text-xs sm:text-sm font-black uppercase text-gray-100"
+              popoverAlign="left"
             />
+
+            <div className="relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+              <input
+                type="text"
+                placeholder="Rechercher une hôtesse ou un shop..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-black/60 border border-white/10 rounded-2xl pl-9 pr-3 py-2.5 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+              />
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
