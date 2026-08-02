@@ -6,6 +6,7 @@ import { TabType } from './BottomNav';
 import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archive, Eye, Search, Filter, RefreshCw } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { buildPointageFeedback } from '../utils/pointageStatus';
+import { DateIconPicker } from './DateIconPicker';
 
 interface AgentViewProps {
   currentUser: User;
@@ -280,11 +281,12 @@ export const AgentView: React.FC<AgentViewProps> = ({
 
             {/* Date Selector */}
             <div className="flex items-center space-x-1 sm:space-x-2">
-              <input
-                type="date"
+              <DateIconPicker
                 value={clientDateFilter}
-                onChange={(e) => setClientDateFilter(e.target.value)}
-                className="bg-black/60 border border-white/10 rounded-xl px-2 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500 flex-1"
+                onChange={setClientDateFilter}
+                className="flex-1 inline-flex items-center"
+                buttonClassName="h-10 w-10 rounded-xl bg-black/60 border border-white/10 text-gray-200 hover:bg-white/10"
+                labelClassName="text-[10px] font-black uppercase text-gray-200"
               />
               <button
                 onClick={() => setClientDateFilter(todayStr)}

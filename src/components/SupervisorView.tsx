@@ -4,6 +4,7 @@ import { getSupervisorLiveView, getReports, getUsers, getLeads, updateUserShopAs
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
 import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DateIconPicker } from './DateIconPicker';
 
 interface SupervisorViewProps {
   currentUser: User;
@@ -263,11 +264,12 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
             </p>
           </div>
 
-          <input
-            type="date"
+          <DateIconPicker
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5 text-white text-[10px] font-bold focus:outline-none focus:border-red-500"
+            onChange={setSelectedDate}
+            className="inline-flex items-center"
+            buttonClassName="h-10 w-10 rounded-xl bg-black/60 border border-white/10 text-gray-200 hover:bg-white/10"
+            labelClassName="text-[10px] font-black uppercase text-gray-200"
           />
         </div>
 

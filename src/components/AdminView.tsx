@@ -6,6 +6,7 @@ import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis
 import { UserPlus, Store, FileSpreadsheet, Eye, User as UserIcon, UserCheck, FileText, Search, Filter, MapPin, Clock3, Pencil, X } from 'lucide-react';
 import { formatAgentLocationLine } from '../utils/location';
 import { SupervisorProfileModal, SupervisorHostessSummary } from './Modals/SupervisorProfileModal';
+import { DateIconPicker } from './DateIconPicker';
 
 interface AdminViewProps {
   currentUser: User;
@@ -1095,13 +1096,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 />
               </div>
             ) : (
-              <input
-                type="date"
+              <DateIconPicker
+                value={leadExactDate}
+                onChange={setLeadExactDate}
                 min={firstLeadDate}
                 max={todayIso}
-                value={leadExactDate}
-                onChange={(e) => setLeadExactDate(e.target.value)}
-                className="bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold"
+                className="inline-flex items-center"
+                buttonClassName="h-10 w-10 rounded-xl bg-black/60 border border-white/10 text-gray-200 hover:bg-white/10"
+                labelClassName="text-[10px] font-black uppercase text-gray-200"
               />
             )}
           </div>
