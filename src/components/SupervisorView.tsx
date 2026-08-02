@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { User, Shop, AgentMasterStatus } from '../types';
 import { getSupervisorLiveView, getReports, getUsers, getLeads, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate } from '../utils/storage';
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
-import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera, Clock3, FileText, ChevronDown } from 'lucide-react';
+import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface SupervisorViewProps {
   currentUser: User;
@@ -43,6 +43,32 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [draggedHostess, setDraggedHostess] = useState<{ agentId: string; fromShopId: string } | null>(null);
   const [dragOverShopId, setDragOverShopId] = useState<string | null>(null);
   const [selectedLocationAgent, setSelectedLocationAgent] = useState<{ id: string; name: string; shop: string; status?: 'Présent' | 'Clôturé' | 'Absent'; arrivalTime?: string; departureTime?: string; mapsIn?: string; mapsOut?: string; lat?: number; long?: number } | null>(null);
+  const [showHomeCalendar, setShowHomeCalendar] = useState(false);
+  const [homeCalendarMonth, setHomeCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const homeCalendarRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!showHomeCalendar) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!homeCalendarRef.current) return;
+      if (!homeCalendarRef.current.contains(event.target as Node)) {
+        setShowHomeCalendar(false);
+      }
+    };
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setShowHomeCalendar(false);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showHomeCalendar]);
 
   const teamData = getSupervisorLiveView(currentUser.id, selectedDate);
   const allUsers = getUsers();
@@ -56,6 +82,39 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     if (status === 'Présent') return 'bg-blue-500/20 text-blue-400 border-blue-500/40';
     return 'bg-red-500/20 text-red-400 border-red-500/40';
   };
+
+  const formatIsoDate = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const selectedHomeDate = (() => {
+    const parsed = new Date(`${selectedDate}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+  })();
+  const selectedDateLabel = selectedHomeDate.toLocaleDateString('fr-FR', {
+    weekday: 'short',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+  const monthLabel = homeCalendarMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  const firstDayOfMonth = new Date(homeCalendarMonth.getFullYear(), homeCalendarMonth.getMonth(), 1);
+  const daysInMonth = new Date(homeCalendarMonth.getFullYear(), homeCalendarMonth.getMonth() + 1, 0).getDate();
+  const startOffset = (firstDayOfMonth.getDay() + 6) % 7;
+  const dayCells = Array.from({ length: 42 }, (_, index) => {
+    const dayNumber = index - startOffset + 1;
+    if (dayNumber < 1 || dayNumber > daysInMonth) return null;
+    const dayDate = new Date(homeCalendarMonth.getFullYear(), homeCalendarMonth.getMonth(), dayNumber);
+    return {
+      dayNumber,
+      iso: formatIsoDate(dayDate),
+      isToday: formatIsoDate(dayDate) === formatIsoDate(new Date()),
+      isSelected: formatIsoDate(dayDate) === selectedDate
+    };
+  });
 
   const handleSaveTarget = () => {
     const today = new Date().toISOString().split('T')[0];
@@ -83,6 +142,24 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
   const handleGenerateSupervisorReport = async () => {
     setLoading(true);
+    const targetsByAgent = teamData.map((item) => {
+      const assignedShopId =
+        supervisedAgents.find((u) => u.id === item.id)?.permanentShopId
+        || item.reportObj?.shop_id
+        || '';
+      return getEffectiveTargetsForDate(selectedDate, assignedShopId);
+    });
+
+    const dayTargets = targetsByAgent.reduce(
+      (acc, target) => {
+        acc.privilege += Number(target.privilege || 0);
+        acc.roaming += Number(target.roaming || 0);
+        acc.bundle += Number(target.bundle || 0);
+        return acc;
+      },
+      { privilege: 0, roaming: 0, bundle: 0 }
+    );
+
     const reports = teamData
       .filter(item => item.reportObj)
       .map(item => {
@@ -115,6 +192,13 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     const payload = {
       supName: currentUser.name,
       date: selectedDate,
+      dayTargets: {
+        privilege: dayTargets.privilege,
+        roaming: dayTargets.roaming,
+        bundle: dayTargets.bundle,
+        total: dayTargets.privilege + dayTargets.roaming + dayTargets.bundle,
+        deployedCount: teamData.length
+      },
       team: teamData,
       reports
     };
@@ -738,14 +822,90 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           </p>
         </div>
 
-        <button
-          onClick={handleGenerateSupervisorReport}
-          disabled={loading}
-          className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-2xl text-xs font-black uppercase flex items-center space-x-1.5 shadow-lg shadow-red-600/30 transition-all"
-        >
-          <FileCheck className="w-4 h-4" />
-          <span>{loading ? 'SYNTHÈSE...' : 'Synthèse PDF'}</span>
-        </button>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div ref={homeCalendarRef} className="relative">
+            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/40 px-2 py-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setHomeCalendarMonth(new Date(selectedHomeDate.getFullYear(), selectedHomeDate.getMonth(), 1));
+                  setShowHomeCalendar((prev) => !prev);
+                }}
+                className="h-12 w-12 rounded-2xl border border-white/15 bg-black/60 text-white flex items-center justify-center shadow-lg hover:bg-white/10 transition-all"
+                title="Choisir la date"
+              >
+                <CalendarDays className="w-6 h-6 text-amber-300" />
+              </button>
+              <span className="text-[10px] sm:text-xs font-black uppercase text-amber-200 tracking-wide">
+                {selectedDateLabel}
+              </span>
+            </div>
+
+            {showHomeCalendar && (
+              <div className="absolute right-0 top-16 z-40 w-80 rounded-2xl border border-white/10 bg-zinc-950/95 p-3 shadow-2xl backdrop-blur">
+                <div className="mb-3 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setHomeCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+                    className="h-8 w-8 rounded-xl border border-white/10 bg-white/5 text-gray-200 hover:bg-white/10"
+                    title="Mois précédent"
+                  >
+                    <ChevronLeft className="w-4 h-4 mx-auto" />
+                  </button>
+                  <div className="text-xs font-black uppercase text-white tracking-wide">{monthLabel}</div>
+                  <button
+                    type="button"
+                    onClick={() => setHomeCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+                    className="h-8 w-8 rounded-xl border border-white/10 bg-white/5 text-gray-200 hover:bg-white/10"
+                    title="Mois suivant"
+                  >
+                    <ChevronRight className="w-4 h-4 mx-auto" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 mb-1">
+                  {['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'].map((label) => (
+                    <div key={label} className="text-center text-[10px] font-black uppercase text-gray-500 py-1">{label}</div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-7 gap-1">
+                  {dayCells.map((cell, index) => {
+                    if (!cell) {
+                      return <div key={`empty-${index}`} className="h-9" />;
+                    }
+                    return (
+                      <button
+                        key={cell.iso}
+                        type="button"
+                        onClick={() => {
+                          setSelectedDate(cell.iso);
+                          setShowHomeCalendar(false);
+                        }}
+                        className={`h-9 rounded-lg text-[11px] font-black transition-all ${cell.isSelected
+                          ? 'bg-red-600 text-white'
+                          : cell.isToday
+                            ? 'border border-amber-400/60 bg-amber-400/10 text-amber-300'
+                            : 'bg-white/5 text-gray-200 hover:bg-white/10'}`}
+                      >
+                        {cell.dayNumber}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <button
+            onClick={handleGenerateSupervisorReport}
+            disabled={loading}
+            className="h-12 w-12 bg-red-600 hover:bg-red-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-red-600/30 transition-all disabled:opacity-60"
+            title={loading ? 'Génération en cours' : 'Générer la synthèse PDF'}
+          >
+            <FileCheck className="w-4 h-4" />
+          </button>
+        </div>
       </div>
 
       {/* Team KPI Bar */}
@@ -824,12 +984,9 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           <h2 className="text-xs font-black uppercase text-gray-400 tracking-wider">
             Monitoring en direct ({teamData.length} Hôtesses)
           </h2>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-1 text-white text-[10px] font-bold focus:outline-none focus:border-red-500"
-          />
+          <span className="text-[10px] font-black uppercase text-amber-200">
+            {selectedDateLabel}
+          </span>
         </div>
 
         {teamData.map(item => {

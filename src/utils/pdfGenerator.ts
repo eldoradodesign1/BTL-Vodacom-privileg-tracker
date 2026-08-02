@@ -25,6 +25,13 @@ export interface PDFReportData {
 export interface PDFSupervisorData {
   supName: string;
   date: string;
+  dayTargets?: {
+    privilege: number;
+    roaming: number;
+    bundle: number;
+    total: number;
+    deployedCount: number;
+  };
   team: Array<{
     id?: string;
     name: string;
@@ -312,17 +319,21 @@ async function renderHtmlToPdfDataUrl(htmlContent: string): Promise<string> {
 async function renderPagesToPdfDataUrl(pageContents: string[]): Promise<string> {
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pdfWidth = pdf.internal.pageSize.getWidth();
+  const pdfHeight = pdf.internal.pageSize.getHeight();
+  const A4_WIDTH_PX = 794;
+  const A4_HEIGHT_PX = 1123;
 
   for (let index = 0; index < pageContents.length; index += 1) {
     const container = document.createElement('div');
     container.style.position = 'fixed';
     container.style.left = '-9999px';
     container.style.top = '0px';
-    container.style.width = '794px';
+    container.style.width = `${A4_WIDTH_PX}px`;
+    container.style.minHeight = `${A4_HEIGHT_PX}px`;
     container.style.backgroundColor = '#ffffff';
     container.style.color = '#1a1a1a';
-    container.style.fontFamily = 'Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
-    container.style.padding = '30px';
+    container.style.fontFamily = '"Segoe UI", Arial, Helvetica, sans-serif';
+    container.style.padding = '24px';
     container.style.boxSizing = 'border-box';
     container.innerHTML = pageContents[index];
 
@@ -337,9 +348,8 @@ async function renderPagesToPdfDataUrl(pageContents: string[]): Promise<string> 
       });
 
       const imgData = canvas.toDataURL('image/png');
-      const pageHeight = (canvas.height * pdfWidth) / canvas.width;
       if (index > 0) pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pageHeight);
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
     } finally {
       document.body.removeChild(container);
     }
@@ -360,11 +370,27 @@ function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
   const activeCount = d.team.filter(a => a.status !== 'Absent').length;
   const closedCount = d.team.filter(a => a.status === 'Clôturé').length;
   const totalLeads = d.team.reduce((acc, a) => acc + a.stats.priv + a.stats.roam + a.stats.bund, 0);
+  const reportCount = d.reports?.length || 0;
+
+  const pageFrame = (content: string) => `
+    <div style="
+      width:100%;
+      font-family:'Segoe UI', Arial, Helvetica, sans-serif;
+      color:#0f172a;
+      display:flex;
+      flex-direction:column;
+      gap:12px;
+    ">
+      ${content}
+    </div>
+  `;
+
   const cover = `
     <div style="background:linear-gradient(140deg,#111827 0%,#312e81 48%,#991b1b 100%); border-radius:24px; padding:24px; color:#fff; margin-bottom:18px;">
       <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#c4b5fd; font-weight:800;">Rapport de supervision</div>
       <div style="font-size:28px; font-weight:900; margin-top:6px;">${escapeHtml(d.supName)}</div>
       <div style="font-size:12px; color:#e2e8f0; margin-top:5px;">Période: <b>${escapeHtml(d.date)}</b></div>
+      <div style="font-size:11px; color:#dbeafe; margin-top:10px;">A4 • Synthèse équipe • ${d.team.length} hôtesse(s) • ${reportCount} rapport(s)</div>
     </div>
   `;
 
@@ -378,11 +404,11 @@ function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
     </table>
   `;
 
-  const cards = d.team.map((a) => {
-    const maxValue = Math.max(1, ...[a.stats.priv, a.stats.roam, a.stats.bund]);
+  const buildCard = (a: PDFSupervisorData['team'][number]) => {
+    const total = a.stats.priv + a.stats.roam + a.stats.bund;
     const badge = a.status === 'Clôturé' ? 'Clôturé' : (a.status === 'Présent' ? 'Présent' : 'Absent');
     return `
-      <div style="border:1px solid #e5e7eb; border-radius:14px; padding:12px; background:#ffffff; height:100%;">
+      <div style="border:1px solid #e5e7eb; border-radius:14px; padding:12px; background:#ffffff; min-height:162px; display:flex; flex-direction:column; gap:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
           <div>
             <div style="font-size:13px; font-weight:900; text-transform:uppercase; color:#111827;">${escapeHtml(a.name)}</div>
@@ -390,27 +416,127 @@ function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
           </div>
           <span style="font-size:9px; font-weight:900; padding:4px 9px; border-radius:999px; border:1px solid ${a.status === 'Clôturé' ? '#86efac' : (a.status === 'Présent' ? '#93c5fd' : '#fecaca')}; color:${a.status === 'Clôturé' ? '#166534' : (a.status === 'Présent' ? '#1e3a8a' : '#991b1b')}; background:${a.status === 'Clôturé' ? '#f0fdf4' : (a.status === 'Présent' ? '#eff6ff' : '#fef2f2')};">${escapeHtml(badge)}</span>
         </div>
-        <div style="display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap;">
-          <div style="flex:1; min-width:0;">
-            <div style="font-size:9px; font-weight:800; color:#64748b; text-transform:uppercase; margin-bottom:6px;">Présence & horaires</div>
-            <div style="font-size:10px; color:#111827; font-weight:700;">Arrivée: <b>${escapeHtml(a.arrivalTime || '00:00')}</b></div>
-            <div style="font-size:10px; color:#111827; font-weight:700;">Clôture: <b>${escapeHtml(a.departureTime || '00:00')}</b></div>
+        <div style="display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px;">
+          <div style="border:1px solid #fee2e2; border-radius:10px; background:#fff5f5; padding:8px; text-align:center;">
+            <div style="font-size:8px; text-transform:uppercase; color:#7f1d1d; font-weight:800;">Privilège</div>
+            <div style="font-size:16px; font-weight:900; color:#991b1b; line-height:1.1;">${a.stats.priv}</div>
           </div>
-          <div style="display:flex; gap:6px; flex:1; justify-content:flex-end;">
-            ${buildDonutSvg(a.stats.priv, maxValue, '#dc2626', '#fee2e2', 'PRV')}
-            ${buildDonutSvg(a.stats.roam, maxValue, '#d97706', '#fef3c7', 'ROA')}
-            ${buildDonutSvg(a.stats.bund, maxValue, '#2563eb', '#dbeafe', 'BND')}
+          <div style="border:1px solid #fde68a; border-radius:10px; background:#fffbeb; padding:8px; text-align:center;">
+            <div style="font-size:8px; text-transform:uppercase; color:#78350f; font-weight:800;">Roaming</div>
+            <div style="font-size:16px; font-weight:900; color:#92400e; line-height:1.1;">${a.stats.roam}</div>
+          </div>
+          <div style="border:1px solid #bfdbfe; border-radius:10px; background:#eff6ff; padding:8px; text-align:center;">
+            <div style="font-size:8px; text-transform:uppercase; color:#1e3a8a; font-weight:800;">Bundle</div>
+            <div style="font-size:16px; font-weight:900; color:#1d4ed8; line-height:1.1;">${a.stats.bund}</div>
+          </div>
+        </div>
+        <div style="display:flex; justify-content:space-between; gap:8px; margin-top:auto;">
+          <div style="font-size:10px; color:#334155; font-weight:700;">Arrivée: <b>${escapeHtml(a.arrivalTime || '00:00')}</b></div>
+          <div style="font-size:10px; color:#334155; font-weight:700;">Clôture: <b>${escapeHtml(a.departureTime || '00:00')}</b></div>
+          <div style="font-size:10px; color:#0f172a; font-weight:900;">Total: ${total}</div>
+        </div>
+      </div>
+    `;
+  };
+
+  const buildCardsGrid = (teamChunk: PDFSupervisorData['team']) => `
+    <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; align-content:start;">
+      ${teamChunk.map((agent) => buildCard(agent)).join('')}
+    </div>
+  `;
+
+  const firstPageCardCount = 8;
+  const followingPageCardCount = 10;
+  const firstCards = d.team.slice(0, firstPageCardCount);
+  const remainingCards = d.team.slice(firstPageCardCount);
+  const cardPages: string[] = [cover + summary + buildCardsGrid(firstCards)];
+
+  for (let i = 0; i < remainingCards.length; i += followingPageCardCount) {
+    cardPages.push(buildCardsGrid(remainingCards.slice(i, i + followingPageCardCount)));
+  }
+
+  const histogramChart = (() => {
+    if (!d.team.length) {
+      return `
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:18px; padding:16px;">
+          <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#64748b; font-weight:800;">Performances de la journée</div>
+          <div style="font-size:11px; color:#64748b; margin-top:8px;">Aucune donnée agent disponible pour tracer l'histogramme.</div>
+        </div>
+      `;
+    }
+
+    const values = d.team.flatMap((agent) => [agent.stats.priv, agent.stats.roam, agent.stats.bund]);
+    const maxValue = Math.max(1, ...values);
+    const chartHeight = 122;
+    const dayActualTotal = d.team.reduce((acc, agent) => acc + agent.stats.priv + agent.stats.roam + agent.stats.bund, 0);
+    const fallbackTargetTotal = (d.reports || []).reduce((acc, report) => {
+      const t = report.targets || { privilege: 0, roaming: 0, bundle: 0 };
+      return acc + Number(t.privilege || 0) + Number(t.roaming || 0) + Number(t.bundle || 0);
+    }, 0);
+    const dayTargetTotal = Number(d.dayTargets?.total || 0) || fallbackTargetTotal;
+    const globalPctRaw = dayTargetTotal > 0 ? Math.round((dayActualTotal / dayTargetTotal) * 100) : 0;
+    const globalPctForArc = Math.min(100, Math.max(0, globalPctRaw));
+    const donutRadius = 44;
+    const donutCircumference = 2 * Math.PI * donutRadius;
+    const donutOffset = donutCircumference * (1 - globalPctForArc / 100);
+
+    const groups = d.team.map((agent) => {
+      const bar = (value: number, color: string) => {
+        const h = Math.max(2, Math.round((value / maxValue) * chartHeight));
+        return `
+          <div style="display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:4px;">
+            <div style="font-size:8px; color:#334155; font-weight:900; line-height:1;">${value}</div>
+            <div style="width:8px; height:${h}px; border-radius:6px 6px 0 0; background:${color};"></div>
+          </div>
+        `;
+      };
+      return `
+        <div style="display:flex; flex-direction:column; align-items:center; gap:8px; min-width:46px;">
+          <div style="height:${chartHeight}px; display:flex; align-items:flex-end; gap:3px;">
+            ${bar(agent.stats.priv, '#dc2626')}
+            ${bar(agent.stats.roam, '#d97706')}
+            ${bar(agent.stats.bund, '#2563eb')}
+          </div>
+          <div style="font-size:8px; line-height:1.15; color:#475569; font-weight:800; text-transform:uppercase; width:46px; min-height:20px; text-align:center; white-space:normal; word-break:break-word; overflow-wrap:anywhere;">
+            ${escapeHtml(agent.name.split(' ').slice(0, 2).join(' ') || agent.name)}
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:18px; padding:16px;">
+        <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#64748b; font-weight:800;">Performances de la journée</div>
+        <div style="display:flex; align-items:flex-start; gap:12px; margin-top:8px;">
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; gap:10px; font-size:9px; color:#334155; font-weight:800;">
+              <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; border-radius:2px; background:#dc2626;"></span>Privilège</span>
+              <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; border-radius:2px; background:#d97706;"></span>Roaming</span>
+              <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; border-radius:2px; background:#2563eb;"></span>Bundle</span>
+              <span style="margin-left:auto; font-size:9px; color:#64748b;">Max: ${maxValue}</span>
+            </div>
+            <div style="margin-top:10px; padding:8px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; overflow-x:auto;">
+              <div style="display:flex; align-items:flex-end; gap:8px; min-height:${chartHeight + 42}px; min-width:max-content;">
+                ${groups}
+              </div>
+            </div>
+          </div>
+          <div style="width:180px; border:1px solid #e2e8f0; border-radius:12px; background:#f8fafc; padding:10px; text-align:center;">
+            <div style="font-size:9px; text-transform:uppercase; color:#64748b; font-weight:800; letter-spacing:0.6px;">Performance globale</div>
+            <svg width="116" height="116" viewBox="0 0 116 116" style="display:block; margin:8px auto 2px auto;">
+              <circle cx="58" cy="58" r="${donutRadius}" fill="none" stroke="#e2e8f0" stroke-width="12" />
+              <circle cx="58" cy="58" r="${donutRadius}" fill="none" stroke="#0ea5e9" stroke-width="12" stroke-linecap="round" stroke-dasharray="${donutCircumference}" stroke-dashoffset="${donutOffset}" transform="rotate(-90 58 58)" />
+              <text x="58" y="54" text-anchor="middle" style="font-size:19px; font-weight:900; fill:#0f172a;">${globalPctRaw}%</text>
+              <text x="58" y="68" text-anchor="middle" style="font-size:8px; font-weight:800; fill:#64748b; text-transform:uppercase;">du target</text>
+            </svg>
+            <div style="font-size:10px; color:#334155; font-weight:800; margin-top:2px;">${dayActualTotal} / ${dayTargetTotal || 'N/A'}</div>
+            <div style="font-size:8px; color:#64748b; margin-top:3px; line-height:1.2;">Target du jour = targets définis × ${d.dayTargets?.deployedCount ?? d.team.length} hôtesse(s) déployée(s).</div>
           </div>
         </div>
       </div>
     `;
-  }).join('');
+  })();
 
-  const cardsGrid = `<div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px;">${cards}</div>`;
-  const pages = [cover + summary + cardsGrid];
-  if (d.reports && d.reports.length) {
-    pages.push(...d.reports.map((report) => buildAgentReportHtml(report)));
-  }
   const closing = `
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:18px; padding:20px;">
       <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#64748b; font-weight:800;">Clôture de compilation</div>
@@ -418,8 +544,20 @@ function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
       <div style="font-size:11px; color:#475569; margin-top:8px;">La compilation regroupe désormais les rapports journaliers des agents de la période choisie.</div>
     </div>
   `;
-  pages.push(closing);
-  return pages.map((page) => wrapPage(page));
+  const tailSection = histogramChart + closing;
+  const reportPages = (d.reports || []).map((report) => buildAgentReportHtml(report));
+
+  if (reportPages.length > 0) {
+    const lastReportPage = reportPages.length - 1;
+    reportPages[lastReportPage] = reportPages[lastReportPage] + tailSection;
+  } else if (cardPages.length > 0) {
+    const lastCardPage = cardPages.length - 1;
+    cardPages[lastCardPage] = cardPages[lastCardPage] + tailSection;
+  } else {
+    cardPages.push(tailSection);
+  }
+
+  return [...cardPages, ...reportPages].map((page) => wrapPage(pageFrame(page)));
 }
 
 export function buildSupervisorReportHtml(d: PDFSupervisorData): string {
