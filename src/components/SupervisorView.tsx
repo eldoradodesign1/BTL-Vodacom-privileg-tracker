@@ -216,11 +216,11 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
             return (
               <div key={item.id} className="glass-card p-3 border border-white/10 hover:border-red-500/30 transition-all">
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-xs font-black uppercase text-white">{item.name}</h3>
-                      <span className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg}`}>
+                      <span className={`px-2 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg}`}>
                         {item.status}
                       </span>
                     </div>
@@ -248,7 +248,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                           trend: [4, 7, 5, 12, 18, 14, totalLeads]
                         })}
                         className={`p-1.5 ${statusBg} rounded-xl border transition-all`}
-                        title="Voir l'historique des rapports"
+                        title="Voir l'historique"
                       >
                         <NotebookText className="w-3.5 h-3.5" />
                       </button>
@@ -258,32 +258,9 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                       <button
                         onClick={() => onOpenPdfModal(`report-id:${item.reportObj!.id}`)}
                         className={`p-1.5 ${statusBg} rounded-xl border transition-all`}
-                        title="Voir le rapport PDF"
+                        title="Rapport"
                       >
                         <FileText className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-
-                    {(item.status === 'Présent' || item.status === 'Clôturé') && onOpenLocationModal && (
-                      <button
-                        onClick={() => {
-                          const agentForLocation: AgentMasterStatus = {
-                            id: item.id,
-                            name: item.name,
-                            phone: '0810000000',
-                            shop: item.shop,
-                            shopId: '',
-                            status: item.status,
-                            trend: [0, 0, 0],
-                            reportObj: item.reportObj,
-                            stats: item.stats
-                          };
-                          onOpenLocationModal(agentForLocation);
-                        }}
-                        className={`p-1.5 ${statusBg} rounded-xl border transition-all`}
-                        title={item.status === 'Présent' ? 'Voir la localisation de pointage' : 'Voir la localisation de clôture'}
-                      >
-                        <MapPin className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>

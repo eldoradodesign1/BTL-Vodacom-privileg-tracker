@@ -4,6 +4,7 @@ import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSy
 import { formatDriveImageUrl, getGSheetConfig, syncFromGoogleSheetUrl } from '../utils/googleSheetsSync';
 import { TabType } from './BottomNav';
 import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archive, Eye, Search, Filter, RefreshCw } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { buildPointageFeedback } from '../utils/pointageStatus';
 
 interface AgentViewProps {
@@ -99,6 +100,13 @@ export const AgentView: React.FC<AgentViewProps> = ({
   const podiumTier = myTodayRank === 1 ? 'gold' : (myTodayRank === 2 ? 'silver' : (myTodayRank === 3 ? 'bronze' : null));
   const podiumLabel = myTodayTotal > 0 ? `#${myTodayRank}` : 'Non classé';
   const showPodium = true;
+  const evolutionData = [...agentReports]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-6)
+    .map(rep => ({
+      label: rep.date.slice(5),
+      value: rep.priv + rep.roam + rep.bund
+    }));
 
   // All history leads registered by this agent
   const allAgentLeads = getLeads().filter(l => 
@@ -489,6 +497,26 @@ export const AgentView: React.FC<AgentViewProps> = ({
           </div>
         </div>
       )}
+
+      <div className="glass-card p-4 border border-white/10">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Évolution</p>
+            <p className="text-xs font-black uppercase text-white">Derniers rapports</p>
+          </div>
+          <span className="text-[10px] font-black uppercase text-red-400">{evolutionData.length} jours</span>
+        </div>
+        <div className="mt-3 h-24 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={evolutionData}>
+              <XAxis dataKey="label" stroke="#71717a" fontSize={9} tickLine={false} axisLine={false} />
+              <YAxis stroke="#71717a" fontSize={9} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '10px', fontSize: '11px' }} />
+              <Line type="monotone" dataKey="value" stroke="#f43f5e" strokeWidth={2.2} dot={{ r: 3, fill: '#f43f5e' }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
 
       {/* Pointage Unique Arrivée */}
       <div className="glass-card text-center p-6 border border-white/10">
