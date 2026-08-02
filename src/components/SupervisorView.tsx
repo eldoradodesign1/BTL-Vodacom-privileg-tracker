@@ -612,7 +612,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   e.preventDefault();
                   let payload: { agentId: string; fromShopId: string } | null = null;
                   try {
-                    const raw = e.dataTransfer.getData('application/json');
+                      const raw = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
                     if (raw) payload = JSON.parse(raw) as { agentId: string; fromShopId: string };
                   } catch {}
                   handleDropHostessOnShop(shop.id, payload);
@@ -643,10 +643,12 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                         draggable
                         onDragStart={(e) => {
                           const payload = { agentId: ag.id, fromShopId: shop.id };
+                          const payloadString = JSON.stringify(payload);
                           setDraggedHostess(payload);
                           setDragOverShopId(null);
                           e.dataTransfer.effectAllowed = 'move';
-                          e.dataTransfer.setData('application/json', JSON.stringify(payload));
+                          e.dataTransfer.setData('application/json', payloadString);
+                          e.dataTransfer.setData('text/plain', payloadString);
                         }}
                         onDragEnd={() => {
                           setDraggedHostess(null);

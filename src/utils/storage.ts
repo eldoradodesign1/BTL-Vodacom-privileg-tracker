@@ -984,7 +984,7 @@ export function getReportPreviewHtml(report: DailyReport): string {
 }
 
 // --- NOTIFICATIONS ---
-export async function getNotifications(userId: string): Promise<NotificationItem[]> {
+export function getNotifications(userId: string): NotificationItem[] {
   const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
   return notifs.filter(n => n.user_id === userId);
 }

@@ -59,6 +59,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Online' | 'Absent' | 'Clôturé'>('ALL');
   const [supFilter, setSupFilter] = useState('ALL');
   const [inlineAssignShop, setInlineAssignShop] = useState<Record<string, string>>({});
+  const [draggedHostess, setDraggedHostess] = useState<{ agentId: string; fromShopId: string } | null>(null);
+  const [dragOverShopId, setDragOverShopId] = useState<string | null>(null);
   const [shopAssignmentModal, setShopAssignmentModal] = useState<{ agentId: string; agentName: string; currentShopId: string; selectedShopId: string } | null>(null);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
 
@@ -249,8 +251,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   const handleSaveAssignments = () => {
     if (!assignUser) return;
-    if (assignShop) updateUserShopAssignment(assignUser, assignShop);
+    // Apply supervisor first so any subsequent shop notification is sent to the current supervisor.
     if (assignSupervisor) updateUserSupervisor(assignUser, assignSupervisor);
+    if (assignShop) updateUserShopAssignment(assignUser, assignShop);
     setAssignUser('');
     setAssignShop('');
     setAssignSupervisor('');
@@ -269,6 +272,32 @@ export const AdminView: React.FC<AdminViewProps> = ({
       target_bundle_std: targetBundleStd,
       target_bundle_air: targetBundleAir
     });
+    if (onRefreshData) onRefreshData();
+  };
+
+  const handleDropHostessOnShop = (targetShopId: string, payload?: { agentId: string; fromShopId: string } | null) => {
+    const source = payload || draggedHostess;
+    if (!source) return;
+
+    const { agentId, fromShopId } = source;
+    setDraggedHostess(null);
+    setDragOverShopId(null);
+
+    if (fromShopId === targetShopId) return;
+
+    const agent = agents.find((u) => u.id === agentId);
+    const fromShop = shops.find((s) => s.id === fromShopId);
+    const toShop = shops.find((s) => s.id === targetShopId);
+    if (!agent || !toShop) return;
+
+    const confirmed = window.confirm(
+      `Confirmer l'affectation de ${agent.name} de ${fromShop?.name || 'shop actuel'} vers ${toShop.name} ?`
+    );
+    if (!confirmed) return;
+
+    updateUserShopAssignment(agentId, targetShopId);
+    // Trigger immediate repaint for source/target cards.
+    setInlineAssignShop((prev) => ({ ...prev }));
     if (onRefreshData) onRefreshData();
   };
 
@@ -569,7 +598,33 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 {shops.map(shop => {
                   const assignedAgents = agents.filter(a => a.permanentShopId === shop.id);
                   return (
-                    <div key={shop.id} className="glass-card p-4 border border-white/10 space-y-3">
+                    <div
+                      key={shop.id}
+                      className={`glass-card p-4 border space-y-3 transition-all ${
+                        dragOverShopId === shop.id
+                          ? 'border-amber-300 bg-amber-400/20 ring-2 ring-amber-300/60 shadow-[0_0_0_1px_rgba(252,211,77,0.45)]'
+                          : draggedHostess
+                            ? 'border-amber-400/40'
+                            : 'border-white/10'
+                      }`}
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                        setDragOverShopId(shop.id);
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragOverShopId(shop.id);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        let payload: { agentId: string; fromShopId: string } | null = null;
+                        try {
+                          const raw = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
+                          if (raw) payload = JSON.parse(raw) as { agentId: string; fromShopId: string };
+                        } catch {}
+                        handleDropHostessOnShop(shop.id, payload);
+                      }}
+                    >
                       <div className="flex justify-between items-start">
                         <div>
                           <h3 className="text-xs font-black uppercase text-white flex items-center space-x-2">
@@ -589,7 +644,25 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           <span className="text-[10px] text-gray-500 italic">Aucune hôtesse affectée à ce shop</span>
                         ) : (
                           assignedAgents.map(ag => (
-                            <span key={ag.id} className="text-[9px] font-black uppercase px-2.5 py-1 bg-white/5 text-gray-300 rounded-lg border border-white/10 flex items-center space-x-1">
+                            <span
+                              key={ag.id}
+                              draggable
+                              onDragStart={(e) => {
+                                const payload = { agentId: ag.id, fromShopId: shop.id };
+                                const payloadString = JSON.stringify(payload);
+                                setDraggedHostess(payload);
+                                setDragOverShopId(null);
+                                e.dataTransfer.effectAllowed = 'move';
+                                e.dataTransfer.setData('application/json', payloadString);
+                                e.dataTransfer.setData('text/plain', payloadString);
+                              }}
+                              onDragEnd={() => {
+                                setDraggedHostess(null);
+                                setDragOverShopId(null);
+                              }}
+                              className="cursor-grab active:cursor-grabbing text-[9px] font-black uppercase px-2.5 py-1 bg-white/5 text-gray-300 rounded-lg border border-white/10 flex items-center space-x-1"
+                              title="Glisser-déposer vers un autre shop"
+                            >
                               <UserCheck className="w-3 h-3 text-emerald-400" />
                               <span>{ag.name}</span>
                             </span>
