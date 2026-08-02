@@ -241,7 +241,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
               subTab === 'manage' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
-            Gestion
+            <span className="inline-flex items-center justify-center gap-1">
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>HOT.</span>
+            </span>
           </button>
           <button
             onClick={() => setSubTab('stats')}
@@ -249,7 +252,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
               subTab === 'stats' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
-            Analyses
+            <span className="inline-flex items-center justify-center gap-1">
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>SUP.</span>
+            </span>
           </button>
           <button
             onClick={() => setSubTab('leads')}
@@ -257,7 +263,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
               subTab === 'leads' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
-            Leads
+            <span className="inline-flex items-center justify-center gap-1">
+              <Store className="w-3.5 h-3.5" />
+              <span>Shops</span>
+            </span>
           </button>
           <button
             onClick={() => setSubTab('reports')}
@@ -265,7 +274,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
               subTab === 'reports' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
-            Archives
+            <span className="inline-flex items-center justify-center gap-1">
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Target</span>
+            </span>
           </button>
         </div>
       )}
