@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AgentMasterStatus, DailyReport, Lead, Shop } from '../../types';
-import { resolveStoredPhotoUrl, updateUserShopAssignment } from '../../utils/storage';
+import { getLeads, resolveStoredPhotoUrl, updateUserShopAssignment } from '../../utils/storage';
+import { buildAgentCompilationPayload } from '../../utils/agentCompilation';
 import { Phone, FileSpreadsheet, X, Eye, Camera, CheckCircle2, Clock3, UserCheck } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 
@@ -59,6 +60,41 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
     onAssignmentChanged?.();
   };
 
+  const handleCompileAgent = () => {
+    if (!agent) return;
+    const reports = agentReports.length > 0 ? agentReports : [];
+    const allAgentLeads = getLeads().filter((lead) => lead.agent_id === agent.id);
+    const payload = buildAgentCompilationPayload({
+      agentId: agent.id,
+      agentName: agent.name,
+      shopName: agent.shop,
+      reports: reports.map((report) => ({
+        date: report.date,
+        agent_name: report.agent_name,
+        shop_name: report.shop_name,
+        agent_id: report.agent_id,
+        arrival_time: report.arrival_time,
+        departure_time: report.departure_time,
+        maps_in: report.maps_in,
+        maps_out: report.maps_out,
+        priv: report.priv,
+        roam: report.roam,
+        bund: report.bund,
+        pointage_photo: report.pointage_photo,
+        photos: report.photos || [],
+        comment: report.comment
+      })),
+      leads: allAgentLeads.map((lead) => ({
+        agent_id: lead.agent_id,
+        timestamp: lead.timestamp,
+        client_name: lead.client_name,
+        msisdn: lead.msisdn,
+        action_type: lead.action_type
+      }))
+    });
+    onOpenPdf(`preview-admin-batch:${encodeURIComponent(JSON.stringify(payload))}`);
+  };
+
   const statusBadgeClass = agent.status === 'Clôturé'
     ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
     : agent.status === 'Présent'
@@ -96,7 +132,7 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
 
         <div className="grid grid-cols-2 gap-3 mb-6">
           <button
-            onClick={() => onCompileAgent(agent.id)}
+            onClick={handleCompileAgent}
             className="btn-neon btn-red text-xs py-3 flex items-center justify-center space-x-1.5"
           >
             <FileSpreadsheet className="w-4 h-4" />
