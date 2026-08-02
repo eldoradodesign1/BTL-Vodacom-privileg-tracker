@@ -304,7 +304,7 @@ export default function App() {
 
   return (
     <div
-      className="min-h-screen flex flex-col relative overflow-hidden font-sans select-none transition-colors"
+      className="h-screen flex flex-col relative overflow-hidden font-sans select-none transition-colors"
       style={themeSurfaceStyle}
     >
       <SimulationBar
@@ -325,6 +325,7 @@ export default function App() {
         online={online}
         syncPendingCount={syncPendingCount}
         profilePhotoUrl={todayCheckinPhoto || undefined}
+        onPointageRecorded={refreshData}
         theme={theme}
         onSetTheme={setThemeMode}
         onMarkNotifsRead={() => {
@@ -341,7 +342,7 @@ export default function App() {
         onOpenGSheetModal={realMasterUser.role === 'admin' ? () => setIsGSheetModalOpen(true) : undefined}
       />
 
-      <main className="flex-1 px-3 sm:px-4 pt-3 pb-32 max-w-2xl mx-auto w-full overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 min-h-0 px-3 sm:px-4 pt-3 pb-32 max-w-2xl mx-auto w-full overflow-y-auto overflow-x-hidden">
         {renderContent()}
       </main>
 

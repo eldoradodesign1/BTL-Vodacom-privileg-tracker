@@ -285,6 +285,11 @@ export function runScheduledDailyReminders(now: Date = new Date()): void {
 
 // In-memory cache for heavy PDF Data URLs to avoid exceeding localStorage quota (5MB limit)
 const pdfCache = new Map<string, string>();
+const transientCheckinPhotoCache = new Map<string, string>();
+
+function checkinPhotoCacheKey(agentId: string, isoDate: string): string {
+  return `${agentId}::${isoDate}`;
+}
 
 // Initialize seed data without wiping the user's persisted state on first load.
 (function initializeSeedData() {
@@ -353,11 +358,34 @@ function saveItem<T>(key: string, data: T): void {
           if (typeof item === 'object' && item !== null) {
             const copy: any = { ...item };
             if ('pdf_url' in copy) delete copy.pdf_url;
-            if ('photo' in copy && typeof copy.photo === 'string' && copy.photo.length > 1000) {
+            if (
+              'photo' in copy
+              && typeof copy.photo === 'string'
+              && copy.photo.length > 1000
+              && copy.photo.startsWith('data:image')
+            ) {
               delete copy.photo;
             }
+            if (
+              'pointage_photo' in copy
+              && typeof copy.pointage_photo === 'string'
+              && copy.pointage_photo.length > 1000
+              && copy.pointage_photo.startsWith('data:image')
+            ) {
+              delete copy.pointage_photo;
+            }
             if ('photos' in copy && Array.isArray(copy.photos)) {
-              delete copy.photos;
+              const keptPhotos = copy.photos.filter((p: unknown) => {
+                if (typeof p !== 'string') return false;
+                const value = p.trim();
+                if (!value) return false;
+                return !value.startsWith('data:image');
+              });
+              if (keptPhotos.length > 0) {
+                copy.photos = keptPhotos;
+              } else {
+                delete copy.photos;
+              }
             }
             return copy;
           }
@@ -719,8 +747,22 @@ export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
   const checkins = getCheckins();
   const newCheckin: Checkin = {
     ...checkinData,
+    status: checkinData.status === 'pending' ? 'pending' : (checkinData.type === 'IN' ? 'pending' : (checkinData.status || 'synced')),
     id: generateUUID()
   };
+
+  // Keep a transient copy to avoid visual loss before Drive URL sync completes.
+  if (
+    newCheckin.type === 'IN'
+    && typeof newCheckin.photo === 'string'
+    && newCheckin.photo.startsWith('data:image')
+  ) {
+    transientCheckinPhotoCache.set(
+      checkinPhotoCacheKey(newCheckin.agent_id, toISO(newCheckin.timestamp)),
+      newCheckin.photo
+    );
+  }
+
   checkins.unshift(newCheckin);
   saveItem(STORAGE_KEYS.CHECKINS, checkins);
   pushToGoogleSheetWebhook({
@@ -729,10 +771,21 @@ export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
     folders: {
       photos: DRIVE_FOLDERS.PHOTOS_FOLDER_URL
     }
-  }).then(() => {
-    const cfg = getGSheetConfig();
-    if (cfg.sheetCsvUrl) {
-      syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
+  }).then((confirmed) => {
+    if (confirmed) {
+      const cfg = getGSheetConfig();
+      if (cfg.sheetCsvUrl) {
+        syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
+      }
+      return;
+    }
+
+    // Keep a pending flag if webhook confirmation failed.
+    const latest = getCheckins();
+    const idx = latest.findIndex((c) => c.id === newCheckin.id);
+    if (idx >= 0 && latest[idx].status !== 'pending') {
+      latest[idx] = { ...latest[idx], status: 'pending' };
+      saveCheckins(latest);
     }
   }).catch(() => {});
   return newCheckin;
@@ -741,9 +794,17 @@ export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
 export function checkDailyStatus(agentId: string, dateISO: string) {
   const checkins = getCheckins();
   const reports = getReports();
+  const users = getUsers();
 
   const targetDate = toISO(dateISO);
-  const hasCheckin = checkins.some(r => r.agent_id === agentId && toISO(r.timestamp) === targetDate);
+  const currentUser = users.find((user) => user.id === agentId);
+  const hasCheckin = checkins.some((record) => {
+    if (toISO(record.timestamp) !== targetDate) return false;
+    if (record.type !== 'IN') return false;
+    if (record.agent_id === agentId) return true;
+    if (currentUser && isMatchAgent(record.agent_id, currentUser)) return true;
+    return false;
+  });
   const hasReport = reports.some(r => r.agent_id === agentId && toISO(r.date) === targetDate);
 
   return { checkinDone: hasCheckin, reportDone: hasReport };
@@ -768,11 +829,25 @@ export function resolveStoredPhotoUrl(raw: string | undefined | null): string | 
 export function getTodayCheckinPhoto(agentId: string): string | null {
   const checkins = getCheckins();
   const today = toISO(new Date());
-  const found = checkins.find(r => r.agent_id === agentId && toISO(r.timestamp) === today && r.type === 'IN');
-  const photoValue = found?.photo_drive_url || found?.photo;
-  if (!photoValue) return null;
 
-  return resolveStoredPhotoUrl(photoValue);
+  const todayIns = checkins.filter(
+    (r) => r.agent_id === agentId && toISO(r.timestamp) === today && r.type === 'IN'
+  );
+
+  const withPhoto = todayIns.find((r) => !!(r.photo_drive_url || r.photo));
+  const preferred = withPhoto || todayIns[0];
+  const photoValue = preferred?.photo_drive_url || preferred?.photo;
+  const resolved = resolveStoredPhotoUrl(photoValue);
+  if (resolved) return resolved;
+
+  const anyTodayWithPhoto = checkins.find(
+    (r) => r.agent_id === agentId && toISO(r.timestamp) === today && !!(r.photo_drive_url || r.photo)
+  );
+  const anyResolved = resolveStoredPhotoUrl(anyTodayWithPhoto?.photo_drive_url || anyTodayWithPhoto?.photo || '');
+  if (anyResolved) return anyResolved;
+
+  const cached = transientCheckinPhotoCache.get(checkinPhotoCacheKey(agentId, today));
+  return cached || null;
 }
 
 // --- LEADS ---
@@ -1269,7 +1344,7 @@ export function getDashboardData(filters: { start?: string; end?: string; agentI
   });
 
   const pieData = [
-    { name: 'Privilège', value: priv, color: '#E60000' },
+    { name: 'Privilège', value: priv, color: 'var(--theme-accent)' },
     { name: 'Roaming', value: roam, color: '#FFD700' },
     { name: 'Bundles', value: bund, color: '#3b82f6' }
   ];
