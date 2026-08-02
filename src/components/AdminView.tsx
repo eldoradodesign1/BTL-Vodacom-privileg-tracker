@@ -503,16 +503,16 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                 <div className="space-y-2">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Sélectionner un utilisateur</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Sélectionner une hôtesse</label>
                     <select
                       value={assignUser}
                       onChange={(e) => setAssignUser(e.target.value)}
                       className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
                     >
-                      <option value="">-- Choisir un utilisateur --</option>
-                      {allUsers.map(u => (
+                      <option value="">-- Choisir une hôtesse --</option>
+                      {agents.map(u => (
                         <option key={u.id} value={u.id}>
-                          {u.name} ({u.role.toUpperCase()})
+                          {u.name}
                         </option>
                       ))}
                     </select>
