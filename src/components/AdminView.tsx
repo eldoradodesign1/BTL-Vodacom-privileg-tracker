@@ -1161,9 +1161,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   {agent.status !== 'Absent' && (
                     <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
                       {[
-                        { label: 'Privilège', value: agent.stats.priv, colorClass: 'text-red-500' },
-                        { label: 'Roaming', value: agent.stats.roam, colorClass: 'text-amber-400' },
-                        { label: 'Bundles', value: agent.stats.bund, colorClass: 'text-blue-400' }
+                        { label: 'Privilège', value: agent.stats?.priv ?? 0, colorClass: 'text-red-500' },
+                        { label: 'Roaming', value: agent.stats?.roam ?? 0, colorClass: 'text-amber-400' },
+                        { label: 'Bundles', value: agent.stats?.bund ?? 0, colorClass: 'text-blue-400' }
                       ].map(tile => (
                         <button
                           key={tile.label}
@@ -1197,25 +1197,25 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div
               onClick={() => setSubTab('leads')}
-              className="relative overflow-hidden bg-gradient-to-br from-white via-zinc-100 to-zinc-200 text-black p-5 rounded-[28px] text-center shadow-[0_18px_38px_rgba(0,0,0,0.28)] border border-white/70 cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group"
+              className="relative overflow-hidden bg-white/[0.128] text-white p-5 rounded-[28px] text-center shadow-[0_18px_38px_rgba(0,0,0,0.38)] border border-white/25 backdrop-blur-xl cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group"
               title="Cliquer pour voir tous les Leads / Rapport de Synthèse"
             >
               <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-rose-500/20 blur-2xl" />
-              <div className="pointer-events-none absolute left-3 top-3 h-7 w-7 rounded-full border border-red-500/20" />
-              <span className="text-[9px] font-black uppercase tracking-wider text-gray-500 block group-hover:text-red-600">Total Activations</span>
-              <p className="text-3xl font-black text-red-600 drop-shadow-[0_0_14px_rgba(230,0,0,0.35)]">{dashboardData.kpi.totalLeads}</p>
-              <span className="text-[8px] font-bold text-gray-400 uppercase mt-1 block group-hover:underline">→ Voir la liste</span>
+              <div className="pointer-events-none absolute left-3 top-3 h-7 w-7 rounded-full border border-white/20" />
+              <span className="text-[9px] font-black uppercase tracking-wider text-gray-300 block group-hover:text-red-400">Total Activations</span>
+              <p className="text-3xl font-black text-red-400 drop-shadow-[0_0_14px_rgba(0,0,0,0.4)]">{dashboardData.kpi.totalLeads}</p>
+              <span className="text-[8px] font-bold text-gray-300 uppercase mt-1 block group-hover:underline">→ Voir la liste</span>
             </div>
             <div
               onClick={() => setSubTab('manage')}
-              className="relative overflow-hidden bg-gradient-to-br from-white via-zinc-100 to-zinc-200 text-black p-5 rounded-[28px] text-center shadow-[0_18px_38px_rgba(0,0,0,0.28)] border border-white/70 cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group"
+              className="relative overflow-hidden bg-white/[0.128] text-white p-5 rounded-[28px] text-center shadow-[0_18px_38px_rgba(0,0,0,0.38)] border border-white/25 backdrop-blur-xl cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group"
               title="Cliquer pour aller au Monitoring des hôtesses"
             >
               <div className="pointer-events-none absolute -left-10 -bottom-10 h-28 w-28 rounded-full bg-amber-400/18 blur-2xl" />
-              <div className="pointer-events-none absolute right-3 top-3 h-7 w-7 rounded-full border border-zinc-900/15" />
-              <span className="text-[9px] font-black uppercase tracking-wider text-gray-500 block group-hover:text-black">Effectif Hôtesses</span>
-              <p className="text-3xl font-black text-zinc-900 drop-shadow-[0_0_12px_rgba(24,24,27,0.2)]">{dashboardData.kpi.presence}</p>
-              <span className="text-[8px] font-bold text-gray-400 uppercase mt-1 block group-hover:underline">→ Aller au Monitoring</span>
+              <div className="pointer-events-none absolute right-3 top-3 h-7 w-7 rounded-full border border-white/20" />
+              <span className="text-[9px] font-black uppercase tracking-wider text-gray-300 block group-hover:text-white">Effectif Hôtesses</span>
+              <p className="text-3xl font-black text-white drop-shadow-[0_0_12px_rgba(0,0,0,0.4)]">{dashboardData.kpi.presence}</p>
+              <span className="text-[8px] font-bold text-gray-300 uppercase mt-1 block group-hover:underline">→ Aller au Monitoring</span>
             </div>
           </div>
 
@@ -1225,7 +1225,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
             <div className="pointer-events-none absolute left-1/3 -bottom-16 h-36 w-36 rounded-full bg-amber-400/12 blur-3xl" />
             <div className="pointer-events-none absolute -left-14 top-10 h-28 w-28 rounded-full bg-sky-400/10 blur-3xl" />
             <h3 className="text-xs font-black uppercase text-red-400 tracking-[0.16em] mb-3 text-center">
-              Répartition des Activations (Offres)
+              Répartition des Activations
             </h3>
             <div className="h-56 w-full rounded-3xl border border-white/10 bg-black/20 backdrop-blur-sm px-2 py-1">
               <ResponsiveContainer width="100%" height="100%">
