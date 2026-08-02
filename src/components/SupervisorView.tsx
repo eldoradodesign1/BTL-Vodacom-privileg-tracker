@@ -3,7 +3,7 @@ import { User, Shop, AgentMasterStatus } from '../types';
 import { getSupervisorLiveView, getReports, getUsers, getLeads, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate } from '../utils/storage';
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
-import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera, Clock3, FileText } from 'lucide-react';
+import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera, Clock3, FileText, ChevronDown } from 'lucide-react';
 
 interface SupervisorViewProps {
   currentUser: User;
@@ -39,6 +39,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [targetRoamingAir, setTargetRoamingAir] = useState(15);
   const [targetBundleStd, setTargetBundleStd] = useState(10);
   const [targetBundleAir, setTargetBundleAir] = useState(10);
+  const [isTargetsCardOpen, setIsTargetsCardOpen] = useState(false);
   const [selectedLocationAgent, setSelectedLocationAgent] = useState<{ id: string; name: string; shop: string; status?: 'Présent' | 'Clôturé' | 'Absent'; arrivalTime?: string; departureTime?: string; mapsIn?: string; mapsOut?: string; lat?: number; long?: number } | null>(null);
 
   const teamData = getSupervisorLiveView(currentUser.id, selectedDate);
@@ -458,39 +459,99 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
         </div>
 
         <div className="glass-card border border-white/10 p-5 space-y-4">
-          <div className="space-y-1">
-            <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Définir les targets</h2>
-            <p className="text-[10px] text-gray-400 font-semibold">Les cibles de privilège, roaming et bundle sont centralisées ici pour les superviseurs.</p>
-          </div>
-          <div className="grid gap-3">
-            {[
-              { key: 'privStd', label: 'Privilège', value: targetPrivilegeStd, setter: setTargetPrivilegeStd, max: 100, side: 'Standard' },
-              { key: 'privAir', label: 'Privilège', value: targetPrivilegeAir, setter: setTargetPrivilegeAir, max: 100, side: 'Aéroport' },
-              { key: 'roamStd', label: 'Roaming', value: targetRoamingStd, setter: setTargetRoamingStd, max: 50, side: 'Standard' },
-              { key: 'roamAir', label: 'Roaming', value: targetRoamingAir, setter: setTargetRoamingAir, max: 50, side: 'Aéroport' },
-              { key: 'bundleStd', label: 'Bundle', value: targetBundleStd, setter: setTargetBundleStd, max: 50, side: 'Standard' },
-              { key: 'bundleAir', label: 'Bundle', value: targetBundleAir, setter: setTargetBundleAir, max: 50, side: 'Aéroport' }
-            ].map((item) => (
-              <div key={item.key} className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                <div className="mb-2 flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{item.label}</p>
-                    <p className="text-[10px] text-gray-500">{item.side}</p>
-                  </div>
-                  <div className="rounded-full border border-red-500/30 bg-red-600/10 px-2.5 py-1">
-                    <span className="text-[11px] font-black text-white">{item.value}</span>
+          <button
+            type="button"
+            onClick={() => setIsTargetsCardOpen((prev) => !prev)}
+            className="w-full flex items-center justify-between"
+          >
+            <div className="space-y-1 text-left">
+              <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Définir les targets</h2>
+              <p className="text-[10px] text-gray-400 font-semibold">Les cibles de privilège, roaming et bundle sont centralisées ici pour les superviseurs.</p>
+            </div>
+            <ChevronDown className={`w-5 h-5 text-gray-300 transition-transform ${isTargetsCardOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isTargetsCardOpen && (
+            <>
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Standard</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <label className="text-[9px] font-black uppercase text-gray-400">Privilège
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={targetPrivilegeStd}
+                        onChange={(e) => setTargetPrivilegeStd(Math.max(0, Math.min(100, Number(e.target.value || 0))))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                      />
+                    </label>
+                    <label className="text-[9px] font-black uppercase text-gray-400">Roaming
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        value={targetRoamingStd}
+                        onChange={(e) => setTargetRoamingStd(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                      />
+                    </label>
+                    <label className="text-[9px] font-black uppercase text-gray-400">Bundle
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        value={targetBundleStd}
+                        onChange={(e) => setTargetBundleStd(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                      />
+                    </label>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <input type="range" min="0" max={item.max} step="1" value={item.value} onChange={(e) => item.setter(Number(e.target.value))} className="h-2.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-red-500" />
-                  <input type="number" min="0" max={item.max} value={item.value} onChange={(e) => item.setter(Math.max(0, Math.min(item.max, Number(e.target.value || 0))))} className="w-16 rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400" />
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Aéroport</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <label className="text-[9px] font-black uppercase text-gray-400">Privilège
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={targetPrivilegeAir}
+                        onChange={(e) => setTargetPrivilegeAir(Math.max(0, Math.min(100, Number(e.target.value || 0))))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                      />
+                    </label>
+                    <label className="text-[9px] font-black uppercase text-gray-400">Roaming
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        value={targetRoamingAir}
+                        onChange={(e) => setTargetRoamingAir(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                      />
+                    </label>
+                    <label className="text-[9px] font-black uppercase text-gray-400">Bundle
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        value={targetBundleAir}
+                        onChange={(e) => setTargetBundleAir(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-          <button onClick={handleSaveTarget} className="w-full rounded-xl bg-red-600 px-3 py-2.5 text-[10px] font-black uppercase text-white">
-            Enregistrer les targets
-          </button>
+
+              <button onClick={handleSaveTarget} className="w-full rounded-xl bg-red-600 px-3 py-2.5 text-[10px] font-black uppercase text-white">
+                Enregistrer les targets
+              </button>
+            </>
+          )}
         </div>
 
         {/* Shops List */}
