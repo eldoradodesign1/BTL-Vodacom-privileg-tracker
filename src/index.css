@@ -371,6 +371,18 @@ body::after {
   animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.calendar-dock-stretch {
+  animation: calendarDockStretchIn 0.42s cubic-bezier(0.2, 0.85, 0.28, 1);
+  will-change: transform, opacity, filter;
+  transform-origin: top right;
+}
+
+.presence-registry-modal-in {
+  animation: presenceRegistryModalIn 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity, filter;
+  transform-origin: center center;
+}
+
 @keyframes popIn {
   from {
     transform: scale(0.95);
@@ -379,6 +391,56 @@ body::after {
   to {
     transform: scale(1);
     opacity: 1;
+  }
+}
+
+@keyframes calendarDockStretchIn {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(-12px) scaleX(0.62) scaleY(0.16);
+  }
+  45% {
+    opacity: 1;
+    filter: blur(1.4px);
+    transform: translateY(2px) scaleX(1.06) scaleY(1.08);
+  }
+  72% {
+    filter: blur(0);
+    transform: translateY(0) scaleX(0.985) scaleY(0.97);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scaleX(1) scaleY(1);
+  }
+}
+
+@keyframes presenceRegistryModalIn {
+  0% {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(14px) scale(0.9);
+  }
+  55% {
+    opacity: 1;
+    filter: blur(1px);
+    transform: translateY(-2px) scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calendar-dock-stretch {
+    animation: none;
+  }
+
+  .presence-registry-modal-in {
+    animation: none;
   }
 }
 

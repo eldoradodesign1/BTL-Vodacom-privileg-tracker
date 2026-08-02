@@ -569,69 +569,87 @@ export async function generateAdminBatchPDF(d: PDFAdminBatchData): Promise<strin
 }
 
 function buildAdminBatchReportPages(d: PDFAdminBatchData): string[] {
-  const title = d.title || 'Compilation périodique';
   const rows = d.rows || [];
   const totals = d.totals || { privilege: 0, roaming: 0, bundles: 0 };
+  const formatLongDate = (iso: string): string => {
+    const parsed = new Date(`${iso}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return iso;
+    return parsed.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  };
+
+  const periodMatch = (d.period || '').match(/(\d{4}-\d{2}-\d{2})\s+au\s+(\d{4}-\d{2}-\d{2})/i);
+  const periodStart = periodMatch?.[1] || rows[0]?.date || '';
+  const periodEnd = periodMatch?.[2] || rows[rows.length - 1]?.date || periodStart;
+
   const cover = `
     <div style="background:linear-gradient(135deg,#111827 0%,#1d4ed8 46%,#dc2626 100%); color:#fff; border-radius:24px; padding:24px; margin-bottom:18px;">
       <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#dbeafe; font-weight:800;">Compilation de période</div>
-      <div style="font-size:28px; font-weight:900; margin-top:6px;">${escapeHtml(title)}</div>
-      <div style="font-size:12px; color:#e2e8f0; margin-top:5px;">Période: <b>${escapeHtml(d.period)}</b></div>
+      <div style="font-size:34px; font-weight:900; margin-top:6px;">Rapport compilé</div>
+      <div style="font-size:12px; color:#e2e8f0; margin-top:8px;">Période du <b>${escapeHtml(formatLongDate(periodStart))}</b> au <b>${escapeHtml(formatLongDate(periodEnd))}</b></div>
     </div>
   `;
 
-  const summary = `
+  const summaryCards = `
     <table style="width:100%; border-spacing:10px; margin-left:-10px; margin-bottom:10px;">
       <tr>
-        <td style="width:25%;"><div style="background:#fff5f5; border:1px solid #fecaca; border-radius:12px; text-align:center; padding:10px;"><div style="font-size:8px; color:#991b1b; text-transform:uppercase; font-weight:800;">Privilège</div><div style="font-size:20px; font-weight:900; color:#7f1d1d;">${totals.privilege}</div></div></td>
-        <td style="width:25%;"><div style="background:#fffbeb; border:1px solid #fde68a; border-radius:12px; text-align:center; padding:10px;"><div style="font-size:8px; color:#92400e; text-transform:uppercase; font-weight:800;">Roaming</div><div style="font-size:20px; font-weight:900; color:#78350f;">${totals.roaming}</div></div></td>
-        <td style="width:25%;"><div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; text-align:center; padding:10px;"><div style="font-size:8px; color:#1e3a8a; text-transform:uppercase; font-weight:800;">Bundles</div><div style="font-size:20px; font-weight:900; color:#1d4ed8;">${totals.bundles}</div></div></td>
-        <td style="width:25%;"><div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; text-align:center; padding:10px;"><div style="font-size:8px; color:#334155; text-transform:uppercase; font-weight:800;">Lignes</div><div style="font-size:20px; font-weight:900; color:#0f172a;">${rows.length}</div></div></td>
+        <td style="width:25%;"><div style="background:#fff5f5; border:1px solid #fecaca; border-radius:14px; text-align:center; padding:14px;"><div style="font-size:9px; color:#991b1b; text-transform:uppercase; font-weight:800;">Privilège</div><div style="font-size:24px; font-weight:900; color:#7f1d1d; margin-top:3px;">${totals.privilege}</div></div></td>
+        <td style="width:25%;"><div style="background:#fffbeb; border:1px solid #fde68a; border-radius:14px; text-align:center; padding:14px;"><div style="font-size:9px; color:#92400e; text-transform:uppercase; font-weight:800;">Roaming</div><div style="font-size:24px; font-weight:900; color:#78350f; margin-top:3px;">${totals.roaming}</div></div></td>
+        <td style="width:25%;"><div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; text-align:center; padding:14px;"><div style="font-size:9px; color:#1e3a8a; text-transform:uppercase; font-weight:800;">Bundles</div><div style="font-size:24px; font-weight:900; color:#1d4ed8; margin-top:3px;">${totals.bundles}</div></div></td>
+        <td style="width:25%;"><div style="background:#0f172a; border:1px solid #334155; border-radius:14px; text-align:center; padding:14px;"><div style="font-size:9px; color:#cbd5e1; text-transform:uppercase; font-weight:800;">Total rapports</div><div style="font-size:24px; font-weight:900; color:#ffffff; margin-top:3px;">${rows.length}</div></div></td>
       </tr>
     </table>
   `;
 
-  const rowsHtml = rows.length > 0 ? `
+  const tablePage = rows.length > 0 ? `
+    <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#334155; font-weight:800; margin-bottom:8px;">Tableau des rapports</div>
     <table style="width:100%; border-collapse:collapse; border:1px solid #e5e7eb; border-radius:10px; overflow:hidden;">
       <thead>
         <tr style="background:#0f172a; color:#ffffff; border-bottom:1px solid #1e293b;">
-          <th style="text-align:left; font-size:10px; padding:10px;">Date</th>
-          <th style="text-align:left; font-size:10px; padding:10px;">Agent</th>
-          <th style="text-align:center; font-size:10px; padding:10px;">PRV</th>
-          <th style="text-align:center; font-size:10px; padding:10px;">ROA</th>
-          <th style="text-align:center; font-size:10px; padding:10px;">BND</th>
+          <th style="text-align:left; font-size:10px; padding:9px;">Date</th>
+          <th style="text-align:left; font-size:10px; padding:9px;">Agent</th>
+          <th style="text-align:center; font-size:10px; padding:9px;">PRV</th>
+          <th style="text-align:center; font-size:10px; padding:9px;">ROA</th>
+          <th style="text-align:center; font-size:10px; padding:9px;">BND</th>
+          <th style="text-align:center; font-size:10px; padding:9px;">Total</th>
         </tr>
       </thead>
       <tbody>
-        ${rows.map((r, idx) => `
-          <tr style="border-bottom:1px solid #e5e7eb; font-size:11px; background:${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
-            <td style="padding:9px;">${escapeHtml(r.date)}</td>
-            <td style="padding:9px;"><b>${escapeHtml(r.agent)}</b></td>
-            <td style="padding:9px; text-align:center; color:#991b1b; font-weight:800;">${r.priv}</td>
-            <td style="padding:9px; text-align:center; color:#92400e; font-weight:800;">${r.roam}</td>
-            <td style="padding:9px; text-align:center; color:#1e3a8a; font-weight:800;">${r.bund}</td>
+        ${rows.map((r, idx) => {
+          const total = r.priv + r.roam + r.bund;
+          return `
+          <tr style="border-bottom:1px solid #e5e7eb; font-size:10px; background:${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
+            <td style="padding:8px;">${escapeHtml(r.date)}</td>
+            <td style="padding:8px;"><b>${escapeHtml(r.agent)}</b></td>
+            <td style="padding:8px; text-align:center; color:#991b1b; font-weight:800;">${r.priv}</td>
+            <td style="padding:8px; text-align:center; color:#92400e; font-weight:800;">${r.roam}</td>
+            <td style="padding:8px; text-align:center; color:#1e3a8a; font-weight:800;">${r.bund}</td>
+            <td style="padding:8px; text-align:center; color:#0f172a; font-weight:900;">${total}</td>
           </tr>
-        `).join('')}
+        `;
+        }).join('')}
       </tbody>
     </table>
   ` : '<div style="font-size:11px; color:#64748b;">Aucune ligne disponible pour cette période.</div>';
 
-  const pages = [cover + summary + rowsHtml];
+  const pages: string[] = [cover + summaryCards, tablePage];
+
   if (d.reports && d.reports.length) {
     pages.push(...d.reports.map((report) => buildAgentReportHtml(report)));
   }
+
   const closing = `
     <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; padding:20px;">
       <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#64748b; font-weight:800;">Clôture de compilation</div>
       <div style="font-size:24px; font-weight:900; color:#111827; margin-top:4px;">${(d.reports || []).length} rapports journaliers inclus</div>
-      <div style="margin-top:10px;">${(d.groups || []).map((group) => `
-        <div style="border:1px solid #e2e8f0; border-radius:12px; padding:10px; margin-bottom:8px; background:#fff;">
-          <div style="font-size:11px; font-weight:900; color:#111827; text-transform:uppercase;">${escapeHtml(group.supervisor)}</div>
-          <div style="font-size:10px; color:#64748b; margin-top:4px;">Agents: <b>${group.agentCount}</b> • Leads: <b>${group.totalLeads}</b></div>
-        </div>
-      `).join('') || '<div style="font-size:10px; color:#64748b;">Aucun regroupement disponible pour cette période.</div>'}</div>
+      <div style="font-size:11px; color:#475569; margin-top:8px;">Fin du rapport compilé pour la période sélectionnée.</div>
     </div>
   `;
+
   pages.push(closing);
   return pages.map((page) => wrapPage(page));
 }

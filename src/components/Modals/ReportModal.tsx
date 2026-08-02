@@ -3,6 +3,7 @@ import { User, Lead } from '../../types';
 import { getTargetsByShop, getShopById, addReport, addCheckin, getCheckins, toISO, resolveStoredPhotoUrl, getLeads, isMatchAgent } from '../../utils/storage';
 import { generateAgentPDF } from '../../utils/pdfGenerator';
 import { FileText, Plus, X, Image as ImageIcon } from 'lucide-react';
+import { DateIconPicker } from '../DateIconPicker';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -181,12 +182,15 @@ export const ReportModal: React.FC<ReportModalProps> = ({
         <div className="space-y-4">
           <div>
             <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Date d'activité</label>
-            <input
-              type="date"
-              value={reportDate}
-              onChange={(e) => setReportDate(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-white text-sm font-bold text-center focus:outline-none focus:border-red-500"
-            />
+            <div className="w-full bg-white/5 border border-white/10 rounded-2xl px-3 py-2.5">
+              <DateIconPicker
+                value={reportDate}
+                onChange={setReportDate}
+                className="inline-flex items-center w-full"
+                buttonClassName="h-9 w-9 rounded-xl bg-black/50 border border-white/10 text-gray-200 hover:bg-white/10"
+                labelClassName="text-[11px] font-black uppercase text-white"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center">

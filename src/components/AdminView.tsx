@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Shop, AgentMasterStatus, User } from '../types';
-import { getAdminMasterList, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl, saveTargetDefinition } from '../utils/storage';
+import { getAdminMasterList, getCheckins, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl, saveTargetDefinition } from '../utils/storage';
 import { TabType } from './BottomNav';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { UserPlus, Store, FileSpreadsheet, Eye, User as UserIcon, UserCheck, FileText, Search, Filter, MapPin, Clock3, Pencil, X } from 'lucide-react';
+import { UserPlus, Store, FileSpreadsheet, Eye, User as UserIcon, UserCheck, FileText, Search, Filter, MapPin, Clock3, Pencil, X, Check, Circle, CalendarDays, ChevronLeft, ChevronRight, FileX2 } from 'lucide-react';
 import { formatAgentLocationLine } from '../utils/location';
 import { SupervisorProfileModal, SupervisorHostessSummary } from './Modals/SupervisorProfileModal';
+import { DateIconPicker } from './DateIconPicker';
+import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 
 interface AdminViewProps {
   currentUser: User;
@@ -53,22 +56,64 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [leadStartOffset, setLeadStartOffset] = useState(0);
   const [leadEndOffset, setLeadEndOffset] = useState(maxOffset);
   const [leadExactDate, setLeadExactDate] = useState(todayIso);
+  const [monitoringDate, setMonitoringDate] = useState(todayIso);
   const [selectedAgentId, setSelectedAgentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Online' | 'Absent' | 'Clôturé'>('ALL');
   const [supFilter, setSupFilter] = useState('ALL');
+  const [reportsFilterTerm, setReportsFilterTerm] = useState('');
   const [inlineAssignShop, setInlineAssignShop] = useState<Record<string, string>>({});
   const [draggedHostess, setDraggedHostess] = useState<{ agentId: string; fromShopId: string } | null>(null);
   const [dragOverShopId, setDragOverShopId] = useState<string | null>(null);
   const [shopAssignmentModal, setShopAssignmentModal] = useState<{ agentId: string; agentName: string; currentShopId: string; selectedShopId: string } | null>(null);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
+  const [presenceCalendarAgentId, setPresenceCalendarAgentId] = useState<string | null>(null);
+  const [presenceCalendarPosition, setPresenceCalendarPosition] = useState<{ top: number; left: number } | null>(null);
+  const [presenceCalendarMonth, setPresenceCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
 
   const getStatusPalette = (status: string) => {
     if (status === 'Clôturé') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
     if (status === 'Présent') return 'bg-blue-500/20 text-blue-400 border-blue-500/40';
     return 'bg-red-500/20 text-red-400 border-red-500/40';
   };
+  const getStatusIcon = (status: string) => {
+    if (status === 'Clôturé') return <Check className="w-4 h-4" />;
+    if (status === 'Présent') return <Circle className="w-3.5 h-3.5 fill-current" />;
+    return <X className="w-4 h-4" />;
+  };
+  const getStatusActionTitle = (status: string) => {
+    if (status === 'Présent') return 'Voir la localisation de pointage';
+    if (status === 'Clôturé') return 'Voir la localisation de clôture';
+    return 'Absent';
+  };
+  const formatIsoDate = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+  const getAgentStatusForDate = (agent: AgentMasterStatus, isoDate: string): 'Absent' | 'Présent' | 'Clôturé' => {
+    const hasReport = allReports.some((report) => (
+      (report.agent_id === agent.id || report.agent_id === agent.name) && toISO(report.date) === isoDate
+    ));
+    if (hasReport) return 'Clôturé';
+
+    const hasCheckin = allCheckins.some((checkin) => (
+      (checkin.agent_id === agent.id || checkin.agent_id === agent.name) && toISO(checkin.timestamp) === isoDate && checkin.type === 'IN'
+    ));
+    return hasCheckin ? 'Présent' : 'Absent';
+  };
+  const getStatusCalendarCellClass = (status: 'Absent' | 'Présent' | 'Clôturé') => {
+    if (status === 'Clôturé') return 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40';
+    if (status === 'Présent') return 'bg-blue-500/25 text-blue-300 border-blue-500/40';
+    return 'bg-red-500/20 text-red-300 border-red-500/35';
+  };
+  const activityStartIso = '2026-07-23';
+  const isInsideActivityPeriod = (isoDate: string) => isoDate >= activityStartIso && isoDate <= todayIso;
   const [targetPrivilegeStd, setTargetPrivilegeStd] = useState(20);
   const [targetPrivilegeAir, setTargetPrivilegeAir] = useState(20);
   const [targetRoamingStd, setTargetRoamingStd] = useState(3);
@@ -82,6 +127,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [assignSupervisor, setAssignSupervisor] = useState('');
 
   const masterList = getAdminMasterList();
+  const monitoringMasterList = getAdminMasterList(monitoringDate);
+  const allCheckins = getCheckins();
   const dashboardData = getDashboardData({ start: startDate, end: endDate, agentId: selectedAgentId });
   const allReports = getReports();
   const allUsers = getUsers();
@@ -92,6 +139,24 @@ export const AdminView: React.FC<AdminViewProps> = ({
     acc[sup.id] = sup.name;
     return acc;
   }, {});
+  const reportDateList = [...new Set(allReports.map((r) => toISO(r.date)))].sort();
+  const consolidationMinDate = reportDateList[0] || todayIso;
+  const consolidationMaxDate = reportDateList[reportDateList.length - 1] || todayIso;
+  const consolidationStartDate = startDate < consolidationMinDate
+    ? consolidationMinDate
+    : (startDate > consolidationMaxDate ? consolidationMaxDate : startDate);
+  const consolidationEndDate = endDate < consolidationMinDate
+    ? consolidationMinDate
+    : (endDate > consolidationMaxDate ? consolidationMaxDate : endDate);
+  const filteredReportsForPeriod = allReports
+    .filter((report) => report.date >= consolidationStartDate && report.date <= consolidationEndDate)
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const filteredReportsDisplay = filteredReportsForPeriod.filter((report) => {
+    const q = reportsFilterTerm.trim().toLowerCase();
+    if (!q) return true;
+    const haystack = `${report.agent_name} ${report.shop_name || ''} ${report.date}`.toLowerCase();
+    return haystack.includes(q);
+  });
   const usersById = allUsers.reduce<Record<string, User>>((acc, user) => {
     acc[user.id] = user;
     return acc;
@@ -135,7 +200,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       })
       .sort((a, b) => a.name.localeCompare(b.name))
     : [];
-  const filteredMasterList = masterList.filter(agent => {
+  const filteredMasterList = monitoringMasterList.filter(agent => {
     const srcUser = allUsers.find(u => u.id === agent.id);
     const supId = srcUser?.supervisorId || '';
     const matchesSearch = !searchTerm
@@ -171,9 +236,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
     }
   }, [subTab]);
 
+  useEffect(() => {
+    if (!presenceCalendarAgentId) return;
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setPresenceCalendarAgentId(null);
+        setPresenceCalendarPosition(null);
+      }
+    };
+
+    document.addEventListener('keydown', onEscape);
+
+    return () => {
+      document.removeEventListener('keydown', onEscape);
+    };
+  }, [presenceCalendarAgentId]);
+
   const handleGenerateBatchPDF = async () => {
     setLoading(true);
-    const selectedReports = allReports.filter(r => r.date >= startDate && r.date <= endDate);
+    const selectedReports = filteredReportsForPeriod;
     const rows = selectedReports.map(r => ({
       date: r.date,
       agent: r.agent_name,
@@ -797,15 +879,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
           </div>
 
-          <div className="relative">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
-            <input
-              type="text"
-              placeholder="Rechercher une hôtesse ou un shop..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-black/60 border border-white/10 rounded-2xl pl-9 pr-3 py-2.5 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+          <div className="glass-card p-4 border border-white/10 space-y-3">
+            <DateIconPicker
+              value={monitoringDate}
+              onChange={setMonitoringDate}
+              className="inline-flex items-center"
+              buttonClassName="h-11 w-11 rounded-2xl bg-black/60 border border-white/10 text-gray-200 hover:bg-white/10"
+              labelClassName="text-xs sm:text-sm font-black uppercase text-gray-100"
+              popoverAlign="left"
             />
+
+            <div className="relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+              <input
+                type="text"
+                placeholder="Rechercher une hôtesse ou un shop..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-black/60 border border-white/10 rounded-2xl pl-9 pr-3 py-2.5 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+              />
+            </div>
           </div>
 
           <div className="flex flex-wrap gap-2">
@@ -835,6 +928,43 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div className="space-y-3">
             {filteredMasterList.map(agent => {
               const statusBg = getStatusPalette(agent.status);
+              const today = new Date();
+              const presenceHistory = Array.from({ length: 7 }).map((_, idx) => {
+                const day = new Date(today);
+                day.setDate(today.getDate() - (6 - idx));
+                const dayIso = toISO(day);
+                const hasReport = allReports.some((report) => (
+                  (report.agent_id === agent.id || report.agent_id === agent.name) && toISO(report.date) === dayIso
+                ));
+                const hasCheckin = allCheckins.some((checkin) => (
+                  (checkin.agent_id === agent.id || checkin.agent_id === agent.name) && toISO(checkin.timestamp) === dayIso && checkin.type === 'IN'
+                ));
+
+                let dayStatus: 'Absent' | 'Présent' | 'Clôturé' = 'Absent';
+                if (hasReport) dayStatus = 'Clôturé';
+                else if (hasCheckin) dayStatus = 'Présent';
+
+                return { dayIso, status: dayStatus };
+              });
+              const historyTitle = presenceHistory
+                .map((entry) => `${entry.dayIso}: ${entry.status}`)
+                .join(' | ');
+              const isPresenceCalendarOpen = presenceCalendarAgentId === agent.id;
+              const monthLabel = presenceCalendarMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+              const firstDayOfMonth = new Date(presenceCalendarMonth.getFullYear(), presenceCalendarMonth.getMonth(), 1);
+              const daysInMonth = new Date(presenceCalendarMonth.getFullYear(), presenceCalendarMonth.getMonth() + 1, 0).getDate();
+              const startOffset = (firstDayOfMonth.getDay() + 6) % 7;
+              const dayCells = Array.from({ length: 42 }, (_, index) => {
+                const dayNumber = index - startOffset + 1;
+                if (dayNumber < 1 || dayNumber > daysInMonth) return null;
+
+                const dayDate = new Date(presenceCalendarMonth.getFullYear(), presenceCalendarMonth.getMonth(), dayNumber);
+                const isoDate = formatIsoDate(dayDate);
+                const dayStatus = getAgentStatusForDate(agent, isoDate);
+                const inActivityPeriod = isInsideActivityPeriod(isoDate);
+                const isToday = isoDate === formatIsoDate(new Date());
+                return { dayNumber, isoDate, dayStatus, isToday, inActivityPeriod };
+              });
 
               return (
                 <div
@@ -852,12 +982,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         <h3 className="text-xs font-black uppercase text-white">{agent.name}</h3>
                       </div>
 
-                      <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-wrap gap-1 mt-1">
+                      <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-nowrap gap-1 mt-1 whitespace-nowrap overflow-hidden">
                         <MapPin className="w-3 h-3 text-blue-400" />
-                        <span>{agent.shop}</span>
+                        <span className="truncate">{formatAgentLocationLine({ shop: agent.shop, status: agent.status, arrivalTime: agent.reportObj?.arrival_time, departureTime: agent.reportObj?.departure_time })}</span>
                         <button
                           type="button"
-                          onClick={() => openShopAssignmentModal(agent)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openShopAssignmentModal(agent);
+                          }}
                           className="ml-1 rounded-full border border-white/10 bg-white/5 p-1 text-gray-300 hover:text-white hover:bg-white/10"
                           title={`Modifier l'affectation du shop de ${agent.name}`}
                         >
@@ -866,43 +999,162 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       </p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => {
-                          if (agent.status === 'Présent' || agent.status === 'Clôturé') {
-                            if (onOpenLocationModal) {
-                              onOpenLocationModal(agent);
-                            }
-                          }
-                        }}
-                        className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg} ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
-                        title={agent.status === 'Présent' ? 'Voir la localisation de pointage' : (agent.status === 'Clôturé' ? 'Voir la localisation de clôture' : undefined)}
-                      >
-                        {agent.status}
-                      </button>
-
+                    <div className="grid grid-cols-2 gap-2 shrink-0">
                       {onOpenAgentProfile && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             onOpenAgentProfile(agent);
                           }}
-                          className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
-                          title="Voir l'historique des rapports"
+                          className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0 flex items-center justify-center`}
+                          title="Détail hotesse"
                         >
                           <UserIcon className="w-4 h-4" />
                         </button>
                       )}
 
-                      {agent.reportObj && (
+                      {agent.reportObj ? (
                         <button
-                          onClick={() => onOpenPdfModal(`report-id:${agent.reportObj.id}`)}
-                          className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenPdfModal(`report-id:${agent.reportObj?.id}`);
+                          }}
+                          className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0 flex items-center justify-center`}
                           title="Voir le rapport PDF"
                         >
                           <FileText className="w-4 h-4" />
                         </button>
+                      ) : (
+                        <span
+                          className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0 flex items-center justify-center opacity-75`}
+                          title="Pas de rapport"
+                        >
+                          <FileX2 className="w-4 h-4" />
+                        </span>
                       )}
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (agent.status === 'Présent' || agent.status === 'Clôturé') {
+                            if (onOpenLocationModal) {
+                              onOpenLocationModal(agent);
+                            }
+                          }
+                        }}
+                        className={`p-1.5 rounded-xl border ${statusBg} ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:opacity-90' : 'cursor-default'} flex items-center justify-center`}
+                        title={getStatusActionTitle(agent.status)}
+                      >
+                        {getStatusIcon(agent.status)}
+                      </button>
+
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isPresenceCalendarOpen) {
+                              setPresenceCalendarAgentId(null);
+                              setPresenceCalendarPosition(null);
+                              return;
+                            }
+                            const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                            const popupWidth = 320;
+                            const popupHeight = 360;
+                            const left = Math.max(8, Math.min(rect.right - popupWidth, window.innerWidth - popupWidth - 8));
+                            const topBelow = rect.bottom + 8;
+                            const top = topBelow + popupHeight > window.innerHeight - 8
+                              ? Math.max(8, rect.top - popupHeight - 8)
+                              : topBelow;
+                            const now = new Date();
+                            setPresenceCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+                            setPresenceCalendarPosition({ top, left });
+                            setPresenceCalendarAgentId(agent.id);
+                          }}
+                          className={`p-1.5 rounded-xl border transition-all flex items-center justify-center ${statusBg}`}
+                          title={`Registre de présence (7 jours): ${historyTitle}`}
+                        >
+                          <CalendarDays className="w-4 h-4" />
+                        </button>
+
+                        {isPresenceCalendarOpen && presenceCalendarPosition && createPortal(
+                          <div
+                            className="fixed inset-0 z-[9999] bg-black/45 backdrop-blur-[2px]"
+                            onClick={() => {
+                              setPresenceCalendarAgentId(null);
+                              setPresenceCalendarPosition(null);
+                            }}
+                          >
+                            <div
+                              className="presence-registry-modal-in absolute w-80 rounded-2xl border border-white/10 bg-zinc-950/95 p-3 shadow-2xl"
+                              style={{ top: `${presenceCalendarPosition.top}px`, left: `${presenceCalendarPosition.left}px` }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="mb-2 flex justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPresenceCalendarAgentId(null);
+                                    setPresenceCalendarPosition(null);
+                                  }}
+                                  className="h-7 w-7 rounded-lg border border-white/10 bg-white/5 text-gray-300 hover:text-white hover:bg-white/10"
+                                  title="Fermer"
+                                >
+                                  <X className="w-4 h-4 mx-auto" />
+                                </button>
+                              </div>
+                              <div className="mb-3 flex items-center justify-between">
+                                <button
+                                  type="button"
+                                  onClick={() => setPresenceCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+                                  className="h-8 w-8 rounded-xl border border-white/10 bg-white/5 text-gray-200 hover:bg-white/10"
+                                  title="Mois précédent"
+                                >
+                                  <ChevronLeft className="w-4 h-4 mx-auto" />
+                                </button>
+                                <div className="text-xs font-black uppercase text-white tracking-wide">{monthLabel}</div>
+                                <button
+                                  type="button"
+                                  onClick={() => setPresenceCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+                                  className="h-8 w-8 rounded-xl border border-white/10 bg-white/5 text-gray-200 hover:bg-white/10"
+                                  title="Mois suivant"
+                                >
+                                  <ChevronRight className="w-4 h-4 mx-auto" />
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-7 gap-1 mb-1">
+                                {['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'].map((label) => (
+                                  <div key={label} className="text-center text-[10px] font-black uppercase text-gray-500 py-1">{label}</div>
+                                ))}
+                              </div>
+
+                              <div className="grid grid-cols-7 gap-1">
+                                {dayCells.map((cell, index) => {
+                                  if (!cell) {
+                                    return <div key={`empty-${index}`} className="h-9" />;
+                                  }
+                                  return (
+                                    <div
+                                      key={cell.isoDate}
+                                      className={`h-9 rounded-lg border text-[11px] font-black flex items-center justify-center ${cell.inActivityPeriod ? getStatusCalendarCellClass(cell.dayStatus) : 'bg-white/5 text-gray-500 border-white/10'} ${cell.isToday ? 'ring-1 ring-amber-300/70' : ''}`}
+                                      title={cell.inActivityPeriod ? `${cell.isoDate}: ${cell.dayStatus}` : `${cell.isoDate}: hors période d'activité`}
+                                    >
+                                      {cell.dayNumber}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+
+                              <div className="mt-3 flex items-center justify-center gap-3 text-[9px] font-black uppercase text-gray-300">
+                                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />Absent</span>
+                                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-blue-400" />Présent</span>
+                                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" />Clôturé</span>
+                              </div>
+                            </div>
+                          </div>,
+                          document.body
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -1095,13 +1347,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 />
               </div>
             ) : (
-              <input
-                type="date"
+              <DateIconPicker
+                value={leadExactDate}
+                onChange={setLeadExactDate}
                 min={firstLeadDate}
                 max={todayIso}
-                value={leadExactDate}
-                onChange={(e) => setLeadExactDate(e.target.value)}
-                className="bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold"
+                className="inline-flex items-center"
+                buttonClassName="h-10 w-10 rounded-xl bg-black/60 border border-white/10 text-gray-200 hover:bg-white/10"
+                labelClassName="text-[10px] font-black uppercase text-gray-200"
               />
             )}
           </div>
@@ -1197,18 +1450,24 @@ export const AdminView: React.FC<AdminViewProps> = ({
           {/* Filter Bar */}
           <div className="glass-card p-4 border border-white/10 space-y-3">
             <p className="text-[10px] font-black uppercase text-gray-400">Filtres de Consolidation Périodique</p>
-            <div className="grid grid-cols-2 gap-2">
+            <DateRangeKnobSlider
+              minDate={consolidationMinDate}
+              maxDate={consolidationMaxDate}
+              startDate={consolidationStartDate}
+              endDate={consolidationEndDate}
+              onChange={({ startDate: nextStart, endDate: nextEnd }) => {
+                setStartDate(nextStart);
+                setEndDate(nextEnd);
+              }}
+            />
+            <div className="relative">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
               <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold"
-              />
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold"
+                type="text"
+                value={reportsFilterTerm}
+                onChange={(e) => setReportsFilterTerm(e.target.value)}
+                placeholder="Filtre par nom, date ou shop..."
+                className="w-full bg-black/60 border border-white/10 rounded-2xl pl-9 pr-3 py-2.5 text-white text-xs font-bold focus:outline-none focus:border-red-500"
               />
             </div>
           </div>
@@ -1226,23 +1485,44 @@ export const AdminView: React.FC<AdminViewProps> = ({
           {/* Master Reports List */}
           <div className="space-y-2 pt-2">
             <h2 className="text-xs font-black uppercase tracking-wider text-gray-400 px-1">
-              Rapports Soumis ({allReports.length})
+              Rapports Soumis ({filteredReportsDisplay.length})
             </h2>
 
-            {allReports.map(rep => (
-              <div key={rep.id} className="glass-card p-4 border border-white/10 flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-black uppercase text-white">{rep.agent_name}</p>
-                  <p className="text-[9px] font-bold text-gray-400 uppercase">{rep.shop_name} • {rep.date}</p>
+            {filteredReportsDisplay.map(rep => (
+              <div key={rep.id} className="glass-card p-4 border border-white/10 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black uppercase text-white">{rep.agent_name}</p>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase">{rep.shop_name} • {rep.date}</p>
+                  </div>
+
+                  <button
+                    onClick={() => onOpenPdfModal(`report-id:${rep.id}`)}
+                    className="h-9 w-9 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-xl border border-red-500/30 transition-all flex items-center justify-center shrink-0"
+                    title="Ouvrir PDF"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
                 </div>
 
-                <button
-                  onClick={() => onOpenPdfModal(`report-id:${rep.id}`)}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[10px] font-black uppercase flex items-center space-x-1 shadow-md"
-                >
-                  <Eye className="w-3.5 h-3.5" />
-                  <span>Ouvrir PDF</span>
-                </button>
+                <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
+                  <div className="bg-white/5 p-2 rounded-xl border border-white/10">
+                    <span className="text-[8px] text-gray-400 uppercase block">Privilège</span>
+                    <span className="text-red-500 text-xs">{rep.priv}</span>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded-xl border border-white/10">
+                    <span className="text-[8px] text-gray-400 uppercase block">Roaming</span>
+                    <span className="text-amber-400 text-xs">{rep.roam}</span>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded-xl border border-white/10">
+                    <span className="text-[8px] text-gray-400 uppercase block">Bundles</span>
+                    <span className="text-blue-400 text-xs">{rep.bund}</span>
+                  </div>
+                </div>
+
+                {rep.comment && (
+                  <p className="text-[10px] italic text-gray-300 border-l-2 border-red-500/40 pl-2">"{rep.comment}"</p>
+                )}
               </div>
             ))}
           </div>
