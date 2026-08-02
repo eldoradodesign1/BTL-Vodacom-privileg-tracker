@@ -40,6 +40,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [targetBundleStd, setTargetBundleStd] = useState(10);
   const [targetBundleAir, setTargetBundleAir] = useState(10);
   const [isTargetsCardOpen, setIsTargetsCardOpen] = useState(false);
+  const [draggedHostess, setDraggedHostess] = useState<{ agentId: string; fromShopId: string } | null>(null);
   const [selectedLocationAgent, setSelectedLocationAgent] = useState<{ id: string; name: string; shop: string; status?: 'Présent' | 'Clôturé' | 'Absent'; arrivalTime?: string; departureTime?: string; mapsIn?: string; mapsOut?: string; lat?: number; long?: number } | null>(null);
 
   const teamData = getSupervisorLiveView(currentUser.id, selectedDate);
@@ -123,6 +124,31 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const handleAssignShopSubmit = (userId: string, shopId: string) => {
     updateUserShopAssignment(userId, shopId);
     setAssigningUserId(null);
+    if (onRefreshData) onRefreshData();
+  };
+
+  const handleDropHostessOnShop = (targetShopId: string, payload?: { agentId: string; fromShopId: string } | null) => {
+    const source = payload || draggedHostess;
+    if (!source) return;
+
+    const { agentId, fromShopId } = source;
+    setDraggedHostess(null);
+
+    if (fromShopId === targetShopId) return;
+
+    const agent = supervisedAgents.find((u) => u.id === agentId);
+    const fromShop = shops.find((s) => s.id === fromShopId);
+    const toShop = shops.find((s) => s.id === targetShopId);
+    if (!agent || !toShop) return;
+
+    const confirmed = window.confirm(
+      `Confirmer l'affectation de ${agent.name} de ${fromShop?.name || 'shop actuel'} vers ${toShop.name} ?`
+    );
+    if (!confirmed) return;
+
+    updateUserShopAssignment(agentId, targetShopId);
+    // Force immediate local repaint so source/target shop cards reflect new assignment.
+    setInlineAssignShop((prev) => ({ ...prev }));
     if (onRefreshData) onRefreshData();
   };
 
@@ -563,7 +589,22 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           {shops.map(shop => {
             const assignedAgents = supervisedAgents.filter(a => a.permanentShopId === shop.id);
             return (
-              <div key={shop.id} className="glass-card p-4 border border-white/10 space-y-3">
+              <div
+                key={shop.id}
+                className={`glass-card p-4 border space-y-3 transition-all ${draggedHostess ? 'border-amber-400/40' : 'border-white/10'}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  let payload: { agentId: string; fromShopId: string } | null = null;
+                  try {
+                    const raw = e.dataTransfer.getData('application/json');
+                    if (raw) payload = JSON.parse(raw) as { agentId: string; fromShopId: string };
+                  } catch {}
+                  handleDropHostessOnShop(shop.id, payload);
+                }}
+              >
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-xs font-black uppercase text-white flex items-center space-x-2">
@@ -572,8 +613,9 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                     </h3>
                     <p className="text-[10px] text-gray-400 font-semibold">{shop.city} • Type: {shop.type}</p>
                   </div>
-                  <span className="px-2.5 py-1 bg-red-600/20 text-red-400 rounded-xl text-[9px] font-black uppercase border border-red-500/30">
-                    {assignedAgents.length} Hôtesses
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 text-amber-300 rounded-xl text-[9px] font-black uppercase border border-amber-500/40">
+                    <UserCheck className="w-3 h-3" />
+                    <span>{assignedAgents.length}</span>
                   </span>
                 </div>
 
@@ -583,7 +625,19 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                     <span className="text-[10px] text-gray-500 italic">Aucune hôtesse affectée à ce shop</span>
                   ) : (
                     assignedAgents.map(ag => (
-                      <span key={ag.id} className="text-[9px] font-black uppercase px-2.5 py-1 bg-white/5 text-gray-300 rounded-lg border border-white/10 flex items-center space-x-1">
+                      <span
+                        key={ag.id}
+                        draggable
+                        onDragStart={(e) => {
+                          const payload = { agentId: ag.id, fromShopId: shop.id };
+                          setDraggedHostess(payload);
+                          e.dataTransfer.effectAllowed = 'move';
+                          e.dataTransfer.setData('application/json', JSON.stringify(payload));
+                        }}
+                        onDragEnd={() => setDraggedHostess(null)}
+                        className="cursor-grab active:cursor-grabbing text-[9px] font-black uppercase px-2.5 py-1 bg-white/5 text-gray-300 rounded-lg border border-white/10 flex items-center space-x-1"
+                        title="Glisser-déposer vers un autre shop"
+                      >
                         <UserCheck className="w-3 h-3 text-emerald-400" />
                         <span>{ag.name}</span>
                       </span>

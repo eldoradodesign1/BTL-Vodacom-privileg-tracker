@@ -181,17 +181,17 @@ function mergeUsersWithSeedData(storedUsers: User[]): User[] {
 
     const existing = merged[existingIndex];
     merged[existingIndex] = {
-      ...candidate,
       ...existing,
-      id: existing.id || candidate.id,
-      phone: existing.phone || candidate.phone,
-      name: existing.name || candidate.name,
-      role: existing.role || candidate.role,
-      password: existing.password || candidate.password,
-      supervisorId: existing.supervisorId || candidate.supervisorId,
-      permanentShopId: existing.permanentShopId || candidate.permanentShopId,
-      created_at: existing.created_at || candidate.created_at,
-      last_login: existing.last_login || candidate.last_login
+      ...candidate,
+      id: candidate.id || existing.id,
+      phone: candidate.phone || existing.phone,
+      name: candidate.name || existing.name,
+      role: candidate.role || existing.role,
+      password: candidate.password ?? existing.password,
+      supervisorId: candidate.supervisorId ?? existing.supervisorId,
+      permanentShopId: candidate.permanentShopId ?? existing.permanentShopId,
+      created_at: candidate.created_at || existing.created_at,
+      last_login: candidate.last_login || existing.last_login
     };
   });
 
