@@ -476,11 +476,6 @@ export const AgentView: React.FC<AgentViewProps> = ({
             <span>MISSION : <strong className="text-white">{shopName}</strong></span>
           </p>
         </div>
-
-        <div className="glass-card px-4 py-2 rounded-2xl border border-white/10">
-          <span className="text-[8px] font-black uppercase text-gray-400 block">📍 Shop Actif</span>
-          <span className="text-xs font-black uppercase text-red-500">{shopObj?.city || 'Kinshasa'}</span>
-        </div>
       </div>
 
       {showPodium && (
@@ -504,36 +499,10 @@ export const AgentView: React.FC<AgentViewProps> = ({
         </div>
       )}
 
-      <div className="glass-card p-4 border border-white/10">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Évolution</p>
-            <p className="text-xs font-black uppercase text-white">Derniers rapports</p>
-          </div>
-          <span className="text-[10px] font-black uppercase text-red-400">{evolutionData.length} jours</span>
-        </div>
-        <div className="mt-3 h-24 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={evolutionData}>
-              <XAxis dataKey="label" stroke="#71717a" fontSize={9} tickLine={false} axisLine={false} />
-              <YAxis stroke="#71717a" fontSize={9} tickLine={false} axisLine={false} />
-              <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '10px', fontSize: '11px' }} />
-              <Line type="monotone" dataKey="value" stroke="#f43f5e" strokeWidth={2.2} dot={{ r: 3, fill: '#f43f5e' }} />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
+      {!(checkinDone || checkinDoneLocal) && (
+        <div className="glass-card text-center p-6 border border-white/10">
+          <h2 className="text-xs font-black uppercase tracking-widest text-red-500 mb-4">Pointage d'Arrivée GPS</h2>
 
-      {/* Pointage Unique Arrivée */}
-      <div className="glass-card text-center p-6 border border-white/10">
-        <h2 className="text-xs font-black uppercase tracking-widest text-red-500 mb-4">Pointage d'Arrivée GPS</h2>
-
-        {checkinDone || checkinDoneLocal ? (
-          <div className="btn-neon bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 pointer-events-none">
-            <CheckCircle2 className="w-5 h-5" />
-            <span>POINTAGE EFFECTUÉ (GPS OK)</span>
-          </div>
-        ) : (
           <div className="space-y-3">
             <label
               onClick={handleCaptureClick}
@@ -551,30 +520,30 @@ export const AgentView: React.FC<AgentViewProps> = ({
             </label>
             {feedback.primaryText && <p className={`text-[10px] font-black ${feedback.badgeStatus === 'warn' ? 'text-amber-400' : (feedback.badgeStatus === 'unknown' ? 'text-zinc-300' : 'text-emerald-400')}`}>{feedback.primaryText}</p>}
           </div>
-        )}
 
-        {photoPreview && (
-          <div className="mt-4 flex justify-center">
-            <img
-              src={photoPreview}
-              alt="Photo de pointage"
-              className="w-32 h-32 object-cover rounded-2xl border-2 border-red-500/50 shadow-lg"
-            />
-          </div>
-        )}
+          {photoPreview && (
+            <div className="mt-4 flex justify-center">
+              <img
+                src={photoPreview}
+                alt="Photo de pointage"
+                className="w-32 h-32 object-cover rounded-2xl border-2 border-red-500/50 shadow-lg"
+              />
+            </div>
+          )}
 
-        {feedback.showBadge && feedback.badgeText && (
-          <div className={`mt-3 inline-flex items-center px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase ${
-            feedback.badgeStatus === 'ok'
-              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-              : (feedback.badgeStatus === 'warn'
-                ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
-                : 'bg-zinc-500/10 text-zinc-300 border-zinc-500/30')
-          }`}>
-            {feedback.badgeText}
-          </div>
-        )}
-      </div>
+          {feedback.showBadge && feedback.badgeText && (
+            <div className={`mt-3 inline-flex items-center px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase ${
+              feedback.badgeStatus === 'ok'
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                : (feedback.badgeStatus === 'warn'
+                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                  : 'bg-zinc-500/10 text-zinc-300 border-zinc-500/30')
+            }`}>
+              {feedback.badgeText}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Quick Action Grid */}
       <div className="grid grid-cols-2 gap-4">
@@ -604,6 +573,26 @@ export const AgentView: React.FC<AgentViewProps> = ({
           </span>
           <span className="text-[9px] text-gray-400 font-semibold">PDF & Synthèse</span>
         </button>
+      </div>
+
+      <div className="glass-card p-4 border border-white/10">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Évolution</p>
+            <p className="text-xs font-black uppercase text-white">Derniers rapports</p>
+          </div>
+          <span className="text-[10px] font-black uppercase text-red-400">{evolutionData.length} jours</span>
+        </div>
+        <div className="mt-3 h-24 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={evolutionData}>
+              <XAxis dataKey="label" stroke="#71717a" fontSize={9} tickLine={false} axisLine={false} />
+              <YAxis stroke="#71717a" fontSize={9} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '10px', fontSize: '11px' }} />
+              <Line type="monotone" dataKey="value" stroke="#f43f5e" strokeWidth={2.2} dot={{ r: 3, fill: '#f43f5e' }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );

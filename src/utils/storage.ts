@@ -794,9 +794,17 @@ export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
 export function checkDailyStatus(agentId: string, dateISO: string) {
   const checkins = getCheckins();
   const reports = getReports();
+  const users = getUsers();
 
   const targetDate = toISO(dateISO);
-  const hasCheckin = checkins.some(r => r.agent_id === agentId && toISO(r.timestamp) === targetDate);
+  const currentUser = users.find((user) => user.id === agentId);
+  const hasCheckin = checkins.some((record) => {
+    if (toISO(record.timestamp) !== targetDate) return false;
+    if (record.type !== 'IN') return false;
+    if (record.agent_id === agentId) return true;
+    if (currentUser && isMatchAgent(record.agent_id, currentUser)) return true;
+    return false;
+  });
   const hasReport = reports.some(r => r.agent_id === agentId && toISO(r.date) === targetDate);
 
   return { checkinDone: hasCheckin, reportDone: hasReport };
@@ -1336,7 +1344,7 @@ export function getDashboardData(filters: { start?: string; end?: string; agentI
   });
 
   const pieData = [
-    { name: 'Privilège', value: priv, color: '#E60000' },
+    { name: 'Privilège', value: priv, color: 'var(--theme-accent)' },
     { name: 'Roaming', value: roam, color: '#FFD700' },
     { name: 'Bundles', value: bund, color: '#3b82f6' }
   ];

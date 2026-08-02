@@ -42,7 +42,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <Home className={`w-6 h-6 transition-transform ${activeTab === 'home' ? '-translate-y-1 scale-110' : ''}`} />
         <span className="text-[9px] font-black uppercase tracking-wider">Home</span>
         {activeTab === 'home' && (
-          <div className="w-1.5 h-1.5 bg-red-500 rounded-full shadow-[0_0_8px_#E60000]" />
+          <div className="w-1.5 h-1.5 bg-red-500 rounded-full" style={{ boxShadow: '0 0 8px var(--theme-accent)' }} />
         )}
       </button>
 
@@ -55,7 +55,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <Users className={`w-6 h-6 transition-transform ${activeTab === 'tab2' ? '-translate-y-1 scale-110' : ''}`} />
         <span className="text-[9px] font-black uppercase tracking-wider">{getTab2Label()}</span>
         {activeTab === 'tab2' && (
-          <div className="w-1.5 h-1.5 bg-red-500 rounded-full shadow-[0_0_8px_#E60000]" />
+          <div className="w-1.5 h-1.5 bg-red-500 rounded-full" style={{ boxShadow: '0 0 8px var(--theme-accent)' }} />
         )}
       </button>
 
@@ -68,7 +68,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         <FolderOpen className={`w-6 h-6 transition-transform ${activeTab === 'tab3' ? '-translate-y-1 scale-110' : ''}`} />
         <span className="text-[9px] font-black uppercase tracking-wider">{getTab3Label()}</span>
         {activeTab === 'tab3' && (
-          <div className="w-1.5 h-1.5 bg-red-500 rounded-full shadow-[0_0_8px_#E60000]" />
+          <div className="w-1.5 h-1.5 bg-red-500 rounded-full" style={{ boxShadow: '0 0 8px var(--theme-accent)' }} />
         )}
       </button>
 
@@ -88,7 +88,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         </div>
         <span className="text-[9px] font-black uppercase tracking-wider">Chat</span>
         {activeTab === 'chat' && (
-          <div className="w-1.5 h-1.5 bg-red-500 rounded-full shadow-[0_0_8px_#E60000]" />
+          <div className="w-1.5 h-1.5 bg-red-500 rounded-full" style={{ boxShadow: '0 0 8px var(--theme-accent)' }} />
         )}
       </button>
 
@@ -102,7 +102,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <Settings className={`w-6 h-6 transition-transform ${activeTab === 'admin' ? '-translate-y-1 scale-110' : ''}`} />
           <span className="text-[9px] font-black uppercase tracking-wider">{getAdminLabel()}</span>
           {activeTab === 'admin' && (
-            <div className="w-1.5 h-1.5 bg-red-500 rounded-full shadow-[0_0_8px_#E60000]" />
+            <div className="w-1.5 h-1.5 bg-red-500 rounded-full" style={{ boxShadow: '0 0 8px var(--theme-accent)' }} />
           )}
         </button>
       )}

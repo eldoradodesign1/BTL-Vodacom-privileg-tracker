@@ -53,6 +53,7 @@ export const Header: React.FC<HeaderProps> = ({
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const unreadCount = safeNotifications.filter(n => !n.is_read).length;
   const roleLabel = user.role === 'admin' ? 'Admin' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent');
+  const isDarkTheme = theme === 'anthracite' || theme === 'rubis' || theme === 'silver' || theme === 'diamond' || theme === 'sapphire' || theme === 'ambre';
   const syncState: 'ok' | 'progress' | 'late' = (() => {
     if (online && syncPendingCount === 0) return 'ok';
     if (online && syncPendingCount > 0) return 'progress';
@@ -148,7 +149,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className={`px-3 sm:px-6 py-2.5 backdrop-blur-md border-b shrink-0 relative z-40 transition-colors ${
-      theme === 'anthracite' || theme === 'rubis' || theme === 'silver' || theme === 'diamond' || theme === 'ambre'
+      isDarkTheme
         ? 'bg-black/40 border-white/10 text-white'
         : 'bg-white/90 border-zinc-200 text-zinc-900 shadow-xl'
     }`}>
@@ -182,7 +183,7 @@ export const Header: React.FC<HeaderProps> = ({
           ) : (
             <span className="px-1 text-[8px] font-black uppercase tracking-wide leading-[1.05] text-center">Check-in en attente</span>
           )}
-          <span className={`status-dot absolute -bottom-0.5 -right-0.5 border-2 ${theme === 'light' ? 'border-white' : 'border-black'} ${online ? 'status-online' : 'status-offline'}`} />
+          <span className={`status-dot absolute -bottom-0.5 -right-0.5 border-2 ${isDarkTheme ? 'border-black' : 'border-white'} ${online ? 'status-online' : 'status-offline'}`} />
         </button>
         <input
           ref={pointageInputRef}
@@ -198,12 +199,9 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="font-black text-sm sm:text-lg tracking-tight brand-text truncate">
               BTL Deployment Tracker
             </span>
-            <span className="text-[9px] font-black uppercase px-1.5 py-0.5 bg-red-600 text-white rounded shadow-sm">
-              {user.role}
-            </span>
           </div>
             <span className={`text-xs sm:text-sm font-black mt-0.5 px-2.5 py-1 rounded-full inline-flex items-center gap-2 w-fit max-w-full truncate ${
-              theme === 'light' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-white/10 text-red-100 border border-white/20'
+              isDarkTheme ? 'bg-white/10 text-red-100 border border-white/20' : 'bg-red-50 text-red-700 border border-red-200'
             }`} title={user.name}>
               <span className={`inline-block w-2.5 h-2.5 rounded-full shadow ${syncDotClass}`} />
               <span className="truncate">{roleLabel}: {user.name}</span>
@@ -220,9 +218,9 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 onClick={() => setShowThemeMenu(prev => !prev)}
                 className={`p-2 rounded-xl border transition-all ${
-                  theme === 'light'
-                    ? 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
-                    : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'
+                  isDarkTheme
+                    ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'
+                    : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
                 }`}
                 title="Theme"
               >
@@ -231,13 +229,14 @@ export const Header: React.FC<HeaderProps> = ({
 
               {showThemeMenu && (
                 <div className={`absolute right-0 top-11 w-40 border rounded-2xl p-1.5 shadow-2xl z-50 ${
-                  theme === 'light' ? 'bg-white border-zinc-200 text-zinc-900' : 'bg-zinc-900 border-white/10 text-white'
+                  isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
                 }`}>
                   {[
                     { key: 'anthracite', label: 'Anthracite' },
                     { key: 'rubis', label: 'Rubis' },
                     { key: 'silver', label: 'Silver' },
                     { key: 'diamond', label: 'Diamond' },
+                    { key: 'sapphire', label: 'Sapphire' },
                     { key: 'ambre', label: 'Ambre' }
                   ].map(opt => (
                     <button
@@ -249,7 +248,7 @@ export const Header: React.FC<HeaderProps> = ({
                       className={`w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase transition-all ${
                         theme === opt.key
                           ? 'bg-red-600 text-white'
-                          : (theme === 'light' ? 'hover:bg-zinc-100 text-zinc-700' : 'hover:bg-white/10 text-gray-300')
+                          : (isDarkTheme ? 'hover:bg-white/10 text-gray-100' : 'hover:bg-zinc-100 text-zinc-700')
                       }`}
                     >
                       {opt.label}
@@ -275,9 +274,9 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onOpenPasswordModal}
             className={`p-2 rounded-xl border transition-all ${
-              theme === 'light'
-                ? 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
-                : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-400 hover:text-white'
+              isDarkTheme
+                ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-400 hover:text-white'
+                : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
             }`}
             title="Sécuriser mon accès"
           >
@@ -294,9 +293,9 @@ export const Header: React.FC<HeaderProps> = ({
                 }
               }}
               className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all relative ${
-                theme === 'light'
-                  ? 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
-                  : 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'
+                isDarkTheme
+                  ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'
+                  : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
               }`}
             >
               <Bell className="w-5 h-5" />
@@ -310,7 +309,7 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Notifications Panel */}
             {showNotifPanel && (
               <div className={`absolute right-0 top-12 w-80 border rounded-3xl p-4 shadow-2xl z-50 animate-pop ${
-                theme === 'light' ? 'bg-white border-zinc-200 text-zinc-900' : 'bg-zinc-900 border-white/10 text-white'
+                isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
               }`}>
                 <div className="flex justify-between items-center mb-3 border-b border-white/10 pb-2">
                   <span className="text-xs font-black uppercase text-gray-400 tracking-wider">Alertes Internes</span>
