@@ -565,21 +565,17 @@ async function hashPasswordAsync(value: string): Promise<string> {
 
 function doesProvidedPasswordMatch(user: User, providedRaw: string): boolean {
   const provided = providedRaw.trim();
-  if (!provided) return true;
+  if (!provided) return false;
 
   const providedNormalized = provided.toLowerCase();
   const customPass = user.password ? user.password.trim() : '';
   if (customPass.length > 0) {
     const storedNormalized = customPass.trim().toLowerCase();
-    const isPlainMatch = storedNormalized === providedNormalized;
-    const isDefaultRoleMatch = [getDefaultPasswordForRole(user.role), 'password', 'admin', 'test', '1234', '0000']
-      .some(candidate => candidate.toLowerCase() === providedNormalized);
-    return isPlainMatch || isDefaultRoleMatch;
+    return storedNormalized === providedNormalized;
   }
 
   const defaultPass = getDefaultPasswordForRole(user.role);
-  const fallbackPasswords = [defaultPass, 'password', 'admin', 'test', '1234', '0000'];
-  return fallbackPasswords.some(candidate => candidate.toLowerCase() === providedNormalized);
+  return defaultPass.toLowerCase() === providedNormalized;
 }
 
 export function updateUserPassword(userId: string, oldPass: string, newPass: string): { success: boolean; message: string } {
@@ -653,11 +649,15 @@ export function authenticate(phone: string, password_hash: string): { success: b
   }
 
   const provided = (password_hash || '').trim().toLowerCase();
+  if (!provided) {
+    return { success: false, message: 'Mot de passe requis.' };
+  }
+
   const customPassword = (found.password || '').trim().toLowerCase();
   const roleDefaultPassword = getDefaultPasswordForRole(found.role).toLowerCase();
-  const acceptedPasswords = [customPassword, roleDefaultPassword, 'password', 'admin', 'test', '1234', '0000'];
+  const acceptedPasswords = customPassword ? [customPassword] : [roleDefaultPassword];
 
-  if (provided && !acceptedPasswords.some(candidate => candidate && candidate === provided)) {
+  if (!acceptedPasswords.some(candidate => candidate && candidate === provided)) {
     return { success: false, message: 'Mot de passe incorrect.' };
   }
 

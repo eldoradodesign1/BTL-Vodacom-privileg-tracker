@@ -113,14 +113,43 @@ export default function App() {
     setDataRevision((prev) => prev + 1);
   };
 
+  const enforceUserConformityAfterSync = () => {
+    const freshUsers = getUsers();
+    const persistedRaw = localStorage.getItem('vodacom_user');
+    if (!persistedRaw) return;
+
+    try {
+      const persistedUser = JSON.parse(persistedRaw) as User;
+      const matched = freshUsers.find((u) => u.id === persistedUser.id);
+      if (!matched) {
+        setCurrentUser(null);
+        setMasterUser(null);
+        setSimulatedRole(null);
+        setSimulatedUserId(null);
+        setToast({
+          message: 'Votre compte a ete retire de la feuille Google Sheets. Reconnectez-vous avec un compte actif.',
+          level: 'error'
+        });
+        return;
+      }
+
+      setCurrentUser((prev) => (prev && prev.id === matched.id ? matched : prev));
+      setMasterUser((prev) => (prev && prev.id === matched.id ? matched : prev));
+      setSimulatedUserId((prev) => (prev && !freshUsers.some((u) => u.id === prev) ? null : prev));
+    } catch {
+      // Ignore malformed persisted payload and keep app flow unchanged.
+    }
+  };
+
   useEffect(() => {
     const doAutoSync = () => {
       const cfg = getGSheetConfig();
       if (cfg.sheetCsvUrl) {
-        syncFromGoogleSheetUrl(cfg.sheetCsvUrl)
+        syncFromGoogleSheetUrl(cfg.sheetCsvUrl, { strictUsers: true })
           .then((res) => {
-            if (res.success && res.count > 0) {
+            if (res.success) {
               refreshData();
+              enforceUserConformityAfterSync();
             }
           })
           .catch(() => undefined);
@@ -439,7 +468,10 @@ export default function App() {
       <GSheetModal
         isOpen={isGSheetModalOpen}
         onClose={() => setIsGSheetModalOpen(false)}
-        onSyncSuccess={refreshData}
+        onSyncSuccess={() => {
+          refreshData();
+          enforceUserConformityAfterSync();
+        }}
       />
     </div>
   );

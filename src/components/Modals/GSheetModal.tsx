@@ -27,7 +27,7 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
     saveGSheetConfig(config);
 
     if (config.sheetCsvUrl) {
-      const res = await syncFromGoogleSheetUrl(config.sheetCsvUrl);
+      const res = await syncFromGoogleSheetUrl(config.sheetCsvUrl, { strictUsers: true });
       if (res.success) {
         setStatusMsg({ type: 'success', text: res.message });
         onSyncSuccess();
@@ -49,7 +49,7 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
 
     try {
       const buffer = await file.arrayBuffer();
-      const res = parseXlsxBuffer(buffer);
+      const res = parseXlsxBuffer(buffer, { strictUsers: true });
       if (res.success) {
         setStatusMsg({ type: 'success', text: res.message });
         onSyncSuccess();

@@ -14,6 +14,10 @@ export interface GSheetConfig {
   lastSyncedAt?: string;
 }
 
+export interface SyncOptions {
+  strictUsers?: boolean;
+}
+
 export function getGSheetConfig(): GSheetConfig {
   try {
     const saved = localStorage.getItem(GSHEET_CONFIG_KEY);
@@ -318,6 +322,34 @@ export function mergeUsersForLocalAuth(localUsers: User[], importedUsers: User[]
   });
 
   return merged;
+}
+
+function conformUsersFromSheet(importedUsers: User[]): User[] {
+  const unique: User[] = [];
+  const seen = new Set<string>();
+
+  importedUsers.forEach((user) => {
+    const byId = (user.id || '').trim().toLowerCase();
+    const byPhone = buildUserLookupKey(user.phone);
+    const key = byId || byPhone;
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+
+    unique.push({
+      ...user,
+      id: user.id,
+      phone: user.phone,
+      name: user.name,
+      role: user.role,
+      password: user.password || '',
+      supervisorId: user.supervisorId || '',
+      permanentShopId: user.permanentShopId || '',
+      created_at: user.created_at,
+      last_login: user.last_login
+    });
+  });
+
+  return unique;
 }
 
 /**
@@ -742,7 +774,7 @@ export function parseReportsFromRows(rows: string[][]): DailyReport[] {
 /**
  * Parses an Excel (.xlsx / .xls) ArrayBuffer containing multiple worksheets
  */
-export function parseXlsxBuffer(buffer: ArrayBuffer): { success: boolean; count: number; message: string } {
+export function parseXlsxBuffer(buffer: ArrayBuffer, options: SyncOptions = {}): { success: boolean; count: number; message: string } {
   try {
     const wb = XLSX.read(buffer, { type: 'array' });
     let totalImported = 0;
@@ -760,8 +792,10 @@ export function parseXlsxBuffer(buffer: ArrayBuffer): { success: boolean; count:
       if (normName.includes('user') || normName.includes('utilisateur') || normName.includes('agent')) {
         const users = parseUsersFromRows(rows);
         if (users.length > 0) {
-          const mergedUsers = mergeUsersForLocalAuth(getUsers(), users);
-          saveUsers(mergedUsers);
+          const nextUsers = options.strictUsers === false
+            ? mergeUsersForLocalAuth(getUsers(), users)
+            : conformUsersFromSheet(users);
+          saveUsers(nextUsers);
           totalImported += users.length;
           summaryParts.push(`${users.length} utilisateur(s)`);
         }
@@ -838,7 +872,7 @@ export function parseXlsxBuffer(buffer: ArrayBuffer): { success: boolean; count:
 /**
  * Multi-Tab Fetching from Google Sheets URL
  */
-export async function syncFromGoogleSheetUrl(url: string): Promise<{ success: boolean; count: number; message: string }> {
+export async function syncFromGoogleSheetUrl(url: string, options: SyncOptions = {}): Promise<{ success: boolean; count: number; message: string }> {
   const trimmedUrl = url.trim();
   if (!trimmedUrl) {
     return { success: false, count: 0, message: 'Veuillez saisir l\'URL de votre Google Sheet.' };
@@ -868,7 +902,7 @@ export async function syncFromGoogleSheetUrl(url: string): Promise<{ success: bo
       const res = await fetch(xlsxTargetUrl, { cache: 'no-store' });
       if (res.ok) {
         const buf = await res.arrayBuffer();
-        const result = parseXlsxBuffer(buf);
+        const result = parseXlsxBuffer(buf, options);
         if (result.success && result.count > 0) {
           const cfg = getGSheetConfig();
           cfg.lastSyncedAt = new Date().toISOString();
@@ -904,8 +938,10 @@ export async function syncFromGoogleSheetUrl(url: string): Promise<{ success: bo
           if (tab.type === 'users') {
             const users = parseUsersFromRows(rows);
             if (users.length > 0) {
-              const mergedUsers = mergeUsersForLocalAuth(getUsers(), users);
-              saveUsers(mergedUsers);
+              const nextUsers = options.strictUsers === false
+                ? mergeUsersForLocalAuth(getUsers(), users)
+                : conformUsersFromSheet(users);
+              saveUsers(nextUsers);
               totalSynced += users.length;
               parts.push(`${users.length} utilisateurs`);
             }
@@ -960,7 +996,7 @@ export async function syncFromGoogleSheetUrl(url: string): Promise<{ success: bo
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('spreadsheet') || contentType.includes('excel') || contentType.includes('octet-stream') || trimmedUrl.includes('output=xlsx')) {
       const buf = await res.arrayBuffer();
-      const result = parseXlsxBuffer(buf);
+      const result = parseXlsxBuffer(buf, options);
       if (result.success && result.count > 0) {
         const cfg = getGSheetConfig();
         cfg.lastSyncedAt = new Date().toISOString();
@@ -974,8 +1010,10 @@ export async function syncFromGoogleSheetUrl(url: string): Promise<{ success: bo
 
     const parsedUsers = parseUsersFromRows(rows);
     if (parsedUsers.length > 0) {
-      const mergedUsers = mergeUsersForLocalAuth(getUsers(), parsedUsers);
-      saveUsers(mergedUsers);
+      const nextUsers = options.strictUsers === false
+        ? mergeUsersForLocalAuth(getUsers(), parsedUsers)
+        : conformUsersFromSheet(parsedUsers);
+      saveUsers(nextUsers);
       totalSynced += parsedUsers.length;
       parts.push(`${parsedUsers.length} utilisateurs`);
     }
