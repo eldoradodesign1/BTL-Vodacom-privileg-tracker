@@ -419,7 +419,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
               const statusBg = getStatusPalette(agent.status);
 
               return (
-                <div key={agent.id} className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition-all">
+                <div
+                  key={agent.id}
+                  className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition-all cursor-pointer"
+                  onClick={() => {
+                    if (onOpenAgentProfile) {
+                      onOpenAgentProfile(agent);
+                    }
+                  }}
+                >
                   <div className="flex flex-wrap items-start justify-between gap-2 w-full">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -457,7 +465,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                       {onOpenAgentProfile && (
                         <button
-                          onClick={() => onOpenAgentProfile(agent)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenAgentProfile(agent);
+                          }}
                           className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
                           title="Voir l'historique des rapports"
                         >

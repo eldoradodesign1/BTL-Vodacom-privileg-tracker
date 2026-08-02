@@ -201,7 +201,23 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
             const totalLeads = item.stats.priv + item.stats.roam + item.stats.bund;
 
             return (
-              <div key={item.id} className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition-all">
+              <div
+                key={item.id}
+                className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition-all cursor-pointer"
+                onClick={() => {
+                  if (onOpenAgentProfile) {
+                    onOpenAgentProfile({
+                      id: item.id,
+                      name: item.name,
+                      phone: '0810000000',
+                      shop: item.shop,
+                      shopId: '',
+                      status: item.status,
+                      trend: [4, 7, 5, 12, 18, 14, totalLeads]
+                    });
+                  }
+                }}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-2 w-full">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
@@ -265,15 +281,18 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
                     {onOpenAgentProfile && (
                       <button
-                        onClick={() => onOpenAgentProfile({
-                          id: item.id,
-                          name: item.name,
-                          phone: '0810000000',
-                          shop: item.shop,
-                          shopId: '',
-                          status: item.status,
-                          trend: [4, 7, 5, 12, 18, 14, totalLeads]
-                        })}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenAgentProfile({
+                            id: item.id,
+                            name: item.name,
+                            phone: '0810000000',
+                            shop: item.shop,
+                            shopId: '',
+                            status: item.status,
+                            trend: [4, 7, 5, 12, 18, 14, totalLeads]
+                          });
+                        }}
                         className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
                         title="Voir l'historique des rapports"
                       >
