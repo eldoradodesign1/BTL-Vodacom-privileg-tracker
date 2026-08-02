@@ -4,7 +4,7 @@ import { User, Shop, AgentMasterStatus } from '../types';
 import { getSupervisorLiveView, getReports, getUsers, getLeads, getCheckins, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate } from '../utils/storage';
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
-import { Trophy, FileCheck, Eye, Search, Store, UserCheck, User as UserIcon, MapPin, Archive, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight, X, Check, Circle, FileX2 } from 'lucide-react';
+import { Trophy, FileCheck, Eye, Search, Store, UserCheck, User as UserIcon, MapPin, Archive, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight, X, Check, Circle, FileX2, NotebookText } from 'lucide-react';
 import { DateIconPicker } from './DateIconPicker';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 
