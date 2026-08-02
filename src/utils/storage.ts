@@ -1093,15 +1093,12 @@ function buildAgentEvolutionSeries(agentId: string, agentName: string, reportDat
     return { evolutionTargetData: [], evolutionActivationData: [] };
   }
 
-  let cumulative = 0;
+  const targetTotal = Math.max(1, (targets.privilege || 0) + (targets.roaming || 0) + (targets.bundle || 0));
+  const evolutionTargetData = datesToInclude.map(() => targetTotal);
   const evolutionActivationData = datesToInclude.map((date) => {
     const dayLeads = matchingLeads.filter(l => toISO(l.timestamp) === date);
-    cumulative += dayLeads.length;
-    return cumulative;
+    return dayLeads.length;
   });
-
-  const targetTotal = Math.max(1, (targets.privilege || 0) + (targets.roaming || 0) + (targets.bundle || 0));
-  const evolutionTargetData = datesToInclude.map((_, index) => targetTotal * (index + 1));
 
   return { evolutionTargetData, evolutionActivationData };
 }

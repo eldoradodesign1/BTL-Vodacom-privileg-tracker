@@ -52,7 +52,7 @@ export default function App() {
   const [theme, setTheme] = useState<ThemeMode>(() => {
     try {
       const saved = localStorage.getItem('vodacom_theme') as ThemeMode | null;
-      const allowed: ThemeMode[] = ['classic', 'dark', 'light', 'anthracite', 'rubis', 'silver', 'sapphire', 'emerald', 'gold', 'glass'];
+      const allowed: ThemeMode[] = ['anthracite', 'rubis', 'silver', 'diamond', 'sapphire', 'ambre'];
       return saved && allowed.includes(saved) ? saved : 'anthracite';
     } catch {
       return 'anthracite';
@@ -92,7 +92,7 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('vodacom_theme', theme);
-    document.body.classList.remove('theme-classic', 'theme-dark', 'theme-light', 'theme-anthracite', 'theme-rubis', 'theme-silver', 'theme-sapphire', 'theme-emerald', 'theme-gold', 'theme-glass');
+    document.body.classList.remove('theme-classic', 'theme-dark', 'theme-light', 'theme-anthracite', 'theme-rubis', 'theme-silver', 'theme-sapphire', 'theme-emerald', 'theme-gold', 'theme-glass', 'theme-diamond', 'theme-ambre');
     document.body.classList.add(`theme-${theme}`);
   }, [theme]);
 
@@ -259,25 +259,19 @@ export default function App() {
     );
   };
 
-  const themeSurfaceStyle = theme === 'classic'
-    ? { backgroundColor: '#4d0000', backgroundImage: 'linear-gradient(135deg, #4d0000 0%, #8c0000 35%, #ca0000 70%, #300000 100%)', color: '#ffffff' }
-    : theme === 'light'
-      ? { backgroundColor: '#f8fafc', backgroundImage: 'linear-gradient(145deg, #f8fafc 0%, #eef2ff 38%, #fdecec 100%)', color: '#111827' }
-      : theme === 'anthracite'
-        ? { backgroundColor: '#111317', backgroundImage: 'linear-gradient(135deg, #0b0d11 0%, #1a1f27 42%, #2b2320 100%)', color: '#f8fafc' }
-        : theme === 'rubis'
-          ? { backgroundColor: '#220b11', backgroundImage: 'linear-gradient(135deg, #2a0d15 0%, #7f1d1d 45%, #fb7185 100%)', color: '#fff7f7' }
-          : theme === 'silver'
-            ? { backgroundColor: '#0f172a', backgroundImage: 'linear-gradient(135deg, #0f172a 0%, #334155 46%, #dbeafe 100%)', color: '#f8fafc' }
-            : theme === 'sapphire'
-              ? { backgroundColor: '#071120', backgroundImage: 'linear-gradient(135deg, #071120 0%, #1d4ed8 48%, #93c5fd 100%)', color: '#f8fbff' }
-              : theme === 'emerald'
-                ? { backgroundColor: '#04160f', backgroundImage: 'linear-gradient(135deg, #03110b 0%, #166534 48%, #86efac 100%)', color: '#f0fdf4' }
-                : theme === 'gold'
-                  ? { backgroundColor: '#23150c', backgroundImage: 'linear-gradient(135deg, #23150c 0%, #92400e 50%, #fde68a 100%)', color: '#fffef7' }
-                  : theme === 'glass'
-                    ? { backgroundColor: '#0b1120', backgroundImage: 'linear-gradient(135deg, #111827 0%, #1f2937 45%, #e2e8f0 100%)', color: '#f8fafc' }
-                    : { backgroundColor: '#09090b', backgroundImage: 'radial-gradient(circle at top right, #3d0000 0%, #09090b 60%)', color: '#ffffff' };
+  const themeSurfaceStyle = theme === 'anthracite'
+    ? { backgroundColor: '#111317', backgroundImage: 'linear-gradient(135deg, #0b0d11 0%, #1a1f27 42%, #2b2320 100%)', color: '#f8fafc' }
+    : theme === 'rubis'
+      ? { backgroundColor: '#220b11', backgroundImage: 'linear-gradient(135deg, #2a0d15 0%, #7f1d1d 45%, #fb7185 100%)', color: '#fff7f7' }
+      : theme === 'silver'
+        ? { backgroundColor: '#0f172a', backgroundImage: 'linear-gradient(135deg, #0f172a 0%, #334155 46%, #dbeafe 100%)', color: '#f8fafc' }
+        : theme === 'diamond'
+          ? { backgroundColor: '#0b1120', backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.28) 0%, transparent 18%), radial-gradient(circle at 80% 0%, rgba(244,114,182,0.25) 0%, transparent 20%), linear-gradient(135deg, #0b1120 0%, #111827 40%, #1f2937 70%, #e2e8f0 100%)', color: '#f8fafc' }
+          : theme === 'sapphire'
+            ? { backgroundColor: '#071120', backgroundImage: 'linear-gradient(135deg, #071120 0%, #1d4ed8 48%, #93c5fd 100%)', color: '#f8fbff' }
+            : theme === 'ambre'
+              ? { backgroundColor: '#23150c', backgroundImage: 'linear-gradient(135deg, #23150c 0%, #92400e 50%, #fde68a 100%)', color: '#fffef7' }
+              : { backgroundColor: '#111317', backgroundImage: 'linear-gradient(135deg, #0b0d11 0%, #1a1f27 42%, #2b2320 100%)', color: '#f8fafc' };
 
   return (
     <div
@@ -289,6 +283,7 @@ export default function App() {
         effectiveUser={effectiveUser}
         users={users}
         simulatedRole={simulatedRole}
+        theme={theme}
         onSimulateRole={(role) => setSimulatedRole(role)}
         onSimulateUserChange={handleSimulateUserChange}
         onResetSimulation={handleResetSimulation}
@@ -377,8 +372,11 @@ export default function App() {
         isOpen={!!selectedAgentForProfile}
         agent={selectedAgentForProfile}
         agentReports={getReports().filter((r) => r.agent_id === selectedAgentForProfile?.id)}
+        todayLeads={getLeads().filter((l) => l.agent_id === selectedAgentForProfile?.id && toISO(l.timestamp) === todayStr)}
+        shops={shops}
         onClose={() => setSelectedAgentForProfile(null)}
         onOpenPdf={(url) => setPdfModalUrl(url)}
+        onAssignmentChanged={refreshData}
         onCompileAgent={() => {
           setSelectedAgentForProfile(null);
           setActiveTab('admin');

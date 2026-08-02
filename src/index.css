@@ -69,34 +69,6 @@ select {
   appearance: none;
 }
 
-body.theme-classic {
-  background-color: #550000 !important;
-  background-image: linear-gradient(135deg, #4d0000 0%, #8c0000 35%, #ca0000 70%, #300000 100%) !important;
-  background-attachment: fixed !important;
-  color: #ffffff !important;
-}
-
-body.theme-classic::after {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-body.theme-classic .glass-card {
-  background: rgba(0, 0, 0, 0.35);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), 0 0 20px rgba(230, 0, 0, 0.3);
-}
-
-body.theme-classic .modal-sheet {
-  background: #2a0000;
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-body.theme-dark {
-  background-color: #09090b !important;
-  background-image: radial-gradient(circle at top right, #3d0000 0%, #09090b 60%) !important;
-  color: #ffffff !important;
-}
-
 body.theme-anthracite {
   background-color: #111317 !important;
   background-image: linear-gradient(135deg, #0b0d11 0%, #1a1f27 42%, #2b2320 100%) !important;
@@ -115,166 +87,55 @@ body.theme-silver {
   color: #f8fafc !important;
 }
 
+body.theme-diamond {
+  background-color: #0b1120 !important;
+  background-image: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.28) 0%, transparent 18%), radial-gradient(circle at 80% 0%, rgba(244,114,182,0.25) 0%, transparent 20%), linear-gradient(135deg, #0b1120 0%, #111827 40%, #1f2937 70%, #e2e8f0 100%) !important;
+  color: #f8fafc !important;
+}
+
 body.theme-sapphire {
   background-color: #071120 !important;
   background-image: linear-gradient(135deg, #071120 0%, #1d4ed8 48%, #93c5fd 100%) !important;
   color: #f8fbff !important;
 }
 
-body.theme-emerald {
-  background-color: #04160f !important;
-  background-image: linear-gradient(135deg, #03110b 0%, #166534 48%, #86efac 100%) !important;
-  color: #f0fdf4 !important;
-}
-
-body.theme-gold {
+body.theme-ambre {
   background-color: #23150c !important;
   background-image: linear-gradient(135deg, #23150c 0%, #92400e 50%, #fde68a 100%) !important;
   color: #fffef7 !important;
 }
 
-body.theme-glass {
-  background-color: #0b1120 !important;
-  background-image: linear-gradient(135deg, #111827 0%, #1f2937 45%, #e2e8f0 100%) !important;
-  color: #f8fafc !important;
-}
-
-body.theme-light {
-  background-color: #f3f4f6 !important;
-  background-image: linear-gradient(145deg, #f8fafc 0%, #eef2ff 38%, #fdecec 100%) !important;
-  color: #111827 !important;
-}
-
-body.theme-light .glass-card,
-body.theme-silver .glass-card,
-body.theme-glass .glass-card,
 body.theme-anthracite .glass-card,
 body.theme-rubis .glass-card,
-body.theme-sapphire .glass-card,
-body.theme-emerald .glass-card,
-body.theme-gold .glass-card {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.18);
-  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.24);
-}
-
-body.theme-light .glass-card,
 body.theme-silver .glass-card,
-body.theme-glass .glass-card,
-body.theme-anthracite .glass-card,
-body.theme-rubis .glass-card,
+body.theme-diamond .glass-card,
 body.theme-sapphire .glass-card,
-body.theme-emerald .glass-card,
-body.theme-gold .glass-card {
+body.theme-ambre .glass-card {
   background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.22);
   box-shadow: 0 16px 38px rgba(15, 23, 42, 0.24);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
 }
 
-body.theme-light .glass-card {
-  background: rgba(255, 255, 255, 0.96);
-  border-color: rgba(15, 23, 42, 0.12);
-  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.09);
-}
-
-body.theme-light .modal-sheet {
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
   background: #ffffff;
-  border-color: rgba(17, 24, 39, 0.1);
+  border: 2px solid #f43f5e;
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.2);
 }
 
-body.theme-light .brand-text {
-  background: linear-gradient(180deg, #0f172a 0%, #334155 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-body.theme-light .text-white {
-  color: #0f172a !important;
-}
-
-body.theme-light .text-gray-400,
-body.theme-light .text-gray-500,
-body.theme-light .text-zinc-400,
-body.theme-light .text-zinc-500 {
-  color: #475569 !important;
-}
-
-body.theme-light .bg-black\/60,
-body.theme-light .bg-black\/40,
-body.theme-light .bg-zinc-900,
-body.theme-light .bg-zinc-900\/90,
-body.theme-light .bg-white\/5,
-body.theme-light .bg-white\/10 {
-  background-color: #f8fafc !important;
-}
-
-body.theme-light .border-white\/10,
-body.theme-light .border-white\/20 {
-  border-color: rgba(15, 23, 42, 0.14) !important;
-}
-
-body.theme-light input,
-body.theme-light select,
-body.theme-light textarea {
-  color: #0f172a !important;
-  border-color: rgba(15, 23, 42, 0.18) !important;
-  background-color: #ffffff !important;
-}
-
-body.theme-light input::placeholder,
-body.theme-light textarea::placeholder {
-  color: #64748b !important;
-}
-
-body.theme-light nav {
-  background: rgba(255, 255, 255, 0.95) !important;
-  border-color: rgba(15, 23, 42, 0.12) !important;
-}
-
-body.theme-light .btn-dark {
-  background: #f1f5f9;
-  color: #0f172a;
-  border-color: rgba(15, 23, 42, 0.14);
-}
-
-body.theme-light .btn-dark:hover {
-  background: #e2e8f0;
-}
-
-/* Light theme chat readability */
-body.theme-light .chat-view .chat-title {
-  color: #0f172a !important;
-}
-
-body.theme-light .chat-view .chat-subtitle {
-  color: #64748b !important;
-}
-
-body.theme-light .chat-view .chat-meta-name {
-  color: #334155 !important;
-}
-
-body.theme-light .chat-view .chat-meta-time,
-body.theme-light .chat-view .chat-delete-btn {
-  color: #64748b !important;
-}
-
-body.theme-light .chat-view .chat-delete-btn:hover {
-  color: #dc2626 !important;
-}
-
-body.theme-light .chat-view .chat-bubble-other {
-  background: #ffffff !important;
-  border-color: #cbd5e1 !important;
-  color: #0f172a !important;
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-}
-
-body.theme-light .chat-view .chat-bubble-me {
-  background: #dc2626 !important;
-  color: #ffffff !important;
-  box-shadow: 0 8px 20px rgba(220, 38, 38, 0.25);
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: #ffffff;
+  border: 2px solid #f43f5e;
+  box-shadow: 0 0 0 3px rgba(244, 63, 94, 0.2);
 }
 
 body.theme-light .chat-view .chat-input-shell {

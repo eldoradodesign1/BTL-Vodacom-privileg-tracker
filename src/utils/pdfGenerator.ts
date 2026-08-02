@@ -317,7 +317,7 @@ async function renderPagesToPdfDataUrl(pageContents: string[]): Promise<string> 
     container.style.width = '794px';
     container.style.backgroundColor = '#ffffff';
     container.style.color = '#1a1a1a';
-    container.style.fontFamily = 'Helvetica, Arial, sans-serif';
+    container.style.fontFamily = 'Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
     container.style.padding = '30px';
     container.style.boxSizing = 'border-box';
     container.innerHTML = pageContents[index];

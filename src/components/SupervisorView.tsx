@@ -3,7 +3,7 @@ import { User, Shop, AgentMasterStatus } from '../types';
 import { getSupervisorLiveView, getReports, getUsers, getLeads, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate } from '../utils/storage';
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
-import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera } from 'lucide-react';
+import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera, Clock3, FileText } from 'lucide-react';
 
 interface SupervisorViewProps {
   currentUser: User;
@@ -47,6 +47,12 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
   const activeCount = teamData.filter(t => t.status !== 'Absent').length;
   const closedCount = teamData.filter(t => t.status === 'Clôturé').length;
+
+  const getStatusPalette = (status: string) => {
+    if (status === 'Clôturé') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+    if (status === 'Présent') return 'bg-blue-500/20 text-blue-400 border-blue-500/40';
+    return 'bg-red-500/20 text-red-400 border-red-500/40';
+  };
 
   const handleSaveTarget = () => {
     const today = new Date().toISOString().split('T')[0];
@@ -191,8 +197,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
         {/* Agent Cards */}
         <div className="space-y-3">
           {filteredTeam.map(item => {
-            const statusBg = item.status === 'Clôturé' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-              : (item.status === 'Présent' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' : 'bg-red-500/20 text-red-400 border-red-500/40');
+            const statusBg = getStatusPalette(item.status);
             const totalLeads = item.stats.priv + item.stats.roam + item.stats.bund;
 
             return (
@@ -279,10 +284,10 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                     {item.reportObj && (
                       <button
                         onClick={() => onOpenPdfModal(`report-id:${item.reportObj!.id}`)}
-                        className="p-1.5 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-xl border border-red-500/30 transition-all"
+                        className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
                         title="Voir le rapport PDF"
                       >
-                        <Eye className="w-4 h-4" />
+                        <FileText className="w-4 h-4" />
                       </button>
                     )}
                   </div>
@@ -433,6 +438,42 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           </p>
         </div>
 
+        <div className="glass-card border border-white/10 p-5 space-y-4">
+          <div className="space-y-1">
+            <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Définir les targets</h2>
+            <p className="text-[10px] text-gray-400 font-semibold">Les cibles de privilège, roaming et bundle sont centralisées ici pour les superviseurs.</p>
+          </div>
+          <div className="grid gap-3">
+            {[
+              { key: 'privStd', label: 'Privilège', value: targetPrivilegeStd, setter: setTargetPrivilegeStd, max: 100, side: 'Standard' },
+              { key: 'privAir', label: 'Privilège', value: targetPrivilegeAir, setter: setTargetPrivilegeAir, max: 100, side: 'Aéroport' },
+              { key: 'roamStd', label: 'Roaming', value: targetRoamingStd, setter: setTargetRoamingStd, max: 50, side: 'Standard' },
+              { key: 'roamAir', label: 'Roaming', value: targetRoamingAir, setter: setTargetRoamingAir, max: 50, side: 'Aéroport' },
+              { key: 'bundleStd', label: 'Bundle', value: targetBundleStd, setter: setTargetBundleStd, max: 50, side: 'Standard' },
+              { key: 'bundleAir', label: 'Bundle', value: targetBundleAir, setter: setTargetBundleAir, max: 50, side: 'Aéroport' }
+            ].map((item) => (
+              <div key={item.key} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{item.label}</p>
+                    <p className="text-[10px] text-gray-500">{item.side}</p>
+                  </div>
+                  <div className="rounded-full border border-red-500/30 bg-red-600/10 px-2.5 py-1">
+                    <span className="text-[11px] font-black text-white">{item.value}</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input type="range" min="0" max={item.max} step="1" value={item.value} onChange={(e) => item.setter(Number(e.target.value))} className="h-2.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-red-500" />
+                  <input type="number" min="0" max={item.max} value={item.value} onChange={(e) => item.setter(Math.max(0, Math.min(item.max, Number(e.target.value || 0))))} className="w-16 rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <button onClick={handleSaveTarget} className="w-full rounded-xl bg-red-600 px-3 py-2.5 text-[10px] font-black uppercase text-white">
+            Enregistrer les targets
+          </button>
+        </div>
+
         {/* Shops List */}
         <div className="space-y-3">
           <h2 className="text-xs font-black uppercase text-gray-400 tracking-wider">
@@ -569,34 +610,46 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
       <div className="glass-card border border-white/10 p-5 space-y-4">
         <div className="space-y-1">
           <h2 className="text-xs font-black uppercase text-amber-400 tracking-wider">Définir les targets</h2>
-          <p className="text-[10px] text-gray-400 font-semibold">Les valeurs sont enregistrées aujourd’hui pour les catégories Standard et Aéroport.</p>
+          <p className="text-[10px] text-gray-400 font-semibold">Saisissez manuellement ou glissez pour ajuster chaque valeur.</p>
         </div>
-        <div className="space-y-3">
+        <div className="grid gap-3">
           {[
-            { label: 'Privilège - Standard', value: targetPrivilegeStd, setter: setTargetPrivilegeStd, max: 100 },
-            { label: 'Privilège - Aéroport', value: targetPrivilegeAir, setter: setTargetPrivilegeAir, max: 100 },
-            { label: 'Roaming - Standard', value: targetRoamingStd, setter: setTargetRoamingStd, max: 50 },
-            { label: 'Roaming - Aéroport', value: targetRoamingAir, setter: setTargetRoamingAir, max: 50 },
-            { label: 'Bundle - Standard', value: targetBundleStd, setter: setTargetBundleStd, max: 50 },
-            { label: 'Bundle - Aéroport', value: targetBundleAir, setter: setTargetBundleAir, max: 50 }
+            { key: 'privStd', label: 'Privilège', value: targetPrivilegeStd, setter: setTargetPrivilegeStd, max: 100, side: 'Standard' },
+            { key: 'privAir', label: 'Privilège', value: targetPrivilegeAir, setter: setTargetPrivilegeAir, max: 100, side: 'Aéroport' },
+            { key: 'roamStd', label: 'Roaming', value: targetRoamingStd, setter: setTargetRoamingStd, max: 50, side: 'Standard' },
+            { key: 'roamAir', label: 'Roaming', value: targetRoamingAir, setter: setTargetRoamingAir, max: 50, side: 'Aéroport' },
+            { key: 'bundleStd', label: 'Bundle', value: targetBundleStd, setter: setTargetBundleStd, max: 50, side: 'Standard' },
+            { key: 'bundleAir', label: 'Bundle', value: targetBundleAir, setter: setTargetBundleAir, max: 50, side: 'Aéroport' }
           ].map((item) => (
-            <div key={item.label} className="space-y-1.5">
-              <div className="flex items-center justify-between text-[10px] font-black uppercase text-gray-400">
-                <span>{item.label}</span>
-                <span className="text-white">[{item.value}]</span>
+            <div key={item.key} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{item.label}</p>
+                  <p className="text-[10px] text-gray-500">{item.side}</p>
+                </div>
+                <div className="rounded-full border border-red-500/30 bg-red-600/10 px-2.5 py-1">
+                  <span className="text-[11px] font-black text-white">{item.value}</span>
+                </div>
               </div>
-              <input
-                type="range"
-                min="0"
-                max={item.max}
-                value={item.value}
-                onChange={(e) => item.setter(Number(e.target.value))}
-                className="w-full accent-red-500"
-                aria-label={item.label}
-              />
-              <div className="flex justify-between text-[9px] text-gray-500">
-                <span>0</span>
-                <span>{item.max}</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="range"
+                  min="0"
+                  max={item.max}
+                  step="1"
+                  value={item.value}
+                  onChange={(e) => item.setter(Number(e.target.value))}
+                  className="h-2.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-red-500"
+                  aria-label={`${item.label} ${item.side}`}
+                />
+                <input
+                  type="number"
+                  min="0"
+                  max={item.max}
+                  value={item.value}
+                  onChange={(e) => item.setter(Math.max(0, Math.min(item.max, Number(e.target.value || 0))))}
+                  className="w-16 rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                />
               </div>
             </div>
           ))}

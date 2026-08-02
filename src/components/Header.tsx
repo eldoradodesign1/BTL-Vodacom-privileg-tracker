@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { User, NotificationItem } from '../types';
 import { Bell, LogOut, Shield, FileSpreadsheet, Palette } from 'lucide-react';
 
-export type ThemeMode = 'classic' | 'dark' | 'light' | 'anthracite' | 'rubis' | 'silver' | 'sapphire' | 'emerald' | 'gold' | 'glass';
+export type ThemeMode = 'anthracite' | 'rubis' | 'silver' | 'diamond' | 'sapphire' | 'ambre';
 
 interface HeaderProps {
   user: User;
@@ -32,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   onOpenPasswordModal,
   onOpenGSheetModal,
-  theme = 'classic',
+  theme = 'anthracite',
   onSetTheme
 }) => {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
@@ -58,7 +58,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className={`px-3 sm:px-6 py-2.5 backdrop-blur-md border-b shrink-0 relative z-40 transition-colors ${
-      theme === 'light' ? 'bg-white/90 border-zinc-200 text-zinc-900 shadow-xl' : (theme === 'classic' ? 'bg-red-950/80 border-red-500/30 text-white shadow-xl' : 'bg-black/40 border-white/10 text-white')
+      theme === 'anthracite' || theme === 'rubis' || theme === 'silver' || theme === 'diamond' || theme === 'ambre'
+        ? 'bg-black/40 border-white/10 text-white'
+        : 'bg-white/90 border-zinc-200 text-zinc-900 shadow-xl'
     }`}>
       <div className="flex items-start justify-between gap-2 sm:gap-3">
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
@@ -125,13 +127,8 @@ export const Header: React.FC<HeaderProps> = ({
                     { key: 'anthracite', label: 'Anthracite' },
                     { key: 'rubis', label: 'Rubis' },
                     { key: 'silver', label: 'Silver' },
-                    { key: 'sapphire', label: 'Saphyr' },
-                    { key: 'emerald', label: 'Émeraude' },
-                    { key: 'gold', label: 'Gold' },
-                    { key: 'glass', label: 'Glass' },
-                    { key: 'classic', label: 'Classic' },
-                    { key: 'dark', label: 'Sombre' },
-                    { key: 'light', label: 'Clair' }
+                    { key: 'diamond', label: 'Diamond' },
+                    { key: 'ambre', label: 'Ambre' }
                   ].map(opt => (
                     <button
                       key={opt.key}

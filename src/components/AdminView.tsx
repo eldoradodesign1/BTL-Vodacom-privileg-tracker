@@ -3,7 +3,7 @@ import { Shop, AgentMasterStatus, User } from '../types';
 import { getAdminMasterList, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl, saveTargetDefinition } from '../utils/storage';
 import { TabType } from './BottomNav';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
-import { UserPlus, Store, FileSpreadsheet, Eye, NotebookText, UserCheck, FileText, Search, Filter, MapPin } from 'lucide-react';
+import { UserPlus, Store, FileSpreadsheet, Eye, NotebookText, UserCheck, FileText, Search, Filter, MapPin, Clock3 } from 'lucide-react';
 import { formatAgentLocationLine } from '../utils/location';
 
 interface AdminViewProps {
@@ -57,6 +57,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Online' | 'Absent' | 'Clôturé'>('ALL');
   const [supFilter, setSupFilter] = useState('ALL');
   const [inlineAssignShop, setInlineAssignShop] = useState<Record<string, string>>({});
+
+  const getStatusPalette = (status: string) => {
+    if (status === 'Clôturé') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
+    if (status === 'Présent') return 'bg-blue-500/20 text-blue-400 border-blue-500/40';
+    return 'bg-red-500/20 text-red-400 border-red-500/40';
+  };
   const [targetPrivilegeStd, setTargetPrivilegeStd] = useState(20);
   const [targetPrivilegeAir, setTargetPrivilegeAir] = useState(20);
   const [targetRoamingStd, setTargetRoamingStd] = useState(3);
@@ -348,34 +354,47 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div className="glass-card p-5 border border-white/10 space-y-4">
             <div className="space-y-1">
               <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Définir les targets</h2>
-              <p className="text-[10px] text-gray-400 font-semibold">Les valeurs sont enregistrées aujourd’hui pour les catégories Standard et Aéroport.</p>
+              <p className="text-[10px] text-gray-400 font-semibold">Saisissez manuellement ou glissez pour ajuster chaque valeur.</p>
             </div>
-            <div className="space-y-3">
+
+            <div className="grid gap-3">
               {[
-                { label: 'Privilège - Standard', value: targetPrivilegeStd, setter: setTargetPrivilegeStd, max: 100 },
-                { label: 'Privilège - Aéroport', value: targetPrivilegeAir, setter: setTargetPrivilegeAir, max: 100 },
-                { label: 'Roaming - Standard', value: targetRoamingStd, setter: setTargetRoamingStd, max: 50 },
-                { label: 'Roaming - Aéroport', value: targetRoamingAir, setter: setTargetRoamingAir, max: 50 },
-                { label: 'Bundle - Standard', value: targetBundleStd, setter: setTargetBundleStd, max: 50 },
-                { label: 'Bundle - Aéroport', value: targetBundleAir, setter: setTargetBundleAir, max: 50 }
+                { key: 'privStd', label: 'Privilège', value: targetPrivilegeStd, setter: setTargetPrivilegeStd, max: 100, side: 'Standard' },
+                { key: 'privAir', label: 'Privilège', value: targetPrivilegeAir, setter: setTargetPrivilegeAir, max: 100, side: 'Aéroport' },
+                { key: 'roamStd', label: 'Roaming', value: targetRoamingStd, setter: setTargetRoamingStd, max: 50, side: 'Standard' },
+                { key: 'roamAir', label: 'Roaming', value: targetRoamingAir, setter: setTargetRoamingAir, max: 50, side: 'Aéroport' },
+                { key: 'bundleStd', label: 'Bundle', value: targetBundleStd, setter: setTargetBundleStd, max: 50, side: 'Standard' },
+                { key: 'bundleAir', label: 'Bundle', value: targetBundleAir, setter: setTargetBundleAir, max: 50, side: 'Aéroport' }
               ].map((item) => (
-                <div key={item.label} className="space-y-1.5">
-                  <div className="flex items-center justify-between text-[10px] font-black uppercase text-gray-400">
-                    <span>{item.label}</span>
-                    <span className="text-white">[{item.value}]</span>
+                <div key={item.key} className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="mb-2 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{item.label}</p>
+                      <p className="text-[10px] text-gray-500">{item.side}</p>
+                    </div>
+                    <div className="rounded-full border border-red-500/30 bg-red-600/10 px-2.5 py-1">
+                      <span className="text-[11px] font-black text-white">{item.value}</span>
+                    </div>
                   </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max={item.max}
-                    value={item.value}
-                    onChange={(e) => item.setter(Number(e.target.value))}
-                    className="w-full accent-red-500"
-                    aria-label={item.label}
-                  />
-                  <div className="flex justify-between text-[9px] text-gray-500">
-                    <span>0</span>
-                    <span>{item.max}</span>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max={item.max}
+                      step="1"
+                      value={item.value}
+                      onChange={(e) => item.setter(Number(e.target.value))}
+                      className="h-2.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-red-500"
+                      aria-label={`${item.label} ${item.side}`}
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      max={item.max}
+                      value={item.value}
+                      onChange={(e) => item.setter(Math.max(0, Math.min(item.max, Number(e.target.value || 0))))}
+                      className="w-16 rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                    />
                   </div>
                 </div>
               ))}
@@ -440,144 +459,44 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
 
             {filteredMasterList.map(agent => {
-              const statusBg = agent.status === 'Clôturé'
-                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
-                : (agent.status === 'Présent' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' : 'bg-red-500/20 text-red-400 border-red-500/40');
-
-              // Generate simple SVG sparkline path
-              const maxVal = Math.max(...agent.trend, 10);
-              const points = agent.trend.map((val, idx) => {
-                const x = (idx / (agent.trend.length - 1)) * 60;
-                const y = 25 - (val / maxVal) * 20;
-                return `${x},${y}`;
-              }).join(' ');
+              const statusBg = getStatusPalette(agent.status);
 
               return (
-                <div
+                <button
                   key={agent.id}
-                  className="glass-card p-4 border border-white/10 hover:border-red-500/40 transition-all space-y-3"
+                  type="button"
+                  onClick={() => onOpenAgentProfile(agent)}
+                  className={`w-full rounded-2xl border p-3 text-left transition-all ${statusBg} hover:opacity-90`}
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2 w-full">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-xs font-black uppercase text-white">{agent.name}</h3>
-                        <select
-                          value={inlineAssignShop[agent.id] || ''}
-                          onChange={(e) => {
-                            const nextShopId = e.target.value;
-                            if (!nextShopId) return;
-
-                            const confirmed = window.confirm(`Affecter ${agent.name} à ce shop ?`);
-                            if (!confirmed) return;
-
-                            updateUserShopAssignment(agent.id, nextShopId);
-                            setInlineAssignShop(prev => ({ ...prev, [agent.id]: '' }));
-                            if (onRefreshData) onRefreshData();
-                          }}
-                          className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5 text-white text-[10px] font-bold min-w-[120px]"
-                        >
-                          <option value="">shop...</option>
-                          {shops.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-wrap gap-1 mt-1">
-                        <MapPin className="w-3 h-3 text-blue-400" />
-                        <span>{formatAgentLocationLine({
-                          shop: agent.shop,
-                          status: agent.status,
-                          arrivalTime: agent.reportObj?.arrival_time,
-                          departureTime: agent.reportObj?.departure_time
-                        })}</span>
-                      </p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">{agent.shop}</p>
+                      <h3 className="text-xs font-black uppercase text-white">{agent.name}</h3>
                     </div>
-
-                    <div className="flex flex-wrap items-center gap-2 shrink-0">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if ((agent.status === 'Présent' || agent.status === 'Clôturé') && onOpenLocationModal) {
-                            onOpenLocationModal(agent);
-                          }
-                        }}
-                        className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg} ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
-                        title={agent.status === 'Présent' ? 'Voir la localisation de pointage' : (agent.status === 'Clôturé' ? 'Voir la localisation de clôture' : undefined)}
-                      >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase ${statusBg}`}>
                         {agent.status}
-                      </button>
-
-                      {agent.reportObj && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenPdfModal(`report-id:${agent.reportObj!.id}`);
-                          }}
-                          className="p-1.5 bg-red-600/20 text-red-400 hover:bg-red-600 hover:text-white rounded-xl border border-red-500/30 transition-all"
-                          title="Voir le rapport PDF"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                      )}
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenAgentProfile(agent);
-                        }}
-                        className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
-                        title="Voir l'historique des rapports"
-                      >
-                        <NotebookText className="w-4 h-4" />
-                      </button>
+                      </span>
+                      <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[9px] font-black uppercase text-white/80">
+                        {agent.reportObj ? 'Rapport' : 'Aucun'}
+                      </span>
                     </div>
                   </div>
-
-                  {agent.stats && (
-                    <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if ((agent.status === 'Présent' || agent.status === 'Clôturé') && onOpenLocationModal) {
-                            onOpenLocationModal(agent);
-                          }
-                        }}
-                        className={`bg-white/5 p-2 rounded-xl ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
-                      >
-                        <span className="text-[8px] text-gray-400 uppercase block">Privilège</span>
-                        <span className="text-red-400 text-xs">{agent.stats.priv}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if ((agent.status === 'Présent' || agent.status === 'Clôturé') && onOpenLocationModal) {
-                            onOpenLocationModal(agent);
-                          }
-                        }}
-                        className={`bg-white/5 p-2 rounded-xl ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
-                      >
-                        <span className="text-[8px] text-gray-400 uppercase block">Roaming</span>
-                        <span className="text-amber-400 text-xs">{agent.stats.roam}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if ((agent.status === 'Présent' || agent.status === 'Clôturé') && onOpenLocationModal) {
-                            onOpenLocationModal(agent);
-                          }
-                        }}
-                        className={`bg-white/5 p-2 rounded-xl ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
-                      >
-                        <span className="text-[8px] text-gray-400 uppercase block">Bundles</span>
-                        <span className="text-blue-400 text-xs">{agent.stats.bund}</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className={`rounded-xl border border-white/10 bg-black/20 px-2.5 py-1 text-[9px] font-black uppercase ${statusBg}`}>
+                      <div className="flex items-center gap-1">
+                        <FileText className="w-3 h-3" />
+                        <span>PDF</span>
+                      </div>
+                    </span>
+                    <span className={`rounded-xl border border-white/10 bg-black/20 px-2.5 py-1 text-[9px] font-black uppercase ${statusBg}`}>
+                      <div className="flex items-center gap-1">
+                        <Clock3 className="w-3 h-3" />
+                        <span>Historique</span>
+                      </div>
+                    </span>
+                  </div>
+                </button>
               );
             })}
           </div>
