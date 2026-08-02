@@ -462,41 +462,44 @@ export const AdminView: React.FC<AdminViewProps> = ({
               const statusBg = getStatusPalette(agent.status);
 
               return (
-                <button
+                <div
                   key={agent.id}
-                  type="button"
-                  onClick={() => onOpenAgentProfile(agent)}
-                  className={`w-full rounded-2xl border p-3 text-left transition-all ${statusBg} hover:opacity-90`}
+                  className={`w-full rounded-2xl border p-3 text-left transition-all ${statusBg}`}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <button type="button" onClick={() => onOpenAgentProfile(agent)} className="min-w-0 flex-1 text-left">
                       <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">{agent.shop}</p>
                       <h3 className="text-xs font-black uppercase text-white">{agent.name}</h3>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
+                    </button>
+                    <div className="flex items-center gap-1.5">
                       <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase ${statusBg}`}>
                         {agent.status}
                       </span>
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[9px] font-black uppercase text-white/80">
-                        {agent.reportObj ? 'Rapport' : 'Aucun'}
-                      </span>
+                      {agent.reportObj && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenPdfModal(`report-id:${agent.reportObj!.id}`)}
+                          className="rounded-full border border-white/10 bg-black/20 p-1.5 text-white/80"
+                          title="Ouvrir le PDF"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className={`rounded-xl border border-white/10 bg-black/20 px-2.5 py-1 text-[9px] font-black uppercase ${statusBg}`}>
-                      <div className="flex items-center gap-1">
-                        <FileText className="w-3 h-3" />
-                        <span>PDF</span>
-                      </div>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[9px] font-black uppercase text-white/80">
+                      {agent.reportObj ? 'Rapport' : 'Aucun'}
                     </span>
-                    <span className={`rounded-xl border border-white/10 bg-black/20 px-2.5 py-1 text-[9px] font-black uppercase ${statusBg}`}>
-                      <div className="flex items-center gap-1">
-                        <Clock3 className="w-3 h-3" />
-                        <span>Historique</span>
-                      </div>
-                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onOpenAgentProfile(agent)}
+                      className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[9px] font-black uppercase text-white/80"
+                    >
+                      Historique
+                    </button>
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>

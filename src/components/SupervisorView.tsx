@@ -3,7 +3,7 @@ import { User, Shop, AgentMasterStatus } from '../types';
 import { getSupervisorLiveView, getReports, getUsers, getLeads, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate } from '../utils/storage';
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
-import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera, Clock3, FileText } from 'lucide-react';
+import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera, Clock3, FileText, GripVertical } from 'lucide-react';
 
 interface SupervisorViewProps {
   currentUser: User;
@@ -33,6 +33,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
   const [assigningShopId, setAssigningShopId] = useState<string>('');
   const [inlineAssignShop, setInlineAssignShop] = useState<Record<string, string>>({});
+  const [draggingAgentId, setDraggingAgentId] = useState<string | null>(null);
   const [targetPrivilegeStd, setTargetPrivilegeStd] = useState(20);
   const [targetPrivilegeAir, setTargetPrivilegeAir] = useState(20);
   const [targetRoamingStd, setTargetRoamingStd] = useState(3);
@@ -125,6 +126,19 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     if (onRefreshData) onRefreshData();
   };
 
+  const handleDropOnShop = (shopId: string) => {
+    if (!draggingAgentId) return;
+    const confirmed = window.confirm('Affecter cette hôtesse à ce shop ?');
+    if (!confirmed) {
+      setDraggingAgentId(null);
+      return;
+    }
+
+    updateUserShopAssignment(draggingAgentId, shopId);
+    setDraggingAgentId(null);
+    if (onRefreshData) onRefreshData();
+  };
+
   // --- TAB 2: MONITORING ---
   if (activeTab === 'tab2') {
     const filteredTeam = teamData.filter(item => {
@@ -201,33 +215,15 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
             const totalLeads = item.stats.priv + item.stats.roam + item.stats.bund;
 
             return (
-              <div key={item.id} className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition-all">
-                <div className="flex flex-wrap items-start justify-between gap-2 w-full">
+              <div key={item.id} className="glass-card p-3 border border-white/10 hover:border-red-500/30 transition-all">
+                <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-xs font-black uppercase text-white">{item.name}</h3>
-                      <select
-                        value={inlineAssignShop[item.id] || ''}
-                        onChange={(e) => {
-                          const nextShopId = e.target.value;
-                          if (!nextShopId) return;
-
-                          const confirmed = window.confirm(`Affecter ${item.name} à ce shop ?`);
-                          if (!confirmed) return;
-
-                          updateUserShopAssignment(item.id, nextShopId);
-                          setInlineAssignShop(prev => ({ ...prev, [item.id]: '' }));
-                          if (onRefreshData) onRefreshData();
-                        }}
-                        className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5 text-white text-[10px] font-bold min-w-[120px]"
-                      >
-                        <option value="">shop...</option>
-                        {shops.map(s => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
+                      <span className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg}`}>
+                        {item.status}
+                      </span>
                     </div>
-
                     <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-wrap gap-1 mt-1">
                       <MapPin className="w-3 h-3 text-blue-400" />
                       <span>{formatAgentLocationLine({
@@ -239,30 +235,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => {
-                        if (item.status === 'Présent' || item.status === 'Clôturé') {
-                          const agentForLocation: AgentMasterStatus = {
-                            id: item.id,
-                            name: item.name,
-                            phone: '0810000000',
-                            shop: item.shop,
-                            shopId: '',
-                            status: item.status,
-                            trend: [0, 0, 0],
-                            reportObj: item.reportObj,
-                            stats: item.stats
-                          };
-                          if (onOpenLocationModal) onOpenLocationModal(agentForLocation);
-                        }
-                      }}
-                      className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg} ${(item.status === 'Présent' || item.status === 'Clôturé') ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
-                      title={item.status === 'Présent' ? 'Voir la localisation de pointage' : (item.status === 'Clôturé' ? 'Voir la localisation de clôture' : undefined)}
-                    >
-                      {item.status}
-                    </button>
-
+                  <div className="flex items-center gap-1.5 shrink-0">
                     {onOpenAgentProfile && (
                       <button
                         onClick={() => onOpenAgentProfile({
@@ -274,59 +247,60 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                           status: item.status,
                           trend: [4, 7, 5, 12, 18, 14, totalLeads]
                         })}
-                        className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
+                        className={`p-1.5 ${statusBg} rounded-xl border transition-all`}
                         title="Voir l'historique des rapports"
                       >
-                        <NotebookText className="w-4 h-4" />
+                        <NotebookText className="w-3.5 h-3.5" />
                       </button>
                     )}
 
                     {item.reportObj && (
                       <button
                         onClick={() => onOpenPdfModal(`report-id:${item.reportObj!.id}`)}
-                        className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
+                        className={`p-1.5 ${statusBg} rounded-xl border transition-all`}
                         title="Voir le rapport PDF"
                       >
-                        <FileText className="w-4 h-4" />
+                        <FileText className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    {(item.status === 'Présent' || item.status === 'Clôturé') && onOpenLocationModal && (
+                      <button
+                        onClick={() => {
+                          const agentForLocation: AgentMasterStatus = {
+                            id: item.id,
+                            name: item.name,
+                            phone: '0810000000',
+                            shop: item.shop,
+                            shopId: '',
+                            status: item.status,
+                            trend: [0, 0, 0],
+                            reportObj: item.reportObj,
+                            stats: item.stats
+                          };
+                          onOpenLocationModal(agentForLocation);
+                        }}
+                        className={`p-1.5 ${statusBg} rounded-xl border transition-all`}
+                        title={item.status === 'Présent' ? 'Voir la localisation de pointage' : 'Voir la localisation de clôture'}
+                      >
+                        <MapPin className="w-3.5 h-3.5" />
                       </button>
                     )}
                   </div>
                 </div>
 
-                {item.status !== 'Absent' && (
-                  <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
-                    {[
-                      { label: 'Privilège', value: item.stats.priv, colorClass: 'text-red-500' },
-                      { label: 'Roaming', value: item.stats.roam, colorClass: 'text-amber-400' },
-                      { label: 'Bundles', value: item.stats.bund, colorClass: 'text-blue-400' }
-                    ].map(tile => (
-                      <button
-                        key={tile.label}
-                        type="button"
-                        onClick={() => {
-                          if (item.status === 'Présent' || item.status === 'Clôturé') {
-                            const agentForLocation: AgentMasterStatus = {
-                              id: item.id,
-                              name: item.name,
-                              phone: '0810000000',
-                              shop: item.shop,
-                              shopId: '',
-                              status: item.status,
-                              trend: [0, 0, 0],
-                              reportObj: item.reportObj,
-                              stats: item.stats
-                            };
-                            if (onOpenLocationModal) onOpenLocationModal(agentForLocation);
-                          }
-                        }}
-                        className={`bg-white/5 p-2 rounded-xl ${(item.status === 'Présent' || item.status === 'Clôturé') ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
-                      >
-                        <span className="text-[8px] text-gray-400 uppercase block">{tile.label}</span>
-                        <span className={`${tile.colorClass} text-xs`}>{tile.value}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {[
+                    { label: 'Privilège', value: item.stats.priv, colorClass: 'text-red-500' },
+                    { label: 'Roaming', value: item.stats.roam, colorClass: 'text-amber-400' },
+                    { label: 'Bundles', value: item.stats.bund, colorClass: 'text-blue-400' }
+                  ].map(tile => (
+                    <span key={tile.label} className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-[9px] font-black uppercase text-gray-300">
+                      <span className="mr-1 text-[8px] text-gray-500">{tile.label}</span>
+                      <span className={tile.colorClass}>{tile.value}</span>
+                    </span>
+                  ))}
+                </div>
               </div>
             );
           })}
@@ -483,7 +457,12 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           {shops.map(shop => {
             const assignedAgents = supervisedAgents.filter(a => a.permanentShopId === shop.id);
             return (
-              <div key={shop.id} className="glass-card p-4 border border-white/10 space-y-3">
+              <div
+                key={shop.id}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={() => handleDropOnShop(shop.id)}
+                className="glass-card p-4 border border-white/10 space-y-3 transition-all hover:border-red-500/30"
+              >
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-xs font-black uppercase text-white flex items-center space-x-2">
@@ -497,14 +476,19 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   </span>
                 </div>
 
-                {/* Assigned Agents badges */}
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {assignedAgents.length === 0 ? (
-                    <span className="text-[10px] text-gray-500 italic">Aucune hôtesse affectée à ce shop</span>
+                    <span className="text-[10px] text-gray-500 italic">Glissez une hôtesse ici</span>
                   ) : (
                     assignedAgents.map(ag => (
-                      <span key={ag.id} className="text-[9px] font-black uppercase px-2.5 py-1 bg-white/5 text-gray-300 rounded-lg border border-white/10 flex items-center space-x-1">
-                        <UserCheck className="w-3 h-3 text-emerald-400" />
+                      <span
+                        key={ag.id}
+                        draggable
+                        onDragStart={() => setDraggingAgentId(ag.id)}
+                        onDragEnd={() => setDraggingAgentId(null)}
+                        className="cursor-grab text-[9px] font-black uppercase px-2.5 py-1 bg-white/5 text-gray-300 rounded-lg border border-white/10 flex items-center space-x-1"
+                      >
+                        <GripVertical className="w-3 h-3 text-amber-400" />
                         <span>{ag.name}</span>
                       </span>
                     ))

@@ -4,6 +4,7 @@ import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSy
 import { formatDriveImageUrl, getGSheetConfig, syncFromGoogleSheetUrl } from '../utils/googleSheetsSync';
 import { TabType } from './BottomNav';
 import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archive, Eye, Search, Filter, RefreshCw } from 'lucide-react';
+import { buildPointageFeedback } from '../utils/pointageStatus';
 
 interface AgentViewProps {
   currentUser: User;
@@ -71,6 +72,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
   }, [currentUser.id, todayCheckin?.photo, todayStr]);
 
   const { checkinDone, reportDone } = checkDailyStatus(currentUser.id, todayStr);
+  const feedback = buildPointageFeedback({ stage: checkinDone || checkinDoneLocal ? 'captured' : 'idle', gpsMessage: gpsInfo, geoBadge: geoBadge || undefined });
 
   const shopObj = getShopById(activeShopId || currentUser.permanentShopId);
   const shopName = shopObj ? shopObj.name : "Vodacom Flagship Gombe";
@@ -513,7 +515,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
                 className="hidden"
               />
             </label>
-            {gpsInfo && <p className="text-[10px] font-black text-emerald-400">{gpsInfo}</p>}
+            {feedback.primaryText && <p className={`text-[10px] font-black ${feedback.badgeStatus === 'warn' ? 'text-amber-400' : (feedback.badgeStatus === 'unknown' ? 'text-zinc-300' : 'text-emerald-400')}`}>{feedback.primaryText}</p>}
           </div>
         )}
 
@@ -527,15 +529,15 @@ export const AgentView: React.FC<AgentViewProps> = ({
           </div>
         )}
 
-        {geoBadge && (
+        {feedback.showBadge && feedback.badgeText && (
           <div className={`mt-3 inline-flex items-center px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase ${
-            geoBadge.status === 'ok'
+            feedback.badgeStatus === 'ok'
               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-              : (geoBadge.status === 'warn'
+              : (feedback.badgeStatus === 'warn'
                 ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                 : 'bg-zinc-500/10 text-zinc-300 border-zinc-500/30')
           }`}>
-            {geoBadge.text}
+            {feedback.badgeText}
           </div>
         )}
       </div>
