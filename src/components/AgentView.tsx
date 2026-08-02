@@ -4,6 +4,8 @@ import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSy
 import { formatDriveImageUrl, getGSheetConfig, syncFromGoogleSheetUrl } from '../utils/googleSheetsSync';
 import { TabType } from './BottomNav';
 import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archive, Eye, Search, Filter, RefreshCw } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
+import { buildPointageFeedback } from '../utils/pointageStatus';
 
 interface AgentViewProps {
   currentUser: User;
@@ -71,6 +73,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
   }, [currentUser.id, todayCheckin?.photo, todayStr]);
 
   const { checkinDone, reportDone } = checkDailyStatus(currentUser.id, todayStr);
+  const feedback = buildPointageFeedback({ stage: checkinDone || checkinDoneLocal ? 'captured' : 'idle', gpsMessage: gpsInfo, geoBadge: geoBadge || undefined });
 
   const shopObj = getShopById(activeShopId || currentUser.permanentShopId);
   const shopName = shopObj ? shopObj.name : "Vodacom Flagship Gombe";
@@ -97,6 +100,13 @@ export const AgentView: React.FC<AgentViewProps> = ({
   const podiumTier = myTodayRank === 1 ? 'gold' : (myTodayRank === 2 ? 'silver' : (myTodayRank === 3 ? 'bronze' : null));
   const podiumLabel = myTodayTotal > 0 ? `#${myTodayRank}` : 'Non classé';
   const showPodium = true;
+  const evolutionData = [...agentReports]
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-6)
+    .map(rep => ({
+      label: rep.date.slice(5),
+      value: rep.priv + rep.roam + rep.bund
+    }));
 
   // All history leads registered by this agent
   const allAgentLeads = getLeads().filter(l => 
@@ -488,6 +498,26 @@ export const AgentView: React.FC<AgentViewProps> = ({
         </div>
       )}
 
+      <div className="glass-card p-4 border border-white/10">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Évolution</p>
+            <p className="text-xs font-black uppercase text-white">Derniers rapports</p>
+          </div>
+          <span className="text-[10px] font-black uppercase text-red-400">{evolutionData.length} jours</span>
+        </div>
+        <div className="mt-3 h-24 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={evolutionData}>
+              <XAxis dataKey="label" stroke="#71717a" fontSize={9} tickLine={false} axisLine={false} />
+              <YAxis stroke="#71717a" fontSize={9} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '10px', fontSize: '11px' }} />
+              <Line type="monotone" dataKey="value" stroke="#f43f5e" strokeWidth={2.2} dot={{ r: 3, fill: '#f43f5e' }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Pointage Unique Arrivée */}
       <div className="glass-card text-center p-6 border border-white/10">
         <h2 className="text-xs font-black uppercase tracking-widest text-red-500 mb-4">Pointage d'Arrivée GPS</h2>
@@ -513,7 +543,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
                 className="hidden"
               />
             </label>
-            {gpsInfo && <p className="text-[10px] font-black text-emerald-400">{gpsInfo}</p>}
+            {feedback.primaryText && <p className={`text-[10px] font-black ${feedback.badgeStatus === 'warn' ? 'text-amber-400' : (feedback.badgeStatus === 'unknown' ? 'text-zinc-300' : 'text-emerald-400')}`}>{feedback.primaryText}</p>}
           </div>
         )}
 
@@ -527,15 +557,15 @@ export const AgentView: React.FC<AgentViewProps> = ({
           </div>
         )}
 
-        {geoBadge && (
+        {feedback.showBadge && feedback.badgeText && (
           <div className={`mt-3 inline-flex items-center px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase ${
-            geoBadge.status === 'ok'
+            feedback.badgeStatus === 'ok'
               ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-              : (geoBadge.status === 'warn'
+              : (feedback.badgeStatus === 'warn'
                 ? 'bg-amber-500/10 text-amber-400 border-amber-500/30'
                 : 'bg-zinc-500/10 text-zinc-300 border-zinc-500/30')
           }`}>
-            {geoBadge.text}
+            {feedback.badgeText}
           </div>
         )}
       </div>
