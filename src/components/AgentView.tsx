@@ -75,7 +75,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
   const { checkinDone, reportDone } = checkDailyStatus(currentUser.id, todayStr);
   const feedback = buildPointageFeedback({ stage: checkinDone || checkinDoneLocal ? 'captured' : 'idle', gpsMessage: gpsInfo, geoBadge: geoBadge || undefined });
 
-  const shopObj = getShopById(activeShopId || currentUser.permanentShopId);
+  const shopObj = getShopById(currentUser.permanentShopId || activeShopId);
   const shopName = shopObj ? shopObj.name : "Vodacom Flagship Gombe";
 
   const allUsers = getUsers();
