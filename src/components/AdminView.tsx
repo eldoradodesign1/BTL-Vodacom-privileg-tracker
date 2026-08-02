@@ -494,29 +494,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           )}
 
           {manageSection === 'shops' && (
-            <div className="glass-card p-5 border border-white/10 space-y-4">
-              <div className="space-y-1">
-                <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Gestion des shops</h2>
-                <p className="text-[10px] text-gray-400 font-semibold">Création et affectation des ressources.</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  onClick={onOpenUserModal}
-                  className="btn-neon btn-dark py-3.5 text-xs flex items-center justify-center space-x-1.5"
-                >
-                  <UserPlus className="w-4 h-4 text-red-500" />
-                  <span>＋ Agent / Sup</span>
-                </button>
-                <button
-                  onClick={onOpenShopModal}
-                  className="btn-neon btn-dark py-3.5 text-xs flex items-center justify-center space-x-1.5"
-                >
-                  <Store className="w-4 h-4 text-amber-400" />
-                  <span>＋ Shop</span>
-                </button>
-              </div>
-
+            <div className="space-y-4">
               <div className="glass-card p-4 border border-white/10 space-y-3">
                 <h2 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center space-x-1.5">
                   <UserCheck className="w-4 h-4" />
@@ -581,6 +559,46 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     </button>
                   )}
                 </div>
+              </div>
+
+              <div className="space-y-3">
+                <h2 className="text-xs font-black uppercase text-gray-400 tracking-wider">
+                  Shops Disponibles ({shops.length})
+                </h2>
+
+                {shops.map(shop => {
+                  const assignedAgents = agents.filter(a => a.permanentShopId === shop.id);
+                  return (
+                    <div key={shop.id} className="glass-card p-4 border border-white/10 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-xs font-black uppercase text-white flex items-center space-x-2">
+                            <Store className="w-4 h-4 text-amber-400" />
+                            <span>{shop.name}</span>
+                          </h3>
+                          <p className="text-[10px] text-gray-400 font-semibold">{shop.city} • Type: {shop.type}</p>
+                        </div>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 text-amber-300 rounded-xl text-[9px] font-black uppercase border border-amber-500/40">
+                          <UserCheck className="w-3 h-3" />
+                          <span>{assignedAgents.length}</span>
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {assignedAgents.length === 0 ? (
+                          <span className="text-[10px] text-gray-500 italic">Aucune hôtesse affectée à ce shop</span>
+                        ) : (
+                          assignedAgents.map(ag => (
+                            <span key={ag.id} className="text-[9px] font-black uppercase px-2.5 py-1 bg-white/5 text-gray-300 rounded-lg border border-white/10 flex items-center space-x-1">
+                              <UserCheck className="w-3 h-3 text-emerald-400" />
+                              <span>{ag.name}</span>
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
