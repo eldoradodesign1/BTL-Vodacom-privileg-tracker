@@ -798,14 +798,27 @@ export function checkDailyStatus(agentId: string, dateISO: string) {
 
   const targetDate = toISO(dateISO);
   const currentUser = users.find((user) => user.id === agentId);
+  const normalizeIdentity = (value: string | undefined | null): string => {
+    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  };
+  const identityKeys = new Set<string>([
+    normalizeIdentity(agentId),
+    normalizeIdentity(currentUser?.id),
+    normalizeIdentity(currentUser?.name),
+    normalizeIdentity(currentUser?.phone)
+  ].filter(Boolean));
+
   const hasCheckin = checkins.some((record) => {
     if (toISO(record.timestamp) !== targetDate) return false;
     if (record.type !== 'IN') return false;
-    if (record.agent_id === agentId) return true;
-    if (currentUser && isMatchAgent(record.agent_id, currentUser)) return true;
-    return false;
+    const recordKey = normalizeIdentity(record.agent_id);
+    return recordKey ? identityKeys.has(recordKey) : false;
   });
-  const hasReport = reports.some(r => r.agent_id === agentId && toISO(r.date) === targetDate);
+  const hasReport = reports.some((record) => {
+    if (toISO(record.date) !== targetDate) return false;
+    const recordKey = normalizeIdentity(record.agent_id);
+    return recordKey ? identityKeys.has(recordKey) : false;
+  });
 
   return { checkinDone: hasCheckin, reportDone: hasReport };
 }
