@@ -263,240 +263,137 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </button>
       </div>
 
-      {/* --- SUB-TAB 1: GESTION --- */}
+      {/* --- SUB-TAB 1: GESTION / MONITORING --- */}
       {subTab === 'manage' && (
-        <div className="space-y-4 animate-pop">
-          {/* Creation Buttons */}
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={onOpenUserModal}
-              className="btn-neon btn-dark py-3.5 text-xs flex items-center justify-center space-x-1.5"
-            >
-              <UserPlus className="w-4 h-4 text-red-500" />
-              <span>＋ Agent / Sup</span>
-            </button>
-            <button
-              onClick={onOpenShopModal}
-              className="btn-neon btn-dark py-3.5 text-xs flex items-center justify-center space-x-1.5"
-            >
-              <Store className="w-4 h-4 text-amber-400" />
-              <span>＋ Shop</span>
-            </button>
-          </div>
-
-          {/* Assignment Management Box */}
-          <div className="glass-card p-4 border border-white/10 space-y-3">
-            <h2 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center space-x-1.5">
-              <UserCheck className="w-4 h-4" />
-              <span>Affectations Shop & Superviseur</span>
-            </h2>
-
-            <div className="space-y-2">
-              <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Sélectionner un utilisateur</label>
-                <select
-                  value={assignUser}
-                  onChange={(e) => setAssignUser(e.target.value)}
-                  className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
-                >
-                  <option value="">-- Choisir un utilisateur --</option>
-                  {allUsers.map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.name} ({u.role.toUpperCase()})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {assignUser && (
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Affecter au Shop</label>
-                    <select
-                      value={assignShop}
-                      onChange={(e) => setAssignShop(e.target.value)}
-                      className="w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
-                    >
-                      <option value="">-- Conserver shop --</option>
-                      {shops.map(s => (
-                        <option key={s.id} value={s.id}>{s.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Affecter au Superviseur</label>
-                    <select
-                      value={assignSupervisor}
-                      onChange={(e) => setAssignSupervisor(e.target.value)}
-                      className="w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
-                    >
-                      <option value="">-- Conserver sup --</option>
-                      {supervisors.map(sup => (
-                        <option key={sup.id} value={sup.id}>{sup.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-
-              {assignUser && (
-                <button
-                  onClick={handleSaveAssignments}
-                  className="w-full mt-2 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase shadow-md transition-all"
-                >
-                  Enregistrer l'affectation
-                </button>
-              )}
+        <div className="space-y-4 animate-pop pb-32">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-black text-white tracking-tight">
+                Monitoring <span className="text-red-500">Équipe</span>
+              </h1>
+              <p className="text-xs font-semibold text-gray-400 mt-0.5">
+                Suivi détaillé et historique individuel des hôtesses ({filteredMasterList.length})
+              </p>
             </div>
           </div>
 
-          <div className="glass-card p-5 border border-white/10 space-y-4">
-            <div className="space-y-1">
-              <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Définir les targets</h2>
-              <p className="text-[10px] text-gray-400 font-semibold">Saisissez manuellement ou glissez pour ajuster chaque valeur.</p>
-            </div>
-
-            <div className="grid gap-3">
-              {[
-                { key: 'privStd', label: 'Privilège', value: targetPrivilegeStd, setter: setTargetPrivilegeStd, max: 100, side: 'Standard' },
-                { key: 'privAir', label: 'Privilège', value: targetPrivilegeAir, setter: setTargetPrivilegeAir, max: 100, side: 'Aéroport' },
-                { key: 'roamStd', label: 'Roaming', value: targetRoamingStd, setter: setTargetRoamingStd, max: 50, side: 'Standard' },
-                { key: 'roamAir', label: 'Roaming', value: targetRoamingAir, setter: setTargetRoamingAir, max: 50, side: 'Aéroport' },
-                { key: 'bundleStd', label: 'Bundle', value: targetBundleStd, setter: setTargetBundleStd, max: 50, side: 'Standard' },
-                { key: 'bundleAir', label: 'Bundle', value: targetBundleAir, setter: setTargetBundleAir, max: 50, side: 'Aéroport' }
-              ].map((item) => (
-                <div key={item.key} className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <div className="mb-2 flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{item.label}</p>
-                      <p className="text-[10px] text-gray-500">{item.side}</p>
-                    </div>
-                    <div className="rounded-full border border-red-500/30 bg-red-600/10 px-2.5 py-1">
-                      <span className="text-[11px] font-black text-white">{item.value}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="range"
-                      min="0"
-                      max={item.max}
-                      step="1"
-                      value={item.value}
-                      onChange={(e) => item.setter(Number(e.target.value))}
-                      className="h-2.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-red-500"
-                      aria-label={`${item.label} ${item.side}`}
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      max={item.max}
-                      value={item.value}
-                      onChange={(e) => item.setter(Math.max(0, Math.min(item.max, Number(e.target.value || 0))))}
-                      className="w-16 rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <button onClick={handleSaveTarget} className="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase">Enregistrer le target</button>
+          <div className="relative">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+            <input
+              type="text"
+              placeholder="Rechercher une hôtesse ou un shop..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-black/60 border border-white/10 rounded-2xl pl-9 pr-3 py-2.5 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+            />
           </div>
 
-          {/* Master User Directory with Live Sparklines */}
-          <div className="space-y-2">
-            <h2 className="text-xs font-black uppercase tracking-wider text-gray-400 px-1">
-              Annuaire Master Hôtesses ({filteredMasterList.length})
-            </h2>
-
-            <div className="glass-card p-3 border border-white/10 space-y-2">
-              <div className="relative">
-                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Recherche nom ou numero..."
-                  className="w-full bg-black/60 border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { key: 'ALL', label: 'Toutes' },
-                    { key: 'Online', label: 'En ligne' },
-                    { key: 'Absent', label: 'Absents' },
-                    { key: 'Clôturé', label: 'Clôturés' }
-                  ].map(option => {
-                    const isActive = statusFilter === option.key;
-                    return (
-                      <button
-                        key={option.key}
-                        onClick={() => setStatusFilter(option.key as 'ALL' | 'Online' | 'Absent' | 'Clôturé')}
-                        className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase transition-all ${
-                          isActive
-                            ? 'bg-red-600 text-white border-red-500 shadow-lg'
-                            : 'bg-black/60 text-gray-300 border-white/10 hover:border-red-500/40 hover:text-white'
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-                <select
-                  value={supFilter}
-                  onChange={(e) => setSupFilter(e.target.value)}
-                  className="w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold"
-                >
-                  <option value="ALL">Tous les superviseurs</option>
-                  {supervisors.map(sup => <option key={sup.id} value={sup.id}>{sup.name}</option>)}
-                </select>
-              </div>
-              <div className="text-[10px] font-black uppercase text-gray-400 flex items-center space-x-1">
-                <Filter className="w-3 h-3" />
-                <span>Filtres instantanes actifs</span>
-              </div>
-            </div>
-
-            {filteredMasterList.map(agent => {
-              const statusBg = getStatusPalette(agent.status);
-
+          <div className="flex flex-wrap gap-2">
+            {[
+              { key: 'ALL', label: 'Toutes' },
+              { key: 'Online', label: 'En ligne' },
+              { key: 'Absent', label: 'Absents' },
+              { key: 'Clôturé', label: 'Clôturés' }
+            ].map(option => {
+              const isActive = statusFilter === option.key;
               return (
                 <button
-                  key={agent.id}
-                  type="button"
-                  onClick={() => onOpenAgentProfile(agent)}
-                  className={`w-full rounded-2xl border p-3 text-left transition-all ${statusBg} hover:opacity-90`}
+                  key={option.key}
+                  onClick={() => setStatusFilter(option.key as 'ALL' | 'Online' | 'Absent' | 'Clôturé')}
+                  className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase transition-all ${
+                    isActive
+                      ? 'bg-red-600 text-white border-red-500 shadow-lg'
+                      : 'bg-black/60 text-gray-300 border-white/10 hover:border-red-500/40 hover:text-white'
+                  }`}
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">{agent.shop}</p>
-                      <h3 className="text-xs font-black uppercase text-white">{agent.name}</h3>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`rounded-full border px-2.5 py-1 text-[9px] font-black uppercase ${statusBg}`}>
-                        {agent.status}
-                      </span>
-                      <span className="rounded-full border border-white/10 bg-black/20 px-2.5 py-1 text-[9px] font-black uppercase text-white/80">
-                        {agent.reportObj ? 'Rapport' : 'Aucun'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className={`rounded-xl border border-white/10 bg-black/20 px-2.5 py-1 text-[9px] font-black uppercase ${statusBg}`}>
-                      <div className="flex items-center gap-1">
-                        <FileText className="w-3 h-3" />
-                        <span>PDF</span>
-                      </div>
-                    </span>
-                    <span className={`rounded-xl border border-white/10 bg-black/20 px-2.5 py-1 text-[9px] font-black uppercase ${statusBg}`}>
-                      <div className="flex items-center gap-1">
-                        <Clock3 className="w-3 h-3" />
-                        <span>Historique</span>
-                      </div>
-                    </span>
-                  </div>
+                  {option.label}
                 </button>
+              );
+            })}
+          </div>
+
+          <div className="space-y-3">
+            {filteredMasterList.map(agent => {
+              const statusBg = getStatusPalette(agent.status);
+              const totalLeads = agent.stats.priv + agent.stats.roam + agent.stats.bund;
+
+              return (
+                <div key={agent.id} className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition-all">
+                  <div className="flex flex-wrap items-start justify-between gap-2 w-full">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-xs font-black uppercase text-white">{agent.name}</h3>
+                      </div>
+
+                      <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-wrap gap-1 mt-1">
+                        <MapPin className="w-3 h-3 text-blue-400" />
+                        <span>{agent.shop}</span>
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => {
+                          if (agent.status === 'Présent' || agent.status === 'Clôturé') {
+                            if (onOpenLocationModal) {
+                              onOpenLocationModal(agent);
+                            }
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg} ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
+                        title={agent.status === 'Présent' ? 'Voir la localisation de pointage' : (agent.status === 'Clôturé' ? 'Voir la localisation de clôture' : undefined)}
+                      >
+                        {agent.status}
+                      </button>
+
+                      {onOpenAgentProfile && (
+                        <button
+                          onClick={() => onOpenAgentProfile(agent)}
+                          className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
+                          title="Voir l'historique des rapports"
+                        >
+                          <NotebookText className="w-4 h-4" />
+                        </button>
+                      )}
+
+                      {agent.reportObj && (
+                        <button
+                          onClick={() => onOpenPdfModal(`report-id:${agent.reportObj.id}`)}
+                          className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
+                          title="Voir le rapport PDF"
+                        >
+                          <FileText className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {agent.status !== 'Absent' && (
+                    <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
+                      {[
+                        { label: 'Privilège', value: agent.stats.priv, colorClass: 'text-red-500' },
+                        { label: 'Roaming', value: agent.stats.roam, colorClass: 'text-amber-400' },
+                        { label: 'Bundles', value: agent.stats.bund, colorClass: 'text-blue-400' }
+                      ].map(tile => (
+                        <button
+                          key={tile.label}
+                          type="button"
+                          onClick={() => {
+                            if (agent.status === 'Présent' || agent.status === 'Clôturé') {
+                              if (onOpenLocationModal) {
+                                onOpenLocationModal(agent);
+                              }
+                            }
+                          }}
+                          className={`bg-white/5 p-2 rounded-xl ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
+                        >
+                          <span className="text-[8px] text-gray-400 uppercase block">{tile.label}</span>
+                          <span className={`${tile.colorClass} text-xs`}>{tile.value}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>

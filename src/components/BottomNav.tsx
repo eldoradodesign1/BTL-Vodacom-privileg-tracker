@@ -28,7 +28,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
   const getAdminLabel = () => {
     if (userRole === 'supervisor') return 'Shops';
-    return 'Admin';
+    return 'Gestion';
   };
 
   return (
