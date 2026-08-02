@@ -677,37 +677,87 @@ export const AdminView: React.FC<AdminViewProps> = ({
           )}
 
           {manageSection === 'targets' && (
-            <div className="glass-card p-5 border border-white/10 space-y-4">
-              <div className="space-y-1">
-                <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Targets</h2>
-                <p className="text-[10px] text-gray-400 font-semibold">Définition des objectifs standards et aéroport.</p>
+            <div className="glass-card border border-white/10 p-5 space-y-4">
+              <div className="space-y-1 text-left">
+                <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Définir les targets</h2>
+                <p className="text-[10px] text-gray-400 font-semibold">Les cibles de privilège, roaming et bundle sont centralisées ici pour les superviseurs.</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <label className="text-[10px] font-black uppercase text-gray-400">Privilege STD
-                  <input type="number" value={targetPrivilegeStd} onChange={(e) => setTargetPrivilegeStd(parseInt(e.target.value || '0', 10))} className="mt-1 w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold" />
-                </label>
-                <label className="text-[10px] font-black uppercase text-gray-400">Privilege AIR
-                  <input type="number" value={targetPrivilegeAir} onChange={(e) => setTargetPrivilegeAir(parseInt(e.target.value || '0', 10))} className="mt-1 w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold" />
-                </label>
-                <label className="text-[10px] font-black uppercase text-gray-400">Roaming STD
-                  <input type="number" value={targetRoamingStd} onChange={(e) => setTargetRoamingStd(parseInt(e.target.value || '0', 10))} className="mt-1 w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold" />
-                </label>
-                <label className="text-[10px] font-black uppercase text-gray-400">Roaming AIR
-                  <input type="number" value={targetRoamingAir} onChange={(e) => setTargetRoamingAir(parseInt(e.target.value || '0', 10))} className="mt-1 w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold" />
-                </label>
-                <label className="text-[10px] font-black uppercase text-gray-400">Bundle STD
-                  <input type="number" value={targetBundleStd} onChange={(e) => setTargetBundleStd(parseInt(e.target.value || '0', 10))} className="mt-1 w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold" />
-                </label>
-                <label className="text-[10px] font-black uppercase text-gray-400">Bundle AIR
-                  <input type="number" value={targetBundleAir} onChange={(e) => setTargetBundleAir(parseInt(e.target.value || '0', 10))} className="mt-1 w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold" />
-                </label>
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Standard</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <label className="text-[9px] font-black uppercase text-gray-400">Privilège
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={targetPrivilegeStd}
+                        onChange={(e) => setTargetPrivilegeStd(Math.max(0, Math.min(100, Number(e.target.value || 0))))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                      />
+                    </label>
+                    <label className="text-[9px] font-black uppercase text-gray-400">Roaming
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        value={targetRoamingStd}
+                        onChange={(e) => setTargetRoamingStd(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                      />
+                    </label>
+                    <label className="text-[9px] font-black uppercase text-gray-400">Bundle
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        value={targetBundleStd}
+                        onChange={(e) => setTargetBundleStd(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                      />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Aéroport</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <label className="text-[9px] font-black uppercase text-gray-400">Privilège
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        value={targetPrivilegeAir}
+                        onChange={(e) => setTargetPrivilegeAir(Math.max(0, Math.min(100, Number(e.target.value || 0))))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                      />
+                    </label>
+                    <label className="text-[9px] font-black uppercase text-gray-400">Roaming
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        value={targetRoamingAir}
+                        onChange={(e) => setTargetRoamingAir(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                      />
+                    </label>
+                    <label className="text-[9px] font-black uppercase text-gray-400">Bundle
+                      <input
+                        type="number"
+                        min="0"
+                        max="50"
+                        value={targetBundleAir}
+                        onChange={(e) => setTargetBundleAir(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                      />
+                    </label>
+                  </div>
+                </div>
               </div>
 
-              <button
-                onClick={handleSaveTarget}
-                className="w-full mt-1 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase shadow-md transition-all"
-              >
+              <button onClick={handleSaveTarget} className="w-full rounded-xl bg-red-600 px-3 py-2.5 text-[10px] font-black uppercase text-white">
                 Enregistrer les targets
               </button>
             </div>

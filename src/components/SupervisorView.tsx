@@ -760,56 +760,6 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
         </div>
       </div>
 
-      <div className="glass-card border border-white/10 p-5 space-y-4">
-        <div className="space-y-1">
-          <h2 className="text-xs font-black uppercase text-amber-400 tracking-wider">Définir les targets</h2>
-          <p className="text-[10px] text-gray-400 font-semibold">Saisissez manuellement ou glissez pour ajuster chaque valeur.</p>
-        </div>
-        <div className="grid gap-3">
-          {[
-            { key: 'privStd', label: 'Privilège', value: targetPrivilegeStd, setter: setTargetPrivilegeStd, max: 100, side: 'Standard' },
-            { key: 'privAir', label: 'Privilège', value: targetPrivilegeAir, setter: setTargetPrivilegeAir, max: 100, side: 'Aéroport' },
-            { key: 'roamStd', label: 'Roaming', value: targetRoamingStd, setter: setTargetRoamingStd, max: 50, side: 'Standard' },
-            { key: 'roamAir', label: 'Roaming', value: targetRoamingAir, setter: setTargetRoamingAir, max: 50, side: 'Aéroport' },
-            { key: 'bundleStd', label: 'Bundle', value: targetBundleStd, setter: setTargetBundleStd, max: 50, side: 'Standard' },
-            { key: 'bundleAir', label: 'Bundle', value: targetBundleAir, setter: setTargetBundleAir, max: 50, side: 'Aéroport' }
-          ].map((item) => (
-            <div key={item.key} className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{item.label}</p>
-                  <p className="text-[10px] text-gray-500">{item.side}</p>
-                </div>
-                <div className="rounded-full border border-red-500/30 bg-red-600/10 px-2.5 py-1">
-                  <span className="text-[11px] font-black text-white">{item.value}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="range"
-                  min="0"
-                  max={item.max}
-                  step="1"
-                  value={item.value}
-                  onChange={(e) => item.setter(Number(e.target.value))}
-                  className="h-2.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-red-500"
-                  aria-label={`${item.label} ${item.side}`}
-                />
-                <input
-                  type="number"
-                  min="0"
-                  max={item.max}
-                  value={item.value}
-                  onChange={(e) => item.setter(Math.max(0, Math.min(item.max, Number(e.target.value || 0))))}
-                  className="w-16 rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-        <button onClick={handleSaveTarget} className="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase">Enregistrer le target</button>
-      </div>
-
       {/* Podium Team */}
       <div className="glass-card border border-white/10 p-5">
         <div className="flex items-center justify-between mb-4">
