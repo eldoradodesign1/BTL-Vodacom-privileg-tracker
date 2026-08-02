@@ -7,6 +7,7 @@ import { UserPlus, Store, FileSpreadsheet, Eye, User as UserIcon, UserCheck, Fil
 import { formatAgentLocationLine } from '../utils/location';
 import { SupervisorProfileModal, SupervisorHostessSummary } from './Modals/SupervisorProfileModal';
 import { DateIconPicker } from './DateIconPicker';
+import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 
 interface AdminViewProps {
   currentUser: User;
@@ -93,6 +94,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
     acc[sup.id] = sup.name;
     return acc;
   }, {});
+  const reportDateList = [...new Set(allReports.map((r) => toISO(r.date)))].sort();
+  const consolidationMinDate = reportDateList[0] || todayIso;
+  const consolidationMaxDate = reportDateList[reportDateList.length - 1] || todayIso;
+  const consolidationStartDate = startDate < consolidationMinDate
+    ? consolidationMinDate
+    : (startDate > consolidationMaxDate ? consolidationMaxDate : startDate);
+  const consolidationEndDate = endDate < consolidationMinDate
+    ? consolidationMinDate
+    : (endDate > consolidationMaxDate ? consolidationMaxDate : endDate);
+  const filteredReportsForPeriod = allReports
+    .filter((report) => report.date >= consolidationStartDate && report.date <= consolidationEndDate)
+    .sort((a, b) => b.date.localeCompare(a.date));
   const usersById = allUsers.reduce<Record<string, User>>((acc, user) => {
     acc[user.id] = user;
     return acc;
@@ -174,7 +187,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   const handleGenerateBatchPDF = async () => {
     setLoading(true);
-    const selectedReports = allReports.filter(r => r.date >= startDate && r.date <= endDate);
+    const selectedReports = filteredReportsForPeriod;
     const rows = selectedReports.map(r => ({
       date: r.date,
       agent: r.agent_name,
@@ -1199,20 +1212,16 @@ export const AdminView: React.FC<AdminViewProps> = ({
           {/* Filter Bar */}
           <div className="glass-card p-4 border border-white/10 space-y-3">
             <p className="text-[10px] font-black uppercase text-gray-400">Filtres de Consolidation Périodique</p>
-            <div className="grid grid-cols-2 gap-2">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold"
-              />
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold"
-              />
-            </div>
+            <DateRangeKnobSlider
+              minDate={consolidationMinDate}
+              maxDate={consolidationMaxDate}
+              startDate={consolidationStartDate}
+              endDate={consolidationEndDate}
+              onChange={({ startDate: nextStart, endDate: nextEnd }) => {
+                setStartDate(nextStart);
+                setEndDate(nextEnd);
+              }}
+            />
           </div>
 
           {/* Batch Generation Button */}
@@ -1228,10 +1237,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
           {/* Master Reports List */}
           <div className="space-y-2 pt-2">
             <h2 className="text-xs font-black uppercase tracking-wider text-gray-400 px-1">
-              Rapports Soumis ({allReports.length})
+              Rapports Soumis ({filteredReportsForPeriod.length})
             </h2>
 
-            {allReports.map(rep => (
+            {filteredReportsForPeriod.map(rep => (
               <div key={rep.id} className="glass-card p-4 border border-white/10 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-black uppercase text-white">{rep.agent_name}</p>
