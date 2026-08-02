@@ -33,8 +33,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   onOpenLocationModal,
   onRefreshData
 }) => {
-  const [subTab, setSubTab] = useState<'manage' | 'stats' | 'leads' | 'reports'>(
-    activeTab === 'home' ? 'stats' : (activeTab === 'tab3' ? 'reports' : 'manage')
+  const [subTab, setSubTab] = useState<'manage' | 'monitoring' | 'stats' | 'leads' | 'reports'>(
+    activeTab === 'home' ? 'stats' : (activeTab === 'tab3' ? 'reports' : (activeTab === 'admin' ? 'manage' : 'monitoring'))
   );
   const [startDate, setStartDate] = useState('2026-07-01');
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
@@ -107,7 +107,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   React.useEffect(() => {
     if (activeTab === 'home') setSubTab('stats');
     else if (activeTab === 'tab3') setSubTab('reports');
-    else if (activeTab === 'tab2' || activeTab === 'admin') setSubTab('manage');
+    else if (activeTab === 'admin') setSubTab('manage');
+    else if (activeTab === 'tab2') setSubTab('monitoring');
   }, [activeTab]);
 
   const handleGenerateBatchPDF = async () => {
@@ -264,8 +265,103 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </div>
       )}
 
-      {/* --- SUB-TAB 1: GESTION / MONITORING --- */}
+      {/* --- SUB-TAB 1: GESTION --- */}
       {subTab === 'manage' && (
+        <div className="space-y-4 animate-pop">
+          <div className="glass-card p-5 border border-white/10 space-y-4">
+            <div className="space-y-1">
+              <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Gestion de l'administration</h2>
+              <p className="text-[10px] text-gray-400 font-semibold">Les outils de gestion restent concentrés ici.</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={onOpenUserModal}
+                className="btn-neon btn-dark py-3.5 text-xs flex items-center justify-center space-x-1.5"
+              >
+                <UserPlus className="w-4 h-4 text-red-500" />
+                <span>＋ Agent / Sup</span>
+              </button>
+              <button
+                onClick={onOpenShopModal}
+                className="btn-neon btn-dark py-3.5 text-xs flex items-center justify-center space-x-1.5"
+              >
+                <Store className="w-4 h-4 text-amber-400" />
+                <span>＋ Shop</span>
+              </button>
+            </div>
+
+            <div className="glass-card p-4 border border-white/10 space-y-3">
+              <h2 className="text-xs font-black uppercase tracking-wider text-amber-400 flex items-center space-x-1.5">
+                <UserCheck className="w-4 h-4" />
+                <span>Affectations Shop & Superviseur</span>
+              </h2>
+
+              <div className="space-y-2">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Sélectionner un utilisateur</label>
+                  <select
+                    value={assignUser}
+                    onChange={(e) => setAssignUser(e.target.value)}
+                    className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+                  >
+                    <option value="">-- Choisir un utilisateur --</option>
+                    {allUsers.map(u => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.role.toUpperCase()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {assignUser && (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Affecter au Shop</label>
+                      <select
+                        value={assignShop}
+                        onChange={(e) => setAssignShop(e.target.value)}
+                        className="w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+                      >
+                        <option value="">-- Conserver shop --</option>
+                        {shops.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Affecter au Superviseur</label>
+                      <select
+                        value={assignSupervisor}
+                        onChange={(e) => setAssignSupervisor(e.target.value)}
+                        className="w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
+                      >
+                        <option value="">-- Conserver sup --</option>
+                        {supervisors.map(sup => (
+                          <option key={sup.id} value={sup.id}>{sup.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {assignUser && (
+                  <button
+                    onClick={handleSaveAssignments}
+                    className="w-full mt-2 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase shadow-md transition-all"
+                  >
+                    Enregistrer l'affectation
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- SUB-TAB 1: MONITORING --- */}
+      {subTab === 'monitoring' && (
         <div className="space-y-4 animate-pop pb-32">
           <div className="flex justify-between items-center">
             <div>
@@ -316,7 +412,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div className="space-y-3">
             {filteredMasterList.map(agent => {
               const statusBg = getStatusPalette(agent.status);
-              const totalLeads = agent.stats.priv + agent.stats.roam + agent.stats.bund;
 
               return (
                 <div key={agent.id} className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition-all">
