@@ -184,6 +184,7 @@ body.theme-light .modal-sheet {
 
 body.theme-light .brand-text {
   background: linear-gradient(180deg, #0f172a 0%, #334155 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -309,6 +310,7 @@ body::after {
   font-weight: 900;
   font-style: italic;
   background: linear-gradient(180deg, #ffffff 0%, #a1a1aa 100%);
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }

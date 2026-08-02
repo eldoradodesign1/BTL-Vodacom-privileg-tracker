@@ -617,6 +617,37 @@ export function getTargetsByShop(shopId: string): ShopTargets {
   return { privilege: 20, roaming: 3, bundle: 20 };
 }
 
+export function saveTargetDefinition(payload: {
+  user_id: string;
+  date: string;
+  target_privilege_std: number;
+  target_privilege_air: number;
+  target_roaming_std: number;
+  target_roaming_air: number;
+  target_bundle_std: number;
+  target_bundle_air: number;
+}): void {
+  const key = `vodacom_targets_${payload.user_id}_${payload.date}`;
+  const current = loadItem<Record<string, unknown>>(key, {});
+  const next = {
+    ...current,
+    ...payload,
+    updated_at: new Date().toISOString()
+  };
+  saveItem(key, next);
+}
+
+export function getEffectiveTargetsForDate(date: string, shopId?: string): ShopTargets {
+  const shop = shopId ? getShopById(shopId) : undefined;
+  const isAirport = shop?.type === 'Airport';
+  const key = `vodacom_targets_${date}`;
+  const targetData = loadItem<Record<string, unknown>>(key, {});
+  const privilege = isAirport ? Number(targetData.target_privilege_air ?? 20) : Number(targetData.target_privilege_std ?? 20);
+  const roaming = isAirport ? Number(targetData.target_roaming_air ?? 15) : Number(targetData.target_roaming_std ?? 3);
+  const bundle = isAirport ? Number(targetData.target_bundle_air ?? 10) : Number(targetData.target_bundle_std ?? 10);
+  return { privilege, roaming, bundle };
+}
+
 // --- CHECKINS ---
 export function getCheckins(): Checkin[] {
   const items: Checkin[] = loadItem(STORAGE_KEYS.CHECKINS, INITIAL_CHECKINS);
