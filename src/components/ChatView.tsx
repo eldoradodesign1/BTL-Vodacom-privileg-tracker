@@ -104,7 +104,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onDataChanged }
       </div>
 
       {/* Input Area */}
-      <form onSubmit={handleSend} className="chat-input-shell shrink-0 flex items-center space-x-2 bg-white/5 border border-white/10 rounded-2xl p-2">
+      <form onSubmit={handleSend} className="chat-input-shell sticky bottom-0 z-20 mt-3 shrink-0 flex items-center space-x-2 bg-zinc-950/95 backdrop-blur border border-white/10 rounded-2xl p-2 shadow-[0_-10px_30px_rgba(0,0,0,0.25)]">
         <input
           type="text"
           value={inputText}

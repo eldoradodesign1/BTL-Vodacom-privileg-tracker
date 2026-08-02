@@ -93,8 +93,8 @@ function buildEvolutionSvg(targetValues: number[], activationValues: number[]): 
         ${activationPoints ? `<polyline fill="none" stroke="#dc2626" stroke-width="3" points="${activationPoints}" />` : ''}
       </svg>
       <div style="font-size:10px; color:#e2e8f0; margin-top:4px; display:flex; gap:10px; flex-wrap:wrap;">
-        <span>🎯 Targets cum.: <b>${targetLast}</b></span>
-        <span>📈 Activations cum.: <b>${activationLast}</b></span>
+        <span>🎯 Targets journaliers: <b>${targetLast}</b></span>
+        <span>📈 Activations journalières: <b>${activationLast}</b></span>
       </div>
     </div>
   `;

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Shop, AgentMasterStatus } from '../types';
-import { getSupervisorLiveView, getReports, getUsers, getLeads, updateUserShopAssignment, resolveStoredPhotoUrl } from '../utils/storage';
+import { getSupervisorLiveView, getReports, getUsers, getLeads, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate } from '../utils/storage';
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
 import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera } from 'lucide-react';
@@ -33,6 +33,12 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [assigningUserId, setAssigningUserId] = useState<string | null>(null);
   const [assigningShopId, setAssigningShopId] = useState<string>('');
   const [inlineAssignShop, setInlineAssignShop] = useState<Record<string, string>>({});
+  const [targetPrivilegeStd, setTargetPrivilegeStd] = useState(20);
+  const [targetPrivilegeAir, setTargetPrivilegeAir] = useState(20);
+  const [targetRoamingStd, setTargetRoamingStd] = useState(3);
+  const [targetRoamingAir, setTargetRoamingAir] = useState(15);
+  const [targetBundleStd, setTargetBundleStd] = useState(10);
+  const [targetBundleAir, setTargetBundleAir] = useState(10);
   const [selectedLocationAgent, setSelectedLocationAgent] = useState<{ id: string; name: string; shop: string; status?: 'Présent' | 'Clôturé' | 'Absent'; arrivalTime?: string; departureTime?: string; mapsIn?: string; mapsOut?: string; lat?: number; long?: number } | null>(null);
 
   const teamData = getSupervisorLiveView(currentUser.id, selectedDate);
@@ -41,6 +47,21 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
   const activeCount = teamData.filter(t => t.status !== 'Absent').length;
   const closedCount = teamData.filter(t => t.status === 'Clôturé').length;
+
+  const handleSaveTarget = () => {
+    const today = new Date().toISOString().split('T')[0];
+    saveTargetDefinition({
+      user_id: currentUser.id,
+      date: today,
+      target_privilege_std: targetPrivilegeStd,
+      target_privilege_air: targetPrivilegeAir,
+      target_roaming_std: targetRoamingStd,
+      target_roaming_air: targetRoamingAir,
+      target_bundle_std: targetBundleStd,
+      target_bundle_air: targetBundleAir
+    });
+    if (onRefreshData) onRefreshData();
+  };
 
   // Podium sorting only when there is real activity
   const sortedPodium = [...teamData]
@@ -543,6 +564,44 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           <span className="text-[9px] font-black uppercase text-gray-400 block mb-1">Clôtures Reçues</span>
           <span className="text-2xl font-black text-emerald-400">{closedCount}</span>
         </div>
+      </div>
+
+      <div className="glass-card border border-white/10 p-5 space-y-4">
+        <div className="space-y-1">
+          <h2 className="text-xs font-black uppercase text-amber-400 tracking-wider">Définir les targets</h2>
+          <p className="text-[10px] text-gray-400 font-semibold">Les valeurs sont enregistrées aujourd’hui pour les catégories Standard et Aéroport.</p>
+        </div>
+        <div className="space-y-3">
+          {[
+            { label: 'Privilège - Standard', value: targetPrivilegeStd, setter: setTargetPrivilegeStd, max: 100 },
+            { label: 'Privilège - Aéroport', value: targetPrivilegeAir, setter: setTargetPrivilegeAir, max: 100 },
+            { label: 'Roaming - Standard', value: targetRoamingStd, setter: setTargetRoamingStd, max: 50 },
+            { label: 'Roaming - Aéroport', value: targetRoamingAir, setter: setTargetRoamingAir, max: 50 },
+            { label: 'Bundle - Standard', value: targetBundleStd, setter: setTargetBundleStd, max: 50 },
+            { label: 'Bundle - Aéroport', value: targetBundleAir, setter: setTargetBundleAir, max: 50 }
+          ].map((item) => (
+            <div key={item.label} className="space-y-1.5">
+              <div className="flex items-center justify-between text-[10px] font-black uppercase text-gray-400">
+                <span>{item.label}</span>
+                <span className="text-white">[{item.value}]</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max={item.max}
+                value={item.value}
+                onChange={(e) => item.setter(Number(e.target.value))}
+                className="w-full accent-red-500"
+                aria-label={item.label}
+              />
+              <div className="flex justify-between text-[9px] text-gray-500">
+                <span>0</span>
+                <span>{item.max}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <button onClick={handleSaveTarget} className="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase">Enregistrer le target</button>
       </div>
 
       {/* Podium Team */}

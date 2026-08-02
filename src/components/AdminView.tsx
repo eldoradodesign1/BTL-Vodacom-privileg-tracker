@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { Shop, AgentMasterStatus } from '../types';
-import { getAdminMasterList, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl } from '../utils/storage';
+import { Shop, AgentMasterStatus, User } from '../types';
+import { getAdminMasterList, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl, saveTargetDefinition } from '../utils/storage';
 import { TabType } from './BottomNav';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { UserPlus, Store, FileSpreadsheet, Eye, NotebookText, UserCheck, FileText, Search, Filter, MapPin } from 'lucide-react';
 import { formatAgentLocationLine } from '../utils/location';
 
 interface AdminViewProps {
+  currentUser: User;
   shops: Shop[];
   activeTab?: TabType;
   onSimulateRole: (role: any) => void;
@@ -20,6 +21,7 @@ interface AdminViewProps {
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({
+  currentUser,
   shops,
   activeTab = 'admin',
   onSimulateRole,
@@ -55,6 +57,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Online' | 'Absent' | 'Clôturé'>('ALL');
   const [supFilter, setSupFilter] = useState('ALL');
   const [inlineAssignShop, setInlineAssignShop] = useState<Record<string, string>>({});
+  const [targetPrivilegeStd, setTargetPrivilegeStd] = useState(20);
+  const [targetPrivilegeAir, setTargetPrivilegeAir] = useState(20);
+  const [targetRoamingStd, setTargetRoamingStd] = useState(3);
+  const [targetRoamingAir, setTargetRoamingAir] = useState(15);
+  const [targetBundleStd, setTargetBundleStd] = useState(10);
+  const [targetBundleAir, setTargetBundleAir] = useState(10);
 
   // User Assignment State
   const [assignUser, setAssignUser] = useState('');
@@ -184,6 +192,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (onRefreshData) onRefreshData();
   };
 
+  const handleSaveTarget = () => {
+    const today = new Date().toISOString().split('T')[0];
+    saveTargetDefinition({
+      user_id: currentUser.id,
+      date: today,
+      target_privilege_std: targetPrivilegeStd,
+      target_privilege_air: targetPrivilegeAir,
+      target_roaming_std: targetRoamingStd,
+      target_roaming_air: targetRoamingAir,
+      target_bundle_std: targetBundleStd,
+      target_bundle_air: targetBundleAir
+    });
+    if (onRefreshData) onRefreshData();
+  };
+
   return (
     <div className="space-y-6 animate-pop pb-32">
       {/* Admin Title */}
@@ -237,31 +260,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
       {/* --- SUB-TAB 1: GESTION --- */}
       {subTab === 'manage' && (
         <div className="space-y-4 animate-pop">
-          {/* Simulation Switcher Box */}
-          <div className="glass-card p-4 border border-white/10 text-center">
-            <p className="text-[10px] font-black uppercase text-gray-400 mb-3">Changer de vue instantanée</p>
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                onClick={() => onSimulateRole('admin')}
-                className="py-2 bg-red-600 text-white rounded-xl text-xs font-black uppercase shadow-md"
-              >
-                ADMIN
-              </button>
-              <button
-                onClick={() => onSimulateRole('supervisor')}
-                className="py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-xs font-black uppercase border border-white/10"
-              >
-                SUP
-              </button>
-              <button
-                onClick={() => onSimulateRole('agent')}
-                className="py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-xs font-black uppercase border border-white/10"
-              >
-                AGENT
-              </button>
-            </div>
-          </div>
-
           {/* Creation Buttons */}
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -345,6 +343,44 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </button>
               )}
             </div>
+          </div>
+
+          <div className="glass-card p-5 border border-white/10 space-y-4">
+            <div className="space-y-1">
+              <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Définir les targets</h2>
+              <p className="text-[10px] text-gray-400 font-semibold">Les valeurs sont enregistrées aujourd’hui pour les catégories Standard et Aéroport.</p>
+            </div>
+            <div className="space-y-3">
+              {[
+                { label: 'Privilège - Standard', value: targetPrivilegeStd, setter: setTargetPrivilegeStd, max: 100 },
+                { label: 'Privilège - Aéroport', value: targetPrivilegeAir, setter: setTargetPrivilegeAir, max: 100 },
+                { label: 'Roaming - Standard', value: targetRoamingStd, setter: setTargetRoamingStd, max: 50 },
+                { label: 'Roaming - Aéroport', value: targetRoamingAir, setter: setTargetRoamingAir, max: 50 },
+                { label: 'Bundle - Standard', value: targetBundleStd, setter: setTargetBundleStd, max: 50 },
+                { label: 'Bundle - Aéroport', value: targetBundleAir, setter: setTargetBundleAir, max: 50 }
+              ].map((item) => (
+                <div key={item.label} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-[10px] font-black uppercase text-gray-400">
+                    <span>{item.label}</span>
+                    <span className="text-white">[{item.value}]</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max={item.max}
+                    value={item.value}
+                    onChange={(e) => item.setter(Number(e.target.value))}
+                    className="w-full accent-red-500"
+                    aria-label={item.label}
+                  />
+                  <div className="flex justify-between text-[9px] text-gray-500">
+                    <span>0</span>
+                    <span>{item.max}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button onClick={handleSaveTarget} className="w-full py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase">Enregistrer le target</button>
           </div>
 
           {/* Master User Directory with Live Sparklines */}

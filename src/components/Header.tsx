@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { User, NotificationItem } from '../types';
 import { Bell, LogOut, Shield, FileSpreadsheet, Palette } from 'lucide-react';
 
+export type ThemeMode = 'classic' | 'dark' | 'light' | 'anthracite' | 'rubis' | 'silver' | 'sapphire' | 'emerald' | 'gold' | 'glass';
+
 interface HeaderProps {
   user: User;
   notifications: NotificationItem[];
@@ -14,8 +16,8 @@ interface HeaderProps {
   onLogout: () => void;
   onOpenPasswordModal: () => void;
   onOpenGSheetModal?: () => void;
-  theme?: 'classic' | 'dark' | 'light';
-  onSetTheme?: (theme: 'classic' | 'dark' | 'light') => void;
+  theme?: ThemeMode;
+  onSetTheme?: (theme: ThemeMode) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -120,6 +122,13 @@ export const Header: React.FC<HeaderProps> = ({
                   theme === 'light' ? 'bg-white border-zinc-200 text-zinc-900' : 'bg-zinc-900 border-white/10 text-white'
                 }`}>
                   {[
+                    { key: 'anthracite', label: 'Anthracite' },
+                    { key: 'rubis', label: 'Rubis' },
+                    { key: 'silver', label: 'Silver' },
+                    { key: 'sapphire', label: 'Saphyr' },
+                    { key: 'emerald', label: 'Émeraude' },
+                    { key: 'gold', label: 'Gold' },
+                    { key: 'glass', label: 'Glass' },
                     { key: 'classic', label: 'Classic' },
                     { key: 'dark', label: 'Sombre' },
                     { key: 'light', label: 'Clair' }
@@ -127,7 +136,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <button
                       key={opt.key}
                       onClick={() => {
-                        onSetTheme(opt.key as 'classic' | 'dark' | 'light');
+                        onSetTheme(opt.key as ThemeMode);
                         setShowThemeMenu(false);
                       }}
                       className={`w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase transition-all ${

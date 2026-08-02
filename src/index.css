@@ -27,6 +27,11 @@
   --radius-md: 16px;
 }
 
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -38,6 +43,30 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+select {
+  appearance: none;
 }
 
 body.theme-classic {
@@ -68,10 +97,78 @@ body.theme-dark {
   color: #ffffff !important;
 }
 
+body.theme-anthracite {
+  background-color: #111317 !important;
+  background-image: linear-gradient(135deg, #0b0d11 0%, #1a1f27 42%, #2b2320 100%) !important;
+  color: #f8fafc !important;
+}
+
+body.theme-rubis {
+  background-color: #220b11 !important;
+  background-image: linear-gradient(135deg, #2a0d15 0%, #7f1d1d 45%, #fb7185 100%) !important;
+  color: #fff7f7 !important;
+}
+
+body.theme-silver {
+  background-color: #0f172a !important;
+  background-image: linear-gradient(135deg, #0f172a 0%, #334155 46%, #dbeafe 100%) !important;
+  color: #f8fafc !important;
+}
+
+body.theme-sapphire {
+  background-color: #071120 !important;
+  background-image: linear-gradient(135deg, #071120 0%, #1d4ed8 48%, #93c5fd 100%) !important;
+  color: #f8fbff !important;
+}
+
+body.theme-emerald {
+  background-color: #04160f !important;
+  background-image: linear-gradient(135deg, #03110b 0%, #166534 48%, #86efac 100%) !important;
+  color: #f0fdf4 !important;
+}
+
+body.theme-gold {
+  background-color: #23150c !important;
+  background-image: linear-gradient(135deg, #23150c 0%, #92400e 50%, #fde68a 100%) !important;
+  color: #fffef7 !important;
+}
+
+body.theme-glass {
+  background-color: #0b1120 !important;
+  background-image: linear-gradient(135deg, #111827 0%, #1f2937 45%, #e2e8f0 100%) !important;
+  color: #f8fafc !important;
+}
+
 body.theme-light {
   background-color: #f3f4f6 !important;
   background-image: linear-gradient(145deg, #f8fafc 0%, #eef2ff 38%, #fdecec 100%) !important;
   color: #111827 !important;
+}
+
+body.theme-light .glass-card,
+body.theme-silver .glass-card,
+body.theme-glass .glass-card,
+body.theme-anthracite .glass-card,
+body.theme-rubis .glass-card,
+body.theme-sapphire .glass-card,
+body.theme-emerald .glass-card,
+body.theme-gold .glass-card {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.24);
+}
+
+body.theme-light .glass-card,
+body.theme-silver .glass-card,
+body.theme-glass .glass-card,
+body.theme-anthracite .glass-card,
+body.theme-rubis .glass-card,
+body.theme-sapphire .glass-card,
+body.theme-emerald .glass-card,
+body.theme-gold .glass-card {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 16px 38px rgba(15, 23, 42, 0.24);
 }
 
 body.theme-light .glass-card {
@@ -318,10 +415,12 @@ body::after {
   background-image: var(--podium-watermark, none);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 44% auto;
-  opacity: 0.30;
+  background-size: 72% auto;
+  opacity: 0.48;
   pointer-events: none;
   mix-blend-mode: screen;
+  filter: saturate(1.15) contrast(1.05);
+  transform: rotate(-6deg);
   z-index: 0;
 }
 
@@ -345,6 +444,24 @@ body::after {
   border-color: rgba(205, 127, 50, 0.45);
   background: linear-gradient(135deg, rgba(205, 127, 50, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
 }
+
+.podium-bronze::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('../Trophees/Trophee_bronze.png');
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  background-size: 72% auto;
+  opacity: 0.48;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  filter: saturate(1.15) contrast(1.05);
+  transform: rotate(-6deg);
+  z-index: 0;
+}
+
+
 
 .podium-neutral {
   border-color: rgba(255, 255, 255, 0.12);
