@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { Lead, DailyReport, Checkin, User, Shop, UserRole, ChatMessage } from '../types';
-import { getLeads, getReports, getCheckins, getUsers, getShops, saveLeads, saveReports, saveCheckins, saveUsers, saveShops } from './storage';
+import { getLeads, getReports, getCheckins, getUsers, getShops, saveLeads, saveReports, saveCheckins, saveUsers, saveShops, toISO } from './storage';
 
 const GSHEET_CONFIG_KEY = 'vodacom_gsheet_config';
 
@@ -167,6 +167,97 @@ export function formatDriveImageUrl(rawUrl: string | undefined | null): string {
     return `https://lh3.googleusercontent.com/d/${fileId}`;
   }
   return rawUrl;
+}
+
+function parsePhotoList(raw: string): string[] {
+  if (!raw) return [];
+  const trimmed = raw.trim();
+  if (!trimmed) return [];
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (Array.isArray(parsed)) {
+      return parsed.map((v) => String(v || '').trim()).filter(Boolean);
+    }
+  } catch {}
+
+  const split = trimmed
+    .split(/[|;,\n]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  return split;
+}
+
+function buildReportMergeKey(report: Partial<DailyReport>): string {
+  const dateKey = report.date ? toISO(report.date) : '';
+  const agentKey = (report.agent_id || '').trim().toLowerCase();
+  const shopKey = (report.shop_id || '').trim().toLowerCase();
+  const nameKey = (report.agent_name || '').trim().toLowerCase();
+  return `${dateKey}::${agentKey}::${shopKey}::${nameKey}`;
+}
+
+function buildCheckinMergeKey(checkin: Partial<Checkin>): string {
+  const agentKey = (checkin.agent_id || '').trim().toLowerCase();
+  const typeKey = (checkin.type || '').trim().toUpperCase();
+  const tsKey = (checkin.timestamp || '').trim();
+  return `${agentKey}::${typeKey}::${tsKey}`;
+}
+
+function mergeReportsPreservingMedia(incomingReports: DailyReport[]): DailyReport[] {
+  const existingReports = getReports();
+  const existingById = new Map(existingReports.map((report) => [report.id, report]));
+  const existingByKey = new Map(existingReports.map((report) => [buildReportMergeKey(report), report]));
+
+  const merged = incomingReports.map((incoming) => {
+    const existing = existingById.get(incoming.id) || existingByKey.get(buildReportMergeKey(incoming));
+    if (!existing) return incoming;
+
+    return {
+      ...existing,
+      ...incoming,
+      id: incoming.id || existing.id,
+      pointage_photo: incoming.pointage_photo || existing.pointage_photo,
+      photos: incoming.photos && incoming.photos.length > 0 ? incoming.photos : (existing.photos || []),
+      drive_pdf_url: incoming.drive_pdf_url || existing.drive_pdf_url,
+      report_photos_drive_urls: incoming.report_photos_drive_urls && incoming.report_photos_drive_urls.length > 0
+        ? incoming.report_photos_drive_urls
+        : (existing.report_photos_drive_urls || []),
+      pdf_url: incoming.pdf_url || existing.pdf_url
+    };
+  });
+
+  const seenIds = new Set(merged.map((report) => report.id));
+  const seenKeys = new Set(merged.map((report) => buildReportMergeKey(report)));
+
+  const extras = existingReports.filter((report) => !seenIds.has(report.id) && !seenKeys.has(buildReportMergeKey(report)));
+  return [...merged, ...extras];
+}
+
+function mergeCheckinsPreservingMedia(incomingCheckins: Checkin[]): Checkin[] {
+  const existingCheckins = getCheckins();
+  const existingById = new Map(existingCheckins.map((checkin) => [checkin.id, checkin]));
+  const existingByKey = new Map(existingCheckins.map((checkin) => [buildCheckinMergeKey(checkin), checkin]));
+
+  const merged = incomingCheckins.map((incoming) => {
+    const existing = existingById.get(incoming.id) || existingByKey.get(buildCheckinMergeKey(incoming));
+    if (!existing) return incoming;
+
+    return {
+      ...existing,
+      ...incoming,
+      id: incoming.id || existing.id,
+      photo: incoming.photo || existing.photo,
+      photo_drive_url: incoming.photo_drive_url || existing.photo_drive_url,
+      status: incoming.status || existing.status || 'synced'
+    };
+  });
+
+  const seenIds = new Set(merged.map((checkin) => checkin.id));
+  const seenKeys = new Set(merged.map((checkin) => buildCheckinMergeKey(checkin)));
+
+  const extras = existingCheckins.filter((checkin) => !seenIds.has(checkin.id) && !seenKeys.has(buildCheckinMergeKey(checkin)));
+  return [...merged, ...extras];
 }
 
 /**
@@ -587,6 +678,12 @@ export function parseReportsFromRows(rows: string[][]): DailyReport[] {
   const bundIdx = headers.findIndex(h => h.includes('bund') || h.includes('pack'));
   const amountIdx = headers.findIndex(h => h.includes('montant') || h.includes('amount') || h.includes('ca'));
   const commentIdx = headers.findIndex(h => h.includes('comment') || h.includes('remarque') || h.includes('note'));
+  const idIdx = headers.findIndex(h => h === 'id' || h.includes('report_id') || h.includes('uuid'));
+  const shopIdIdx = headers.findIndex(h => h === 'shop_id' || h.includes('id shop'));
+  const shopNameIdx = headers.findIndex(h => h === 'shop_name' || h.includes('nom shop') || h.includes('boutique'));
+  const pointagePhotoIdx = headers.findIndex(h => h.includes('pointage_photo') || h.includes('photo_pointage'));
+  const reportPhotosIdx = headers.findIndex(h => h.includes('report_photos') || h.includes('photos_report') || h === 'photos');
+  const drivePdfIdx = headers.findIndex(h => h.includes('drive_pdf_url') || h.includes('pdf_drive') || h.includes('report_url'));
 
   const users = getUsers();
   const shops = getShops();
@@ -596,7 +693,7 @@ export function parseReportsFromRows(rows: string[][]): DailyReport[] {
     const row = rows[i];
     if (!row || row.length < 3) continue;
 
-    const dateVal = (dateIdx >= 0 && row[dateIdx]) ? row[dateIdx] : new Date().toISOString().split('T')[0];
+    const dateVal = toISO((dateIdx >= 0 && row[dateIdx]) ? row[dateIdx] : new Date().toISOString().split('T')[0]);
     const privVal = (privIdx >= 0 && row[privIdx]) ? (parseInt(row[privIdx], 10) || 0) : 0;
     const roamVal = (roamIdx >= 0 && row[roamIdx]) ? (parseInt(row[roamIdx], 10) || 0) : 0;
     const bundVal = (bundIdx >= 0 && row[bundIdx]) ? (parseInt(row[bundIdx], 10) || 0) : 0;
@@ -608,10 +705,19 @@ export function parseReportsFromRows(rows: string[][]): DailyReport[] {
       const match = users.find(u => u.name.toLowerCase().includes(row[agentIdx].toLowerCase()) || u.id === row[agentIdx]);
       if (match) agentObj = match;
     }
-    const shopObj = (agentObj.permanentShopId ? shops.find(s => s.id === agentObj.permanentShopId) : null) || shops[0];
+    const rowShopId = (shopIdIdx >= 0 && row[shopIdIdx]) ? row[shopIdIdx].trim() : '';
+    const rowShopName = (shopNameIdx >= 0 && row[shopNameIdx]) ? row[shopNameIdx].trim() : '';
+    const shopObj = rowShopId
+      ? (shops.find(s => s.id === rowShopId) || shops.find(s => s.name.toLowerCase() === rowShopName.toLowerCase()) || shops[0])
+      : ((agentObj.permanentShopId ? shops.find(s => s.id === agentObj.permanentShopId) : null) || shops.find(s => s.name.toLowerCase() === rowShopName.toLowerCase()) || shops[0]);
+    const pointagePhoto = pointagePhotoIdx >= 0 ? formatDriveImageUrl(row[pointagePhotoIdx]) : '';
+    const reportPhotos = reportPhotosIdx >= 0 ? parsePhotoList(row[reportPhotosIdx]).map(formatDriveImageUrl) : [];
+    const drivePdfUrl = drivePdfIdx >= 0 ? row[drivePdfIdx].trim() : '';
+    const parsedId = (idIdx >= 0 && row[idIdx]) ? row[idIdx].trim() : '';
+    const fallbackId = `gsheet-${dateVal}-${agentObj.id}-${shopObj.id}`;
 
     reports.push({
-      id: `gsheet-rep-${i}-${Date.now()}`,
+      id: parsedId || fallbackId,
       date: dateVal,
       agent_id: agentObj.id,
       agent_name: agentObj.name,
@@ -622,6 +728,9 @@ export function parseReportsFromRows(rows: string[][]): DailyReport[] {
       bund: bundVal,
       amount: amountVal,
       comment: commentVal,
+      pointage_photo: pointagePhoto,
+      photos: reportPhotos,
+      drive_pdf_url: drivePdfUrl || undefined,
       arrival_time: '08:00',
       departure_time: '17:00'
     });
@@ -675,14 +784,14 @@ export function parseXlsxBuffer(buffer: ArrayBuffer): { success: boolean; count:
         const checkins = parseCheckinsFromRows(rows);
         if (checkins.length > 0) {
           const localPending = getCheckins().filter(c => c.status === 'pending');
-          saveCheckins([...checkins, ...localPending]);
+            saveCheckins(mergeCheckinsPreservingMedia([...checkins, ...localPending]));
           totalImported += checkins.length;
           summaryParts.push(`${checkins.length} pointage(s)`);
         }
       } else if (normName.includes('report') || normName.includes('rapport')) {
         const reports = parseReportsFromRows(rows);
         if (reports.length > 0) {
-          saveReports(reports);
+            saveReports(mergeReportsPreservingMedia(reports));
           totalImported += reports.length;
           summaryParts.push(`${reports.length} rapport(s)`);
         }
@@ -819,14 +928,14 @@ export async function syncFromGoogleSheetUrl(url: string): Promise<{ success: bo
             const checkins = parseCheckinsFromRows(rows);
             if (checkins.length > 0) {
               const localPending = getCheckins().filter(c => c.status === 'pending');
-              saveCheckins([...checkins, ...localPending]);
+              saveCheckins(mergeCheckinsPreservingMedia([...checkins, ...localPending]));
               totalSynced += checkins.length;
               parts.push(`${checkins.length} pointages`);
             }
           } else if (tab.type === 'reports') {
             const reports = parseReportsFromRows(rows);
             if (reports.length > 0) {
-              saveReports(reports);
+              saveReports(mergeReportsPreservingMedia(reports));
               totalSynced += reports.length;
               parts.push(`${reports.length} rapports`);
             }
@@ -889,9 +998,16 @@ export async function syncFromGoogleSheetUrl(url: string): Promise<{ success: bo
     const parsedCheckins = parseCheckinsFromRows(rows);
     if (parsedCheckins.length > 0) {
       const localPending = getCheckins().filter(c => c.status === 'pending');
-      saveCheckins([...parsedCheckins, ...localPending]);
+      saveCheckins(mergeCheckinsPreservingMedia([...parsedCheckins, ...localPending]));
       totalSynced += parsedCheckins.length;
       parts.push(`${parsedCheckins.length} pointages`);
+    }
+
+    const parsedReports = parseReportsFromRows(rows);
+    if (parsedReports.length > 0) {
+      saveReports(mergeReportsPreservingMedia(parsedReports));
+      totalSynced += parsedReports.length;
+      parts.push(`${parsedReports.length} rapports`);
     }
 
     const cfg = getGSheetConfig();
@@ -1108,19 +1224,27 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
     if (res.ok && checkinObj) {
       try {
         const text = await res.text();
-        if (text.includes('photoUrl') || text.includes('http')) {
-          const json = JSON.parse(text);
-          const returnedPhoto = json.photoUrl || json.photo;
-          if (returnedPhoto && returnedPhoto.startsWith('http')) {
-            const checkins = getCheckins();
-            const idx = checkins.findIndex(c => c.id === checkinObj.id || (c.agent_id === checkinObj.agent_id && c.timestamp === checkinObj.timestamp));
-            if (idx >= 0) {
-              checkins[idx].photo = returnedPhoto;
-              checkins[idx].photo_drive_url = returnedPhoto;
-              checkins[idx].status = 'synced';
-              saveCheckins(checkins);
-            }
+        let returnedPhoto = '';
+        if (text) {
+          try {
+            const json = JSON.parse(text);
+            returnedPhoto = json.photoUrl || json.photo || '';
+          } catch {
+            const foundUrl = text.match(/https?:\/\/[^\s"']+/i);
+            if (foundUrl) returnedPhoto = foundUrl[0];
           }
+        }
+
+        const checkins = getCheckins();
+        const idx = checkins.findIndex(c => c.id === checkinObj.id || (c.agent_id === checkinObj.agent_id && c.timestamp === checkinObj.timestamp));
+        if (idx >= 0) {
+          const next = { ...checkins[idx], status: 'synced' as const };
+          if (returnedPhoto && returnedPhoto.startsWith('http')) {
+            next.photo = returnedPhoto;
+            next.photo_drive_url = returnedPhoto;
+          }
+          checkins[idx] = next;
+          saveCheckins(checkins);
         }
       } catch (e) {}
     }
@@ -1162,6 +1286,11 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(enrichedPayload)
       });
+
+      // no-cors cannot confirm write/media upload. Be strict for media-critical events.
+      if (checkinObj || reportObj) {
+        return false;
+      }
       return true;
     } catch (err2) {
       console.warn('Webhook push error:', err2);

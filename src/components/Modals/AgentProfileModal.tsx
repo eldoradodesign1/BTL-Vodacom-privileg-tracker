@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AgentMasterStatus, DailyReport, Lead, Shop } from '../../types';
-import { getLeads, resolveStoredPhotoUrl, updateUserShopAssignment } from '../../utils/storage';
+import { getLeads, getCheckins, resolveStoredPhotoUrl, toISO, updateUserShopAssignment } from '../../utils/storage';
 import { buildAgentCompilationPayload } from '../../utils/agentCompilation';
 import { Phone, FileSpreadsheet, X, Eye, Camera, CheckCircle2, Clock3, UserCheck } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
@@ -33,6 +34,7 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
   const [selectedShopId, setSelectedShopId] = useState(agent.shopId || '');
   const todayStr = new Date().toISOString().split('T')[0];
   const [selectedClientsDate, setSelectedClientsDate] = useState<string>(todayStr);
+  const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
 
   useEffect(() => {
     setSelectedShopId(agent.shopId || '');
@@ -42,14 +44,35 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
     setSelectedClientsDate(todayStr);
   }, [agent.id, todayStr]);
 
+  useEffect(() => {
+    setIsPhotoViewerOpen(false);
+  }, [agent.id]);
+
   const initials = agent.name
     ? agent.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
     : 'AG';
 
   const latestPhoto = useMemo(() => {
+    const today = toISO(new Date());
+    const checkins = getCheckins().filter((checkin) => (
+      checkin.agent_id === agent.id || checkin.agent_id === agent.name
+    ));
+
+    const preferredCheckin = checkins.find((checkin) => (
+      checkin.type === 'IN'
+      && toISO(checkin.timestamp) === today
+      && (checkin.photo_drive_url || checkin.photo)
+    )) || checkins.find((checkin) => checkin.type === 'IN' && (checkin.photo_drive_url || checkin.photo));
+
     const fromReport = agentReports.find(rep => rep.pointage_photo || rep.photos?.length);
-    return resolveStoredPhotoUrl(fromReport?.pointage_photo || fromReport?.photos?.[0]) || '';
-  }, [agentReports]);
+    return resolveStoredPhotoUrl(
+      preferredCheckin?.photo_drive_url
+      || preferredCheckin?.photo
+      || fromReport?.pointage_photo
+      || fromReport?.photos?.[0]
+      || ''
+    ) || '';
+  }, [agent.id, agent.name, agentReports]);
 
   const evolutionData = useMemo(() => {
     return [...agentReports]
@@ -136,13 +159,18 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
         </button>
 
         <div className="flex flex-col items-center text-center mb-6">
-          <div className="w-16 h-16 rounded-3xl bg-red-600/20 border-2 border-red-500/40 text-red-500 font-black text-xl flex items-center justify-center mb-3 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => latestPhoto && setIsPhotoViewerOpen(true)}
+            className={`w-16 h-16 rounded-3xl bg-red-600/20 border-2 border-red-500/40 text-red-500 font-black text-xl flex items-center justify-center mb-3 overflow-hidden transition-transform ${latestPhoto ? 'cursor-zoom-in hover:scale-[1.03]' : 'cursor-default'}`}
+            aria-label={latestPhoto ? `Ouvrir la photo de pointage de ${agent.name}` : `Avatar de ${agent.name}`}
+          >
             {latestPhoto ? (
               <img src={latestPhoto} alt={`Pointage ${agent.name}`} className="w-full h-full object-cover" />
             ) : (
               initials
             )}
-          </div>
+          </button>
           <h2 className="text-xl font-black uppercase text-white tracking-wider">{agent.name}</h2>
           <p className="text-xs text-gray-400 font-bold uppercase">{agent.shop} • MSISDN: {agent.phone}</p>
         </div>
@@ -320,6 +348,32 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
           </div>
         </div>
       </div>
+
+      {isPhotoViewerOpen && latestPhoto && createPortal(
+        <div
+          className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4"
+          onClick={() => setIsPhotoViewerOpen(false)}
+        >
+          <button
+            type="button"
+            onClick={() => setIsPhotoViewerOpen(false)}
+            className="absolute right-4 top-4 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-white/20"
+          >
+            Fermer
+          </button>
+          <div
+            className="max-h-[92vh] max-w-[96vw] overflow-hidden rounded-[2rem] border border-white/10 bg-black shadow-[0_30px_120px_rgba(0,0,0,0.75)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <img
+              src={latestPhoto}
+              alt={`Photo de pointage pleine écran ${agent.name}`}
+              className="max-h-[92vh] max-w-[96vw] object-contain"
+            />
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

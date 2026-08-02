@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Lead, Checkin, DailyReport } from '../types';
-import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSyncPendingCount, isMatchAgent, toISO, getUsers } from '../utils/storage';
+import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSyncPendingCount, isMatchAgent, toISO, getUsers, resolveStoredPhotoUrl } from '../utils/storage';
 import { formatDriveImageUrl, getGSheetConfig, syncFromGoogleSheetUrl } from '../utils/googleSheetsSync';
 import { TabType } from './BottomNav';
 import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archive, Eye, Search, Filter, RefreshCw } from 'lucide-react';
@@ -68,9 +68,13 @@ export const AgentView: React.FC<AgentViewProps> = ({
 
   useEffect(() => {
     const allCheckins = getCheckins();
-    const myToday = allCheckins.find(c => c.agent_id === currentUser.id && c.timestamp.startsWith(todayStr));
-    const rawPhoto = myToday?.photo || todayCheckin?.photo || null;
-    setPhotoPreview(rawPhoto ? formatDriveImageUrl(rawPhoto) : null);
+    const myTodayIn = allCheckins
+      .filter(c => c.agent_id === currentUser.id && toISO(c.timestamp) === todayStr && c.type === 'IN');
+    const withPhoto = myTodayIn.find(c => !!(c.photo_drive_url || c.photo));
+    const fallback = myTodayIn[0] || todayCheckin || null;
+    const rawPhoto = withPhoto?.photo_drive_url || withPhoto?.photo || fallback?.photo_drive_url || fallback?.photo || null;
+    const resolved = resolveStoredPhotoUrl(rawPhoto || '');
+    setPhotoPreview(resolved ? formatDriveImageUrl(resolved) : null);
   }, [currentUser.id, todayCheckin?.photo, todayStr]);
 
   const { checkinDone, reportDone } = checkDailyStatus(currentUser.id, todayStr);
@@ -158,7 +162,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
-        const maxDim = 600;
+        const maxDim = 320;
         let w = img.width;
         let h = img.height;
         if (w > h) {
@@ -170,7 +174,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
         canvas.height = h;
         if (ctx) {
           ctx.drawImage(img, 0, 0, w, h);
-          const base64 = canvas.toDataURL('image/jpeg', 0.6);
+          const base64 = canvas.toDataURL('image/jpeg', 0.45);
           setPhotoPreview(base64);
 
           const recordCheckin = (lat: number, long: number, accuracy: number) => {
@@ -191,7 +195,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
               photo: base64,
               distance_m: distance >= 0 ? distance : undefined,
               geo_status: distance < 0 ? 'inconnu' : (isConforme ? 'conforme' : 'hors_zone'),
-              status: 'synced'
+              status: 'pending'
             });
 
             if (distance < 0) {
