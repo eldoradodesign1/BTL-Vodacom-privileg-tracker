@@ -3,7 +3,7 @@ import { Shop, AgentMasterStatus, User } from '../types';
 import { getAdminMasterList, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl, saveTargetDefinition } from '../utils/storage';
 import { TabType } from './BottomNav';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
-import { UserPlus, Store, FileSpreadsheet, Eye, NotebookText, UserCheck, FileText, Search, Filter, MapPin, Clock3 } from 'lucide-react';
+import { UserPlus, Store, FileSpreadsheet, Eye, NotebookText, UserCheck, FileText, Search, Filter, MapPin, Clock3, Pencil, X } from 'lucide-react';
 import { formatAgentLocationLine } from '../utils/location';
 
 interface AdminViewProps {
@@ -57,6 +57,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'Online' | 'Absent' | 'Clôturé'>('ALL');
   const [supFilter, setSupFilter] = useState('ALL');
   const [inlineAssignShop, setInlineAssignShop] = useState<Record<string, string>>({});
+  const [shopAssignmentModal, setShopAssignmentModal] = useState<{ agentId: string; agentName: string; currentShopId: string; selectedShopId: string } | null>(null);
 
   const getStatusPalette = (status: string) => {
     if (status === 'Clôturé') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
@@ -211,6 +212,22 @@ export const AdminView: React.FC<AdminViewProps> = ({
       target_bundle_std: targetBundleStd,
       target_bundle_air: targetBundleAir
     });
+    if (onRefreshData) onRefreshData();
+  };
+
+  const openShopAssignmentModal = (agent: AgentMasterStatus) => {
+    setShopAssignmentModal({
+      agentId: agent.id,
+      agentName: agent.name,
+      currentShopId: agent.shopId || '',
+      selectedShopId: agent.shopId || ''
+    });
+  };
+
+  const saveShopAssignment = () => {
+    if (!shopAssignmentModal) return;
+    updateUserShopAssignment(shopAssignmentModal.agentId, shopAssignmentModal.selectedShopId);
+    setShopAssignmentModal(null);
     if (onRefreshData) onRefreshData();
   };
 
@@ -412,6 +429,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-wrap gap-1 mt-1">
                         <MapPin className="w-3 h-3 text-blue-400" />
                         <span>{agent.shop}</span>
+                        <button
+                          type="button"
+                          onClick={() => openShopAssignmentModal(agent)}
+                          className="ml-1 rounded-full border border-white/10 bg-white/5 p-1 text-gray-300 hover:text-white hover:bg-white/10"
+                          title={`Modifier l'affectation du shop de ${agent.name}`}
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
                       </p>
                     </div>
 
@@ -656,6 +681,55 @@ export const AdminView: React.FC<AdminViewProps> = ({
       )}
 
       {/* --- SUB-TAB 3: ARCHIVES & COMPILATION --- */}
+      {shopAssignmentModal && (
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-sm z-[60] flex items-center justify-center p-4" onClick={() => setShopAssignmentModal(null)}>
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-zinc-950/95 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500">Affectation du shop</p>
+                <h3 className="text-base font-black uppercase text-white">{shopAssignmentModal.agentName}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShopAssignmentModal(null)}
+                className="rounded-full border border-white/10 bg-white/5 p-2 text-gray-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">Sélectionner un shop</label>
+            <select
+              value={shopAssignmentModal.selectedShopId}
+              onChange={(e) => setShopAssignmentModal(prev => prev ? { ...prev, selectedShopId: e.target.value } : prev)}
+              className="w-full rounded-2xl border border-white/10 bg-black/60 px-3 py-2.5 text-sm font-bold text-white"
+            >
+              <option value="">Aucun shop</option>
+              {shops.map(shop => (
+                <option key={shop.id} value={shop.id}>{shop.name}</option>
+              ))}
+            </select>
+
+            <div className="mt-5 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setShopAssignmentModal(null)}
+                className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-[10px] font-black uppercase text-gray-300"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={saveShopAssignment}
+                className="flex-1 rounded-2xl bg-red-600 px-3 py-2.5 text-[10px] font-black uppercase text-white"
+              >
+                Enregistrer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {subTab === 'reports' && (
         <div className="space-y-4 animate-pop">
           {/* Filter Bar */}
