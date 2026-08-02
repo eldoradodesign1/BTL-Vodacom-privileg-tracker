@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { User, NotificationItem } from '../types';
-import { Bell, LogOut, Shield, FileSpreadsheet, Palette } from 'lucide-react';
+import { Bell, LogOut, Shield, FileSpreadsheet, Palette, Camera, X } from 'lucide-react';
+import { addCheckin, getShopById, resolveStoredPhotoUrl } from '../utils/storage';
 
 export type ThemeMode = 'anthracite' | 'rubis' | 'silver' | 'diamond' | 'sapphire' | 'ambre';
 
@@ -16,6 +18,7 @@ interface HeaderProps {
   onLogout: () => void;
   onOpenPasswordModal: () => void;
   onOpenGSheetModal?: () => void;
+  onPointageRecorded?: () => void;
   theme?: ThemeMode;
   onSetTheme?: (theme: ThemeMode) => void;
 }
@@ -32,13 +35,21 @@ export const Header: React.FC<HeaderProps> = ({
   onLogout,
   onOpenPasswordModal,
   onOpenGSheetModal,
+  onPointageRecorded,
   theme = 'anthracite',
   onSetTheme
 }) => {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
   const [photoError, setPhotoError] = useState(false);
-  const photoSrc = profilePhotoUrl && !photoError ? profilePhotoUrl : '';
+  const [localPhotoUrl, setLocalPhotoUrl] = useState(profilePhotoUrl || '');
+  const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
+  const [isPointagePending, setIsPointagePending] = useState(false);
+  const pointageInputRef = useRef<HTMLInputElement | null>(null);
+  const photoSrc = useMemo(() => {
+    const source = localPhotoUrl || profilePhotoUrl || '';
+    return source && !photoError ? resolveStoredPhotoUrl(source) : '';
+  }, [localPhotoUrl, profilePhotoUrl, photoError]);
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const unreadCount = safeNotifications.filter(n => !n.is_read).length;
   const roleLabel = user.role === 'admin' ? 'Admin' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent');
@@ -48,6 +59,11 @@ export const Header: React.FC<HeaderProps> = ({
     if (!online && syncPendingCount > 0) return 'late';
     return 'progress';
   })();
+
+  useEffect(() => {
+    setLocalPhotoUrl(profilePhotoUrl || '');
+    setPhotoError(false);
+  }, [profilePhotoUrl]);
 
   useEffect(() => {
     if (!showNotifPanel && !showThemeMenu) return;
@@ -60,6 +76,68 @@ export const Header: React.FC<HeaderProps> = ({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showNotifPanel, showThemeMenu]);
+
+  const handlePointageCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || isPointagePending) return;
+
+    setIsPointagePending(true);
+    const shopObj = getShopById(user.permanentShopId);
+    const finalize = (lat: number, long: number, accuracy: number, base64: string) => {
+      addCheckin({
+        agent_id: user.id,
+        type: 'IN',
+        timestamp: new Date().toISOString(),
+        lat,
+        long,
+        accuracy,
+        photo: base64,
+        geo_status: 'conforme',
+        status: 'pending'
+      });
+      setLocalPhotoUrl(base64);
+      setPhotoError(false);
+      setIsPointagePending(false);
+      onPointageRecorded?.();
+    };
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const maxDim = 320;
+        let w = img.width;
+        let h = img.height;
+        if (w > h) {
+          if (w > maxDim) { h *= maxDim / w; w = maxDim; }
+        } else if (h > maxDim) {
+          w *= maxDim / h; h = maxDim;
+        }
+        canvas.width = w;
+        canvas.height = h;
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, w, h);
+          const base64 = canvas.toDataURL('image/jpeg', 0.45);
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (pos) => finalize(pos.coords.latitude, pos.coords.longitude, Math.round(pos.coords.accuracy || 5), base64),
+              () => finalize(shopObj?.lat || -4.3033, shopObj?.long || 15.3015, 15, base64),
+              { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+            );
+          } else {
+            finalize(shopObj?.lat || -4.3033, shopObj?.long || 15.3015, 15, base64);
+          }
+        } else {
+          setIsPointagePending(false);
+        }
+      };
+      img.src = ev.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const syncDotClass = syncState === 'ok'
     ? 'bg-emerald-500 shadow-emerald-500/60'
@@ -77,7 +155,19 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-start justify-between gap-2 sm:gap-3">
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
         {/* Vodacom / Eldorado Badge */}
-        <div className="relative w-11 h-11 bg-red-600 rounded-2xl flex items-center justify-center font-black text-white text-base shadow-lg shadow-red-600/30 overflow-hidden shrink-0 border border-white/20">
+        <button
+          type="button"
+          onClick={() => {
+            if (photoSrc) {
+              setIsPhotoViewerOpen(true);
+            } else if (user.role === 'agent') {
+              pointageInputRef.current?.click();
+            }
+          }}
+          disabled={isPointagePending}
+          className={`relative w-11 h-11 bg-red-600 rounded-2xl flex items-center justify-center font-black text-white text-base shadow-lg shadow-red-600/30 overflow-hidden shrink-0 border border-white/20 transition-transform ${photoSrc ? 'cursor-zoom-in hover:scale-[1.03]' : user.role === 'agent' ? 'cursor-pointer hover:scale-[1.03]' : 'cursor-default'} ${isPointagePending ? 'opacity-75' : ''}`}
+          aria-label={photoSrc ? 'Ouvrir la photo de pointage en plein écran' : 'Check-in en attente'}
+        >
           {photoSrc ? (
             <img
               src={photoSrc}
@@ -90,10 +180,18 @@ export const Header: React.FC<HeaderProps> = ({
               }}
             />
           ) : (
-            <span className="text-[8px] font-black uppercase tracking-wide">Photo non dispo</span>
+            <span className="px-1 text-[8px] font-black uppercase tracking-wide leading-[1.05] text-center">Check-in en attente</span>
           )}
           <span className={`status-dot absolute -bottom-0.5 -right-0.5 border-2 ${theme === 'light' ? 'border-white' : 'border-black'} ${online ? 'status-online' : 'status-offline'}`} />
-        </div>
+        </button>
+        <input
+          ref={pointageInputRef}
+          type="file"
+          accept="image/*"
+          capture="user"
+          onChange={handlePointageCapture}
+          className="hidden"
+        />
 
           <div className="flex flex-col min-w-0">
           <div className="flex items-center space-x-2">
@@ -255,6 +353,30 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
       </div>
+
+      {isPhotoViewerOpen && photoSrc && createPortal(
+        <div className="fixed inset-0 z-[120] bg-black/95 backdrop-blur-2xl flex items-center justify-center p-4" onClick={() => setIsPhotoViewerOpen(false)}>
+          <button
+            type="button"
+            onClick={() => setIsPhotoViewerOpen(false)}
+            className="absolute right-4 top-4 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-white/20"
+          >
+            Fermer
+          </button>
+          <div className="max-h-[92vh] max-w-[96vw] overflow-hidden rounded-[2rem] border border-white/10 bg-black shadow-[0_30px_120px_rgba(0,0,0,0.75)]" onClick={(event) => event.stopPropagation()}>
+            <img src={photoSrc} alt={`Photo de pointage pleine écran ${user.name}`} className="max-h-[92vh] max-w-[96vw] object-contain" />
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsPhotoViewerOpen(false)}
+            className="absolute left-4 top-4 rounded-full border border-white/15 bg-white/10 p-3 text-white transition hover:bg-white/20"
+            aria-label="Fermer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>,
+        document.body
+      )}
     </header>
   );
 };

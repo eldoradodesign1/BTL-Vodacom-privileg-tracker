@@ -325,6 +325,7 @@ export default function App() {
         online={online}
         syncPendingCount={syncPendingCount}
         profilePhotoUrl={todayCheckinPhoto || undefined}
+        onPointageRecorded={refreshData}
         theme={theme}
         onSetTheme={setThemeMode}
         onMarkNotifsRead={() => {
