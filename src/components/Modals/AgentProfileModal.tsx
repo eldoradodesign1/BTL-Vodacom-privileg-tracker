@@ -58,21 +58,42 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
       checkin.agent_id === agent.id || checkin.agent_id === agent.name
     ));
 
-    const preferredCheckin = checkins.find((checkin) => (
+    const selectedDateReport = agentReports.find((report) => report.date === selectedClientsDate);
+    const selectedDateCheckin = checkins.find((checkin) => (
+      checkin.type === 'IN'
+      && toISO(checkin.timestamp) === selectedClientsDate
+      && (checkin.photo_drive_url || checkin.photo)
+    ));
+
+    const todayCheckin = checkins.find((checkin) => (
       checkin.type === 'IN'
       && toISO(checkin.timestamp) === today
       && (checkin.photo_drive_url || checkin.photo)
     )) || checkins.find((checkin) => checkin.type === 'IN' && (checkin.photo_drive_url || checkin.photo));
 
-    const fromReport = agentReports.find(rep => rep.pointage_photo || rep.photos?.length);
+    const selectedDatePhoto = resolveStoredPhotoUrl(
+      selectedDateReport?.pointage_photo
+      || selectedDateReport?.photos?.[0]
+      || selectedDateCheckin?.photo_drive_url
+      || selectedDateCheckin?.photo
+      || ''
+    );
+
+    const todayPhoto = resolveStoredPhotoUrl(
+      todayCheckin?.photo_drive_url
+      || todayCheckin?.photo
+      || agentReports.find(rep => rep.date === today && (rep.pointage_photo || rep.photos?.length))?.pointage_photo
+      || agentReports.find(rep => rep.date === today && rep.photos?.length)?.photos?.[0]
+      || ''
+    );
+
     return resolveStoredPhotoUrl(
-      preferredCheckin?.photo_drive_url
-      || preferredCheckin?.photo
-      || fromReport?.pointage_photo
-      || fromReport?.photos?.[0]
+      selectedDatePhoto
+      || (selectedClientsDate === todayStr ? todayPhoto : '')
+      || todayPhoto
       || ''
     ) || '';
-  }, [agent.id, agent.name, agentReports]);
+  }, [agent.id, agent.name, agentReports, selectedClientsDate, todayStr]);
 
   const evolutionData = useMemo(() => {
     return [...agentReports]
