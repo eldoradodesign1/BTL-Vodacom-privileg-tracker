@@ -84,6 +84,7 @@ export default function App() {
   const [online, setOnline] = useState<boolean>(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [syncPendingCount, setSyncPendingCount] = useState(0);
+  const [toast, setToast] = useState<{ message: string; level: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -169,6 +170,22 @@ export default function App() {
       void ensureNotificationsPermission();
     }
   }, [currentUser?.id]);
+
+  useEffect(() => {
+    const onToast = (event: Event) => {
+      const custom = event as CustomEvent<{ message?: string; level?: 'success' | 'error' }>;
+      const message = custom.detail?.message;
+      if (!message) return;
+      const level = custom.detail?.level || 'success';
+      setToast({ message, level });
+      window.setTimeout(() => {
+        setToast((prev) => (prev?.message === message ? null : prev));
+      }, 2400);
+    };
+
+    window.addEventListener('vodacom-toast', onToast as EventListener);
+    return () => window.removeEventListener('vodacom-toast', onToast as EventListener);
+  }, []);
 
   if (!currentUser) {
     return <LoginScreen onLoginSuccess={(u) => { setCurrentUser(u); setMasterUser(u); }} />;
@@ -334,6 +351,16 @@ export default function App() {
         unreadChatCount={chatUnreadCount}
         onTabChange={(tab) => setActiveTab(tab)}
       />
+
+      {toast && (
+        <div className="fixed left-1/2 top-4 z-[90] -translate-x-1/2 px-3">
+          <div className={`rounded-2xl border px-4 py-2 text-xs font-black uppercase shadow-xl backdrop-blur ${toast.level === 'error'
+            ? 'border-red-400/60 bg-red-600/90 text-white'
+            : 'border-emerald-400/50 bg-emerald-600/90 text-white'}`}>
+            {toast.message}
+          </div>
+        </div>
+      )}
 
       <LeadModal
         isOpen={isLeadModalOpen}

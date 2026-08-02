@@ -31,10 +31,16 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
   if (!isOpen || !agent) return null;
 
   const [selectedShopId, setSelectedShopId] = useState(agent.shopId || '');
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [selectedClientsDate, setSelectedClientsDate] = useState<string>(todayStr);
 
   useEffect(() => {
     setSelectedShopId(agent.shopId || '');
   }, [agent.shopId]);
+
+  useEffect(() => {
+    setSelectedClientsDate(todayStr);
+  }, [agent.id, todayStr]);
 
   const initials = agent.name
     ? agent.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
@@ -49,10 +55,27 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
     return [...agentReports]
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((rep) => ({
+        date: rep.date,
         label: rep.date.slice(5),
         value: rep.priv + rep.roam + rep.bund
       }));
   }, [agentReports]);
+
+  const allAgentLeads = useMemo(() => {
+    return getLeads().filter((lead) => lead.agent_id === agent.id || lead.agent_id === agent.name);
+  }, [agent.id, agent.name, agentReports]);
+
+  const detailLeads = useMemo(() => {
+    return allAgentLeads.filter((lead) => lead.timestamp.startsWith(selectedClientsDate));
+  }, [allAgentLeads, selectedClientsDate]);
+
+  const detailTitle = selectedClientsDate === todayStr
+    ? 'Détail clients du jour'
+    : `Détail clients du ${new Date(`${selectedClientsDate}T00:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+
+  const detailEmptyText = selectedClientsDate === todayStr
+    ? "Aucun client enregistré aujourd'hui."
+    : `Aucun client enregistré le ${new Date(`${selectedClientsDate}T00:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.`;
 
   const handleAssignmentSave = () => {
     if (!selectedShopId || !agent) return;
@@ -198,7 +221,46 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
                 <XAxis dataKey="label" stroke="#71717a" fontSize={9} />
                 <YAxis stroke="#71717a" fontSize={9} />
                 <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '10px', fontSize: '11px' }} />
-                <Line type="monotone" dataKey="value" stroke="#f43f5e" strokeWidth={2.5} dot={{ r: 3, fill: '#f43f5e' }} />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#f43f5e"
+                  strokeWidth={2.5}
+                  dot={(dotProps: any) => {
+                    const { cx, cy, payload } = dotProps;
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={4}
+                        fill="#f43f5e"
+                        stroke="#ffffff"
+                        strokeWidth={1}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                          if (payload?.date) setSelectedClientsDate(payload.date);
+                        }}
+                      />
+                    );
+                  }}
+                  activeDot={(activeProps: any) => {
+                    const { cx, cy, payload } = activeProps;
+                    return (
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={6}
+                        fill="#fb7185"
+                        stroke="#ffffff"
+                        strokeWidth={2}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => {
+                          if (payload?.date) setSelectedClientsDate(payload.date);
+                        }}
+                      />
+                    );
+                  }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -206,16 +268,16 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
 
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Détail clients du jour</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{detailTitle}</p>
             <div className="flex items-center gap-1 text-emerald-400">
               <CheckCircle2 className="w-3 h-3" />
-              <span className="text-[10px] font-black uppercase">{todayLeads.length}</span>
+              <span className="text-[10px] font-black uppercase">{detailLeads.length}</span>
             </div>
           </div>
           <div className="max-h-32 space-y-2 overflow-y-auto pr-1">
-            {todayLeads.length === 0 ? (
-              <p className="text-[10px] text-gray-500 italic">Aucun client enregistré aujourd'hui.</p>
-            ) : todayLeads.map((lead) => (
+            {detailLeads.length === 0 ? (
+              <p className="text-[10px] text-gray-500 italic">{detailEmptyText}</p>
+            ) : detailLeads.map((lead) => (
               <div key={lead.id} className="rounded-xl border border-white/10 bg-black/30 px-2.5 py-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] font-black text-white">{lead.client_name}</span>

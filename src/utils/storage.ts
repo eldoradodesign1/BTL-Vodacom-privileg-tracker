@@ -94,6 +94,36 @@ function maybeShowBrowserNotification(message: string): void {
   } catch {}
 }
 
+function emitAppToast(message: string, level: 'success' | 'error' = 'success'): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(new CustomEvent('vodacom-toast', {
+      detail: { message, level }
+    }));
+  } catch {}
+}
+
+function syncUserUpdateToGSheet(user: User): void {
+  pushToGoogleSheetWebhook({
+    type: 'user-update',
+    data: {
+      id: user.id,
+      phone: user.phone,
+      name: user.name,
+      role: user.role,
+      supervisorId: user.supervisorId || '',
+      permanentShopId: user.permanentShopId || '',
+      password: user.password || '',
+      updated_at: new Date().toISOString()
+    }
+  }).then(() => {
+    const cfg = getGSheetConfig();
+    if (cfg.sheetCsvUrl) {
+      syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
+    }
+  }).catch(() => {});
+}
+
 function pushNotification(userId: string, message: string, type: string): NotificationItem {
   const item: NotificationItem = {
     id: generateUUID(),
@@ -448,6 +478,9 @@ export function updateUserShopAssignment(userId: string, shopId: string): boolea
       }
     }
 
+    emitAppToast(`Affectation mise à jour: ${before.name} → ${shop?.name || shopId}.`);
+    syncUserUpdateToGSheet(users[index]);
+
     return true;
   }
   return false;
@@ -473,6 +506,9 @@ export function updateUserSupervisor(userId: string, supervisorId: string): bool
         'assignment-agent'
       );
     }
+
+    emitAppToast(`Superviseur mis à jour pour ${target.name}.`);
+    syncUserUpdateToGSheet(users[index]);
 
     return true;
   }
