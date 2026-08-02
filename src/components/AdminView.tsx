@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Shop, AgentMasterStatus, User } from '../types';
 import { getAdminMasterList, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl, saveTargetDefinition } from '../utils/storage';
 import { TabType } from './BottomNav';
-import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
+import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { UserPlus, Store, FileSpreadsheet, Eye, User as UserIcon, UserCheck, FileText, Search, Filter, MapPin, Clock3, Pencil, X } from 'lucide-react';
 import { formatAgentLocationLine } from '../utils/location';
 import { SupervisorProfileModal, SupervisorHostessSummary } from './Modals/SupervisorProfileModal';
@@ -945,47 +945,59 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div
               onClick={() => setSubTab('leads')}
-              className="bg-white text-black p-5 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-gray-100 transition-all hover:scale-[1.02] active:scale-95 group"
+              className="relative overflow-hidden bg-gradient-to-br from-white via-zinc-100 to-zinc-200 text-black p-5 rounded-[28px] text-center shadow-[0_18px_38px_rgba(0,0,0,0.28)] border border-white/70 cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group"
               title="Cliquer pour voir tous les Leads / Rapport de Synthèse"
             >
+              <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-rose-500/20 blur-2xl" />
+              <div className="pointer-events-none absolute left-3 top-3 h-7 w-7 rounded-full border border-red-500/20" />
               <span className="text-[9px] font-black uppercase tracking-wider text-gray-500 block group-hover:text-red-600">Total Activations</span>
-              <p className="text-3xl font-black text-red-600">{dashboardData.kpi.totalLeads}</p>
+              <p className="text-3xl font-black text-red-600 drop-shadow-[0_0_14px_rgba(230,0,0,0.35)]">{dashboardData.kpi.totalLeads}</p>
               <span className="text-[8px] font-bold text-gray-400 uppercase mt-1 block group-hover:underline">→ Voir la liste</span>
             </div>
             <div
               onClick={() => setSubTab('manage')}
-              className="bg-white text-black p-5 rounded-3xl text-center shadow-lg cursor-pointer hover:bg-gray-100 transition-all hover:scale-[1.02] active:scale-95 group"
+              className="relative overflow-hidden bg-gradient-to-br from-white via-zinc-100 to-zinc-200 text-black p-5 rounded-[28px] text-center shadow-[0_18px_38px_rgba(0,0,0,0.28)] border border-white/70 cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group"
               title="Cliquer pour aller au Monitoring des hôtesses"
             >
+              <div className="pointer-events-none absolute -left-10 -bottom-10 h-28 w-28 rounded-full bg-amber-400/18 blur-2xl" />
+              <div className="pointer-events-none absolute right-3 top-3 h-7 w-7 rounded-full border border-zinc-900/15" />
               <span className="text-[9px] font-black uppercase tracking-wider text-gray-500 block group-hover:text-black">Effectif Hôtesses</span>
-              <p className="text-3xl font-black text-zinc-900">{dashboardData.kpi.presence}</p>
+              <p className="text-3xl font-black text-zinc-900 drop-shadow-[0_0_12px_rgba(24,24,27,0.2)]">{dashboardData.kpi.presence}</p>
               <span className="text-[8px] font-bold text-gray-400 uppercase mt-1 block group-hover:underline">→ Aller au Monitoring</span>
             </div>
           </div>
 
           {/* Offres Distribution Pie Chart */}
-          <div className="glass-card p-5 border border-white/10">
-            <h3 className="text-xs font-black uppercase text-red-500 tracking-wider mb-3 text-center">
+          <div className="relative overflow-hidden glass-card p-5 border border-white/10 rounded-[26px] shadow-[0_20px_45px_rgba(0,0,0,0.35)]">
+            <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-rose-500/12 blur-3xl" />
+            <div className="pointer-events-none absolute left-1/3 -bottom-16 h-36 w-36 rounded-full bg-amber-400/12 blur-3xl" />
+            <div className="pointer-events-none absolute -left-14 top-10 h-28 w-28 rounded-full bg-sky-400/10 blur-3xl" />
+            <h3 className="text-xs font-black uppercase text-red-400 tracking-[0.16em] mb-3 text-center">
               Répartition des Activations (Offres)
             </h3>
-            <div className="h-56 w-full">
+            <div className="h-56 w-full rounded-3xl border border-white/10 bg-black/20 backdrop-blur-sm px-2 py-1">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={dashboardData.pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={55}
-                    outerRadius={80}
-                    paddingAngle={5}
+                    innerRadius={58}
+                    outerRadius={86}
+                    cornerRadius={10}
+                    paddingAngle={4}
                     dataKey="value"
                   >
                     {dashboardData.pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={entry.color}
+                        style={{ filter: `drop-shadow(0 0 8px ${entry.color}88)` }}
+                      />
                     ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '12px', fontSize: '12px' }}
+                    contentStyle={{ backgroundColor: '#09090b', borderColor: '#3f3f46', borderRadius: '14px', fontSize: '12px', boxShadow: '0 12px 25px rgba(0,0,0,0.35)' }}
                     itemStyle={{ color: '#ffffff', fontWeight: 'bold' }}
                   />
                 </PieChart>
@@ -994,10 +1006,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
             <div className="flex justify-around pt-2 text-center text-xs font-bold">
               {dashboardData.pieData.map(item => (
-                <div key={item.name} className="flex flex-col items-center">
+                <div key={item.name} className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
                   <div className="flex items-center space-x-1">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-[10px] text-gray-400 font-black uppercase">{item.name}</span>
+                    <span className="text-[10px] text-gray-300 font-black uppercase">{item.name}</span>
                   </div>
                   <span className="text-sm font-black text-white">{item.value}</span>
                 </div>
@@ -1006,20 +1018,41 @@ export const AdminView: React.FC<AdminViewProps> = ({
           </div>
 
           {/* Line Chart Activity */}
-          <div className="glass-card p-5 border border-white/10">
-            <h3 className="text-xs font-black uppercase text-gray-300 tracking-wider mb-3">
+          <div className="relative overflow-hidden glass-card p-5 border border-white/10 rounded-[26px] shadow-[0_20px_45px_rgba(0,0,0,0.35)]">
+            <div className="pointer-events-none absolute -right-20 -bottom-20 h-44 w-44 rounded-full bg-rose-500/12 blur-3xl" />
+            <div className="pointer-events-none absolute -left-12 -top-10 h-32 w-32 rounded-full bg-amber-300/10 blur-3xl" />
+            <h3 className="text-xs font-black uppercase text-gray-200 tracking-[0.16em] mb-3">
               Évolution Journalière des Leads
             </h3>
-            <div className="h-48 w-full">
+            <div className="h-48 w-full rounded-3xl border border-white/10 bg-black/20 backdrop-blur-sm px-2 py-1">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dashboardData.lineData}>
-                  <XAxis dataKey="date" stroke="#71717a" fontSize={10} />
-                  <YAxis stroke="#71717a" fontSize={10} />
+                  <defs>
+                    <filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur stdDeviation="2.4" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <CartesianGrid strokeDasharray="4 5" stroke="rgba(161,161,170,0.22)" vertical={false} />
+                  <XAxis dataKey="date" stroke="#a1a1aa" fontSize={10} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#a1a1aa" fontSize={10} tickLine={false} axisLine={false} width={26} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '12px', fontSize: '12px' }}
+                    contentStyle={{ backgroundColor: '#09090b', borderColor: '#3f3f46', borderRadius: '14px', fontSize: '12px', boxShadow: '0 12px 25px rgba(0,0,0,0.35)' }}
                     itemStyle={{ color: '#ffffff', fontWeight: 'bold' }}
+                    labelStyle={{ color: '#d4d4d8' }}
                   />
-                  <Line type="monotone" dataKey="value" stroke="#E60000" strokeWidth={3} dot={{ fill: '#E60000', r: 4 }} />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#fb7185"
+                    strokeWidth={3.5}
+                    filter="url(#lineGlow)"
+                    dot={{ fill: '#fb7185', r: 4, stroke: '#fff', strokeWidth: 1.5 }}
+                    activeDot={{ r: 6, fill: '#fb7185', stroke: '#fff', strokeWidth: 2 }}
+                  />
                 </LineChart>
               </ResponsiveContainer>
             </div>
