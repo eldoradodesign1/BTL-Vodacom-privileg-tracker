@@ -41,6 +41,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [targetBundleAir, setTargetBundleAir] = useState(10);
   const [isTargetsCardOpen, setIsTargetsCardOpen] = useState(false);
   const [draggedHostess, setDraggedHostess] = useState<{ agentId: string; fromShopId: string } | null>(null);
+  const [dragOverShopId, setDragOverShopId] = useState<string | null>(null);
   const [selectedLocationAgent, setSelectedLocationAgent] = useState<{ id: string; name: string; shop: string; status?: 'Présent' | 'Clôturé' | 'Absent'; arrivalTime?: string; departureTime?: string; mapsIn?: string; mapsOut?: string; lat?: number; long?: number } | null>(null);
 
   const teamData = getSupervisorLiveView(currentUser.id, selectedDate);
@@ -133,6 +134,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
     const { agentId, fromShopId } = source;
     setDraggedHostess(null);
+    setDragOverShopId(null);
 
     if (fromShopId === targetShopId) return;
 
@@ -591,9 +593,20 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
             return (
               <div
                 key={shop.id}
-                className={`glass-card p-4 border space-y-3 transition-all ${draggedHostess ? 'border-amber-400/40' : 'border-white/10'}`}
+                className={`glass-card p-4 border space-y-3 transition-all ${
+                  dragOverShopId === shop.id
+                    ? 'border-amber-300 bg-amber-400/20 ring-2 ring-amber-300/60 shadow-[0_0_0_1px_rgba(252,211,77,0.45)]'
+                    : draggedHostess
+                      ? 'border-amber-400/40'
+                      : 'border-white/10'
+                }`}
+                onDragEnter={(e) => {
+                  e.preventDefault();
+                  setDragOverShopId(shop.id);
+                }}
                 onDragOver={(e) => {
                   e.preventDefault();
+                  setDragOverShopId(shop.id);
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -631,10 +644,14 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                         onDragStart={(e) => {
                           const payload = { agentId: ag.id, fromShopId: shop.id };
                           setDraggedHostess(payload);
+                          setDragOverShopId(null);
                           e.dataTransfer.effectAllowed = 'move';
                           e.dataTransfer.setData('application/json', JSON.stringify(payload));
                         }}
-                        onDragEnd={() => setDraggedHostess(null)}
+                        onDragEnd={() => {
+                          setDraggedHostess(null);
+                          setDragOverShopId(null);
+                        }}
                         className="cursor-grab active:cursor-grabbing text-[9px] font-black uppercase px-2.5 py-1 bg-white/5 text-gray-300 rounded-lg border border-white/10 flex items-center space-x-1"
                         title="Glisser-déposer vers un autre shop"
                       >
