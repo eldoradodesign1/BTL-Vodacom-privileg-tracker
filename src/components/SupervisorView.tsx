@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { User, Shop, AgentMasterStatus } from '../types';
-import { getSupervisorLiveView, getReports, getUsers, getLeads, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate } from '../utils/storage';
+import { getSupervisorLiveView, getReports, getUsers, getLeads, getCheckins, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate } from '../utils/storage';
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
-import { Trophy, FileCheck, Eye, Search, Store, UserCheck, MapPin, Archive, NotebookText, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
-import { DateIconPicker } from './DateIconPicker';
+import { Trophy, FileCheck, Eye, Search, Store, UserCheck, User as UserIcon, MapPin, Archive, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight, X, Check, Circle, FileX2 } from 'lucide-react';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 
 interface SupervisorViewProps {
@@ -47,6 +47,12 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [dragOverShopId, setDragOverShopId] = useState<string | null>(null);
   const [selectedLocationAgent, setSelectedLocationAgent] = useState<{ id: string; name: string; shop: string; status?: 'Présent' | 'Clôturé' | 'Absent'; arrivalTime?: string; departureTime?: string; mapsIn?: string; mapsOut?: string; lat?: number; long?: number } | null>(null);
   const [showHomeCalendar, setShowHomeCalendar] = useState(false);
+  const [presenceCalendarAgentId, setPresenceCalendarAgentId] = useState<string | null>(null);
+  const [presenceCalendarPosition, setPresenceCalendarPosition] = useState<{ top: number; left: number } | null>(null);
+  const [presenceCalendarMonth, setPresenceCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
   const todayIso = new Date().toISOString().split('T')[0];
   const [reportsStartDate, setReportsStartDate] = useState(todayIso);
   const [reportsEndDate, setReportsEndDate] = useState(todayIso);
@@ -77,6 +83,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   }, [showHomeCalendar]);
 
   const teamData = getSupervisorLiveView(currentUser.id, selectedDate);
+  const allCheckins = getCheckins();
   const allReports = getReports();
   const allUsers = getUsers();
   const supervisedAgents = allUsers.filter(u => u.role === 'agent' && u.supervisorId === currentUser.id);
@@ -108,6 +115,34 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     if (status === 'Clôturé') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
     if (status === 'Présent') return 'bg-blue-500/20 text-blue-400 border-blue-500/40';
     return 'bg-red-500/20 text-red-400 border-red-500/40';
+  };
+  const getStatusIcon = (status: string) => {
+    if (status === 'Clôturé') return <Check className="w-4 h-4" />;
+    if (status === 'Présent') return <Circle className="w-3.5 h-3.5 fill-current" />;
+    return <X className="w-4 h-4" />;
+  };
+  const getStatusActionTitle = (status: string) => {
+    if (status === 'Présent') return 'Voir la localisation de pointage';
+    if (status === 'Clôturé') return 'Voir la localisation de clôture';
+    return 'Absent';
+  };
+  const getStatusCalendarCellClass = (status: 'Absent' | 'Présent' | 'Clôturé') => {
+    if (status === 'Clôturé') return 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40';
+    if (status === 'Présent') return 'bg-blue-500/25 text-blue-300 border-blue-500/40';
+    return 'bg-red-500/20 text-red-300 border-red-500/35';
+  };
+  const activityStartIso = '2026-07-23';
+  const isInsideActivityPeriod = (isoDate: string) => isoDate >= activityStartIso && isoDate <= todayIso;
+  const getAgentStatusForDate = (agent: { id: string; name: string }, isoDate: string): 'Absent' | 'Présent' | 'Clôturé' => {
+    const hasReport = teamReports.some((report) => (
+      (report.agent_id === agent.id || report.agent_id === agent.name) && report.date === isoDate
+    ));
+    if (hasReport) return 'Clôturé';
+
+    const hasCheckin = allCheckins.some((checkin) => (
+      (checkin.agent_id === agent.id || checkin.agent_id === agent.name) && checkin.type === 'IN' && formatIsoDate(new Date(checkin.timestamp)) === isoDate
+    ));
+    return hasCheckin ? 'Présent' : 'Absent';
   };
 
   const formatIsoDate = (date: Date) => {
@@ -142,6 +177,22 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
       isSelected: formatIsoDate(dayDate) === selectedDate
     };
   });
+
+  useEffect(() => {
+    if (!presenceCalendarAgentId) return;
+
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setPresenceCalendarAgentId(null);
+        setPresenceCalendarPosition(null);
+      }
+    };
+
+    document.addEventListener('keydown', onEscape);
+    return () => {
+      document.removeEventListener('keydown', onEscape);
+    };
+  }, [presenceCalendarAgentId]);
 
   const handleSaveTarget = () => {
     const today = new Date().toISOString().split('T')[0];
@@ -355,17 +406,9 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
               Monitoring <span className="text-red-500">Équipe</span>
             </h1>
             <p className="text-xs font-semibold text-gray-400 mt-0.5">
-              Suivi détaillé et historique individuel des hôtesses ({teamData.length})
+              Suivi détaillé et historique individuel des hôtesses ({filteredTeam.length})
             </p>
           </div>
-
-          <DateIconPicker
-            value={selectedDate}
-            onChange={setSelectedDate}
-            className="inline-flex items-center"
-            buttonClassName="h-10 w-10 rounded-xl bg-black/60 border border-white/10 text-gray-200 hover:bg-white/10"
-            labelClassName="text-[10px] font-black uppercase text-gray-200"
-          />
         </div>
 
         {/* Search Input */}
@@ -432,31 +475,11 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <h3 className="text-xs font-black uppercase text-white">{item.name}</h3>
-                      <select
-                        value={inlineAssignShop[item.id] || ''}
-                        onChange={(e) => {
-                          const nextShopId = e.target.value;
-                          if (!nextShopId) return;
-
-                          const confirmed = window.confirm(`Affecter ${item.name} à ce shop ?`);
-                          if (!confirmed) return;
-
-                          updateUserShopAssignment(item.id, nextShopId);
-                          setInlineAssignShop(prev => ({ ...prev, [item.id]: '' }));
-                          if (onRefreshData) onRefreshData();
-                        }}
-                        className="bg-black/60 border border-white/10 rounded-xl px-2.5 py-1.5 text-white text-[10px] font-bold min-w-[120px]"
-                      >
-                        <option value="">shop...</option>
-                        {shops.map(s => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
-                        ))}
-                      </select>
                     </div>
 
-                    <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-wrap gap-1 mt-1">
+                    <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-nowrap gap-1 mt-1 whitespace-nowrap overflow-hidden">
                       <MapPin className="w-3 h-3 text-blue-400" />
-                      <span>{formatAgentLocationLine({
+                      <span className="truncate">{formatAgentLocationLine({
                         shop: item.shop,
                         status: item.status,
                         arrivalTime: item.reportObj?.arrival_time,
@@ -465,9 +488,51 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <div className="grid grid-cols-2 gap-2 shrink-0">
+                    {onOpenAgentProfile && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenAgentProfile({
+                            id: item.id,
+                            name: item.name,
+                            phone: '0810000000',
+                            shop: item.shop,
+                            shopId: '',
+                            status: item.status,
+                            trend: [4, 7, 5, 12, 18, 14, totalLeads]
+                          });
+                        }}
+                        className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0 flex items-center justify-center`}
+                        title="Détail hotesse"
+                      >
+                        <UserIcon className="w-4 h-4" />
+                      </button>
+                    )}
+
+                    {item.reportObj ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenPdfModal(`report-id:${item.reportObj!.id}`);
+                        }}
+                        className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0 flex items-center justify-center`}
+                        title="Voir le rapport PDF"
+                      >
+                        <FileText className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <span
+                        className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0 flex items-center justify-center opacity-75`}
+                        title="Pas de rapport"
+                      >
+                        <FileX2 className="w-4 h-4" />
+                      </span>
+                    )}
+
                     <button
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.stopPropagation();
                         if (item.status === 'Présent' || item.status === 'Clôturé') {
                           const agentForLocation: AgentMasterStatus = {
                             id: item.id,
@@ -483,42 +548,40 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                           if (onOpenLocationModal) onOpenLocationModal(agentForLocation);
                         }
                       }}
-                      className={`px-2.5 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg} ${(item.status === 'Présent' || item.status === 'Clôturé') ? 'cursor-pointer hover:opacity-90' : 'cursor-default'}`}
-                      title={item.status === 'Présent' ? 'Voir la localisation de pointage' : (item.status === 'Clôturé' ? 'Voir la localisation de clôture' : undefined)}
+                      className={`p-1.5 rounded-xl border ${statusBg} ${(item.status === 'Présent' || item.status === 'Clôturé') ? 'cursor-pointer hover:opacity-90' : 'cursor-default'} flex items-center justify-center`}
+                      title={getStatusActionTitle(item.status)}
                     >
-                      {item.status}
+                      {getStatusIcon(item.status)}
                     </button>
 
-                    {onOpenAgentProfile && (
+                    <div className="relative">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onOpenAgentProfile({
-                            id: item.id,
-                            name: item.name,
-                            phone: '0810000000',
-                            shop: item.shop,
-                            shopId: '',
-                            status: item.status,
-                            trend: [4, 7, 5, 12, 18, 14, totalLeads]
-                          });
+                          if (presenceCalendarAgentId === item.id) {
+                            setPresenceCalendarAgentId(null);
+                            setPresenceCalendarPosition(null);
+                            return;
+                          }
+                          const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
+                          const popupWidth = 320;
+                          const popupHeight = 360;
+                          const left = Math.max(8, Math.min(rect.right - popupWidth, window.innerWidth - popupWidth - 8));
+                          const topBelow = rect.bottom + 8;
+                          const top = topBelow + popupHeight > window.innerHeight - 8
+                            ? Math.max(8, rect.top - popupHeight - 8)
+                            : topBelow;
+                          const now = new Date();
+                          setPresenceCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+                          setPresenceCalendarPosition({ top, left });
+                          setPresenceCalendarAgentId(item.id);
                         }}
-                        className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
-                        title="Voir l'historique des rapports"
+                        className={`p-1.5 rounded-xl border transition-all flex items-center justify-center ${statusBg}`}
+                        title="Registre de présence"
                       >
-                        <NotebookText className="w-4 h-4" />
+                        <CalendarDays className="w-4 h-4" />
                       </button>
-                    )}
-
-                    {item.reportObj && (
-                      <button
-                        onClick={() => onOpenPdfModal(`report-id:${item.reportObj!.id}`)}
-                        className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0`}
-                        title="Voir le rapport PDF"
-                      >
-                        <FileText className="w-4 h-4" />
-                      </button>
-                    )}
+                    </div>
                   </div>
                 </div>
 
@@ -560,6 +623,106 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
             );
           })}
         </div>
+
+        {presenceCalendarAgentId && presenceCalendarPosition && (() => {
+          const selectedAgent = filteredTeam.find((agent) => agent.id === presenceCalendarAgentId)
+            || teamData.find((agent) => agent.id === presenceCalendarAgentId)
+            || null;
+          if (!selectedAgent) return null;
+
+          const presenceMonthLabel = presenceCalendarMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+          const firstPresenceDayOfMonth = new Date(presenceCalendarMonth.getFullYear(), presenceCalendarMonth.getMonth(), 1);
+          const presenceDaysInMonth = new Date(presenceCalendarMonth.getFullYear(), presenceCalendarMonth.getMonth() + 1, 0).getDate();
+          const presenceStartOffset = (firstPresenceDayOfMonth.getDay() + 6) % 7;
+          const presenceDayCells = Array.from({ length: 42 }, (_, index) => {
+            const dayNumber = index - presenceStartOffset + 1;
+            if (dayNumber < 1 || dayNumber > presenceDaysInMonth) return null;
+            const dayDate = new Date(presenceCalendarMonth.getFullYear(), presenceCalendarMonth.getMonth(), dayNumber);
+            const isoDate = formatIsoDate(dayDate);
+            const dayStatus = getAgentStatusForDate(selectedAgent, isoDate);
+            const inActivityPeriod = isInsideActivityPeriod(isoDate);
+            const isToday = isoDate === todayIso;
+            return { dayNumber, isoDate, dayStatus, inActivityPeriod, isToday };
+          });
+
+          return createPortal(
+            <div
+              className="fixed inset-0 z-[9999] bg-black/45 backdrop-blur-[2px]"
+              onClick={() => {
+                setPresenceCalendarAgentId(null);
+                setPresenceCalendarPosition(null);
+              }}
+            >
+              <div
+                className="absolute w-80 rounded-2xl border border-white/10 bg-zinc-950/95 p-3 shadow-2xl"
+                style={{ top: `${presenceCalendarPosition.top}px`, left: `${presenceCalendarPosition.left}px` }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mb-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPresenceCalendarAgentId(null);
+                      setPresenceCalendarPosition(null);
+                    }}
+                    className="h-7 w-7 rounded-lg border border-white/10 bg-white/5 text-gray-300 hover:text-white hover:bg-white/10"
+                    title="Fermer"
+                  >
+                    <X className="w-4 h-4 mx-auto" />
+                  </button>
+                </div>
+
+                <div className="mb-3 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setPresenceCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))}
+                    className="h-8 w-8 rounded-xl border border-white/10 bg-white/5 text-gray-200 hover:bg-white/10"
+                    title="Mois précédent"
+                  >
+                    <ChevronLeft className="w-4 h-4 mx-auto" />
+                  </button>
+                  <div className="text-xs font-black uppercase text-white tracking-wide">{presenceMonthLabel}</div>
+                  <button
+                    type="button"
+                    onClick={() => setPresenceCalendarMonth((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))}
+                    className="h-8 w-8 rounded-xl border border-white/10 bg-white/5 text-gray-200 hover:bg-white/10"
+                    title="Mois suivant"
+                  >
+                    <ChevronRight className="w-4 h-4 mx-auto" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-7 gap-1 mb-1">
+                  {['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'].map((label) => (
+                    <div key={label} className="text-center text-[10px] font-black uppercase text-gray-500 py-1">{label}</div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-7 gap-1">
+                  {presenceDayCells.map((cell, index) => {
+                    if (!cell) return <div key={`empty-${index}`} className="h-9" />;
+                    return (
+                      <div
+                        key={cell.isoDate}
+                        className={`h-9 rounded-lg border text-[11px] font-black flex items-center justify-center ${cell.inActivityPeriod ? getStatusCalendarCellClass(cell.dayStatus) : 'bg-white/5 text-gray-500 border-white/10'} ${cell.isToday ? 'ring-1 ring-amber-300/70' : ''}`}
+                        title={cell.inActivityPeriod ? `${cell.isoDate}: ${cell.dayStatus}` : `${cell.isoDate}: hors période d'activité`}
+                      >
+                        {cell.dayNumber}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-3 flex items-center justify-center gap-3 text-[9px] font-black uppercase text-gray-300">
+                  <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />Absent</span>
+                  <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-blue-400" />Présent</span>
+                  <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" />Clôturé</span>
+                </div>
+              </div>
+            </div>,
+            document.body
+          );
+        })()}
       </div>
     );
   }
