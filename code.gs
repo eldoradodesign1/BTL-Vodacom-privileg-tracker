@@ -131,7 +131,7 @@ function processLead(d) {
 
 function processReport(d) {
   try {
-    const sheet = setupSheet('DailyReports', ['id', 'date', 'shop_name', 'priv', 'roam', 'bund', 'agent_id', 'agent_name', 'shop_id', 'comment', 'timestamp', 'arrival_time', 'departure_time', 'maps_in', 'maps_out', 'pointage_photo', 'report_photos', 'pdf_data_url', 'drive_pdf_url']);
+    const sheet = setupSheet('DailyReports', ['id', 'date', 'agent_id', 'priv', 'roam', 'bund', 'shop_id', 'comment', 'agent_name', 'timestamp', 'arrival_time', 'departure_time', 'maps_in', 'maps_out', 'pointage_photo', 'report_photos', 'pdf_data_url', 'drive_pdf_url']);
 
     const priv = Number(d.priv !== undefined ? d.priv : (d.privilege_count || 0));
     const roam = Number(d.roam !== undefined ? d.roam : (d.roaming_count || 0));
@@ -143,14 +143,13 @@ function processReport(d) {
     sheet.appendRow([
       d.id || d.uuid || Utilities.getUuid(),
       d.date || new Date().toISOString().split('T')[0],
-      d.shop_name || '',
+      d.agent_id || '',
       priv,
       roam,
       bund,
-      d.agent_id || '',
-      d.agent_name || '',
       d.shop_id || '',
       d.comment || '',
+      d.agent_name || '',
       d.timestamp || new Date().toISOString(),
       d.arrival_time || '',
       d.departure_time || '',
