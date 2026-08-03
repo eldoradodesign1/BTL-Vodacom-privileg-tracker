@@ -680,8 +680,8 @@ export function parseCheckinsFromRows(rows: string[][]): Checkin[] {
 
     if (photoRaw.startsWith('http://') || photoRaw.startsWith('https://') || photoRaw.startsWith('data:image')) {
       photoUrl = photoRaw;
-    } else if (photoRaw.length > 10 && !photoRaw.includes(' ')) {
-      // Direct Drive File ID
+    } else if (/^[a-zA-Z0-9_-]{20,}$/.test(photoRaw)) {
+      // Direct Drive File ID only (strict pattern)
       photoUrl = `https://drive.google.com/uc?id=${photoRaw}`;
     }
 

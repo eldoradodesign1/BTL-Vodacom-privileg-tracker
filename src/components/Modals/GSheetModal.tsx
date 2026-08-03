@@ -315,7 +315,6 @@ function processCheckin(d) {
     return { success: false, error: e.toString() };
   }
 }
-  
 function processLead(d) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
