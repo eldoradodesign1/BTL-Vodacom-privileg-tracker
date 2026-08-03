@@ -239,30 +239,55 @@ function processCheckin(d) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let photoUrl = "";
 
-    if (d.photo && d.photo.indexOf("data:image") === 0) {
-      try {
-        let folder;
-        const folders = DriveApp.getFoldersByName("Vodacom_Pointages_Photos");
-        if (folders.hasNext()) {
-          folder = folders.next();
-        } else {
-          folder = DriveApp.createFolder("Vodacom_Pointages_Photos");
+    if (d.photo && typeof d.photo === "string") {
+      const cleanPhoto = d.photo.trim();
+      const lowerPhoto = cleanPhoto.toLowerCase();
+
+      // 1. CAS : Image envoyée en Base64 (data:image/...)
+      if (lowerPhoto.startsWith("data:image")) {
+        try {
+          let folder;
+          const folderName = "Vodacom_Pointages_Photos";
+          const folders = DriveApp.getFoldersByName(folderName);
+          
+          if (folders.hasNext()) {
+            folder = folders.next();
+          } else {
+            folder = DriveApp.createFolder(folderName);
+          }
+
+          // Extraction du type MIME (ex: image/jpeg ou image/png)
+          const parts = cleanPhoto.split(",");
+          const header = parts[0]; // e.g., "data:image/jpeg;base64"
+          const base64Data = parts[1];
+
+          if (base64Data) {
+            const contentType = header.split(":")[1].split(";")[0]; // e.g., "image/jpeg"
+            const extension = contentType.split("/")[1] || "jpg";
+            const bytes = Utilities.base64Decode(base64Data);
+            
+            const fileName = "Pointage_" + (d.agent_id || "agent") + "_" + Date.now() + "." + extension;
+            const blob = Utilities.newBlob(bytes, contentType, fileName);
+            
+            const file = folder.createFile(blob);
+            file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+            
+            // Format d'URL Google Drive direct pour affichage
+            photoUrl = "https://lh3.googleusercontent.com/d/" + file.getId();
+          } else {
+            console.error("Données Base64 invalides ou absentes après la virgule.");
+          }
+        } catch (errDrive) {
+          console.error("Erreur Google Drive : " + errDrive.toString());
         }
-        const parts = d.photo.split(",");
-        const contentType = parts[0].split(":")[1].split(";")[0];
-        const bytes = Utilities.base64Decode(parts[1]);
-        const fileName = "Pointage_" + (d.agent_id || "agent") + "_" + Date.now() + ".jpg";
-        const blob = Utilities.newBlob(bytes, contentType, fileName);
-        const file = folder.createFile(blob);
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        photoUrl = "https://lh3.googleusercontent.com/d/" + file.getId();
-      } catch (errDrive) {
-        console.error("Drive error: " + errDrive.toString());
+      } 
+      // 2. CAS : Image déjà sous forme d'URL (http / https)
+      else if (lowerPhoto.startsWith("http")) {
+        photoUrl = cleanPhoto;
       }
-    } else if (d.photo && d.photo.indexOf("http") === 0) {
-      photoUrl = d.photo;
     }
 
+    // 3. ENREGISTREMENT DANS GOOGLE SHEETS
     let sheet = ss.getSheetByName("Checkins");
     if (!sheet) {
       sheet = ss.insertSheet("Checkins");
@@ -278,17 +303,19 @@ function processCheckin(d) {
       d.lat || 0,
       d.long || d.lng || 0,
       d.accuracy || 0,
-      photoUrl,
+      photoUrl, // On enregistre uniquement l'URL générée ou propre
       d.device || "Mobile App",
       d.status || "synced"
     ]);
 
     return { success: true, photoUrl: photoUrl };
+
   } catch (e) {
+    console.error("Erreur globale : " + e.toString());
     return { success: false, error: e.toString() };
   }
 }
-
+  
 function processLead(d) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
