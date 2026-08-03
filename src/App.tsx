@@ -66,6 +66,7 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState<TabType>('home');
+  const [homeTabPressCount, setHomeTabPressCount] = useState(0);
   const [users, setUsers] = useState<User[]>(() => getUsers());
   const [shops, setShops] = useState<Shop[]>(() => getShops());
   const [activeShopId, setActiveShopId] = useState<string>('');
@@ -274,6 +275,8 @@ export default function App() {
           currentUser={effectiveUser}
           shops={shops}
           activeTab={activeTab}
+          homeTabPressCount={homeTabPressCount}
+          onRequestTabChange={(tab) => setActiveTab(tab)}
           onSimulateRole={(role) => setSimulatedRole(role)}
           onOpenUserModal={() => setIsUserModalOpen(true)}
           onOpenShopModal={() => setIsShopModalOpen(true)}
@@ -379,7 +382,12 @@ export default function App() {
         userRole={effectiveRole}
         activeTab={activeTab}
         unreadChatCount={chatUnreadCount}
-        onTabChange={(tab) => setActiveTab(tab)}
+        onTabChange={(tab) => {
+          if (tab === 'home') {
+            setHomeTabPressCount((prev) => prev + 1);
+          }
+          setActiveTab(tab);
+        }}
       />
 
       {toast && (

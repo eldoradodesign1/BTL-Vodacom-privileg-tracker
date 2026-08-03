@@ -14,6 +14,8 @@ interface AdminViewProps {
   currentUser: User;
   shops: Shop[];
   activeTab?: TabType;
+  homeTabPressCount?: number;
+  onRequestTabChange?: (tab: TabType) => void;
   onSimulateRole: (role: any) => void;
   onOpenUserModal: () => void;
   onOpenShopModal: () => void;
@@ -28,6 +30,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   currentUser,
   shops,
   activeTab = 'admin',
+  homeTabPressCount = 0,
+  onRequestTabChange,
   onSimulateRole,
   onOpenUserModal,
   onOpenShopModal,
@@ -52,10 +56,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const maxTs = new Date(`${todayIso}T00:00:00`).getTime();
   const maxOffset = Math.max(0, Math.floor((maxTs - minTs) / dayMs));
   const offsetToDate = (offset: number) => toISO(new Date(minTs + (Math.max(0, Math.min(maxOffset, offset)) * dayMs)));
-  const [leadFilterMode, setLeadFilterMode] = useState<'range' | 'day'>('range');
   const [leadStartOffset, setLeadStartOffset] = useState(0);
   const [leadEndOffset, setLeadEndOffset] = useState(maxOffset);
-  const [leadExactDate, setLeadExactDate] = useState(todayIso);
   const [monitoringDate, setMonitoringDate] = useState(todayIso);
   const [selectedAgentId, setSelectedAgentId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -219,7 +221,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const leadRangeEndDate = offsetToDate(rangeEnd);
   const filteredLeads = allLeads.filter(ld => {
     const d = toISO(ld.timestamp);
-    if (leadFilterMode === 'day') return d === leadExactDate;
     return d >= leadRangeStartDate && d <= leadRangeEndDate;
   });
   // Sync internal subTab when activeTab changes
@@ -229,6 +230,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
     else if (activeTab === 'admin') setSubTab('manage');
     else if (activeTab === 'tab2') setSubTab('monitoring');
   }, [activeTab]);
+
+  React.useEffect(() => {
+    if (activeTab === 'home') {
+      setSubTab('stats');
+    }
+  }, [homeTabPressCount, activeTab]);
 
   React.useEffect(() => {
     if (subTab !== 'manage') {
@@ -1207,7 +1214,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <span className="text-[8px] font-bold text-gray-300 uppercase mt-1 block group-hover:underline">→ Voir la liste</span>
             </div>
             <div
-              onClick={() => setSubTab('manage')}
+              onClick={() => {
+                setSubTab('manage');
+                setManageSection('hostess');
+                if (onRequestTabChange) onRequestTabChange('admin');
+              }}
               className="relative overflow-hidden bg-white/[0.128] text-white p-5 rounded-[28px] text-center shadow-[0_18px_38px_rgba(0,0,0,0.38)] border border-white/25 backdrop-blur-xl cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group"
               title="Cliquer pour aller au Monitoring des hôtesses"
             >
@@ -1315,51 +1326,26 @@ export const AdminView: React.FC<AdminViewProps> = ({
       {/* --- SUB-TAB 3: LEADS TABLE --- */}
       {subTab === 'leads' && (
         <div className="space-y-4">
-          <div className="glass-card p-4 border border-white/10 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] font-black uppercase text-gray-400">Filtre temporel des leads</p>
-              <button
-                onClick={() => setLeadFilterMode(leadFilterMode === 'range' ? 'day' : 'range')}
-                className="px-3 py-1.5 rounded-xl text-[10px] font-black uppercase bg-white/10 text-white border border-white/20"
-              >
-                {leadFilterMode === 'range' ? 'Date précise' : 'Plage'}
-              </button>
-            </div>
+          <div className="glass-card relative z-30 overflow-visible p-4 border border-white/10 space-y-3">
+            <p className="text-[10px] font-black uppercase text-gray-400">Filtre temporel des leads</p>
 
-            {leadFilterMode === 'range' ? (
-              <div className="space-y-2">
-                <div className="text-[10px] text-gray-300 font-bold">{leadRangeStartDate} → {leadRangeEndDate}</div>
-                <input
-                  type="range"
-                  min={0}
-                  max={maxOffset}
-                  value={leadStartOffset}
-                  onChange={(e) => setLeadStartOffset(parseInt(e.target.value, 10))}
-                  className="w-full"
-                />
-                <input
-                  type="range"
-                  min={0}
-                  max={maxOffset}
-                  value={leadEndOffset}
-                  onChange={(e) => setLeadEndOffset(parseInt(e.target.value, 10))}
-                  className="w-full"
-                />
-              </div>
-            ) : (
-              <DateIconPicker
-                value={leadExactDate}
-                onChange={setLeadExactDate}
-                min={firstLeadDate}
-                max={todayIso}
-                className="inline-flex items-center"
-                buttonClassName="h-10 w-10 rounded-xl bg-black/60 border border-white/10 text-gray-200 hover:bg-white/10"
-                labelClassName="text-[10px] font-black uppercase text-gray-200"
+            <div className="space-y-2">
+              <DateRangeKnobSlider
+                minDate={firstLeadDate}
+                maxDate={todayIso}
+                startDate={leadRangeStartDate}
+                endDate={leadRangeEndDate}
+                onChange={({ startDate: nextStart, endDate: nextEnd }) => {
+                  const nextStartOffset = Math.max(0, Math.min(maxOffset, Math.floor((new Date(`${nextStart}T00:00:00`).getTime() - minTs) / dayMs)));
+                  const nextEndOffset = Math.max(0, Math.min(maxOffset, Math.floor((new Date(`${nextEnd}T00:00:00`).getTime() - minTs) / dayMs)));
+                  setLeadStartOffset(nextStartOffset);
+                  setLeadEndOffset(nextEndOffset);
+                }}
               />
-            )}
+            </div>
           </div>
 
-          <div className="glass-card p-3 border border-white/10 overflow-x-auto">
+          <div className="glass-card relative z-10 p-3 border border-white/10 overflow-x-auto">
             <h2 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-2">Tableau des Leads ({filteredLeads.length})</h2>
             <table className="w-full text-left text-[10px] min-w-[760px]">
               <thead>
