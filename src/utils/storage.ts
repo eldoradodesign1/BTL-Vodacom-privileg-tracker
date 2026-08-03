@@ -899,6 +899,12 @@ export function addLead(leadData: Omit<Lead, 'id'>): Lead {
     throw new Error('Le numero client est obligatoire.');
   }
 
+  const leadDate = toISO(leadData.timestamp || new Date().toISOString());
+  const { reportDone } = checkDailyStatus(leadData.agent_id, leadDate);
+  if (reportDone) {
+    throw new Error('Session cloturee: impossible d\'enregistrer un nouveau client apres envoi du rapport.');
+  }
+
   const leads = getLeads();
   const newLead: Lead = {
     ...leadData,

@@ -124,19 +124,37 @@ function processLead(d) {
 
 function processReport(d) {
   try {
-    const sheet = setupSheet('DailyReports', ['id', 'date', 'shop_name', 'priv', 'roam', 'bund', 'agent_id', 'comment', 'timestamp']);
+    const sheet = setupSheet('DailyReports', ['id', 'date', 'shop_name', 'priv', 'roam', 'bund', 'agent_id', 'agent_name', 'shop_id', 'comment', 'timestamp', 'arrival_time', 'departure_time', 'maps_in', 'maps_out', 'pointage_photo', 'report_photos', 'pdf_data_url', 'drive_pdf_url']);
+
+    const priv = Number(d.priv !== undefined ? d.priv : (d.privilege_count || 0));
+    const roam = Number(d.roam !== undefined ? d.roam : (d.roaming_count || 0));
+    const bund = Number(d.bund !== undefined ? d.bund : (d.bundle_count || 0));
+    const reportPhotos = Array.isArray(d.report_photos)
+      ? JSON.stringify(d.report_photos)
+      : (d.report_photos || '');
+
     sheet.appendRow([
       d.id || d.uuid || Utilities.getUuid(),
       d.date || new Date().toISOString().split('T')[0],
       d.shop_name || '',
-      d.priv || 0,
-      d.roam || 0,
-      d.bund || 0,
+      priv,
+      roam,
+      bund,
       d.agent_id || '',
+      d.agent_name || '',
+      d.shop_id || '',
       d.comment || '',
-      d.timestamp || new Date().toISOString()
+      d.timestamp || new Date().toISOString(),
+      d.arrival_time || '',
+      d.departure_time || '',
+      d.maps_in || '',
+      d.maps_out || '',
+      d.pointage_photo || '',
+      reportPhotos,
+      d.pdf_data_url || d.pdf_url || '',
+      d.drive_pdf_url || d.report_url || ''
     ]);
-    return { success: true };
+    return { success: true, id: d.id || d.uuid || '' };
   } catch (e) {
     return { success: false, error: e.toString() };
   }

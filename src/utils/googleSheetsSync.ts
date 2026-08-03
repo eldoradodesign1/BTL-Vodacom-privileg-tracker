@@ -1193,11 +1193,16 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
       agent_name: r.agent_name,
       shop_id: r.shop_id,
       shop_name: r.shop_name,
+      priv: r.priv,
+      roam: r.roam,
+      bund: r.bund,
       privilege_count: r.priv,
       roaming_count: r.roam,
       bundle_count: r.bund,
       comment: r.comment || '',
+      timestamp: r.timestamp || new Date().toISOString(),
       pdf_data_url: r.pdf_url || '',
+      pdf_url: r.pdf_url || '',
       pointage_photo: r.pointage_photo || '',
       report_photos: r.photos || [],
       maps_in: r.maps_in || '',
@@ -1259,6 +1264,9 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(enrichedPayload)
     });
+    if (!res.ok) {
+      throw new Error(`Webhook HTTP ${res.status}`);
+    }
     if (res.ok && checkinObj) {
       try {
         const text = await res.text();
