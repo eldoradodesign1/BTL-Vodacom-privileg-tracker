@@ -208,6 +208,28 @@ function buildCheckinMergeKey(checkin: Partial<Checkin>): string {
   return `${agentKey}::${typeKey}::${tsKey}`;
 }
 
+function buildLeadMergeKey(lead: Partial<Lead>): string {
+  const dateKey = lead.timestamp ? toISO(lead.timestamp) : '';
+  const agentKey = (lead.agent_id || '').trim().toLowerCase();
+  const shopKey = (lead.shop_id || '').trim().toLowerCase();
+  const msisdnKey = (lead.msisdn || '').replace(/\s+/g, '').trim().toLowerCase();
+  const actionKey = (lead.action_type || '').trim().toLowerCase();
+  return `${dateKey}::${agentKey}::${shopKey}::${msisdnKey}::${actionKey}`;
+}
+
+function mergeLeadsKeepingPending(incomingLeads: Lead[]): Lead[] {
+  const localPending = getLeads().filter((lead) => lead.status === 'pending');
+  const incomingById = new Set(incomingLeads.map((lead) => lead.id));
+  const incomingByKey = new Set(incomingLeads.map((lead) => buildLeadMergeKey(lead)));
+
+  const pendingNotSynced = localPending.filter((lead) => {
+    if (incomingById.has(lead.id)) return false;
+    return !incomingByKey.has(buildLeadMergeKey(lead));
+  });
+
+  return [...incomingLeads, ...pendingNotSynced];
+}
+
 function mergeReportsPreservingMedia(incomingReports: DailyReport[]): DailyReport[] {
   const existingReports = getReports();
   const existingById = new Map(existingReports.map((report) => [report.id, report]));
@@ -809,8 +831,7 @@ export function parseXlsxBuffer(buffer: ArrayBuffer, options: SyncOptions = {}):
       } else if (normName.includes('lead') || normName.includes('client') || normName.includes('opt-in') || normName.includes('activat')) {
         const leads = parseLeadsFromRows(rows);
         if (leads.length > 0) {
-          const localPending = getLeads().filter(l => l.status === 'pending');
-          saveLeads([...leads, ...localPending]);
+          saveLeads(mergeLeadsKeepingPending(leads));
           totalImported += leads.length;
           summaryParts.push(`${leads.length} lead(s)`);
         }
@@ -846,8 +867,7 @@ export function parseXlsxBuffer(buffer: ArrayBuffer, options: SyncOptions = {}):
     const fallbackLeads = parseLeadsFromRows(firstRows);
 
     if (fallbackLeads.length > 0) {
-      const localPending = getLeads().filter(l => l.status === 'pending');
-      saveLeads([...fallbackLeads, ...localPending]);
+      saveLeads(mergeLeadsKeepingPending(fallbackLeads));
       return {
         success: true,
         count: fallbackLeads.length,
@@ -955,8 +975,7 @@ export async function syncFromGoogleSheetUrl(url: string, options: SyncOptions =
           } else if (tab.type === 'leads') {
             const leads = parseLeadsFromRows(rows);
             if (leads.length > 0) {
-              const localPending = getLeads().filter(l => l.status === 'pending');
-              saveLeads([...leads, ...localPending]);
+              saveLeads(mergeLeadsKeepingPending(leads));
               totalSynced += leads.length;
               parts.push(`${leads.length} leads`);
             }
@@ -1027,8 +1046,7 @@ export async function syncFromGoogleSheetUrl(url: string, options: SyncOptions =
 
     const newLeads = parseLeadsFromRows(rows);
     if (newLeads.length > 0) {
-      const localPending = getLeads().filter(l => l.status === 'pending');
-      saveLeads([...newLeads, ...localPending]);
+      saveLeads(mergeLeadsKeepingPending(newLeads));
       totalSynced += newLeads.length;
       parts.push(`${newLeads.length} leads`);
     }
@@ -1267,18 +1285,26 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
     if (!res.ok) {
       throw new Error(`Webhook HTTP ${res.status}`);
     }
+
+    const responseText = await res.text();
+    let parsedBody: any = null;
+    if (responseText) {
+      try {
+        parsedBody = JSON.parse(responseText);
+      } catch {}
+    }
+    if (parsedBody && parsedBody.success === false) {
+      return false;
+    }
+
     if (res.ok && checkinObj) {
       try {
-        const text = await res.text();
         let returnedPhoto = '';
-        if (text) {
-          try {
-            const json = JSON.parse(text);
-            returnedPhoto = json.photoUrl || json.photo || '';
-          } catch {
-            const foundUrl = text.match(/https?:\/\/[^\s"']+/i);
-            if (foundUrl) returnedPhoto = foundUrl[0];
-          }
+        if (parsedBody) {
+          returnedPhoto = parsedBody.photoUrl || parsedBody.photo || '';
+        } else if (responseText) {
+          const foundUrl = responseText.match(/https?:\/\/[^\s"']+/i);
+          if (foundUrl) returnedPhoto = foundUrl[0];
         }
 
         const checkins = getCheckins();
@@ -1296,16 +1322,14 @@ export async function pushToGoogleSheetWebhook(payload: any): Promise<boolean> {
     }
     if (res.ok && reportObj) {
       try {
-        const text = await res.text();
         let drivePdf = '';
         let reportPhotos: string[] | undefined;
 
-        try {
-          const json = JSON.parse(text);
-          drivePdf = json.pdfUrl || json.reportUrl || json.drivePdfUrl || json.drive_url || json.fileUrl || '';
-          reportPhotos = Array.isArray(json.reportPhotoUrls) ? json.reportPhotoUrls : reportPhotos;
-        } catch {
-          const foundUrl = text.match(/https?:\/\/[^\s"']+/i);
+        if (parsedBody) {
+          drivePdf = parsedBody.pdfUrl || parsedBody.reportUrl || parsedBody.drivePdfUrl || parsedBody.drive_url || parsedBody.fileUrl || '';
+          reportPhotos = Array.isArray(parsedBody.reportPhotoUrls) ? parsedBody.reportPhotoUrls : reportPhotos;
+        } else if (responseText) {
+          const foundUrl = responseText.match(/https?:\/\/[^\s"']+/i);
           if (foundUrl) drivePdf = foundUrl[0];
         }
 

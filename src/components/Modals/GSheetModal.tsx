@@ -212,6 +212,8 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
       return responseJSON(processLead(data));
     } else if (action === 'processReport' || data.type === 'report' || data.tab === 'DailyReports') {
       return responseJSON(processReport(data));
+    } else if (action === 'processChat' || data.type === 'chat' || data.tab === 'Chat') {
+      return responseJSON(processChat(data));
     } else {
       return responseJSON({ success: true, message: "Événement reçu", data: data });
     }
@@ -223,6 +225,13 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
 function responseJSON(obj) {
   return ContentService.createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+function responseJSONP(callbackName, obj) {
+  const safeCallback = String(callbackName || '').replace(/[^a-zA-Z0-9_.$]/g, '');
+  if (!safeCallback) return responseJSON(obj);
+  return ContentService.createTextOutput(safeCallback + '(' + JSON.stringify(obj) + ')')
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
 }
 
 function processCheckin(d) {
@@ -327,6 +336,93 @@ function processReport(d) {
     return { success: true };
   } catch (e) {
     return { success: false, error: e.toString() };
+  }
+}
+
+function processChat(d) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName("Chat");
+    if (!sheet) {
+      sheet = ss.insertSheet("Chat");
+      sheet.appendRow(["id", "sender_id", "sender_name", "sender_role", "message", "created_at", "timestamp", "read_by", "deleted", "deleted_by", "deleted_at"]);
+    }
+
+    sheet.appendRow([
+      d.id || Utilities.getUuid(),
+      d.sender_id || "",
+      d.sender_name || "",
+      d.sender_role || "",
+      d.message || "",
+      d.created_at || new Date().toISOString(),
+      d.timestamp || "",
+      JSON.stringify(d.read_by || []),
+      false,
+      "",
+      ""
+    ]);
+
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function doGet(e) {
+  const action = e && e.parameter ? e.parameter.action : '';
+  const callback = e && e.parameter ? e.parameter.callback : '';
+  if (action === 'getChatMessages') {
+    const payload = getChatMessages();
+    if (callback) return responseJSONP(callback, payload);
+    return responseJSON(payload);
+  }
+  const unknown = { success: false, message: 'Action GET inconnue' };
+  if (callback) return responseJSONP(callback, unknown);
+  return responseJSON(unknown);
+}
+
+function getChatMessages() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Chat');
+    if (!sheet) {
+      sheet = ss.insertSheet('Chat');
+      sheet.appendRow(['id', 'sender_id', 'sender_name', 'sender_role', 'message', 'created_at', 'timestamp', 'read_by', 'deleted', 'deleted_by', 'deleted_at']);
+      return { success: true, messages: [] };
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      return { success: true, messages: [] };
+    }
+
+    const rows = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
+    const messages = rows.map(function(row) {
+      let readBy = [];
+      try {
+        readBy = JSON.parse(String(row[7] || '[]'));
+      } catch (err) {}
+
+      return {
+        id: String(row[0] || ''),
+        sender_id: String(row[1] || ''),
+        sender_name: String(row[2] || ''),
+        sender_role: String(row[3] || ''),
+        message: String(row[4] || ''),
+        created_at: String(row[5] || ''),
+        timestamp: String(row[6] || ''),
+        read_by: Array.isArray(readBy) ? readBy : [],
+        deleted: String(row[8] || '').toLowerCase() === 'true',
+        deleted_by: String(row[9] || ''),
+        deleted_at: String(row[10] || '')
+      };
+    }).filter(function(msg) {
+      return !msg.deleted;
+    });
+
+    return { success: true, messages: messages };
+  } catch (e) {
+    return { success: false, error: e.toString(), messages: [] };
   }
 }`}
               </pre>

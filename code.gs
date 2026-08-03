@@ -39,6 +39,13 @@ function responseJSON(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function responseJSONP(callbackName, obj) {
+  const safeCallback = String(callbackName || '').replace(/[^a-zA-Z0-9_.$]/g, '');
+  if (!safeCallback) return responseJSON(obj);
+  return ContentService.createTextOutput(`${safeCallback}(${JSON.stringify(obj)})`)
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
 function safeParseJson(raw) {
   if (!raw) return null;
   try {
@@ -202,10 +209,15 @@ function processChat(d) {
 
 function doGet(e) {
   const action = e && e.parameter ? e.parameter.action : '';
+  const callback = e && e.parameter ? e.parameter.callback : '';
   if (action === 'getChatMessages') {
-    return responseJSON(getChatMessages());
+    const payload = getChatMessages();
+    if (callback) return responseJSONP(callback, payload);
+    return responseJSON(payload);
   }
-  return responseJSON({ success: false, message: 'Action GET inconnue' });
+  const unknown = { success: false, message: 'Action GET inconnue' };
+  if (callback) return responseJSONP(callback, unknown);
+  return responseJSON(unknown);
 }
 
 function getChatMessages() {

@@ -908,14 +908,32 @@ export function addLead(leadData: Omit<Lead, 'id'>): Lead {
   const leads = getLeads();
   const newLead: Lead = {
     ...leadData,
+    status: leadData.status || 'pending',
     id: generateUUID()
   };
   leads.unshift(newLead);
   saveItem(STORAGE_KEYS.LEADS, leads);
-  pushToGoogleSheetWebhook({ type: 'lead', data: newLead }).then(() => {
-    const cfg = getGSheetConfig();
-    if (cfg.sheetCsvUrl) {
-      syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
+  pushToGoogleSheetWebhook({ type: 'lead', data: newLead }).then((confirmed) => {
+    if (confirmed) {
+      const latest = getLeads();
+      const idx = latest.findIndex((lead) => lead.id === newLead.id);
+      if (idx >= 0 && latest[idx].status !== 'synced') {
+        latest[idx] = { ...latest[idx], status: 'synced' };
+        saveLeads(latest);
+      }
+
+      const cfg = getGSheetConfig();
+      if (cfg.sheetCsvUrl) {
+        syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
+      }
+      return;
+    }
+
+    const latest = getLeads();
+    const idx = latest.findIndex((lead) => lead.id === newLead.id);
+    if (idx >= 0 && latest[idx].status !== 'pending') {
+      latest[idx] = { ...latest[idx], status: 'pending' };
+      saveLeads(latest);
     }
   }).catch(() => {});
   return newLead;
