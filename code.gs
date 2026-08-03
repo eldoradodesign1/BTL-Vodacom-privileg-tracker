@@ -69,26 +69,63 @@ function setupSheet(sheetName, headers) {
 function processCheckin(d) {
   try {
     let photoUrl = '';
-    if (d.photo && String(d.photo).indexOf('data:image') === 0) {
+
+    if (d.photo && String(d.photo).trim().toLowerCase().indexOf('data:image') === 0) {
       try {
-        const folder = DriveApp.getFoldersByName('Vodacom_Pointages_Photos');
-        const folderObj = folder.hasNext() ? folder.next() : DriveApp.createFolder('Vodacom_Pointages_Photos');
-        const parts = String(d.photo).split(',');
-        const contentType = parts[0].split(':')[1].split(';')[0];
-        const bytes = Utilities.base64Decode(parts[1]);
-        const fileName = 'Pointage_' + (d.agent_id || 'agent') + '_' + Date.now() + '.jpg';
-        const blob = Utilities.newBlob(bytes, contentType, fileName);
-        const file = folderObj.createFile(blob);
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        photoUrl = 'https://lh3.googleusercontent.com/d/' + file.getId();
+        // 1. Dossier Google Drive
+        const folderIterator = DriveApp.getFoldersByName('Vodacom_Pointages_Photos');
+        const folderObj = folderIterator.hasNext() 
+          ? folderIterator.next() 
+          : DriveApp.createFolder('Vodacom_Pointages_Photos');
+
+        // 2. Découpage & Nettoyage du Base64
+        const photoStr = String(d.photo).trim();
+        const parts = photoStr.split(',');
+        
+        if (parts.length >= 2) {
+          const header = parts[0]; // ex: "data:image/jpeg;base64"
+          let base64Data = parts[1];
+
+          // Correction des caractères URL-encoded éventuels (%2B -> +, %2F -> /)
+          base64Data = decodeURIComponent(base64Data).replace(/ /g, '+');
+
+          // Extraction dynamique du Type MIME
+          const contentTypeMatch = header.match(/data:(image\/[a-zA-Z]+);/);
+          const contentType = contentTypeMatch ? contentTypeMatch[1] : 'image/jpeg';
+          const extension = contentType.split('/')[1] || 'jpg';
+
+          // Décodage
+          const bytes = Utilities.base64Decode(base64Data);
+          const fileName = 'Pointage_' + (d.agent_id || 'agent') + '_' + Date.now() + '.' + extension;
+          const blob = Utilities.newBlob(bytes, contentType, fileName);
+
+          // 3. Création du fichier sur Drive
+          const file = folderObj.createFile(blob);
+          file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+          // URL d'affichage direct Google Drive
+          photoUrl = 'https://lh3.googleusercontent.com/d/' + file.getId();
+        } else {
+          console.error('Format Base64 invalide (pas de virgule de séparation)');
+        }
+
       } catch (errDrive) {
-        console.error('Drive error: ' + errDrive.toString());
+        // Log très détaillé de l'erreur dans la console Apps Script
+        console.error('ERREUR DRIVE DÉTAILLÉE: ' + errDrive.stack || errDrive.toString());
+        // On s'assure explicitement que photoUrl reste un message d'erreur et PAS le data:image brut
+        photoUrl = 'ERROR_DRIVE: ' + errDrive.toString();
       }
+
     } else if (d.photo && String(d.photo).indexOf('http') === 0) {
       photoUrl = String(d.photo);
     }
 
-    const sheet = setupSheet('Checkins', ['id', 'assignment_id', 'agent_id', 'type', 'timestamp', 'lat', 'long', 'accuracy', 'photo', 'device', 'shop_id']);
+    // 4. Insertion dans Google Sheets
+    const sheet = setupSheet('Checkins', [
+      'id', 'assignment_id', 'agent_id', 'type', 'timestamp', 
+      'lat', 'long', 'accuracy', 'photo', 'device', 'shop_id'
+    ]);
+
     sheet.appendRow([
       d.id || d.uuid || Utilities.getUuid(),
       d.assignment_id || '',
@@ -98,13 +135,15 @@ function processCheckin(d) {
       d.lat || 0,
       d.long || d.lng || 0,
       d.accuracy || 0,
-      photoUrl,
+      photoUrl, // Force l'écriture de photoUrl (URL ou 'ERROR_DRIVE...'), JAMAIS d.photo brute
       d.device || 'Mobile App',
       d.shop_id || ''
     ]);
 
     return { success: true, photoUrl: photoUrl };
+
   } catch (e) {
+    console.error('Erreur globale processCheckin: ' + e.toString());
     return { success: false, error: e.toString() };
   }
 }
