@@ -88,7 +88,7 @@ function processCheckin(d) {
       photoUrl = String(d.photo);
     }
 
-    const sheet = setupSheet('Checkins', ['id', 'assignment_id', 'agent_id', 'type', 'timestamp', 'lat', 'long', 'accuracy', 'photo', 'device', 'status']);
+    const sheet = setupSheet('Checkins', ['id', 'assignment_id', 'agent_id', 'type', 'timestamp', 'lat', 'long', 'accuracy', 'photo', 'device', 'shop_id']);
     sheet.appendRow([
       d.id || d.uuid || Utilities.getUuid(),
       d.assignment_id || '',
@@ -100,7 +100,7 @@ function processCheckin(d) {
       d.accuracy || 0,
       photoUrl,
       d.device || 'Mobile App',
-      d.status || 'synced'
+      d.shop_id || ''
     ]);
 
     return { success: true, photoUrl: photoUrl };
