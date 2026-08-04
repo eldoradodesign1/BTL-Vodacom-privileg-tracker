@@ -213,3 +213,41 @@ export async function uploadPhotoToSupabase(fileOrDataUrl: string, bucket: strin
   const { data: publicData } = client.storage.from(bucket).getPublicUrl(fileName);
   return publicData.publicUrl;
 }
+
+export async function fetchUsersFromSupabase(): Promise<User[]> {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await client
+    .from('users')
+    .select('*');
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []).map((u: any) => ({
+    ...u,
+    supervisorId: u.supervisor_id,
+    permanentShopId: u.permanent_shop_id
+  })) as User[];
+}
+
+export async function fetchShopsFromSupabase(): Promise<Shop[]> {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await client
+    .from('shops')
+    .select('*');
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []) as Shop[];
+}

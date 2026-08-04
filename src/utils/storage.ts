@@ -4,6 +4,7 @@ import { buildAgentReportHtml, generateAgentPDF, PDFReportData } from './pdfGene
 import { pushToGoogleSheetWebhook, getGSheetConfig, syncFromGoogleSheetUrl, fetchChatMessagesFromSheet } from './googleSheetsSync';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
 import { isSupabaseConfigured, syncLocalDataToSupabase, uploadPhotoToSupabase } from './supabase';
+import { fetchUsersFromSupabase, fetchShopsFromSupabase } from './supabase';
 
 const API_BASE_URL = '';
 
