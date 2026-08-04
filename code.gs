@@ -39,6 +39,13 @@ function responseJSON(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function responseJSONP(callbackName, obj) {
+  const safeCallback = String(callbackName || '').replace(/[^a-zA-Z0-9_.$]/g, '');
+  if (!safeCallback) return responseJSON(obj);
+  return ContentService.createTextOutput(`${safeCallback}(${JSON.stringify(obj)})`)
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
 function safeParseJson(raw) {
   if (!raw) return null;
   try {
@@ -62,26 +69,62 @@ function setupSheet(sheetName, headers) {
 function processCheckin(d) {
   try {
     let photoUrl = '';
-    if (d.photo && String(d.photo).indexOf('data:image') === 0) {
+
+    if (d.photo && String(d.photo).trim().toLowerCase().indexOf('data:image') === 0) {
       try {
-        const folder = DriveApp.getFoldersByName('Vodacom_Pointages_Photos');
-        const folderObj = folder.hasNext() ? folder.next() : DriveApp.createFolder('Vodacom_Pointages_Photos');
-        const parts = String(d.photo).split(',');
-        const contentType = parts[0].split(':')[1].split(';')[0];
-        const bytes = Utilities.base64Decode(parts[1]);
-        const fileName = 'Pointage_' + (d.agent_id || 'agent') + '_' + Date.now() + '.jpg';
-        const blob = Utilities.newBlob(bytes, contentType, fileName);
-        const file = folderObj.createFile(blob);
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        photoUrl = 'https://lh3.googleusercontent.com/d/' + file.getId();
+        // 1. Dossier Google Drive
+        const folderIterator = DriveApp.getFoldersByName('Vodacom_Pointages_Photos');
+        const folderObj = folderIterator.hasNext() 
+          ? folderIterator.next() 
+          : DriveApp.createFolder('Vodacom_Pointages_Photos');
+
+        // 2. Découpage & Nettoyage du Base64
+        const photoStr = String(d.photo).trim();
+        const parts = photoStr.split(',');
+        
+        if (parts.length >= 2) {
+          const header = parts[0]; // ex: "data:image/jpeg;base64"
+          let base64Data = parts[1];
+
+          // Correction des caractères URL-encoded éventuels (%2B -> +, %2F -> /)
+          base64Data = decodeURIComponent(base64Data).replace(/ /g, '+');
+
+          // Extraction dynamique du Type MIME
+          const contentTypeMatch = header.match(/data:(image\/[a-zA-Z]+);/);
+          const contentType = contentTypeMatch ? contentTypeMatch[1] : 'image/jpeg';
+          const extension = contentType.split('/')[1] || 'jpg';
+
+          // Décodage
+          const bytes = Utilities.base64Decode(base64Data);
+          const fileName = 'Pointage_' + (d.agent_id || 'agent') + '_' + Date.now() + '.' + extension;
+          const blob = Utilities.newBlob(bytes, contentType, fileName);
+
+          // 3. Création du fichier sur Drive
+          const file = folderObj.createFile(blob);
+          file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+          // URL d'affichage direct Google Drive
+          photoUrl = 'https://lh3.googleusercontent.com/d/' + file.getId();
+        } else {
+          console.error('Format Base64 invalide (pas de virgule de séparation)');
+        }
+
       } catch (errDrive) {
-        console.error('Drive error: ' + errDrive.toString());
+        // Log très détaillé de l'erreur dans la console Apps Script
+        console.error('ERREUR DRIVE DÉTAILLÉE: ' + errDrive.stack || errDrive.toString());
+        // On s'assure explicitement que photoUrl reste un message d'erreur et PAS le data:image brut
+        photoUrl = 'ERROR_DRIVE: ' + errDrive.toString();
       }
+
     } else if (d.photo && String(d.photo).indexOf('http') === 0) {
       photoUrl = String(d.photo);
     }
 
-    const sheet = setupSheet('Checkins', ['id', 'assignment_id', 'agent_id', 'type', 'timestamp', 'lat', 'long', 'accuracy', 'photo', 'device', 'status']);
+    // 4. Insertion dans Google Sheets
+    const sheet = setupSheet('Checkins', [
+      'id', 'assignment_id', 'agent_id', 'type', 'timestamp',
+      'lat', 'long', 'accuracy', 'photo', 'device', 'status', 'shop_id'
+    ]);
     sheet.appendRow([
       d.id || d.uuid || Utilities.getUuid(),
       d.assignment_id || '',
@@ -91,13 +134,16 @@ function processCheckin(d) {
       d.lat || 0,
       d.long || d.lng || 0,
       d.accuracy || 0,
-      photoUrl,
+      photoUrl, // Force l'écriture de photoUrl (URL ou 'ERROR_DRIVE...'), JAMAIS d.photo brute
       d.device || 'Mobile App',
-      d.status || 'synced'
+      d.status || 'synced',
+      d.shop_id || ''
     ]);
 
     return { success: true, photoUrl: photoUrl };
+
   } catch (e) {
+    console.error('Erreur globale processCheckin: ' + e.toString());
     return { success: false, error: e.toString() };
   }
 }
@@ -124,19 +170,36 @@ function processLead(d) {
 
 function processReport(d) {
   try {
-    const sheet = setupSheet('DailyReports', ['id', 'date', 'shop_name', 'priv', 'roam', 'bund', 'agent_id', 'comment', 'timestamp']);
+    const sheet = setupSheet('DailyReports', ['id', 'date', 'agent_id', 'priv', 'roam', 'bund', 'shop_id', 'comment', 'agent_name', 'timestamp', 'arrival_time', 'departure_time', 'maps_in', 'maps_out', 'pointage_photo', 'report_photos', 'pdf_data_url', 'drive_pdf_url']);
+
+    const priv = Number(d.priv !== undefined ? d.priv : (d.privilege_count || 0));
+    const roam = Number(d.roam !== undefined ? d.roam : (d.roaming_count || 0));
+    const bund = Number(d.bund !== undefined ? d.bund : (d.bundle_count || 0));
+    const reportPhotos = Array.isArray(d.report_photos)
+      ? JSON.stringify(d.report_photos)
+      : (d.report_photos || '');
+
     sheet.appendRow([
       d.id || d.uuid || Utilities.getUuid(),
       d.date || new Date().toISOString().split('T')[0],
-      d.shop_name || '',
-      d.priv || 0,
-      d.roam || 0,
-      d.bund || 0,
       d.agent_id || '',
+      priv,
+      roam,
+      bund,
+      d.shop_id || '',
       d.comment || '',
-      d.timestamp || new Date().toISOString()
+      d.agent_name || '',
+      d.timestamp || new Date().toISOString(),
+      d.arrival_time || '',
+      d.departure_time || '',
+      d.maps_in || '',
+      d.maps_out || '',
+      d.pointage_photo || '',
+      reportPhotos,
+      d.pdf_data_url || d.pdf_url || '',
+      d.drive_pdf_url || d.report_url || ''
     ]);
-    return { success: true };
+    return { success: true, id: d.id || d.uuid || '' };
   } catch (e) {
     return { success: false, error: e.toString() };
   }
@@ -184,10 +247,15 @@ function processChat(d) {
 
 function doGet(e) {
   const action = e && e.parameter ? e.parameter.action : '';
+  const callback = e && e.parameter ? e.parameter.callback : '';
   if (action === 'getChatMessages') {
-    return responseJSON(getChatMessages());
+    const payload = getChatMessages();
+    if (callback) return responseJSONP(callback, payload);
+    return responseJSON(payload);
   }
-  return responseJSON({ success: false, message: 'Action GET inconnue' });
+  const unknown = { success: false, message: 'Action GET inconnue' };
+  if (callback) return responseJSONP(callback, unknown);
+  return responseJSON(unknown);
 }
 
 function getChatMessages() {

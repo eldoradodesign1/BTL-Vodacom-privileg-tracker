@@ -3,6 +3,7 @@ import { INITIAL_SHOPS, INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_
 import { buildAgentReportHtml, generateAgentPDF, PDFReportData } from './pdfGenerator';
 import { pushToGoogleSheetWebhook, getGSheetConfig, syncFromGoogleSheetUrl, fetchChatMessagesFromSheet } from './googleSheetsSync';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
+import { isSupabaseConfigured, syncLocalDataToSupabase, uploadPhotoToSupabase } from './supabase';
 
 const API_BASE_URL = '';
 
@@ -765,6 +766,25 @@ export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
 
   checkins.unshift(newCheckin);
   saveItem(STORAGE_KEYS.CHECKINS, checkins);
+
+  void (async () => {
+    try {
+      if (isSupabaseConfigured()) {
+        let nextCheckin: Checkin = { ...newCheckin };
+        if (newCheckin.type === 'IN' && typeof newCheckin.photo === 'string' && newCheckin.photo.startsWith('data:image')) {
+          const photoUrl = await uploadPhotoToSupabase(newCheckin.photo, 'photos', 'checkins');
+          nextCheckin = { ...nextCheckin, photo_drive_url: photoUrl, photo: null as unknown as string };
+        }
+
+        await syncLocalDataToSupabase({
+          checkins: [nextCheckin]
+        });
+      }
+    } catch (error) {
+      console.warn('Supabase checkin sync failed', error);
+    }
+  })();
+
   pushToGoogleSheetWebhook({
     type: 'checkin',
     data: newCheckin,
@@ -899,17 +919,52 @@ export function addLead(leadData: Omit<Lead, 'id'>): Lead {
     throw new Error('Le numero client est obligatoire.');
   }
 
+  const leadDate = toISO(leadData.timestamp || new Date().toISOString());
+  const { reportDone } = checkDailyStatus(leadData.agent_id, leadDate);
+  if (reportDone) {
+    throw new Error('Session cloturee: impossible d\'enregistrer un nouveau client apres envoi du rapport.');
+  }
+
   const leads = getLeads();
   const newLead: Lead = {
     ...leadData,
+    status: leadData.status || 'pending',
     id: generateUUID()
   };
   leads.unshift(newLead);
   saveItem(STORAGE_KEYS.LEADS, leads);
-  pushToGoogleSheetWebhook({ type: 'lead', data: newLead }).then(() => {
-    const cfg = getGSheetConfig();
-    if (cfg.sheetCsvUrl) {
-      syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
+  void (async () => {
+    try {
+      if (isSupabaseConfigured()) {
+        await syncLocalDataToSupabase({
+          leads: [newLead]
+        });
+      }
+    } catch (error) {
+      console.warn('Supabase lead sync failed', error);
+    }
+  })();
+  pushToGoogleSheetWebhook({ type: 'lead', data: newLead }).then((confirmed) => {
+    if (confirmed) {
+      const latest = getLeads();
+      const idx = latest.findIndex((lead) => lead.id === newLead.id);
+      if (idx >= 0 && latest[idx].status !== 'synced') {
+        latest[idx] = { ...latest[idx], status: 'synced' };
+        saveLeads(latest);
+      }
+
+      const cfg = getGSheetConfig();
+      if (cfg.sheetCsvUrl) {
+        syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
+      }
+      return;
+    }
+
+    const latest = getLeads();
+    const idx = latest.findIndex((lead) => lead.id === newLead.id);
+    if (idx >= 0 && latest[idx].status !== 'pending') {
+      latest[idx] = { ...latest[idx], status: 'pending' };
+      saveLeads(latest);
     }
   }).catch(() => {});
   return newLead;

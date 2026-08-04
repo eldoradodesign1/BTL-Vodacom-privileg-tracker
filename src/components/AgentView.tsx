@@ -261,10 +261,15 @@ export const AgentView: React.FC<AgentViewProps> = ({
 
             <button
               onClick={onOpenLeadModal}
-              className="px-3 py-2 bg-red-600 hover:bg-red-500 text-white rounded-2xl text-xs font-black uppercase flex items-center space-x-1 shadow-md shadow-red-600/30"
+              disabled={reportDone}
+              className={`px-3 py-2 rounded-2xl text-xs font-black uppercase flex items-center space-x-1 shadow-md transition-all ${
+                reportDone
+                  ? 'bg-zinc-700/70 text-zinc-300 cursor-not-allowed'
+                  : 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/30'
+              }`}
             >
               <UserPlus className="w-4 h-4" />
-              <span>＋ Nouveau</span>
+              <span>{reportDone ? 'Session clôturée' : '＋ Nouveau'}</span>
             </button>
           </div>
         </div>
@@ -549,13 +554,16 @@ export const AgentView: React.FC<AgentViewProps> = ({
       <div className="grid grid-cols-2 gap-4">
         <button
           onClick={onOpenLeadModal}
-          className="glass-card p-6 flex flex-col items-center justify-center space-y-2 text-center hover:border-red-500/50 transition-all group"
+          disabled={reportDone}
+          className={`glass-card p-6 flex flex-col items-center justify-center space-y-2 text-center transition-all group ${
+            reportDone ? 'opacity-60 cursor-not-allowed' : 'hover:border-red-500/50'
+          }`}
         >
           <div className="w-12 h-12 rounded-2xl bg-red-600/20 text-red-500 flex items-center justify-center group-hover:scale-110 transition-transform">
             <UserPlus className="w-6 h-6" />
           </div>
-          <span className="text-xs font-black uppercase text-white">Saisie Client</span>
-          <span className="text-[9px] text-gray-400 font-semibold">Opt-in & Bundles</span>
+          <span className="text-xs font-black uppercase text-white">{reportDone ? 'Session clôturée' : 'Saisie Client'}</span>
+          <span className="text-[9px] text-gray-400 font-semibold">{reportDone ? 'Rapport déjà envoyé' : 'Opt-in & Bundles'}</span>
         </button>
 
         <button

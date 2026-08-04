@@ -171,7 +171,7 @@ export function buildAgentReportHtml(d: PDFReportData): string {
   const photosHtml = d.photos && d.photos.length > 1
     ? `<div style="margin-top:20px; font-size:10px; font-weight:800; color:#999; text-transform:uppercase; border-bottom:1px solid #eee; padding-bottom:5px;">PREUVES TERRAIN / BOUTIQUE (PHOTOS)</div>
        <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
-         ${d.photos.slice(1).map(p => `<div style="width:31%; height:110px; border-radius:12px; border:1px solid #eee; overflow:hidden;"><img src="${p}" style="width:100%; height:100%; object-fit:cover; object-position:center; display:block;"></div>`).join('')}
+         ${d.photos.slice(1).map(p => `<div style="width:31%; height:110px; border-radius:12px; border:1px solid #eee; overflow:hidden; background:#f8fafc; display:flex; align-items:center; justify-content:center;"><img src="${p}" style="max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; object-position:center; display:block;"></div>`).join('')}
        </div>`
     : '';
 
@@ -189,7 +189,7 @@ export function buildAgentReportHtml(d: PDFReportData): string {
           <td style="width:90px; vertical-align:top;">
             <div style="width:80px; height:80px; border-radius:16px; border:3px solid #ef4444; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#0b1220;">
               ${profilePhoto
-                ? `<img src="${profilePhoto}" style="width:100%; height:100%; object-fit:cover; object-position:center;">`
+                ? `<img src="${profilePhoto}" style="max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; object-position:center; display:block;">`
                 : `<span style="font-size:10px; font-weight:900; color:#cbd5e1; text-transform:uppercase; text-align:center;">Photo non disponible</span>`}
             </div>
           </td>

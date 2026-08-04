@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { X, RefreshCw, FileSpreadsheet, Download, CheckCircle, ExternalLink, Link as LinkIcon, ShieldCheck, Upload, Trash2 } from 'lucide-react';
+import { X, RefreshCw, FileSpreadsheet, Download, CheckCircle, ExternalLink, Link as LinkIcon, ShieldCheck, Upload, Trash2, DatabaseZap } from 'lucide-react';
 import { getGSheetConfig, saveGSheetConfig, syncFromGoogleSheetUrl, exportDatabaseToCsv, parseXlsxBuffer } from '../../utils/googleSheetsSync';
 import { purgeAndResetEverything } from '../../utils/storage';
+import { isSupabaseConfigured } from '../../utils/supabase';
+import { runSupabaseMigration } from '../../utils/supabaseMigration';
 
 interface GSheetModalProps {
   isOpen: boolean;
@@ -17,6 +19,8 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
   const [config, setConfig] = useState(getGSheetConfig());
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [migrationLoading, setMigrationLoading] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -75,6 +79,23 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleSupabaseMigration = async () => {
+    setMigrationLoading(true);
+    setMigrationStatus(null);
+
+    try {
+      const result = await runSupabaseMigration();
+      setMigrationStatus({
+        type: result.ok ? 'success' : 'error',
+        text: result.message + (result.summary ? ` (${JSON.stringify(result.summary)})` : '')
+      });
+    } catch (error: any) {
+      setMigrationStatus({ type: 'error', text: error?.message || 'Échec de la migration' });
+    } finally {
+      setMigrationLoading(false);
+    }
   };
 
   return (
@@ -189,6 +210,34 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
             )}
           </div>
 
+          <div className="p-4 bg-violet-500/10 border border-violet-500/30 rounded-2xl">
+            <div className="flex items-center space-x-2 mb-2">
+              <DatabaseZap className="w-4 h-4 text-violet-400" />
+              <span className="text-xs font-black uppercase text-violet-400">Migration vers Supabase</span>
+            </div>
+            <p className="text-[11px] text-gray-300 mb-3">
+              Copie les données locales vers Supabase (users, shops, checkins, leads, reports, notifications, chat). Les photos peuvent ensuite être stockées dans Supabase Storage.
+            </p>
+            {migrationStatus && (
+              <div className={`p-2.5 rounded-xl border mb-3 text-[11px] font-bold ${migrationStatus.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
+                {migrationStatus.text}
+              </div>
+            )}
+            <button
+              onClick={handleSupabaseMigration}
+              disabled={migrationLoading || !isSupabaseConfigured()}
+              className="w-full py-2.5 bg-violet-500 hover:bg-violet-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black uppercase text-xs rounded-xl flex items-center justify-center space-x-2 shadow-lg transition-all"
+            >
+              <DatabaseZap className="w-4 h-4" />
+              <span>{migrationLoading ? 'Migration en cours...' : 'Lancer la migration Supabase'}</span>
+            </button>
+            {!isSupabaseConfigured() && (
+              <p className="text-[10px] text-gray-400 mt-2">
+                Ajoutez VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY dans votre environnement pour activer cette action.
+              </p>
+            )}
+          </div>
+
           {/* Apps Script Helper Code */}
           <details className="p-3.5 bg-zinc-900 border border-white/10 rounded-2xl group">
             <summary className="text-xs font-black uppercase text-amber-400 cursor-pointer flex items-center justify-between">
@@ -212,6 +261,8 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
       return responseJSON(processLead(data));
     } else if (action === 'processReport' || data.type === 'report' || data.tab === 'DailyReports') {
       return responseJSON(processReport(data));
+    } else if (action === 'processChat' || data.type === 'chat' || data.tab === 'Chat') {
+      return responseJSON(processChat(data));
     } else {
       return responseJSON({ success: true, message: "Événement reçu", data: data });
     }
@@ -225,35 +276,67 @@ function responseJSON(obj) {
     .setMimeType(ContentService.MimeType.JSON);
 }
 
+function responseJSONP(callbackName, obj) {
+  const safeCallback = String(callbackName || '').replace(/[^a-zA-Z0-9_.$]/g, '');
+  if (!safeCallback) return responseJSON(obj);
+  return ContentService.createTextOutput(safeCallback + '(' + JSON.stringify(obj) + ')')
+    .setMimeType(ContentService.MimeType.JAVASCRIPT);
+}
+
 function processCheckin(d) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let photoUrl = "";
 
-    if (d.photo && d.photo.indexOf("data:image") === 0) {
-      try {
-        let folder;
-        const folders = DriveApp.getFoldersByName("Vodacom_Pointages_Photos");
-        if (folders.hasNext()) {
-          folder = folders.next();
-        } else {
-          folder = DriveApp.createFolder("Vodacom_Pointages_Photos");
+    if (d.photo && typeof d.photo === "string") {
+      const cleanPhoto = d.photo.trim();
+      const lowerPhoto = cleanPhoto.toLowerCase();
+
+      // 1. CAS : Image envoyée en Base64 (data:image/...)
+      if (lowerPhoto.startsWith("data:image")) {
+        try {
+          let folder;
+          const folderName = "Vodacom_Pointages_Photos";
+          const folders = DriveApp.getFoldersByName(folderName);
+          
+          if (folders.hasNext()) {
+            folder = folders.next();
+          } else {
+            folder = DriveApp.createFolder(folderName);
+          }
+
+          // Extraction du type MIME (ex: image/jpeg ou image/png)
+          const parts = cleanPhoto.split(",");
+          const header = parts[0]; // e.g., "data:image/jpeg;base64"
+          const base64Data = parts[1];
+
+          if (base64Data) {
+            const contentType = header.split(":")[1].split(";")[0]; // e.g., "image/jpeg"
+            const extension = contentType.split("/")[1] || "jpg";
+            const bytes = Utilities.base64Decode(base64Data);
+            
+            const fileName = "Pointage_" + (d.agent_id || "agent") + "_" + Date.now() + "." + extension;
+            const blob = Utilities.newBlob(bytes, contentType, fileName);
+            
+            const file = folder.createFile(blob);
+            file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+            
+            // Format d'URL Google Drive direct pour affichage
+            photoUrl = "https://lh3.googleusercontent.com/d/" + file.getId();
+          } else {
+            console.error("Données Base64 invalides ou absentes après la virgule.");
+          }
+        } catch (errDrive) {
+          console.error("Erreur Google Drive : " + errDrive.toString());
         }
-        const parts = d.photo.split(",");
-        const contentType = parts[0].split(":")[1].split(";")[0];
-        const bytes = Utilities.base64Decode(parts[1]);
-        const fileName = "Pointage_" + (d.agent_id || "agent") + "_" + Date.now() + ".jpg";
-        const blob = Utilities.newBlob(bytes, contentType, fileName);
-        const file = folder.createFile(blob);
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        photoUrl = "https://lh3.googleusercontent.com/d/" + file.getId();
-      } catch (errDrive) {
-        console.error("Drive error: " + errDrive.toString());
+      } 
+      // 2. CAS : Image déjà sous forme d'URL (http / https)
+      else if (lowerPhoto.startsWith("http")) {
+        photoUrl = cleanPhoto;
       }
-    } else if (d.photo && d.photo.indexOf("http") === 0) {
-      photoUrl = d.photo;
     }
 
+    // 3. ENREGISTREMENT DANS GOOGLE SHEETS
     let sheet = ss.getSheetByName("Checkins");
     if (!sheet) {
       sheet = ss.insertSheet("Checkins");
@@ -269,17 +352,18 @@ function processCheckin(d) {
       d.lat || 0,
       d.long || d.lng || 0,
       d.accuracy || 0,
-      photoUrl,
+      photoUrl, // On enregistre uniquement l'URL générée ou propre
       d.device || "Mobile App",
       d.status || "synced"
     ]);
 
     return { success: true, photoUrl: photoUrl };
+
   } catch (e) {
+    console.error("Erreur globale : " + e.toString());
     return { success: false, error: e.toString() };
   }
 }
-
 function processLead(d) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -327,6 +411,93 @@ function processReport(d) {
     return { success: true };
   } catch (e) {
     return { success: false, error: e.toString() };
+  }
+}
+
+function processChat(d) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName("Chat");
+    if (!sheet) {
+      sheet = ss.insertSheet("Chat");
+      sheet.appendRow(["id", "sender_id", "sender_name", "sender_role", "message", "created_at", "timestamp", "read_by", "deleted", "deleted_by", "deleted_at"]);
+    }
+
+    sheet.appendRow([
+      d.id || Utilities.getUuid(),
+      d.sender_id || "",
+      d.sender_name || "",
+      d.sender_role || "",
+      d.message || "",
+      d.created_at || new Date().toISOString(),
+      d.timestamp || "",
+      JSON.stringify(d.read_by || []),
+      false,
+      "",
+      ""
+    ]);
+
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e.toString() };
+  }
+}
+
+function doGet(e) {
+  const action = e && e.parameter ? e.parameter.action : '';
+  const callback = e && e.parameter ? e.parameter.callback : '';
+  if (action === 'getChatMessages') {
+    const payload = getChatMessages();
+    if (callback) return responseJSONP(callback, payload);
+    return responseJSON(payload);
+  }
+  const unknown = { success: false, message: 'Action GET inconnue' };
+  if (callback) return responseJSONP(callback, unknown);
+  return responseJSON(unknown);
+}
+
+function getChatMessages() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let sheet = ss.getSheetByName('Chat');
+    if (!sheet) {
+      sheet = ss.insertSheet('Chat');
+      sheet.appendRow(['id', 'sender_id', 'sender_name', 'sender_role', 'message', 'created_at', 'timestamp', 'read_by', 'deleted', 'deleted_by', 'deleted_at']);
+      return { success: true, messages: [] };
+    }
+
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) {
+      return { success: true, messages: [] };
+    }
+
+    const rows = sheet.getRange(2, 1, lastRow - 1, 11).getValues();
+    const messages = rows.map(function(row) {
+      let readBy = [];
+      try {
+        readBy = JSON.parse(String(row[7] || '[]'));
+      } catch (err) {}
+
+      return {
+        id: String(row[0] || ''),
+        sender_id: String(row[1] || ''),
+        sender_name: String(row[2] || ''),
+        sender_role: String(row[3] || ''),
+        message: String(row[4] || ''),
+        created_at: String(row[5] || ''),
+        timestamp: String(row[6] || ''),
+        read_by: Array.isArray(readBy) ? readBy : [],
+        deleted: String(row[8] || '').toLowerCase() === 'true',
+        deleted_by: String(row[9] || ''),
+        deleted_at: String(row[10] || '')
+      };
+    }).filter(function(msg) {
+      return !msg.deleted;
+    });
+
+    return { success: true, messages: messages };
+  } catch (e) {
+    return { success: false, error: e.toString(), messages: [] };
   }
 }`}
               </pre>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User } from '../../types';
-import { addLead } from '../../utils/storage';
+import { addLead, checkDailyStatus, toISO } from '../../utils/storage';
 import { isValidMsisdn, cleanPhoneNumber, formatMsisdn } from '../../utils/phoneValidator';
 import { UserCheck, X, AlertCircle } from 'lucide-react';
 
@@ -23,6 +23,8 @@ export const LeadModal: React.FC<LeadModalProps> = ({
   const [msisdn, setMsisdn] = useState('');
   const [actionType, setActionType] = useState<'Opt-in Privilège' | 'Opt-in Roaming' | 'Activation Bundle'>('Opt-in Privilège');
   const [phoneError, setPhoneError] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const { reportDone } = checkDailyStatus(currentUser.id, toISO(new Date()));
 
   if (!isOpen) return null;
 
@@ -30,6 +32,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
     // Only keep numeric digits, spaces and leading +
     const filtered = val.replace(/[^\d\+\s]/g, '');
     setMsisdn(filtered);
+    setSubmitError('');
     if (filtered.trim().length > 0 && !isValidMsisdn(filtered)) {
       setPhoneError('Numéro invalide. Format RDC Vodacom requis : 10 chiffres (ex: 0818889900, 082..., 089..., 099...)');
     } else {
@@ -39,6 +42,10 @@ export const LeadModal: React.FC<LeadModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (reportDone) {
+      setSubmitError('Session clôturée: le rapport du jour est déjà envoyé, nouvelle saisie client bloquée.');
+      return;
+    }
     if (!clientName.trim()) return;
 
     if (!isValidMsisdn(msisdn)) {
@@ -49,19 +56,25 @@ export const LeadModal: React.FC<LeadModalProps> = ({
     const cleanedPhone = cleanPhoneNumber(msisdn);
     const formattedPhone = cleanedPhone.length === 10 ? cleanedPhone : formatMsisdn(msisdn);
 
-    addLead({
-      agent_id: currentUser.id,
-      shop_id: activeShopId || currentUser.permanentShopId,
-      timestamp: new Date().toISOString(),
-      client_name: clientName.trim(),
-      msisdn: formattedPhone,
-      action_type: actionType,
-      status: 'pending'
-    });
+    try {
+      addLead({
+        agent_id: currentUser.id,
+        shop_id: activeShopId || currentUser.permanentShopId,
+        timestamp: new Date().toISOString(),
+        client_name: clientName.trim(),
+        msisdn: formattedPhone,
+        action_type: actionType,
+        status: 'pending'
+      });
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Impossible d\'enregistrer ce client.');
+      return;
+    }
 
     setClientName('');
     setMsisdn('');
     setPhoneError('');
+    setSubmitError('');
     setActionType('Opt-in Privilège');
     onSuccess();
     onClose();
@@ -83,15 +96,25 @@ export const LeadModal: React.FC<LeadModalProps> = ({
           <p className="text-xs text-gray-400 font-semibold mt-1">Enregistrement d'activation en direct</p>
         </div>
 
+        {reportDone && (
+          <div className="mb-4 p-3 rounded-2xl border border-amber-500/40 bg-amber-950/35 text-amber-200 text-[11px] font-black uppercase">
+            Session déjà clôturée aujourd'hui. Nouvelle saisie client désactivée.
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Nom du Client</label>
             <input
               type="text"
               value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
+              onChange={(e) => {
+                setClientName(e.target.value);
+                setSubmitError('');
+              }}
               placeholder="Ex: Jean-Marc Bukasa"
               required
+              disabled={reportDone}
               className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-red-500"
             />
           </div>
@@ -107,6 +130,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
               onChange={(e) => handlePhoneChange(e.target.value)}
               placeholder="Ex: 0818889900"
               required
+              disabled={reportDone}
               className={`w-full bg-white/5 border rounded-2xl px-4 py-3 text-white text-sm font-mono font-bold focus:outline-none transition-all ${
                 phoneError ? 'border-red-500 bg-red-950/20' : 'border-white/10 focus:border-red-500'
               }`}
@@ -124,6 +148,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
             <select
               value={actionType}
               onChange={(e) => setActionType(e.target.value as any)}
+              disabled={reportDone}
               className="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-red-500"
             >
               <option value="Opt-in Privilège">Opt-in Privilège VIP</option>
@@ -132,9 +157,16 @@ export const LeadModal: React.FC<LeadModalProps> = ({
             </select>
           </div>
 
+          {submitError && (
+            <div className="p-2.5 bg-red-950/60 border border-red-500/40 rounded-xl text-red-300 text-[11px] font-bold flex items-start space-x-1.5 animate-pop">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+              <span>{submitError}</span>
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={!!phoneError}
+            disabled={!!phoneError || reportDone}
             className="btn-neon btn-red w-full mt-6"
           >
             <UserCheck className="w-4 h-4" />
