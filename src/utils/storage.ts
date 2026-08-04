@@ -933,6 +933,17 @@ export function addLead(leadData: Omit<Lead, 'id'>): Lead {
   };
   leads.unshift(newLead);
   saveItem(STORAGE_KEYS.LEADS, leads);
+  void (async () => {
+    try {
+      if (isSupabaseConfigured()) {
+        await syncLocalDataToSupabase({
+          leads: [newLead]
+        });
+      }
+    } catch (error) {
+      console.warn('Supabase lead sync failed', error);
+    }
+  })();
   pushToGoogleSheetWebhook({ type: 'lead', data: newLead }).then((confirmed) => {
     if (confirmed) {
       const latest = getLeads();
