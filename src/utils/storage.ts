@@ -1003,7 +1003,7 @@ export function getReports(): DailyReport[] {
   );
 }
 
-export function addReport(reportData: Omit<DailyReport, 'id'>): DailyReport {
+export async function addReport(reportData: Omit<DailyReport, 'id'>): DailyReport {
   const reports = getReports();
   const newId = 'rep-' + Math.random().toString(36).substring(2, 9);
 
@@ -1035,9 +1035,11 @@ export function addReport(reportData: Omit<DailyReport, 'id'>): DailyReport {
         });
       }
     } catch (error) {
-      console.warn('Supabase report sync failed', error);
+      console.error('Supabase report sync failed', error);
+      throw error;
     }
   })();
+  
   pushToGoogleSheetWebhook({
     type: 'report',
     data: newReport,
