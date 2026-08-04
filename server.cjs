@@ -1,10 +1,14 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const DATA_FILE = path.join(__dirname, 'shared-data.json');
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabase = supabaseUrl && supabaseServiceRoleKey ? createClient(supabaseUrl, supabaseServiceRoleKey) : null;
 
 app.use(express.json());
 app.use((req, res, next) => {
@@ -32,12 +36,69 @@ function writeData(data) {
   fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
 }
 
-app.get('/api/chat', (req, res) => {
-  res.json(readData().messages);
+async function readChatMessages() {
+  if (supabase) {
+    const { data, error } = await supabase.from('chat_messages').select('*').order('created_at', { ascending: true });
+    if (!error && Array.isArray(data)) {
+      return data;
+    }
+  }
+  return readData().messages;
+}
+
+async function writeChatMessage(msg) {
+  if (supabase) {
+    const { error } = await supabase.from('chat_messages').insert(msg);
+    if (!error) return msg;
+  }
+
+  const data = readData();
+  data.messages.push(msg);
+  writeData(data);
+  return msg;
+}
+
+async function updateChatMessage(id, payload) {
+  if (supabase) {
+    const { data, error } = await supabase.from('chat_messages').update(payload).eq('id', id).select().single();
+    if (!error && data) return data;
+  }
+
+  const data = readData();
+  const index = data.messages.findIndex((msg) => msg.id === id);
+  if (index === -1) return null;
+  data.messages[index] = { ...data.messages[index], ...payload };
+  writeData(data);
+  return data.messages[index];
+}
+
+async function readNotifications() {
+  if (supabase) {
+    const { data, error } = await supabase.from('notifications').select('*').order('timestamp', { ascending: false });
+    if (!error && Array.isArray(data)) {
+      return data;
+    }
+  }
+  return readData().notifications;
+}
+
+async function writeNotification(payload) {
+  if (supabase) {
+    const { error } = await supabase.from('notifications').insert(payload);
+    if (!error) return payload;
+  }
+
+  const data = readData();
+  data.notifications.push(payload);
+  writeData(data);
+  return payload;
+}
+
+app.get('/api/chat', async (req, res) => {
+  res.json(await readChatMessages());
 });
 
-app.post('/api/chat', (req, res) => {
-  const data = readData();
+app.post('/api/chat', async (req, res) => {
   const payload = req.body;
   if (!payload || !payload.message) {
     return res.status(400).json({ error: 'message required' });
@@ -54,33 +115,26 @@ app.post('/api/chat', (req, res) => {
     read_by: payload.read_by || []
   };
 
-  data.messages.push(msg);
-  writeData(data);
+  await writeChatMessage(msg);
   res.json(msg);
 });
 
-app.put('/api/chat/:id', (req, res) => {
-  const data = readData();
-  const index = data.messages.findIndex((msg) => msg.id === req.params.id);
-  if (index === -1) {
+app.put('/api/chat/:id', async (req, res) => {
+  const updated = await updateChatMessage(req.params.id, req.body);
+  if (!updated) {
     return res.status(404).json({ error: 'message not found' });
   }
-
-  data.messages[index] = { ...data.messages[index], ...req.body };
-  writeData(data);
-  res.json(data.messages[index]);
+  res.json(updated);
 });
 
-app.get('/api/notifications', (req, res) => {
-  res.json(readData().notifications);
+app.get('/api/notifications', async (req, res) => {
+  res.json(await readNotifications());
 });
 
-app.post('/api/notifications', (req, res) => {
-  const data = readData();
+app.post('/api/notifications', async (req, res) => {
   const payload = req.body;
-  data.notifications.push(payload);
-  writeData(data);
-  res.json(payload);
+  const saved = await writeNotification(payload);
+  res.json(saved);
 });
 
 app.get('*', (req, res) => {

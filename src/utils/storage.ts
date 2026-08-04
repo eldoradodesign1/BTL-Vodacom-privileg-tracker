@@ -3,6 +3,7 @@ import { INITIAL_SHOPS, INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_
 import { buildAgentReportHtml, generateAgentPDF, PDFReportData } from './pdfGenerator';
 import { pushToGoogleSheetWebhook, getGSheetConfig, syncFromGoogleSheetUrl, fetchChatMessagesFromSheet } from './googleSheetsSync';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
+import { isSupabaseConfigured, syncLocalDataToSupabase, uploadPhotoToSupabase } from './supabase';
 
 const API_BASE_URL = '';
 
@@ -765,6 +766,25 @@ export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
 
   checkins.unshift(newCheckin);
   saveItem(STORAGE_KEYS.CHECKINS, checkins);
+
+  void (async () => {
+    try {
+      if (isSupabaseConfigured()) {
+        let nextCheckin: Checkin = { ...newCheckin };
+        if (newCheckin.type === 'IN' && typeof newCheckin.photo === 'string' && newCheckin.photo.startsWith('data:image')) {
+          const photoUrl = await uploadPhotoToSupabase(newCheckin.photo, 'photos', 'checkins');
+          nextCheckin = { ...nextCheckin, photo_drive_url: photoUrl, photo: null as unknown as string };
+        }
+
+        await syncLocalDataToSupabase({
+          checkins: [nextCheckin]
+        });
+      }
+    } catch (error) {
+      console.warn('Supabase checkin sync failed', error);
+    }
+  })();
+
   pushToGoogleSheetWebhook({
     type: 'checkin',
     data: newCheckin,

@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { X, RefreshCw, FileSpreadsheet, Download, CheckCircle, ExternalLink, Link as LinkIcon, ShieldCheck, Upload, Trash2 } from 'lucide-react';
+import { X, RefreshCw, FileSpreadsheet, Download, CheckCircle, ExternalLink, Link as LinkIcon, ShieldCheck, Upload, Trash2, DatabaseZap } from 'lucide-react';
 import { getGSheetConfig, saveGSheetConfig, syncFromGoogleSheetUrl, exportDatabaseToCsv, parseXlsxBuffer } from '../../utils/googleSheetsSync';
 import { purgeAndResetEverything } from '../../utils/storage';
+import { isSupabaseConfigured } from '../../utils/supabase';
+import { runSupabaseMigration } from '../../utils/supabaseMigration';
 
 interface GSheetModalProps {
   isOpen: boolean;
@@ -17,6 +19,8 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
   const [config, setConfig] = useState(getGSheetConfig());
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [migrationLoading, setMigrationLoading] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
@@ -75,6 +79,23 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  };
+
+  const handleSupabaseMigration = async () => {
+    setMigrationLoading(true);
+    setMigrationStatus(null);
+
+    try {
+      const result = await runSupabaseMigration();
+      setMigrationStatus({
+        type: result.ok ? 'success' : 'error',
+        text: result.message + (result.summary ? ` (${JSON.stringify(result.summary)})` : '')
+      });
+    } catch (error: any) {
+      setMigrationStatus({ type: 'error', text: error?.message || 'Échec de la migration' });
+    } finally {
+      setMigrationLoading(false);
+    }
   };
 
   return (
@@ -185,6 +206,34 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
             {config.lastSyncedAt && (
               <p className="text-[10px] text-emerald-400 font-bold">
                 Dernière synchro : {new Date(config.lastSyncedAt).toLocaleString('fr-FR')}
+              </p>
+            )}
+          </div>
+
+          <div className="p-4 bg-violet-500/10 border border-violet-500/30 rounded-2xl">
+            <div className="flex items-center space-x-2 mb-2">
+              <DatabaseZap className="w-4 h-4 text-violet-400" />
+              <span className="text-xs font-black uppercase text-violet-400">Migration vers Supabase</span>
+            </div>
+            <p className="text-[11px] text-gray-300 mb-3">
+              Copie les données locales vers Supabase (users, shops, checkins, leads, reports, notifications, chat). Les photos peuvent ensuite être stockées dans Supabase Storage.
+            </p>
+            {migrationStatus && (
+              <div className={`p-2.5 rounded-xl border mb-3 text-[11px] font-bold ${migrationStatus.type === 'success' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' : 'bg-red-500/10 border-red-500/30 text-red-400'}`}>
+                {migrationStatus.text}
+              </div>
+            )}
+            <button
+              onClick={handleSupabaseMigration}
+              disabled={migrationLoading || !isSupabaseConfigured()}
+              className="w-full py-2.5 bg-violet-500 hover:bg-violet-400 disabled:opacity-50 disabled:cursor-not-allowed text-black font-black uppercase text-xs rounded-xl flex items-center justify-center space-x-2 shadow-lg transition-all"
+            >
+              <DatabaseZap className="w-4 h-4" />
+              <span>{migrationLoading ? 'Migration en cours...' : 'Lancer la migration Supabase'}</span>
+            </button>
+            {!isSupabaseConfigured() && (
+              <p className="text-[10px] text-gray-400 mt-2">
+                Ajoutez VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY dans votre environnement pour activer cette action.
               </p>
             )}
           </div>
