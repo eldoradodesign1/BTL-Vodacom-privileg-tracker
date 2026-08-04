@@ -1298,9 +1298,13 @@ export function getUnreadChatCount(userId: string): number {
 
 export function isMatchAgent(recordAgent: string | undefined, user: User | undefined): boolean {
   if (!recordAgent || !user) return false;
-  const r = recordAgent.trim().toLowerCase();
-  const uid = user.id.trim().toLowerCase();
-  const uname = user.name.trim().toLowerCase();
+
+  const r = String(recordAgent || '').trim().toLowerCase();
+  const uid = String(user.id || '').trim().toLowerCase();
+  const uname = String(user.name || '').trim().toLowerCase();
+
+  if (!uid && !uname) return false;
+
   return r === uid || r === uname || r.includes(uname) || uname.includes(r);
 }
 
