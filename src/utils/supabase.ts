@@ -229,9 +229,15 @@ export async function fetchUsersFromSupabase(): Promise<User[]> {
   }
 
   return (data || []).map((u: any) => ({
-    ...u,
+    id: u.id,
+    phone: u.phone,
+    name: u.full_name,
+    role: u.role,
+    password: u.password_hash,
     supervisorId: u.supervisor_id,
-    permanentShopId: u.permanent_shop_id
+    permanentShopId: u.permanent_shop_id,
+    created_at: u.created_at,
+    last_login: u.last_login
   })) as User[];
 }
 
@@ -250,4 +256,24 @@ export async function fetchShopsFromSupabase(): Promise<Shop[]> {
   }
 
   return (data || []) as Shop[];
+}
+
+
+export async function fetchCheckinsFromSupabase(): Promise<Checkin[]> {
+  const client = getSupabaseClient();
+  if (!client) return [];
+
+  const { data, error } = await client
+    .from('checkins')
+    .select('*')
+    .order('timestamp', { ascending: false });
+
+  if (error) {
+    console.error(error);
+    return [];
+  }
+
+  return (data || []).map((item) => ({
+    ...item
+  })) as Checkin[];
 }

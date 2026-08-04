@@ -16,6 +16,7 @@ import {
   getSyncPendingCount,
   getTodayCheckinPhoto,
   saveUsers,
+  refreshCheckinsFromSupabase,
   saveShops 
 } from './utils/storage';
 import { SimulationBar } from './components/SimulationBar';
@@ -120,6 +121,7 @@ export default function App() {
 
       saveUsers(usersData);
       saveShops(shopsData);
+      await refreshCheckinsFromSupabase();
 
       setUsers(usersData);
       setShops(shopsData);

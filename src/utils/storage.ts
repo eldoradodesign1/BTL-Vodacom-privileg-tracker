@@ -4,7 +4,7 @@ import { buildAgentReportHtml, generateAgentPDF, PDFReportData } from './pdfGene
 import { pushToGoogleSheetWebhook, getGSheetConfig, syncFromGoogleSheetUrl, fetchChatMessagesFromSheet } from './googleSheetsSync';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
 import { isSupabaseConfigured, syncLocalDataToSupabase, uploadPhotoToSupabase } from './supabase';
-import { fetchUsersFromSupabase, fetchShopsFromSupabase } from './supabase';
+import { fetchCheckinsFromSupabase } from './supabase';
 
 const API_BASE_URL = '';
 
@@ -741,8 +741,19 @@ export function getEffectiveTargetsForDate(date: string, shopId?: string): ShopT
 
 // --- CHECKINS ---
 export function getCheckins(): Checkin[] {
-  const items: Checkin[] = loadItem(STORAGE_KEYS.CHECKINS, INITIAL_CHECKINS);
-  return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return loadItem(STORAGE_KEYS.CHECKINS, INITIAL_CHECKINS)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+export async function refreshCheckinsFromSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const rows = await fetchCheckinsFromSupabase();
+
+  saveItem(
+    STORAGE_KEYS.CHECKINS,
+    rows.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  );
 }
 
 export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
@@ -1004,6 +1015,18 @@ export function addReport(reportData: Omit<DailyReport, 'id'>): DailyReport {
   });
 
   saveItem(STORAGE_KEYS.REPORTS, sanitizedReports);
+
+  void (async () => {
+    try {
+      if (isSupabaseConfigured()) {
+        await syncLocalDataToSupabase({
+          reports: [newReport]
+        });
+      }
+    } catch (error) {
+      console.warn('Supabase report sync failed', error);
+    }
+  })();
   pushToGoogleSheetWebhook({
     type: 'report',
     data: newReport,
