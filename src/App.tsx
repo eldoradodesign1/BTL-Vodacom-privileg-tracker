@@ -158,10 +158,12 @@ export default function App() {
     };
 
     // doAutoSync();
+    window.setTimeout(doAutoSync, 3000);
     const interval = window.setInterval(() => {
       const cfg = getGSheetConfig();
       if (cfg.autoSync && cfg.sheetCsvUrl) {
         // doAutoSync();
+        window.setTimeout(doAutoSync, 3000);
       }
     }, 60000);
 
