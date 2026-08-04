@@ -157,11 +157,11 @@ export default function App() {
       }
     };
 
-    doAutoSync();
+    // doAutoSync();
     const interval = window.setInterval(() => {
       const cfg = getGSheetConfig();
       if (cfg.autoSync && cfg.sheetCsvUrl) {
-        doAutoSync();
+        // doAutoSync();
       }
     }, 60000);
 
