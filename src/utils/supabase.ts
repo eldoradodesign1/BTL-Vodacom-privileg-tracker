@@ -277,3 +277,42 @@ export async function fetchCheckinsFromSupabase(): Promise<Checkin[]> {
     ...item
   })) as Checkin[];
 }
+
+export async function fetchReportsFromSupabase(): Promise<DailyReport[]> {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await client
+    .from('daily_reports')
+    .select('*')
+    .order('date', { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    date: r.date,
+    agent_id: r.agent_id,
+    agent_name: r.agent_name,
+    shop_id: r.shop_id,
+    shop_name: r.shop_name,
+    priv: r.priv,
+    roam: r.roam,
+    bund: r.bund,
+    amount: r.amount,
+    comment: r.comment,
+    pdf_url: r.pdf_url,
+    photos: r.photos || [],
+    arrival_time: r.arrival_time,
+    departure_time: r.departure_time,
+    pointage_photo: r.pointage_photo,
+    maps_in: r.maps_in,
+    maps_out: r.maps_out,
+    drive_pdf_url: r.drive_pdf_url,
+    report_photos_drive_urls: r.report_photos_drive_urls || []
+  })) as DailyReport[];
+}

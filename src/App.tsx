@@ -17,6 +17,7 @@ import {
   getTodayCheckinPhoto,
   saveUsers,
   refreshCheckinsFromSupabase,
+  refreshReportsFromSupabase ,
   saveShops 
 } from './utils/storage';
 import { SimulationBar } from './components/SimulationBar';
@@ -122,6 +123,7 @@ export default function App() {
       saveUsers(usersData);
       saveShops(shopsData);
       await refreshCheckinsFromSupabase();
+      await refreshReportsFromSupabase();
 
       setUsers(usersData);
       setShops(shopsData);
@@ -262,8 +264,26 @@ export default function App() {
   };
 
   const todayStr = toISO(new Date());
-  const todayLeads = getLeads().filter((l) => l.agent_id === effectiveUser.id && toISO(l.timestamp) === todayStr);
-  const todayCheckin = getCheckins().find((c) => c.agent_id === effectiveUser.id && toISO(c.timestamp) === todayStr && c.type === 'IN') || null;
+
+const allCheckins = getCheckins();
+const allLeads = getLeads();
+
+const todayCheckin =
+  allCheckins.find(
+    (c) =>
+      c.agent_id === effectiveUser.id &&
+      toISO(c.timestamp) === todayStr &&
+      c.type === 'IN'
+  ) || null;
+
+const todayLeads =
+  allLeads.filter(
+    (l) =>
+      l.agent_id === effectiveUser.id &&
+      toISO(l.timestamp) === todayStr
+  );
+
+
   const agentReports = getReports().filter((r) => r.agent_id === effectiveUser.id);
   const notifications = getNotifications(effectiveUser.id);
   const todayCheckinPhoto = getTodayCheckinPhoto(effectiveUser.id);

@@ -3,7 +3,7 @@ import { INITIAL_SHOPS, INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_
 import { buildAgentReportHtml, generateAgentPDF, PDFReportData } from './pdfGenerator';
 import { pushToGoogleSheetWebhook, getGSheetConfig, syncFromGoogleSheetUrl, fetchChatMessagesFromSheet } from './googleSheetsSync';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
-import { isSupabaseConfigured, syncLocalDataToSupabase, uploadPhotoToSupabase } from './supabase';
+import { isSupabaseConfigured, syncLocalDataToSupabase, uploadPhotoToSupabase, fetchReportsFromSupabase } from './supabase';
 import { fetchCheckinsFromSupabase } from './supabase';
 
 const API_BASE_URL = '';
@@ -909,6 +909,13 @@ export function saveReports(reports: DailyReport[]): void {
   saveItem(STORAGE_KEYS.REPORTS, reports);
 }
 
+export async function refreshReportsFromSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const reports = await fetchReportsFromSupabase();
+  saveReports(reports);
+}
+
 export function saveCheckins(checkins: Checkin[]): void {
   saveItem(STORAGE_KEYS.CHECKINS, checkins);
 }
@@ -984,12 +991,16 @@ export function addLead(leadData: Omit<Lead, 'id'>): Lead {
 
 // --- REPORTS ---
 export function getReports(): DailyReport[] {
-  const rawReports: DailyReport[] = loadItem(STORAGE_KEYS.REPORTS, INITIAL_REPORTS);
+  const rawReports: DailyReport[] = loadItem(STORAGE_KEYS.REPORTS, []);
+
   const reports = rawReports.map(r => ({
     ...r,
     pdf_url: pdfCache.get(r.id) || r.pdf_url
   }));
-  return reports.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return reports.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
 }
 
 export function addReport(reportData: Omit<DailyReport, 'id'>): DailyReport {
