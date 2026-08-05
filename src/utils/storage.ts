@@ -779,6 +779,8 @@ export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
   checkins.unshift(newCheckin);
   saveItem(STORAGE_KEYS.CHECKINS, checkins);
 
+  console.log('ADDCHECKIN', newCheckin);
+
   void (async () => {
     try {
       if (isSupabaseConfigured()) {
@@ -952,6 +954,9 @@ export function addLead(leadData: Omit<Lead, 'id'>): Lead {
   };
   leads.unshift(newLead);
   saveItem(STORAGE_KEYS.LEADS, leads);
+
+  console.log('ADDLEAD', newLead);
+
   void (async () => {
     try {
       if (isSupabaseConfigured()) {
@@ -1026,6 +1031,8 @@ export async function addReport(reportData: Omit<DailyReport, 'id'>): DailyRepor
   });
 
   saveItem(STORAGE_KEYS.REPORTS, sanitizedReports);
+
+  console.log('ADDREPORT', newReport);
 
   void (async () => {
     try {

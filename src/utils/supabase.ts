@@ -78,7 +78,8 @@ export async function syncLocalDataToSupabase(payload: {
   if (!client) {
     throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY first.');
   }
-
+  
+  console.log(payload.reports);
   await upsertRows(client, 'users', (payload.users || []).map((item) => ({
     ...item,
     supervisor_id: item.supervisorId,
