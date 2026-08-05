@@ -106,24 +106,17 @@ function emitAppToast(message: string, level: 'success' | 'error' = 'success'): 
 }
 
 function syncUserUpdateToGSheet(user: User): void {
-  pushToGoogleSheetWebhook({
-    type: 'user-update',
-    data: {
-      id: user.id,
-      phone: user.phone,
-      name: user.name,
-      role: user.role,
-      supervisorId: user.supervisorId || '',
-      permanentShopId: user.permanentShopId || '',
-      password: user.password || '',
-      updated_at: new Date().toISOString()
+  void (async () => {
+    try {
+      if (!isSupabaseConfigured()) return;
+
+      await syncLocalDataToSupabase({
+        users: [user]
+      });
+    } catch (error) {
+      console.warn('Supabase user sync failed', error);
     }
-  }).then(() => {
-    const cfg = getGSheetConfig();
-    if (cfg.sheetCsvUrl) {
-      syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
-    }
-  }).catch(() => {});
+  })();
 }
 
 function pushNotification(userId: string, message: string, type: string): NotificationItem {
