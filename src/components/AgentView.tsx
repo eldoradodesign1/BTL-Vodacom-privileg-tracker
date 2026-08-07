@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { User, Lead, Checkin, DailyReport } from '../types';
 import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSyncPendingCount, isMatchAgent, toISO, getUsers, resolveStoredPhotoUrl } from '../utils/storage';
-import { formatDriveImageUrl, getGSheetConfig, syncFromGoogleSheetUrl } from '../utils/googleSheetsSync';
+import { formatDriveImageUrl, getGSheetConfig } from '../utils/googleSheetsSync';
+import { refreshData } from '../App';
 import { TabType } from './BottomNav';
 import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archive, Eye, Search, Filter, RefreshCw } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
@@ -58,7 +59,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
     try {
       const cfg = getGSheetConfig();
       if (cfg.sheetCsvUrl) {
-        await syncFromGoogleSheetUrl(cfg.sheetCsvUrl);
+        await refreshData(cfg.sheetCsvUrl);
         if (onRefreshData) onRefreshData();
       }
     } catch {} finally {
