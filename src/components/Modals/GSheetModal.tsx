@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { X, RefreshCw, FileSpreadsheet, Download, CheckCircle, ExternalLink, Link as LinkIcon, ShieldCheck, Upload, Trash2, DatabaseZap } from 'lucide-react';
-import { getGSheetConfig, saveGSheetConfig, refreshData, exportDatabaseToCsv, parseXlsxBuffer } from '../../utils/googleSheetsSync';
+import { getGSheetConfig, saveGSheetConfig, syncFromGoogleSheetUrl, exportDatabaseToCsv, parseXlsxBuffer } from '../../utils/googleSheetsSync';
 import { purgeAndResetEverything } from '../../utils/storage';
 import { isSupabaseConfigured } from '../../utils/supabase';
 import { runSupabaseMigration } from '../../utils/supabaseMigration';
@@ -31,7 +31,7 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
     saveGSheetConfig(config);
 
     if (config.sheetCsvUrl) {
-      const res = await refreshData(config.sheetCsvUrl, { strictUsers: true });
+      const res = await syncFromGoogleSheetUrl(config.sheetCsvUrl, { strictUsers: true });
       if (res.success) {
         setStatusMsg({ type: 'success', text: res.message });
         onSyncSuccess();

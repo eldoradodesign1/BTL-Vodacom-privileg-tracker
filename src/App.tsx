@@ -16,10 +16,17 @@ import {
   getSyncPendingCount,
   getTodayCheckinPhoto,
   saveUsers,
+  saveShops,
   refreshCheckinsFromSupabase,
-  refreshReportsFromSupabase ,
-  saveShops 
+  refreshReportsFromSupabase
 } from './utils/storage';
+
+import {
+  fetchUsersFromSupabase,
+  fetchShopsFromSupabase,
+  isSupabaseConfigured
+} from './utils/supabase';
+
 import { SimulationBar } from './components/SimulationBar';
 import { Header, ThemeMode } from './components/Header';
 import { BottomNav, TabType } from './components/BottomNav';
@@ -38,8 +45,6 @@ import { AgentProfileModal } from './components/Modals/AgentProfileModal';
 import { TodayClientsModal } from './components/Modals/TodayClientsModal';
 import { GSheetModal } from './components/Modals/GSheetModal';
 import { LocationModal } from './components/Modals/LocationModal';
-import { getGSheetConfig, syncFromGoogleSheetUrl } from './utils/googleSheetsSync';
-import { fetchUsersFromSupabase, fetchShopsFromSupabase } from './utils/supabase';
 
 async function ensureNotificationsPermission(): Promise<void> {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
@@ -113,29 +118,38 @@ export default function App() {
     setTheme(nextTheme);
   };
 
-  const refreshData = async () => {
-    try {
-      const [usersData, shopsData] = await Promise.all([
-        fetchUsersFromSupabase(),
-        fetchShopsFromSupabase()
-      ]);
-
-      saveUsers(usersData);
-      saveShops(shopsData);
-      await refreshCheckinsFromSupabase();
-      await refreshReportsFromSupabase();
-
-      setUsers(usersData);
-      setShops(shopsData);
-    } catch (error) {
-      console.warn('Supabase refresh failed:', error);
-
-      setUsers(getUsers());
-      setShops(getShops());
-    }
-
+const refreshData = async () => {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase non configuré : refresh ignoré.');
     setDataRevision((prev) => prev + 1);
-  };
+    return;
+  }
+
+  try {
+    const [usersData, shopsData] = await Promise.all([
+      fetchUsersFromSupabase(),
+      fetchShopsFromSupabase()
+    ]);
+
+    saveUsers(usersData);
+    saveShops(shopsData);
+
+    await Promise.all([
+      refreshCheckinsFromSupabase(),
+      refreshReportsFromSupabase()
+    ]);
+
+    setUsers(usersData);
+    setShops(shopsData);
+  } catch (error) {
+    console.error('Supabase refresh failed:', error);
+    setUsers(getUsers());
+    setShops(getShops());
+  }
+
+  setDataRevision((prev) => prev + 1);
+};
+
   const enforceUserConformityAfterSync = () => {
     const freshUsers = getUsers();
     const persistedRaw = localStorage.getItem('vodacom_user');
@@ -164,35 +178,6 @@ export default function App() {
     }
   };
 
-  // useEffect(() => {
-  //   const doAutoSync = () => {
-  //     const cfg = getGSheetConfig();
-  //     if (cfg.sheetCsvUrl) {
-  //       syncFromGoogleSheetUrl(cfg.sheetCsvUrl, { strictUsers: true })
-  //         .then((res) => {
-  //           if (res.success) {
-  //             refreshData();
-  //             enforceUserConformityAfterSync();
-  //           }
-  //         })
-  //         .catch(() => undefined);
-  //     }
-  //   };
-
-  //   // doAutoSync();
-  //   // window.setTimeout(doAutoSync, 3000);
-  //   // const interval = window.setInterval(() => {
-  //   //   const cfg = getGSheetConfig();
-  //   //   if (cfg.autoSync && cfg.sheetCsvUrl) {
-  //   //     // doAutoSync();
-  //   //     // window.setTimeout(doAutoSync, 3000);
-  //   //   }
-  //   // }, 60000);
-
-  //   void refreshData();
-
-  //   // return () => window.clearInterval(interval);
-  // }, []);
   useEffect(() => {
     void refreshData();
   }, []);
@@ -525,7 +510,6 @@ const todayLeads =
         onClose={() => setIsGSheetModalOpen(false)}
         onSyncSuccess={() => {
           refreshData();
-          enforceUserConformityAfterSync();
         }}
       />
     </div>

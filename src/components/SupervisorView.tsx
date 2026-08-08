@@ -1,7 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { User, Shop, AgentMasterStatus } from '../types';
-import { getSupervisorLiveView, getReports, getUsers, getLeads, getCheckins, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate } from '../utils/storage';
+import { getSupervisorLiveView, getReports, getUsers, getLeads, getCheckins, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate,
+  refreshUsersFromSupabase,
+refreshShopsFromSupabase,
+refreshCheckinsFromSupabase,
+refreshReportsFromSupabase,
+refreshLeadsFromSupabase
+ } from '../utils/storage';
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
 import { Trophy, FileCheck, Eye, Search, Store, UserCheck, User as UserIcon, MapPin, Archive, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight, X, Check, Circle, FileX2 } from 'lucide-react';
@@ -82,6 +88,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
       document.removeEventListener('keydown', handleEscape);
     };
   }, [showHomeCalendar]);
+  
 
   const teamData = getSupervisorLiveView(currentUser.id, selectedDate);
   const allCheckins = getCheckins();

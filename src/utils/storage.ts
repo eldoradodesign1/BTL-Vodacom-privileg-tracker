@@ -3,8 +3,17 @@ import { INITIAL_SHOPS, INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_
 import { buildAgentReportHtml, generateAgentPDF, PDFReportData } from './pdfGenerator';
 import { pushToGoogleSheetWebhook, getGSheetConfig, syncFromGoogleSheetUrl, fetchChatMessagesFromSheet } from './googleSheetsSync';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
-import { isSupabaseConfigured, syncLocalDataToSupabase, uploadPhotoToSupabase, fetchReportsFromSupabase } from './supabase';
-import { fetchCheckinsFromSupabase } from './supabase';
+import {
+  isSupabaseConfigured,
+  syncLocalDataToSupabase,
+  uploadPhotoToSupabase,
+  fetchReportsFromSupabase,
+  fetchCheckinsFromSupabase,
+  fetchLeadsFromSupabase,
+  fetchUsersFromSupabase,
+  fetchShopsFromSupabase
+} from './supabase';
+
 
 const API_BASE_URL = '';
 
@@ -475,6 +484,27 @@ export function saveUser(user: Omit<User, 'id'>): User {
   }
 
   return newUser;
+}
+
+export async function refreshUsersFromSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const users = await fetchUsersFromSupabase();
+  saveUsers(users);
+}
+
+export async function refreshShopsFromSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const shops = await fetchShopsFromSupabase();
+  saveShops(shops);
+}
+
+export async function refreshLeadsFromSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const leads = await fetchLeadsFromSupabase();
+  saveLeads(leads);
 }
 
 export function updateUserShopAssignment(userId: string, shopId: string): boolean {
