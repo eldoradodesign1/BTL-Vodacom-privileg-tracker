@@ -3,7 +3,7 @@ import { INITIAL_SHOPS, INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_
 import { buildAgentReportHtml, generateAgentPDF, PDFReportData } from './pdfGenerator';
 import { pushToGoogleSheetWebhook, getGSheetConfig, syncFromGoogleSheetUrl, fetchChatMessagesFromSheet } from './googleSheetsSync';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
-import { isSupabaseConfigured, syncLocalDataToSupabase, uploadPhotoToSupabase } from './supabase';
+import { isSupabaseConfigured, syncLocalDataToSupabase, uploadPhotoToSupabase, fetchReportsFromSupabase } from './supabase';
 import { fetchCheckinsFromSupabase } from './supabase';
 
 const API_BASE_URL = '';
@@ -106,24 +106,17 @@ function emitAppToast(message: string, level: 'success' | 'error' = 'success'): 
 }
 
 function syncUserUpdateToGSheet(user: User): void {
-  pushToGoogleSheetWebhook({
-    type: 'user-update',
-    data: {
-      id: user.id,
-      phone: user.phone,
-      name: user.name,
-      role: user.role,
-      supervisorId: user.supervisorId || '',
-      permanentShopId: user.permanentShopId || '',
-      password: user.password || '',
-      updated_at: new Date().toISOString()
+  void (async () => {
+    try {
+      if (!isSupabaseConfigured()) return;
+
+      await syncLocalDataToSupabase({
+        users: [user]
+      });
+    } catch (error) {
+      console.warn('Supabase user sync failed', error);
     }
-  }).then(() => {
-    const cfg = getGSheetConfig();
-    if (cfg.sheetCsvUrl) {
-      syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
-    }
-  }).catch(() => {});
+  })();
 }
 
 function pushNotification(userId: string, message: string, type: string): NotificationItem {
@@ -779,6 +772,8 @@ export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
   checkins.unshift(newCheckin);
   saveItem(STORAGE_KEYS.CHECKINS, checkins);
 
+  console.log('ADDCHECKIN', newCheckin);
+
   void (async () => {
     try {
       if (isSupabaseConfigured()) {
@@ -909,6 +904,13 @@ export function saveReports(reports: DailyReport[]): void {
   saveItem(STORAGE_KEYS.REPORTS, reports);
 }
 
+export async function refreshReportsFromSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const reports = await fetchReportsFromSupabase();
+  saveReports(reports);
+}
+
 export function saveCheckins(checkins: Checkin[]): void {
   saveItem(STORAGE_KEYS.CHECKINS, checkins);
 }
@@ -945,6 +947,9 @@ export function addLead(leadData: Omit<Lead, 'id'>): Lead {
   };
   leads.unshift(newLead);
   saveItem(STORAGE_KEYS.LEADS, leads);
+
+  console.log('ADDLEAD', newLead);
+
   void (async () => {
     try {
       if (isSupabaseConfigured()) {
@@ -984,15 +989,19 @@ export function addLead(leadData: Omit<Lead, 'id'>): Lead {
 
 // --- REPORTS ---
 export function getReports(): DailyReport[] {
-  const rawReports: DailyReport[] = loadItem(STORAGE_KEYS.REPORTS, INITIAL_REPORTS);
+  const rawReports: DailyReport[] = loadItem(STORAGE_KEYS.REPORTS, []);
+
   const reports = rawReports.map(r => ({
     ...r,
     pdf_url: pdfCache.get(r.id) || r.pdf_url
   }));
-  return reports.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return reports.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
 }
 
-export function addReport(reportData: Omit<DailyReport, 'id'>): DailyReport {
+export async function addReport(reportData: Omit<DailyReport, 'id'>): DailyReport {
   const reports = getReports();
   const newId = 'rep-' + Math.random().toString(36).substring(2, 9);
 
@@ -1016,6 +1025,8 @@ export function addReport(reportData: Omit<DailyReport, 'id'>): DailyReport {
 
   saveItem(STORAGE_KEYS.REPORTS, sanitizedReports);
 
+  console.log('ADDREPORT', newReport);
+
   void (async () => {
     try {
       if (isSupabaseConfigured()) {
@@ -1024,9 +1035,11 @@ export function addReport(reportData: Omit<DailyReport, 'id'>): DailyReport {
         });
       }
     } catch (error) {
-      console.warn('Supabase report sync failed', error);
+      console.error('Supabase report sync failed', error);
+      throw error;
     }
   })();
+  
   pushToGoogleSheetWebhook({
     type: 'report',
     data: newReport,
