@@ -9,7 +9,6 @@ import {
   uploadPhotoToSupabase,
   fetchReportsFromSupabase,
   fetchCheckinsFromSupabase,
-  fetchLeadsFromSupabase,
   fetchUsersFromSupabase,
   fetchShopsFromSupabase
 } from './supabase';
@@ -498,13 +497,6 @@ export async function refreshShopsFromSupabase(): Promise<void> {
 
   const shops = await fetchShopsFromSupabase();
   saveShops(shops);
-}
-
-export async function refreshLeadsFromSupabase(): Promise<void> {
-  if (!isSupabaseConfigured()) return;
-
-  const leads = await fetchLeadsFromSupabase();
-  saveLeads(leads);
 }
 
 export function updateUserShopAssignment(userId: string, shopId: string): boolean {
