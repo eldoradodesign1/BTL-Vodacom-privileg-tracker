@@ -17,13 +17,16 @@ import {
   getTodayCheckinPhoto,
   saveUsers,
   saveShops,
+  saveLeads,
   refreshCheckinsFromSupabase,
   refreshReportsFromSupabase
 } from './utils/storage';
 
+
 import {
   fetchUsersFromSupabase,
   fetchShopsFromSupabase,
+  fetchLeadsFromSupabase,
   isSupabaseConfigured
 } from './utils/supabase';
 
@@ -119,35 +122,32 @@ export default function App() {
   };
 
 const refreshData = async () => {
-  if (!isSupabaseConfigured()) {
-    console.warn('Supabase non configuré : refresh ignoré.');
-    setDataRevision((prev) => prev + 1);
-    return;
-  }
-
   try {
-    const [usersData, shopsData] = await Promise.all([
+    const [usersData, shopsData, leadsData] = await Promise.all([
       fetchUsersFromSupabase(),
-      fetchShopsFromSupabase()
+      fetchShopsFromSupabase(),
+      fetchLeadsFromSupabase()
     ]);
 
     saveUsers(usersData);
     saveShops(shopsData);
+    saveLeads(leadsData);
 
-    await Promise.all([
-      refreshCheckinsFromSupabase(),
-      refreshReportsFromSupabase()
-    ]);
+    await refreshCheckinsFromSupabase();
+    await refreshReportsFromSupabase();
 
     setUsers(usersData);
     setShops(shopsData);
+    setLeads(leadsData);
+
+    setDataRevision((prev) => prev + 1);
   } catch (error) {
-    console.error('Supabase refresh failed:', error);
+    console.warn('Supabase refresh failed:', error);
+
     setUsers(getUsers());
     setShops(getShops());
+    setLeads(getLeads());
   }
-
-  setDataRevision((prev) => prev + 1);
 };
 
   const enforceUserConformityAfterSync = () => {

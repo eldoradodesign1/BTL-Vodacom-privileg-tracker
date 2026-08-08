@@ -259,6 +259,24 @@ export async function fetchShopsFromSupabase(): Promise<Shop[]> {
   return (data || []) as Shop[];
 }
 
+export async function fetchLeadsFromSupabase(): Promise<Lead[]> {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await client
+    .from('leads')
+    .select('*')
+    .order('timestamp', { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []) as Lead[];
+}
+
 
 export async function fetchCheckinsFromSupabase(): Promise<Checkin[]> {
   const client = getSupabaseClient();
