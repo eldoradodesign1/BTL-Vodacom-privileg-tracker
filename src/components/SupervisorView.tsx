@@ -1,7 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { User, Shop, AgentMasterStatus } from '../types';
-import { getSupervisorLiveView, getReports, getUsers, getLeads, getCheckins, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate } from '../utils/storage';
+import { getSupervisorLiveView, getReports, getUsers, getLeads, getCheckins, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate,
+  refreshUsersFromSupabase,
+refreshShopsFromSupabase,
+refreshCheckinsFromSupabase,
+refreshReportsFromSupabase,
+toISO
+ } from '../utils/storage';
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
 import { Trophy, FileCheck, Eye, Search, Store, UserCheck, User as UserIcon, MapPin, Archive, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight, X, Check, Circle, FileX2 } from 'lucide-react';
@@ -48,6 +54,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [dragOverShopId, setDragOverShopId] = useState<string | null>(null);
   const [selectedLocationAgent, setSelectedLocationAgent] = useState<{ id: string; name: string; shop: string; status?: 'Présent' | 'Clôturé' | 'Absent'; arrivalTime?: string; departureTime?: string; mapsIn?: string; mapsOut?: string; lat?: number; long?: number } | null>(null);
   const [showHomeCalendar, setShowHomeCalendar] = useState(false);
+  const [showReportPeriodModal, setShowReportPeriodModal] = useState(false);
   const [presenceCalendarAgentId, setPresenceCalendarAgentId] = useState<string | null>(null);
   const [presenceCalendarPosition, setPresenceCalendarPosition] = useState<{ top: number; left: number } | null>(null);
   const [presenceCalendarMonth, setPresenceCalendarMonth] = useState(() => {
@@ -55,13 +62,25 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const todayIso = new Date().toISOString().split('T')[0];
-  const [reportsStartDate, setReportsStartDate] = useState(todayIso);
+  // const [reportsStartDate, setReportsStartDate] = useState(todayIso);
+  // const [reportsEndDate, setReportsEndDate] = useState(todayIso);
+  const getMondayIso = () => {
+    const d = new Date();
+    const day = d.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    d.setDate(d.getDate() + diff);
+    return d.toISOString().split('T')[0];
+  };
+
+  const [reportsStartDate, setReportsStartDate] = useState(getMondayIso());
   const [reportsEndDate, setReportsEndDate] = useState(todayIso);
   const [homeCalendarMonth, setHomeCalendarMonth] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const homeCalendarRef = useRef<HTMLDivElement | null>(null);
+
+
 
   useEffect(() => {
     if (!showHomeCalendar) return;
@@ -82,6 +101,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
       document.removeEventListener('keydown', handleEscape);
     };
   }, [showHomeCalendar]);
+  
 
   const teamData = getSupervisorLiveView(currentUser.id, selectedDate);
   const allCheckins = getCheckins();
@@ -220,70 +240,125 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     });
 
   const handleGenerateSupervisorReport = async () => {
-    setLoading(true);
-    const targetsByAgent = teamData.map((item) => {
-      const assignedShopId =
-        supervisedAgents.find((u) => u.id === item.id)?.permanentShopId
-        || item.reportObj?.shop_id
-        || '';
-      return getEffectiveTargetsForDate(selectedDate, assignedShopId);
-    });
+  if (reportsStartDate > reportsEndDate) return;
 
-    const dayTargets = targetsByAgent.reduce(
-      (acc, target) => {
-        acc.privilege += Number(target.privilege || 0);
-        acc.roaming += Number(target.roaming || 0);
-        acc.bundle += Number(target.bundle || 0);
-        return acc;
-      },
-      { privilege: 0, roaming: 0, bundle: 0 }
-    );
+  setLoading(true);
 
-    const reports = teamData
-      .filter(item => item.reportObj)
-      .map(item => {
-        const reportLeads = getLeads().filter(l => l.agent_id === item.id && l.timestamp.startsWith(selectedDate));
-        return {
-          agentName: item.name,
-          shopName: item.shop,
-          date: selectedDate,
-          arrivalTime: item.reportObj?.arrival_time || '08:00',
-          departureTime: item.reportObj?.departure_time || '17:30',
-          mapsIn: item.reportObj?.maps_in || '',
-          mapsOut: item.reportObj?.maps_out || '',
-          totalPrivilege: item.reportObj?.priv ?? item.stats.priv,
-          totalRoaming: item.reportObj?.roam ?? item.stats.roam,
-          totalBundles: item.reportObj?.bund ?? item.stats.bund,
-          targets: { privilege: 20, roaming: 20, bundle: 20 },
-          leads: reportLeads.map(l => ({
-            timestamp: l.timestamp,
-            client_name: l.client_name,
-            msisdn: l.msisdn,
-            action_type: l.action_type
-          })),
-          pointagePhoto: resolveStoredPhotoUrl(item.reportObj?.pointage_photo || '') || '',
-          photos: item.reportObj?.photos || [],
-          comment: item.reportObj?.comment || '',
-          evolutionData: [item.stats.priv, item.stats.priv + item.stats.roam, item.stats.priv + item.stats.roam + item.stats.bund]
-        };
-      });
+  const periodReports = allReports.filter(
+    r =>
+      teamAgentIds.includes(r.agent_id) &&
+      r.date >= reportsStartDate &&
+      r.date <= reportsEndDate
+  );
 
-    const payload = {
-      supName: currentUser.name,
-      date: selectedDate,
-      dayTargets: {
-        privilege: dayTargets.privilege,
-        roaming: dayTargets.roaming,
-        bundle: dayTargets.bundle,
-        total: dayTargets.privilege + dayTargets.roaming + dayTargets.bundle,
-        deployedCount: teamData.length
-      },
-      team: teamData,
-      reports
+  const periodLeads = getLeads().filter(l => {
+  const leadDate = toISO(l.timestamp);
+
+  return (
+    teamAgentIds.includes(l.agent_id) &&
+    leadDate >= reportsStartDate &&
+    leadDate <= reportsEndDate
+  );
+});
+
+  const periodTeam = supervisedAgents.map(agent => {
+    const agentReports = periodReports.filter(r => r.agent_id === agent.id);
+    const agentLeads = periodLeads.filter(l => l.agent_id === agent.id);
+
+    const priv = agentLeads.filter(l =>
+      String(l.action_type).includes('Privil')
+    ).length;
+
+    const roam = agentLeads.filter(l =>
+      String(l.action_type).includes('Roam')
+    ).length;
+
+    const bund = agentLeads.filter(l =>
+      String(l.action_type).includes('Bund') ||
+      String(l.action_type).includes('Pack')
+    ).length;
+
+    const firstReport = [...agentReports].sort((a, b) =>
+      a.date.localeCompare(b.date)
+    )[0];
+
+    return {
+      id: agent.id,
+      name: agent.name,
+      shop: shops.find(s => s.id === agent.permanentShopId)?.name || 'Non affecté',
+      status: agentReports.length > 0 ? 'Clôturé' : 'Absent',
+      stats: { priv, roam, bund },
+      arrivalTime: firstReport?.arrival_time || '00:00',
+      departureTime: firstReport?.departure_time || '00:00'
     };
-    setLoading(false);
-    onOpenPdfModal(`preview-supervisor:${encodeURIComponent(JSON.stringify(payload))}`);
+  });
+
+  const reports = periodTeam.map(agent => {
+    const agentLeads = periodLeads.filter(l => l.agent_id === agent.id);
+    const agentReports = periodReports
+      .filter(r => r.agent_id === agent.id)
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const firstReport = agentReports[0];
+
+    return {
+      agentName: agent.name,
+      shopName: agent.shop,
+      date: `${reportsStartDate} au ${reportsEndDate}`,
+      arrivalTime: firstReport?.arrival_time || '00:00',
+      departureTime: firstReport?.departure_time || '00:00',
+      mapsIn: firstReport?.maps_in || '',
+      mapsOut: firstReport?.maps_out || '',
+      totalPrivilege: agent.stats.priv,
+      totalRoaming: agent.stats.roam,
+      totalBundles: agent.stats.bund,
+      targets: { privilege: 20, roaming: 20, bundle: 20 },
+      leads: agentLeads.map(l => ({
+        timestamp: l.timestamp,
+        client_name: l.client_name,
+        msisdn: l.msisdn,
+        action_type: l.action_type
+      })),
+      pointagePhoto: resolveStoredPhotoUrl(
+        firstReport?.pointage_photo || ''
+      ) || '',
+      photos: firstReport?.photos || [],
+      comment: firstReport?.comment || '',
+      evolutionData: [
+        agent.stats.priv,
+        agent.stats.priv + agent.stats.roam,
+        agent.stats.priv + agent.stats.roam + agent.stats.bund
+      ]
+    };
+  });
+
+  const totalPrivilege = periodTeam.reduce((s, a) => s + a.stats.priv, 0);
+  const totalRoaming = periodTeam.reduce((s, a) => s + a.stats.roam, 0);
+  const totalBundles = periodTeam.reduce((s, a) => s + a.stats.bund, 0);
+
+  const payload = {
+    supName: currentUser.name,
+    date: `${reportsStartDate} au ${reportsEndDate}`,
+    dayTargets: {
+      privilege: 0,
+      roaming: 0,
+      bundle: 0,
+      total: 0,
+      deployedCount: periodTeam.length
+    },
+    team: periodTeam,
+    reports
   };
+
+  setLoading(false);
+  setShowReportPeriodModal(false);
+
+  onOpenPdfModal(
+    `preview-supervisor:${encodeURIComponent(JSON.stringify(payload))}`
+  );
+};
+
+  
 
   const handleAssignShopSubmit = (userId: string, shopId: string) => {
     updateUserShopAssignment(userId, shopId);
@@ -294,6 +369,13 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const handleGenerateBatchPDF = async () => {
     setLoading(true);
     const selectedReports = filteredReportsForPeriod;
+    const allLeads = getLeads();
+    console.log('DEBUG RAPPORT', {
+      allLeads: allLeads.length,
+      startDate,
+      endDate,
+      firstLead: allLeads[0]
+    });
     const rows = selectedReports.map((r) => ({
       date: r.date,
       agent: r.agent_name,
@@ -1164,7 +1246,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           </div>
 
           <button
-            onClick={handleGenerateSupervisorReport}
+            onClick={() => setShowReportPeriodModal(true)}
             disabled={loading}
             className="h-12 w-12 bg-red-600 hover:bg-red-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-red-600/30 transition-all disabled:opacity-60"
             title={loading ? 'Génération en cours' : 'Générer la synthèse PDF'}
@@ -1173,6 +1255,59 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           </button>
         </div>
       </div>
+
+      {showReportPeriodModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md rounded-3xl border border-white/10 bg-zinc-950 p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-black text-white uppercase">
+                  Rapport superviseur
+                </h2>
+                <p className="text-xs text-gray-400 mt-1">
+                  Sélectionnez la période à compiler
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowReportPeriodModal(false)}
+                className="h-9 w-9 rounded-xl bg-white/5 text-gray-300"
+              >
+                <X className="w-4 h-4 mx-auto" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">
+                  Période du rapport
+                </label>
+
+                <DateRangeKnobSlider
+                  minDate="2026-07-23"
+                  maxDate={todayIso}
+                  startDate={reportsStartDate}
+                  endDate={reportsEndDate}
+                  onChange={({ startDate: nextStart, endDate: nextEnd }) => {
+                    setReportsStartDate(nextStart);
+                    setReportsEndDate(nextEnd);
+                  }}
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={reportsStartDate > reportsEndDate || loading}
+                onClick={handleGenerateSupervisorReport}
+                className="w-full rounded-xl bg-red-600 py-3 text-sm font-black uppercase text-white disabled:opacity-40"
+              >
+                Générer le rapport
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Team KPI Bar */}
       <div className="grid grid-cols-2 gap-3">

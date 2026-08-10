@@ -7,7 +7,7 @@ export const INITIAL_SHOPS: Shop[] = [
   { id: 'S004', name: "Shop Vodacom Kintambo", city: "Kinshasa", lat: -4.3167, long: 15.2667, type: 'Standard' },
   { id: 'S005', name: "Shop Vodacom Matete", city: "Kinshasa", lat: -4.3889, long: 15.3611, type: 'Standard' },
   { id: 'S006', name: "Shop Vodacom Bandalungwa", city: "Kinshasa", lat: -4.3444, long: 15.2833, type: 'Standard' },
-  { id: 'S007', name: "Shop Vodacom Masina", city: "Kinshasa", lat: -4.3917, long: 15.4111, type: 'Standard' },
+  { id: 'S007', name: "Shop Vodacom GB", city: "Kinshasa", lat: -4.3917, long: 15.4111, type: 'Standard' },
   { id: 'S008', name: "Shop Vodacom Victoire (Kalamu)", city: "Kinshasa", lat: -4.3389, long: 15.3139, type: 'Standard' },
   { id: 'S009', name: "Shop Vodacom Huileries", city: "Kinshasa", lat: -4.3194, long: 15.3083, type: 'Standard' }
 ];

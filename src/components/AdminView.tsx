@@ -263,6 +263,12 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const handleGenerateBatchPDF = async () => {
     setLoading(true);
     const selectedReports = filteredReportsForPeriod;
+
+    const periodLeads = allLeads.filter(l => {
+      const date = toISO(l.timestamp).slice(0, 10);
+      return date >= startDate && date <= endDate;
+    });
+
     const rows = selectedReports.map(r => ({
       date: r.date,
       agent: r.agent_name,
@@ -271,12 +277,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
       bund: r.bund
     }));
 
-    const totals = rows.reduce(
-      (acc, r) => ({
-        privilege: acc.privilege + r.priv,
-        roaming: acc.roaming + r.roam,
-        bundles: acc.bundles + r.bund
-      }),
+    const totals = periodLeads.reduce(
+      (acc, lead) => {
+        if (lead.action_type === 'Privilège') {
+          acc.privilege += 1;
+        } else if (lead.action_type === 'Roaming') {
+          acc.roaming += 1;
+        } else if (lead.action_type === 'Bundle') {
+          acc.bundles += 1;
+        }
+
+        return acc;
+      },
       { privilege: 0, roaming: 0, bundles: 0 }
     );
 
@@ -304,26 +316,16 @@ export const AdminView: React.FC<AdminViewProps> = ({
       evolutionData: [report.priv, report.priv + report.roam, report.priv + report.roam + report.bund]
     }));
 
-    const groups = selectedReports.reduce<Array<{ supervisor: string; agentCount: number; totalLeads: number; totalPrivilege: number; totalRoaming: number; totalBundles: number }>>((acc, report) => {
-      const existing = acc.find(group => group.supervisor === (report.shop_name || 'Administration'));
-      if (existing) {
-        existing.agentCount += 1;
-        existing.totalLeads += report.priv + report.roam + report.bund;
-        existing.totalPrivilege += report.priv;
-        existing.totalRoaming += report.roam;
-        existing.totalBundles += report.bund;
-      } else {
-        acc.push({
-          supervisor: report.shop_name || 'Administration',
-          agentCount: 1,
-          totalLeads: report.priv + report.roam + report.bund,
-          totalPrivilege: report.priv,
-          totalRoaming: report.roam,
-          totalBundles: report.bund
-        });
+    const groups = [
+      {
+        supervisor: 'Administration',
+        agentCount: new Set(selectedReports.map(r => r.agent_id)).size,
+        totalLeads: periodLeads.length,
+        totalPrivilege: totals.privilege,
+        totalRoaming: totals.roaming,
+        totalBundles: totals.bundles
       }
-      return acc;
-    }, []);
+    ];
 
     const payload = {
       period: `${startDate} au ${endDate}`,

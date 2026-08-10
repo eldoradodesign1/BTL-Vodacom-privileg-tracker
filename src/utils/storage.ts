@@ -3,7 +3,17 @@ import { INITIAL_SHOPS, INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_
 import { buildAgentReportHtml, generateAgentPDF, PDFReportData } from './pdfGenerator';
 import { pushToGoogleSheetWebhook, getGSheetConfig, syncFromGoogleSheetUrl, fetchChatMessagesFromSheet } from './googleSheetsSync';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
-import { isSupabaseConfigured, syncLocalDataToSupabase, uploadPhotoToSupabase } from './supabase';
+import {
+  isSupabaseConfigured,
+  syncLocalDataToSupabase,
+  uploadPhotoToSupabase,
+  fetchReportsFromSupabase,
+  fetchCheckinsFromSupabase,
+  fetchUsersFromSupabase,
+  fetchShopsFromSupabase,
+  fetchLeadsFromSupabase
+} from './supabase';
+
 
 const API_BASE_URL = '';
 
@@ -105,24 +115,17 @@ function emitAppToast(message: string, level: 'success' | 'error' = 'success'): 
 }
 
 function syncUserUpdateToGSheet(user: User): void {
-  pushToGoogleSheetWebhook({
-    type: 'user-update',
-    data: {
-      id: user.id,
-      phone: user.phone,
-      name: user.name,
-      role: user.role,
-      supervisorId: user.supervisorId || '',
-      permanentShopId: user.permanentShopId || '',
-      password: user.password || '',
-      updated_at: new Date().toISOString()
+  void (async () => {
+    try {
+      if (!isSupabaseConfigured()) return;
+
+      await syncLocalDataToSupabase({
+        users: [user]
+      });
+    } catch (error) {
+      console.warn('Supabase user sync failed', error);
     }
-  }).then(() => {
-    const cfg = getGSheetConfig();
-    if (cfg.sheetCsvUrl) {
-      syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
-    }
-  }).catch(() => {});
+  })();
 }
 
 function pushNotification(userId: string, message: string, type: string): NotificationItem {
@@ -483,6 +486,20 @@ export function saveUser(user: Omit<User, 'id'>): User {
   return newUser;
 }
 
+export async function refreshUsersFromSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const users = await fetchUsersFromSupabase();
+  saveUsers(users);
+}
+
+export async function refreshShopsFromSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const shops = await fetchShopsFromSupabase();
+  saveShops(shops);
+}
+
 export function updateUserShopAssignment(userId: string, shopId: string): boolean {
   const users = getUsers();
   const index = users.findIndex(u => u.id === userId);
@@ -740,8 +757,19 @@ export function getEffectiveTargetsForDate(date: string, shopId?: string): ShopT
 
 // --- CHECKINS ---
 export function getCheckins(): Checkin[] {
-  const items: Checkin[] = loadItem(STORAGE_KEYS.CHECKINS, INITIAL_CHECKINS);
-  return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  return loadItem(STORAGE_KEYS.CHECKINS, INITIAL_CHECKINS)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+}
+
+export async function refreshCheckinsFromSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const rows = await fetchCheckinsFromSupabase();
+
+  saveItem(
+    STORAGE_KEYS.CHECKINS,
+    rows.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  );
 }
 
 export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
@@ -766,6 +794,8 @@ export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
 
   checkins.unshift(newCheckin);
   saveItem(STORAGE_KEYS.CHECKINS, checkins);
+
+  console.log('ADDCHECKIN', newCheckin);
 
   void (async () => {
     try {
@@ -897,6 +927,20 @@ export function saveReports(reports: DailyReport[]): void {
   saveItem(STORAGE_KEYS.REPORTS, reports);
 }
 
+export async function refreshReportsFromSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const reports = await fetchReportsFromSupabase();
+  saveReports(reports);
+}
+
+export async function refreshLeadsFromSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const leads = await fetchLeadsFromSupabase();
+  saveLeads(leads);
+}
+
 export function saveCheckins(checkins: Checkin[]): void {
   saveItem(STORAGE_KEYS.CHECKINS, checkins);
 }
@@ -933,6 +977,9 @@ export function addLead(leadData: Omit<Lead, 'id'>): Lead {
   };
   leads.unshift(newLead);
   saveItem(STORAGE_KEYS.LEADS, leads);
+
+  console.log('ADDLEAD', newLead);
+
   void (async () => {
     try {
       if (isSupabaseConfigured()) {
@@ -972,15 +1019,19 @@ export function addLead(leadData: Omit<Lead, 'id'>): Lead {
 
 // --- REPORTS ---
 export function getReports(): DailyReport[] {
-  const rawReports: DailyReport[] = loadItem(STORAGE_KEYS.REPORTS, INITIAL_REPORTS);
+  const rawReports: DailyReport[] = loadItem(STORAGE_KEYS.REPORTS, []);
+
   const reports = rawReports.map(r => ({
     ...r,
     pdf_url: pdfCache.get(r.id) || r.pdf_url
   }));
-  return reports.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return reports.sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
 }
 
-export function addReport(reportData: Omit<DailyReport, 'id'>): DailyReport {
+export async function addReport(reportData: Omit<DailyReport, 'id'>): DailyReport {
   const reports = getReports();
   const newId = 'rep-' + Math.random().toString(36).substring(2, 9);
 
@@ -1003,6 +1054,22 @@ export function addReport(reportData: Omit<DailyReport, 'id'>): DailyReport {
   });
 
   saveItem(STORAGE_KEYS.REPORTS, sanitizedReports);
+
+  console.log('ADDREPORT', newReport);
+
+  void (async () => {
+    try {
+      if (isSupabaseConfigured()) {
+        await syncLocalDataToSupabase({
+          reports: [newReport]
+        });
+      }
+    } catch (error) {
+      console.error('Supabase report sync failed', error);
+      throw error;
+    }
+  })();
+  
   pushToGoogleSheetWebhook({
     type: 'report',
     data: newReport,
@@ -1274,9 +1341,13 @@ export function getUnreadChatCount(userId: string): number {
 
 export function isMatchAgent(recordAgent: string | undefined, user: User | undefined): boolean {
   if (!recordAgent || !user) return false;
-  const r = recordAgent.trim().toLowerCase();
-  const uid = user.id.trim().toLowerCase();
-  const uname = user.name.trim().toLowerCase();
+
+  const r = String(recordAgent || '').trim().toLowerCase();
+  const uid = String(user.id || '').trim().toLowerCase();
+  const uname = String(user.name || '').trim().toLowerCase();
+
+  if (!uid && !uname) return false;
+
   return r === uid || r === uname || r.includes(uname) || uname.includes(r);
 }
 

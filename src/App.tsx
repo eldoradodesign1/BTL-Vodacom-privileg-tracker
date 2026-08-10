@@ -14,8 +14,23 @@ import {
   markChatAsRead,
   runScheduledDailyReminders,
   getSyncPendingCount,
-  getTodayCheckinPhoto
+  getTodayCheckinPhoto,
+  saveUsers,
+  saveShops,
+  saveLeads,
+  refreshCheckinsFromSupabase,
+  refreshReportsFromSupabase,
+  refreshLeadsFromSupabase,
 } from './utils/storage';
+
+
+import {
+  fetchUsersFromSupabase,
+  fetchShopsFromSupabase,
+  fetchLeadsFromSupabase,
+  isSupabaseConfigured
+} from './utils/supabase';
+
 import { SimulationBar } from './components/SimulationBar';
 import { Header, ThemeMode } from './components/Header';
 import { BottomNav, TabType } from './components/BottomNav';
@@ -34,7 +49,6 @@ import { AgentProfileModal } from './components/Modals/AgentProfileModal';
 import { TodayClientsModal } from './components/Modals/TodayClientsModal';
 import { GSheetModal } from './components/Modals/GSheetModal';
 import { LocationModal } from './components/Modals/LocationModal';
-import { getGSheetConfig, syncFromGoogleSheetUrl } from './utils/googleSheetsSync';
 
 async function ensureNotificationsPermission(): Promise<void> {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
@@ -108,11 +122,32 @@ export default function App() {
     setTheme(nextTheme);
   };
 
-  const refreshData = () => {
+const refreshData = async () => {
+  try {
+    const [usersData, shopsData] = await Promise.all([
+      fetchUsersFromSupabase(),
+      fetchShopsFromSupabase()
+    ]);
+
+    saveUsers(usersData);
+    saveShops(shopsData);
+
+    await refreshLeadsFromSupabase();
+    await refreshCheckinsFromSupabase();
+    await refreshReportsFromSupabase();
+
+    setUsers(usersData);
+    setShops(shopsData);
+
+    setDataRevision((prev) => prev + 1);
+  } catch (error) {
+    console.warn('Supabase refresh failed:', error);
+
     setUsers(getUsers());
     setShops(getShops());
-    setDataRevision((prev) => prev + 1);
-  };
+  }
+};
+
 
   const enforceUserConformityAfterSync = () => {
     const freshUsers = getUsers();
@@ -143,29 +178,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    const doAutoSync = () => {
-      const cfg = getGSheetConfig();
-      if (cfg.sheetCsvUrl) {
-        syncFromGoogleSheetUrl(cfg.sheetCsvUrl, { strictUsers: true })
-          .then((res) => {
-            if (res.success) {
-              refreshData();
-              enforceUserConformityAfterSync();
-            }
-          })
-          .catch(() => undefined);
-      }
-    };
-
-    // doAutoSync();
-    const interval = window.setInterval(() => {
-      const cfg = getGSheetConfig();
-      if (cfg.autoSync && cfg.sheetCsvUrl) {
-        // doAutoSync();
-      }
-    }, 60000);
-
-    return () => window.clearInterval(interval);
+    void refreshData();
   }, []);
 
   useEffect(() => {
@@ -235,8 +248,26 @@ export default function App() {
   };
 
   const todayStr = toISO(new Date());
-  const todayLeads = getLeads().filter((l) => l.agent_id === effectiveUser.id && toISO(l.timestamp) === todayStr);
-  const todayCheckin = getCheckins().find((c) => c.agent_id === effectiveUser.id && toISO(c.timestamp) === todayStr && c.type === 'IN') || null;
+
+const allCheckins = getCheckins();
+const allLeads = getLeads();
+
+const todayCheckin =
+  allCheckins.find(
+    (c) =>
+      c.agent_id === effectiveUser.id &&
+      toISO(c.timestamp) === todayStr &&
+      c.type === 'IN'
+  ) || null;
+
+const todayLeads =
+  allLeads.filter(
+    (l) =>
+      l.agent_id === effectiveUser.id &&
+      toISO(l.timestamp) === todayStr
+  );
+
+
   const agentReports = getReports().filter((r) => r.agent_id === effectiveUser.id);
   const notifications = getNotifications(effectiveUser.id);
   const todayCheckinPhoto = getTodayCheckinPhoto(effectiveUser.id);
@@ -478,7 +509,6 @@ export default function App() {
         onClose={() => setIsGSheetModalOpen(false)}
         onSyncSuccess={() => {
           refreshData();
-          enforceUserConformityAfterSync();
         }}
       />
     </div>

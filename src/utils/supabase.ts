@@ -78,7 +78,8 @@ export async function syncLocalDataToSupabase(payload: {
   if (!client) {
     throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY first.');
   }
-
+  
+  console.log(payload.reports);
   await upsertRows(client, 'users', (payload.users || []).map((item) => ({
     ...item,
     supervisor_id: item.supervisorId,
@@ -212,4 +213,125 @@ export async function uploadPhotoToSupabase(fileOrDataUrl: string, bucket: strin
 
   const { data: publicData } = client.storage.from(bucket).getPublicUrl(fileName);
   return publicData.publicUrl;
+}
+
+export async function fetchUsersFromSupabase(): Promise<User[]> {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await client
+    .from('users')
+    .select('*');
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []).map((u: any) => ({
+    id: u.id,
+    phone: u.phone,
+    name: u.full_name,
+    role: u.role,
+    password: u.password_hash,
+    supervisorId: u.supervisor_id,
+    permanentShopId: u.permanent_shop_id,
+    created_at: u.created_at,
+    last_login: u.last_login
+  })) as User[];
+}
+
+export async function fetchShopsFromSupabase(): Promise<Shop[]> {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await client
+    .from('shops')
+    .select('*');
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []) as Shop[];
+}
+
+export async function fetchLeadsFromSupabase(): Promise<Lead[]> {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await client
+    .from('leads')
+    .select('*')
+    .order('timestamp', { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []) as Lead[];
+}
+
+
+export async function fetchCheckinsFromSupabase(): Promise<Checkin[]> {
+  const client = getSupabaseClient();
+  if (!client) return [];
+
+  const { data, error } = await client
+    .from('checkins')
+    .select('*')
+    .order('timestamp', { ascending: false });
+
+  if (error) {
+    console.error(error);
+    return [];
+  }
+
+  return (data || []).map((item) => ({
+    ...item
+  })) as Checkin[];
+}
+
+export async function fetchReportsFromSupabase(): Promise<DailyReport[]> {
+  const client = getSupabaseClient();
+  if (!client) {
+    throw new Error('Supabase is not configured.');
+  }
+
+  const { data, error } = await client
+    .from('daily_reports')
+    .select('*')
+    .order('date', { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    date: r.date,
+    agent_id: r.agent_id,
+    agent_name: r.agent_name,
+    shop_id: r.shop_id,
+    shop_name: r.shop_name,
+    priv: r.priv,
+    roam: r.roam,
+    bund: r.bund,
+    amount: r.amount,
+    comment: r.comment,
+    pdf_url: r.pdf_url,
+    photos: r.photos || [],
+    arrival_time: r.arrival_time,
+    departure_time: r.departure_time,
+    pointage_photo: r.pointage_photo,
+    maps_in: r.maps_in,
+    maps_out: r.maps_out,
+    drive_pdf_url: r.drive_pdf_url,
+    report_photos_drive_urls: r.report_photos_drive_urls || []
+  })) as DailyReport[];
 }

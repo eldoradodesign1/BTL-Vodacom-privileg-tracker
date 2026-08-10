@@ -138,7 +138,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       evolutionActivationData: evolutionSeries.evolutionActivationData
     });
 
-    const savedReport = addReport({
+    const savedReport = await addReport({
       date: reportDate,
       agent_id: currentUser.id,
       agent_name: currentUser.name,

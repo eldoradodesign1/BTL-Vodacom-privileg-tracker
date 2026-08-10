@@ -8,9 +8,9 @@ end $$;
 create table if not exists public.users (
   id text primary key,
   phone text not null,
-  name text not null,
+  full_name text not null,
   role text not null,
-  password text,
+  password_hash text,
   supervisor_id text,
   permanent_shop_id text,
   created_at timestamptz default now(),
@@ -322,4 +322,24 @@ begin
   ) then
     create policy "chat_messages_update_all" on public.chat_messages for update using (true) with check (true);
   end if;
+
+  create table if not exists public.targets (
+  id text primary key,
+  user_id text not null,
+  date text not null,
+  target_privilege_std integer not null default 20,
+  target_privilege_air integer not null default 10,
+  target_roaming_std integer not null default 3,
+  target_roaming_air integer not null default 15,
+  target_bundle integer not null default 20
+);
+
+create table if not exists public.assignments (
+  id text primary key,
+  date text not null,
+  agent_id text not null,
+  shop_id text not null,
+  expected_in text,
+  expected_out text
+);
 end $$;
