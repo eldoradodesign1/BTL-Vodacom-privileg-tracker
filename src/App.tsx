@@ -19,7 +19,8 @@ import {
   saveShops,
   saveLeads,
   refreshCheckinsFromSupabase,
-  refreshReportsFromSupabase
+  refreshReportsFromSupabase,
+  refreshLeadsFromSupabase,
 } from './utils/storage';
 
 
@@ -123,22 +124,20 @@ export default function App() {
 
 const refreshData = async () => {
   try {
-    const [usersData, shopsData, leadsData] = await Promise.all([
+    const [usersData, shopsData] = await Promise.all([
       fetchUsersFromSupabase(),
-      fetchShopsFromSupabase(),
-      fetchLeadsFromSupabase()
+      fetchShopsFromSupabase()
     ]);
 
     saveUsers(usersData);
     saveShops(shopsData);
-    saveLeads(leadsData);
 
+    await refreshLeadsFromSupabase();
     await refreshCheckinsFromSupabase();
     await refreshReportsFromSupabase();
 
     setUsers(usersData);
     setShops(shopsData);
-    setLeads(leadsData);
 
     setDataRevision((prev) => prev + 1);
   } catch (error) {
@@ -146,9 +145,9 @@ const refreshData = async () => {
 
     setUsers(getUsers());
     setShops(getShops());
-    setLeads(getLeads());
   }
 };
+
 
   const enforceUserConformityAfterSync = () => {
     const freshUsers = getUsers();

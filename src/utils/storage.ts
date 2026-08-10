@@ -10,7 +10,8 @@ import {
   fetchReportsFromSupabase,
   fetchCheckinsFromSupabase,
   fetchUsersFromSupabase,
-  fetchShopsFromSupabase
+  fetchShopsFromSupabase,
+  fetchLeadsFromSupabase
 } from './supabase';
 
 
@@ -931,6 +932,13 @@ export async function refreshReportsFromSupabase(): Promise<void> {
 
   const reports = await fetchReportsFromSupabase();
   saveReports(reports);
+}
+
+export async function refreshLeadsFromSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+
+  const leads = await fetchLeadsFromSupabase();
+  saveLeads(leads);
 }
 
 export function saveCheckins(checkins: Checkin[]): void {
