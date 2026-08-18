@@ -1,6 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type {
-  BADailyAssignment,
   BADailyAttendance,
   BATransaction,
   Campaign,
@@ -91,18 +90,6 @@ export async function getActiveCampaignRuns(campaignId: string): Promise<Campaig
   return (data || []) as CampaignRun[];
 }
 
-export async function getAssignmentsForDay(baId: string, activityDate: string): Promise<BADailyAssignment[]> {
-  const client = getMerchantClient();
-  const { data, error } = await client
-    .from('ba_daily_assignments')
-    .select('*, point_of_sale:points_of_sale(*)')
-    .eq('ba_id', baId)
-    .eq('activity_date', activityDate)
-    .order('created_at');
-  fail(error, 'Impossible de charger les POS assignés');
-  return (data || []) as BADailyAssignment[];
-}
-
 export async function getDailyAttendance(baId: string, runId: string, activityDate: string): Promise<BADailyAttendance | null> {
   const client = getMerchantClient();
   const { data, error } = await client
@@ -122,12 +109,25 @@ export async function getTransactionsForDay(baId: string, runId: string, activit
   const end = `${activityDate}T23:59:59.999+01:00`;
   const { data, error } = await client
     .from('ba_transactions')
-    .select('*')
+    .select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)')
     .eq('ba_id', baId)
     .eq('campaign_run_id', runId)
     .gte('occurred_at', start)
     .lte('occurred_at', end)
     .order('occurred_at', { ascending: false });
+  fail(error, 'Impossible de charger les transactions');
+  return (data || []) as BATransaction[];
+}
+
+export async function getTransactionsForBA(baId: string, campaignRunId?: string): Promise<BATransaction[]> {
+  const client = getMerchantClient();
+  let query = client
+    .from('ba_transactions')
+    .select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)')
+    .eq('ba_id', baId)
+    .order('occurred_at', { ascending: false });
+  if (campaignRunId) query = query.eq('campaign_run_id', campaignRunId);
+  const { data, error } = await query;
   fail(error, 'Impossible de charger les transactions');
   return (data || []) as BATransaction[];
 }
@@ -167,86 +167,6 @@ export async function closeDailyAttendance(id: string, input: Pick<BADailyAttend
     .single();
   fail(error, 'Impossible de clôturer la journée');
   return data as BADailyAttendance;
-}
-
-export async function createDailyAssignment(input: Pick<BADailyAssignment, 'campaign_run_id' | 'activity_date' | 'ba_id' | 'pos_id' | 'source'>): Promise<void> {
-  const client = getMerchantClient();
-  const { error } = await client.from('ba_daily_assignments').insert(input);
-  fail(error, 'Impossible d’affecter le POS');
-}
-
-export type AssignmentImportRow = {
-  activityDate: string;
-  baId: string;
-  agentNumber: string;
-};
-
-export async function importDailyAssignments(input: {
-  campaignRunId: string;
-  campaignId: string;
-  assignedBy: string;
-  source: 'csv' | 'xlsx';
-  rows: AssignmentImportRow[];
-}): Promise<{ imported: number; errors: string[] }> {
-  const client = getMerchantClient();
-  const uniqueRows = new Map<string, AssignmentImportRow>();
-  input.rows.forEach((row) => {
-    const key = `${row.activityDate}::${row.agentNumber}`;
-    if (!uniqueRows.has(key)) uniqueRows.set(key, row);
-  });
-  const cleaned = Array.from(uniqueRows.values());
-  const agentNumbers = Array.from(new Set(cleaned.map((row) => row.agentNumber)));
-  const baIds = Array.from(new Set(cleaned.map((row) => row.baId)));
-
-  const [{ data: posRows, error: posError }, { data: baRows, error: baError }] = await Promise.all([
-    client.from('points_of_sale').select('id,agent_number').eq('campaign_id', input.campaignId).in('agent_number', agentNumbers),
-    client.from('users').select('id,user_category,role').in('id', baIds),
-  ]);
-  fail(posError, 'Impossible de valider les POS importés');
-  fail(baError, 'Impossible de valider les BA importés');
-
-  const posByAgent = new Map((posRows || []).map((row: { id: string; agent_number: string }) => [row.agent_number, row.id]));
-  const validBa = new Set((baRows || [])
-    .filter((row: { id: string; user_category?: string; role?: string }) => row.user_category === 'brand_ambassador' || row.role === 'agent')
-    .map((row: { id: string }) => row.id));
-  const errors: string[] = [];
-  const payload: Record<string, unknown>[] = [];
-
-  cleaned.forEach((row, index) => {
-    const posId = posByAgent.get(row.agentNumber);
-    if (!posId) {
-      errors.push(`Ligne ${index + 2} : short code ${row.agentNumber} introuvable.`);
-      return;
-    }
-    if (!validBa.has(row.baId)) {
-      errors.push(`Ligne ${index + 2} : BA ${row.baId} introuvable ou invalide.`);
-      return;
-    }
-    payload.push({
-      campaign_run_id: input.campaignRunId,
-      activity_date: row.activityDate,
-      ba_id: row.baId,
-      pos_id: posId,
-      status: 'planned',
-      source: input.source,
-      assigned_by: input.assignedBy,
-    });
-  });
-
-  for (let offset = 0; offset < payload.length; offset += 100) {
-    const { error } = await client
-      .from('ba_daily_assignments')
-      .upsert(payload.slice(offset, offset + 100), { onConflict: 'campaign_run_id,activity_date,pos_id', ignoreDuplicates: false });
-    fail(error, 'Impossible d’importer les affectations');
-  }
-
-  return { imported: payload.length, errors };
-}
-
-export async function setDailyAssignmentStatus(id: string, status: BADailyAssignment['status']): Promise<void> {
-  const client = getMerchantClient();
-  const { error } = await client.from('ba_daily_assignments').update({ status }).eq('id', id);
-  fail(error, 'Impossible de mettre à jour la visite');
 }
 
 export async function createTransaction(input: Omit<BATransaction, 'id' | 'created_at' | 'updated_at'>): Promise<BATransaction> {

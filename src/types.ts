@@ -94,6 +94,7 @@ export interface BATransaction {
   pos_id: string;
   pos_visit_id?: string | null;
   transaction_reference?: string | null;
+  client_number?: string | null;
   amount: number;
   evidence_path: string;
   occurred_at: string;
@@ -102,6 +103,7 @@ export interface BATransaction {
   accuracy_m?: number | null;
   comment?: string | null;
   status: 'recorded' | 'verified' | 'rejected';
+  point_of_sale?: Pick<PointOfSale, 'agent_number' | 'denomination' | 'pool'>;
 }
 
 export interface Shop {

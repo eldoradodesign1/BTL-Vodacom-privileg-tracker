@@ -9,17 +9,19 @@ interface BottomNavProps {
   activeTab: TabType;
   unreadChatCount?: number;
   onTabChange: (tab: TabType) => void;
+  merchantContext?: boolean;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
   userRole,
   activeTab,
   unreadChatCount = 0,
-  onTabChange
+  onTabChange,
+  merchantContext = false
 }) => {
   const getTab2Label = () => {
     if (userRole === 'admin' || userRole === 'supervisor') return 'Monitoring';
-    return 'Mes Clients';
+    return merchantContext ? 'Mes Transactions' : 'Mes Clients';
   };
 
   const getTab3Label = () => {

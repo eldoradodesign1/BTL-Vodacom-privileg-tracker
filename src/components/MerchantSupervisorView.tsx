@@ -1,16 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ClipboardList, Download, Filter, Search, Upload, UsersRound } from 'lucide-react';
+import { Filter, Search, UsersRound } from 'lucide-react';
 import type { Campaign, CampaignRun, PointOfSale, User } from '../types';
 import { getActiveCampaignRuns, getCampaignPos, getMerchantCampaign } from '../utils/merchantCampaign';
 
 interface MerchantSupervisorViewProps {
   currentUser: User;
-  onOpenImport?: () => void;
 }
 
 const POOLS = ['Tous', 'Funa', 'Lukunga', 'Mont amba'] as const;
 
-export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = ({ currentUser, onOpenImport }) => {
+export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = () => {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [run, setRun] = useState<CampaignRun | null>(null);
   const [pos, setPos] = useState<PointOfSale[]>([]);
@@ -72,11 +71,7 @@ export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = ({ 
 
       {error && <div className="rounded-2xl border border-red-400/40 bg-red-950/45 p-3 text-xs font-bold text-red-100">{error}</div>}
 
-      <section className="glass-card space-y-3 p-4">
-        <div className="flex items-center justify-between gap-3"><div><h2 className="font-black">Affectations quotidiennes</h2><p className="text-xs text-gray-400">Un POS ne peut être attribué qu’à un BA par jour. Les non-visités sont reportés automatiquement.</p></div><ClipboardList className="text-fuchsia-300"/></div>
-        {currentUser.role === 'admin' && onOpenImport && <button type="button" onClick={onOpenImport} className="btn-neon btn-red w-full"><Upload size={16}/><span>Importer les affectations</span></button>}
-        <div className="grid grid-cols-2 gap-2 text-xs"><div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3"><span className="block text-[9px] font-black uppercase text-gray-500">Équipe active</span><b className="mt-1 block text-sm">6 Brand Ambassadors</b></div><div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3"><span className="block text-[9px] font-black uppercase text-gray-500">Statut planning</span><b className="mt-1 block text-sm text-amber-300">À importer</b></div></div>
-      </section>
+      <section className="glass-card grid grid-cols-2 gap-2 p-4 text-xs"><div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3"><span className="block text-[9px] font-black uppercase text-gray-500">Équipe active</span><b className="mt-1 block text-sm">6 Brand Ambassadors</b></div><div className="rounded-2xl border border-white/10 bg-white/[0.03] p-3"><span className="block text-[9px] font-black uppercase text-gray-500">Mode de travail</span><b className="mt-1 block text-sm text-cyan-200">POS libre</b><p className="mt-1 text-[10px] text-gray-400">Les BA recherchent directement le POS concerné.</p></div></section>
 
       <section className="glass-card space-y-3 p-4">
         <div className="flex items-center gap-2"><UsersRound className="text-red-300" size={19}/><div><h2 className="font-black">Base POS complète</h2><p className="text-xs text-gray-400">Inventaire importé depuis la base Merchant Education.</p></div></div>

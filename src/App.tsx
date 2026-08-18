@@ -51,7 +51,7 @@ const GSheetModal = lazy(() => import('./components/Modals/GSheetModal').then(({
 const LocationModal = lazy(() => import('./components/Modals/LocationModal').then(({ LocationModal: component }) => ({ default: component })));
 const MerchantBAView = lazy(() => import('./components/MerchantBAView').then(({ MerchantBAView: component }) => ({ default: component })));
 const MerchantSupervisorView = lazy(() => import('./components/MerchantSupervisorView').then(({ MerchantSupervisorView: component }) => ({ default: component })));
-const MerchantAssignmentImportModal = lazy(() => import('./components/Modals/MerchantAssignmentImportModal').then(({ MerchantAssignmentImportModal: component }) => ({ default: component })));
+const MerchantTransactionsView = lazy(() => import('./components/MerchantTransactionsView').then(({ MerchantTransactionsView: component }) => ({ default: component })));
 
 const SectionLoader = () => (
   <div className="flex min-h-[12rem] items-center justify-center">
@@ -111,7 +111,6 @@ export default function App() {
   const [isShopModalOpen, setIsShopModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isGSheetModalOpen, setIsGSheetModalOpen] = useState(false);
-  const [isMerchantAssignmentImportOpen, setIsMerchantAssignmentImportOpen] = useState(false);
   const [pdfModalUrl, setPdfModalUrl] = useState<string | null>(null);
   const [selectedAgentForProfile, setSelectedAgentForProfile] = useState<AgentMasterStatus | null>(null);
   const [selectedAgentForTodayClients, setSelectedAgentForTodayClients] = useState<AgentMasterStatus | null>(null);
@@ -353,9 +352,11 @@ const todayLeads =
     if (activeTab === 'chat') {
       content = <ChatView currentUser={effectiveUser} onDataChanged={refreshData} />;
     } else if (effectiveUser.userCategory === 'brand_ambassador') {
-      content = <MerchantBAView currentUser={effectiveUser} />;
+      content = activeTab === 'tab2'
+        ? <MerchantTransactionsView currentUser={effectiveUser} />
+        : <MerchantBAView currentUser={effectiveUser} />;
     } else if (isMerchantContext && (effectiveRole === 'admin' || effectiveRole === 'supervisor')) {
-      content = <MerchantSupervisorView currentUser={effectiveUser} onOpenImport={effectiveRole === 'admin' ? () => setIsMerchantAssignmentImportOpen(true) : undefined} />;
+      content = <MerchantSupervisorView currentUser={effectiveUser} />;
     } else if (effectiveRole === 'admin') {
       content = (
         <AdminView
@@ -477,6 +478,7 @@ const todayLeads =
         userRole={effectiveRole}
         activeTab={activeTab}
         unreadChatCount={chatUnreadCount}
+        merchantContext={isMerchantContext}
         onTabChange={(tab) => {
           if (tab === 'home') {
             setHomeTabPressCount((prev) => prev + 1);
@@ -580,20 +582,6 @@ const todayLeads =
       {selectedLocationAgent && (
         <Suspense fallback={null}>
           <LocationModal isOpen agent={selectedLocationAgent} onClose={() => setSelectedLocationAgent(null)} />
-        </Suspense>
-      )}
-
-      {isMerchantAssignmentImportOpen && (
-        <Suspense fallback={null}>
-          <MerchantAssignmentImportModal
-            isOpen
-            currentUser={effectiveUser}
-            onClose={() => setIsMerchantAssignmentImportOpen(false)}
-            onImported={() => {
-              setIsMerchantAssignmentImportOpen(false);
-              setDataRevision((prev) => prev + 1);
-            }}
-          />
         </Suspense>
       )}
 
