@@ -1,6 +1,6 @@
 import { User, UserRole, Shop, Checkin, Lead, DailyReport, NotificationItem, ChatMessage, ShopTargets, AgentMasterStatus } from '../types';
 import { INITIAL_SHOPS, INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_REPORTS, INITIAL_NOTIFICATIONS, INITIAL_CHAT } from '../data/initialData';
-import { buildAgentReportHtml, generateAgentPDF, PDFReportData } from './pdfGenerator';
+import type { PDFReportData } from './pdfGenerator';
 import { pushToGoogleSheetWebhook, getGSheetConfig, syncFromGoogleSheetUrl, fetchChatMessagesFromSheet } from './googleSheetsSync';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
 import {
@@ -17,6 +17,15 @@ import {
 
 const API_BASE_URL = '';
 
+let pdfGeneratorModule: Promise<typeof import('./pdfGenerator')> | null = null;
+
+function loadPdfGenerator() {
+  if (!pdfGeneratorModule) {
+    pdfGeneratorModule = import('./pdfGenerator');
+  }
+  return pdfGeneratorModule;
+}
+
 const STORAGE_KEYS = {
   USERS: 'vodacom_users_v6',
   SHOPS: 'vodacom_shops_v6',
@@ -29,6 +38,8 @@ const STORAGE_KEYS = {
   ACTIVE_SHOP_ID: 'active_shop_id',
   ACTIVE_SHOP_NAME: 'active_shop_name'
 };
+
+const memoryStore = new Map<string, unknown>();
 
 const SHARED_API_BASE = (() => {
   if (typeof window === 'undefined') return '';
@@ -155,6 +166,11 @@ function pushNotification(userId: string, message: string, type: string): Notifi
 }
 
 function loadStoredArray<T>(key: string, legacyKeys: string[], fallback: T): T {
+  const cached = memoryStore.get(key);
+  if (cached !== undefined) {
+    return cached as T;
+  }
+
   const tryParse = (raw: string | null): unknown => {
     if (!raw) return null;
     try {
@@ -166,6 +182,7 @@ function loadStoredArray<T>(key: string, legacyKeys: string[], fallback: T): T {
 
   const currentValue = tryParse(localStorage.getItem(key));
   if (Array.isArray(currentValue)) {
+    memoryStore.set(key, currentValue);
     return currentValue as T;
   }
 
@@ -315,6 +332,7 @@ function checkinPhotoCacheKey(agentId: string, isoDate: string): string {
 export function purgeAndResetEverything(): void {
   try {
     pdfCache.clear();
+    memoryStore.clear();
     localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_SHOP_ID);
     localStorage.removeItem(STORAGE_KEYS.ACTIVE_SHOP_NAME);
@@ -332,9 +350,15 @@ export function purgeAndResetEverything(): void {
 }
 
 function loadItem<T>(key: string, fallback: T): T {
+  const cached = memoryStore.get(key);
+  if (cached !== undefined) {
+    return cached as T;
+  }
+
   try {
     const raw = localStorage.getItem(key);
     if (!raw) {
+      memoryStore.set(key, fallback);
       localStorage.setItem(key, JSON.stringify(fallback));
       return fallback;
     }
@@ -345,13 +369,16 @@ function loadItem<T>(key: string, fallback: T): T {
       return fallback;
     }
 
+    memoryStore.set(key, parsed);
     return parsed as T;
   } catch {
+    memoryStore.set(key, fallback);
     return fallback;
   }
 }
 
 function saveItem<T>(key: string, data: T): void {
+  memoryStore.set(key, data);
   try {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (e) {
@@ -1031,7 +1058,7 @@ export function getReports(): DailyReport[] {
   );
 }
 
-export async function addReport(reportData: Omit<DailyReport, 'id'>): DailyReport {
+export async function addReport(reportData: Omit<DailyReport, 'id'>): Promise<DailyReport> {
   const reports = getReports();
   const newId = 'rep-' + Math.random().toString(36).substring(2, 9);
 
@@ -1131,6 +1158,7 @@ export async function getReportPdf(report: DailyReport): Promise<string> {
 
   const evolutionSeries = buildAgentEvolutionSeries(report.agent_id, report.agent_name, report.date, targets);
 
+  const { generateAgentPDF } = await loadPdfGenerator();
   const generatedUrl = await generateAgentPDF({
     agentName: report.agent_name,
     shopName: report.shop_name || shopObj?.name || 'Vodacom Shop',
@@ -1225,7 +1253,8 @@ function buildReportPreviewData(report: DailyReport): PDFReportData {
   };
 }
 
-export function getReportPreviewHtml(report: DailyReport): string {
+export async function getReportPreviewHtml(report: DailyReport): Promise<string> {
+  const { buildAgentReportHtml } = await loadPdfGenerator();
   return buildAgentReportHtml(buildReportPreviewData(report));
 }
 

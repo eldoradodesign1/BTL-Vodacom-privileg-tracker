@@ -148,7 +148,7 @@ export const Header: React.FC<HeaderProps> = ({
     : (syncState === 'progress' ? 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40 text-amber-500' : 'bg-red-500/10 hover:bg-red-500/20 border-red-500/40 text-red-500');
 
   return (
-    <header className={`px-3 sm:px-6 py-2.5 backdrop-blur-md border-b shrink-0 relative z-40 transition-colors ${
+    <header className={`app-header px-3 sm:px-6 py-2.5 backdrop-blur-md border-b shrink-0 relative z-40 transition-colors ${
       isDarkTheme
         ? 'bg-black/40 border-white/10 text-white'
         : 'bg-white/90 border-zinc-200 text-zinc-900 shadow-xl'
@@ -217,7 +217,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <button
                 onClick={() => setShowThemeMenu(prev => !prev)}
-                className={`p-2 rounded-xl border transition-all ${
+                className={`app-icon-button p-2 rounded-xl border transition-all ${
                   isDarkTheme
                     ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'
                     : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
@@ -228,7 +228,7 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
 
               {showThemeMenu && (
-                <div className={`absolute right-0 top-11 w-40 border rounded-2xl p-1.5 shadow-2xl z-50 ${
+                <div className={`app-popover absolute right-0 top-11 w-40 border rounded-2xl p-1.5 shadow-2xl z-50 ${
                   isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
                 }`}>
                   {[
@@ -273,7 +273,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Security Password Change */}
           <button
             onClick={onOpenPasswordModal}
-            className={`p-2 rounded-xl border transition-all ${
+            className={`app-icon-button p-2 rounded-xl border transition-all ${
               isDarkTheme
                 ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-400 hover:text-white'
                 : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
@@ -292,7 +292,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onMarkNotifsRead();
                 }
               }}
-              className={`w-10 h-10 rounded-xl border flex items-center justify-center transition-all relative ${
+              className={`app-icon-button w-10 h-10 rounded-xl border flex items-center justify-center transition-all relative ${
                 isDarkTheme
                   ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'
                   : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
@@ -308,7 +308,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Notifications Panel */}
             {showNotifPanel && (
-              <div className={`absolute right-0 top-12 w-80 border rounded-3xl p-4 shadow-2xl z-50 animate-pop ${
+              <div className={`app-popover absolute right-0 top-12 w-80 border rounded-3xl p-4 shadow-2xl z-50 animate-pop ${
                 isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
               }`}>
                 <div className="flex justify-between items-center mb-3 border-b border-white/10 pb-2">

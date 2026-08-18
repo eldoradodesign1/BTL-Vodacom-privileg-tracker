@@ -83,6 +83,11 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
 
   useEffect(() => {
+    if (!onRefreshData) return;
+    void onRefreshData();
+  }, [selectedDate, onRefreshData]);
+
+  useEffect(() => {
     if (!showHomeCalendar) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (!homeCalendarRef.current) return;
@@ -370,12 +375,6 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     setLoading(true);
     const selectedReports = filteredReportsForPeriod;
     const allLeads = getLeads();
-    console.log('DEBUG RAPPORT', {
-      allLeads: allLeads.length,
-      startDate,
-      endDate,
-      firstLead: allLeads[0]
-    });
     const rows = selectedReports.map((r) => ({
       date: r.date,
       agent: r.agent_name,

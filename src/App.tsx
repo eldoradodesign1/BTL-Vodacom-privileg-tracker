@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { User, Shop, AgentMasterStatus, UserRole } from './types';
 import {
   getUsers,
@@ -35,20 +35,28 @@ import { SimulationBar } from './components/SimulationBar';
 import { Header, ThemeMode } from './components/Header';
 import { BottomNav, TabType } from './components/BottomNav';
 import { LoginScreen } from './components/LoginScreen';
-import { AgentView } from './components/AgentView';
-import { SupervisorView } from './components/SupervisorView';
-import { AdminView } from './components/AdminView';
-import { ChatView } from './components/ChatView';
-import { LeadModal } from './components/Modals/LeadModal';
-import { ReportModal } from './components/Modals/ReportModal';
-import { UserModal } from './components/Modals/UserModal';
-import { ShopModal } from './components/Modals/ShopModal';
-import { PasswordModal } from './components/Modals/PasswordModal';
-import { PdfViewerModal } from './components/Modals/PdfViewerModal';
-import { AgentProfileModal } from './components/Modals/AgentProfileModal';
-import { TodayClientsModal } from './components/Modals/TodayClientsModal';
-import { GSheetModal } from './components/Modals/GSheetModal';
-import { LocationModal } from './components/Modals/LocationModal';
+const AgentView = lazy(() => import('./components/AgentView').then(({ AgentView: component }) => ({ default: component })));
+const SupervisorView = lazy(() => import('./components/SupervisorView').then(({ SupervisorView: component }) => ({ default: component })));
+const AdminView = lazy(() => import('./components/AdminView').then(({ AdminView: component }) => ({ default: component })));
+const ChatView = lazy(() => import('./components/ChatView').then(({ ChatView: component }) => ({ default: component })));
+const LeadModal = lazy(() => import('./components/Modals/LeadModal').then(({ LeadModal: component }) => ({ default: component })));
+const ReportModal = lazy(() => import('./components/Modals/ReportModal').then(({ ReportModal: component }) => ({ default: component })));
+const UserModal = lazy(() => import('./components/Modals/UserModal').then(({ UserModal: component }) => ({ default: component })));
+const ShopModal = lazy(() => import('./components/Modals/ShopModal').then(({ ShopModal: component }) => ({ default: component })));
+const PasswordModal = lazy(() => import('./components/Modals/PasswordModal').then(({ PasswordModal: component }) => ({ default: component })));
+const PdfViewerModal = lazy(() => import('./components/Modals/PdfViewerModal').then(({ PdfViewerModal: component }) => ({ default: component })));
+const AgentProfileModal = lazy(() => import('./components/Modals/AgentProfileModal').then(({ AgentProfileModal: component }) => ({ default: component })));
+const TodayClientsModal = lazy(() => import('./components/Modals/TodayClientsModal').then(({ TodayClientsModal: component }) => ({ default: component })));
+const GSheetModal = lazy(() => import('./components/Modals/GSheetModal').then(({ GSheetModal: component }) => ({ default: component })));
+const LocationModal = lazy(() => import('./components/Modals/LocationModal').then(({ LocationModal: component }) => ({ default: component })));
+
+const SectionLoader = () => (
+  <div className="flex min-h-[12rem] items-center justify-center">
+    <div className="glass-card px-5 py-3 text-[11px] font-black uppercase tracking-[0.16em] text-gray-300">
+      Chargement de l’espace…
+    </div>
+  </div>
+);
 
 async function ensureNotificationsPermission(): Promise<void> {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
@@ -122,31 +130,36 @@ export default function App() {
     setTheme(nextTheme);
   };
 
-const refreshData = async () => {
+const refreshData = useCallback(async () => {
+  if (!isSupabaseConfigured()) {
+    setUsers(getUsers());
+    setShops(getShops());
+    return;
+  }
+
   try {
     const [usersData, shopsData] = await Promise.all([
       fetchUsersFromSupabase(),
       fetchShopsFromSupabase()
     ]);
 
+    await Promise.all([
+      refreshLeadsFromSupabase(),
+      refreshCheckinsFromSupabase(),
+      refreshReportsFromSupabase()
+    ]);
+
     saveUsers(usersData);
     saveShops(shopsData);
-
-    await refreshLeadsFromSupabase();
-    await refreshCheckinsFromSupabase();
-    await refreshReportsFromSupabase();
-
     setUsers(usersData);
     setShops(shopsData);
-
     setDataRevision((prev) => prev + 1);
   } catch (error) {
     console.warn('Supabase refresh failed:', error);
-
     setUsers(getUsers());
     setShops(getShops());
   }
-};
+}, []);
 
 
   const enforceUserConformityAfterSync = () => {
@@ -179,7 +192,7 @@ const refreshData = async () => {
 
   useEffect(() => {
     void refreshData();
-  }, []);
+  }, [refreshData]);
 
   useEffect(() => {
     const refreshStatus = () => {
@@ -296,12 +309,12 @@ const todayLeads =
   };
 
   const renderContent = () => {
-    if (activeTab === 'chat') {
-      return <ChatView currentUser={effectiveUser} onDataChanged={refreshData} />;
-    }
+    let content: React.ReactNode;
 
-    if (effectiveRole === 'admin') {
-      return (
+    if (activeTab === 'chat') {
+      content = <ChatView currentUser={effectiveUser} onDataChanged={refreshData} />;
+    } else if (effectiveRole === 'admin') {
+      content = (
         <AdminView
           currentUser={effectiveUser}
           shops={shops}
@@ -318,10 +331,8 @@ const todayLeads =
           onRefreshData={refreshData}
         />
       );
-    }
-
-    if (effectiveRole === 'supervisor') {
-      return (
+    } else if (effectiveRole === 'supervisor') {
+      content = (
         <SupervisorView
           currentUser={effectiveUser}
           activeTab={activeTab}
@@ -333,22 +344,24 @@ const todayLeads =
           onRefreshData={refreshData}
         />
       );
+    } else {
+      content = (
+        <AgentView
+          currentUser={effectiveUser}
+          activeShopId={activeShopId}
+          activeTab={activeTab}
+          todayLeads={todayLeads}
+          todayCheckin={todayCheckin}
+          agentReports={agentReports}
+          onOpenLeadModal={() => setIsLeadModalOpen(true)}
+          onOpenReportModal={() => setIsReportModalOpen(true)}
+          onOpenPdfModal={(url) => setPdfModalUrl(url)}
+          onRefreshData={refreshData}
+        />
+      );
     }
 
-    return (
-      <AgentView
-        currentUser={effectiveUser}
-        activeShopId={activeShopId}
-        activeTab={activeTab}
-        todayLeads={todayLeads}
-        todayCheckin={todayCheckin}
-        agentReports={agentReports}
-        onOpenLeadModal={() => setIsLeadModalOpen(true)}
-        onOpenReportModal={() => setIsReportModalOpen(true)}
-        onOpenPdfModal={(url) => setPdfModalUrl(url)}
-        onRefreshData={refreshData}
-      />
-    );
+    return <Suspense fallback={<SectionLoader />}>{content}</Suspense>;
   };
 
   const themeSurfaceStyle = theme === 'anthracite'
@@ -367,8 +380,8 @@ const todayLeads =
 
   return (
     <div
-      className="h-screen flex flex-col relative overflow-hidden font-sans select-none transition-colors"
-      style={themeSurfaceStyle}
+      className="app-shell h-screen flex flex-col relative overflow-hidden font-sans select-none transition-colors"
+      style={{ color: themeSurfaceStyle.color }}
     >
       <SimulationBar
         masterUser={realMasterUser}
@@ -431,86 +444,105 @@ const todayLeads =
         </div>
       )}
 
-      <LeadModal
-        isOpen={isLeadModalOpen}
-        currentUser={effectiveUser}
-        activeShopId={activeShopId}
-        onClose={() => setIsLeadModalOpen(false)}
-        onSuccess={refreshData}
-      />
+      {isLeadModalOpen && (
+        <Suspense fallback={null}>
+          <LeadModal
+            isOpen
+            currentUser={effectiveUser}
+            activeShopId={activeShopId}
+            onClose={() => setIsLeadModalOpen(false)}
+            onSuccess={refreshData}
+          />
+        </Suspense>
+      )}
 
-      <ReportModal
-        isOpen={isReportModalOpen}
-        currentUser={effectiveUser}
-        todayLeads={todayLeads}
-        activeShopId={activeShopId}
-        onClose={() => setIsReportModalOpen(false)}
-        onReportGenerated={(url) => {
-          refreshData();
-          setPdfModalUrl(url);
-        }}
-      />
+      {isReportModalOpen && (
+        <Suspense fallback={null}>
+          <ReportModal
+            isOpen
+            currentUser={effectiveUser}
+            todayLeads={todayLeads}
+            activeShopId={activeShopId}
+            onClose={() => setIsReportModalOpen(false)}
+            onReportGenerated={(url) => {
+              refreshData();
+              setPdfModalUrl(url);
+            }}
+          />
+        </Suspense>
+      )}
 
-      <UserModal
-        isOpen={isUserModalOpen}
-        shops={shops}
-        onClose={() => setIsUserModalOpen(false)}
-        onSuccess={refreshData}
-      />
+      {isUserModalOpen && (
+        <Suspense fallback={null}>
+          <UserModal isOpen shops={shops} onClose={() => setIsUserModalOpen(false)} onSuccess={refreshData} />
+        </Suspense>
+      )}
 
-      <ShopModal
-        isOpen={isShopModalOpen}
-        onClose={() => setIsShopModalOpen(false)}
-        onSuccess={refreshData}
-      />
+      {isShopModalOpen && (
+        <Suspense fallback={null}>
+          <ShopModal isOpen onClose={() => setIsShopModalOpen(false)} onSuccess={refreshData} />
+        </Suspense>
+      )}
 
-      <PasswordModal
-        isOpen={isPasswordModalOpen}
-        currentUser={effectiveUser}
-        onClose={() => setIsPasswordModalOpen(false)}
-      />
+      {isPasswordModalOpen && (
+        <Suspense fallback={null}>
+          <PasswordModal isOpen currentUser={effectiveUser} onClose={() => setIsPasswordModalOpen(false)} />
+        </Suspense>
+      )}
 
-      <PdfViewerModal
-        isOpen={!!pdfModalUrl}
-        pdfUrl={pdfModalUrl}
-        onClose={() => setPdfModalUrl(null)}
-      />
+      {pdfModalUrl && (
+        <Suspense fallback={null}>
+          <PdfViewerModal isOpen pdfUrl={pdfModalUrl} onClose={() => setPdfModalUrl(null)} />
+        </Suspense>
+      )}
 
-      <AgentProfileModal
-        isOpen={!!selectedAgentForProfile}
-        agent={selectedAgentForProfile}
-        agentReports={getReports().filter((r) => r.agent_id === selectedAgentForProfile?.id)}
-        todayLeads={getLeads().filter((l) => l.agent_id === selectedAgentForProfile?.id && toISO(l.timestamp) === todayStr)}
-        shops={shops}
-        onClose={() => setSelectedAgentForProfile(null)}
-        onOpenPdf={(url) => setPdfModalUrl(url)}
-        onAssignmentChanged={refreshData}
-        onCompileAgent={() => {
-          setSelectedAgentForProfile(null);
-          setActiveTab('admin');
-        }}
-      />
+      {selectedAgentForProfile && (
+        <Suspense fallback={null}>
+          <AgentProfileModal
+            isOpen
+            agent={selectedAgentForProfile}
+            agentReports={getReports().filter((r) => r.agent_id === selectedAgentForProfile.id)}
+            todayLeads={getLeads().filter((l) => l.agent_id === selectedAgentForProfile.id && toISO(l.timestamp) === todayStr)}
+            shops={shops}
+            onClose={() => setSelectedAgentForProfile(null)}
+            onOpenPdf={(url) => setPdfModalUrl(url)}
+            onAssignmentChanged={refreshData}
+            onCompileAgent={() => {
+              setSelectedAgentForProfile(null);
+              setActiveTab('admin');
+            }}
+          />
+        </Suspense>
+      )}
 
-      <TodayClientsModal
-        isOpen={!!selectedAgentForTodayClients}
-        agent={selectedAgentForTodayClients}
-        dayLeads={selectedAgentTodayLeads}
-        onClose={() => setSelectedAgentForTodayClients(null)}
-      />
+      {selectedAgentForTodayClients && (
+        <Suspense fallback={null}>
+          <TodayClientsModal
+            isOpen
+            agent={selectedAgentForTodayClients}
+            dayLeads={selectedAgentTodayLeads}
+            onClose={() => setSelectedAgentForTodayClients(null)}
+          />
+        </Suspense>
+      )}
 
-      <LocationModal
-        isOpen={!!selectedLocationAgent}
-        agent={selectedLocationAgent}
-        onClose={() => setSelectedLocationAgent(null)}
-      />
+      {selectedLocationAgent && (
+        <Suspense fallback={null}>
+          <LocationModal isOpen agent={selectedLocationAgent} onClose={() => setSelectedLocationAgent(null)} />
+        </Suspense>
+      )}
 
-      <GSheetModal
-        isOpen={isGSheetModalOpen}
-        onClose={() => setIsGSheetModalOpen(false)}
-        onSyncSuccess={() => {
-          refreshData();
-        }}
-      />
+      {isGSheetModalOpen && (
+        <Suspense fallback={null}>
+          <GSheetModal
+            isOpen
+            onClose={() => setIsGSheetModalOpen(false)}
+            onSyncSuccess={() => {
+              refreshData();
+            }}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

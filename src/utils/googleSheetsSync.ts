@@ -1,4 +1,11 @@
-import * as XLSX from 'xlsx';
+let xlsxModule: Promise<typeof import('xlsx')> | null = null;
+
+function loadXlsx() {
+  if (!xlsxModule) {
+    xlsxModule = import('xlsx');
+  }
+  return xlsxModule;
+}
 import { Lead, DailyReport, Checkin, User, Shop, UserRole, ChatMessage } from '../types';
 import { getLeads, getReports, getCheckins, getUsers, getShops, saveLeads, saveReports, saveCheckins, saveUsers, saveShops, toISO } from './storage';
 
@@ -796,8 +803,9 @@ export function parseReportsFromRows(rows: string[][]): DailyReport[] {
 /**
  * Parses an Excel (.xlsx / .xls) ArrayBuffer containing multiple worksheets
  */
-export function parseXlsxBuffer(buffer: ArrayBuffer, options: SyncOptions = {}): { success: boolean; count: number; message: string } {
+export async function parseXlsxBuffer(buffer: ArrayBuffer, options: SyncOptions = {}): Promise<{ success: boolean; count: number; message: string }> {
   try {
+    const XLSX = await loadXlsx();
     const wb = XLSX.read(buffer, { type: 'array' });
     let totalImported = 0;
     const summaryParts: string[] = [];
@@ -922,7 +930,7 @@ export async function syncFromGoogleSheetUrl(url: string, options: SyncOptions =
       const res = await fetch(xlsxTargetUrl, { cache: 'no-store' });
       if (res.ok) {
         const buf = await res.arrayBuffer();
-        const result = parseXlsxBuffer(buf, options);
+        const result = await parseXlsxBuffer(buf, options);
         if (result.success && result.count > 0) {
           const cfg = getGSheetConfig();
           cfg.lastSyncedAt = new Date().toISOString();
@@ -1015,7 +1023,7 @@ export async function syncFromGoogleSheetUrl(url: string, options: SyncOptions =
     const contentType = res.headers.get('content-type') || '';
     if (contentType.includes('spreadsheet') || contentType.includes('excel') || contentType.includes('octet-stream') || trimmedUrl.includes('output=xlsx')) {
       const buf = await res.arrayBuffer();
-      const result = parseXlsxBuffer(buf, options);
+      const result = await parseXlsxBuffer(buf, options);
       if (result.success && result.count > 0) {
         const cfg = getGSheetConfig();
         cfg.lastSyncedAt = new Date().toISOString();

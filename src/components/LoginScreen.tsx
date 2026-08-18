@@ -45,15 +45,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col justify-center items-center p-6 relative overflow-hidden bg-[#09090b]">
+    <div className="login-shell w-full flex flex-col justify-center items-center p-6 relative overflow-hidden">
       {/* Background glowing effects */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-red-600/20 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none" />
 
-      <div className="w-full max-w-md glass-card border border-white/10 rounded-[45px] p-8 sm:p-10 shadow-2xl relative z-10 animate-pop">
+      <div className="login-panel w-full glass-card border relative z-10 animate-pop">
         <div className="text-center mb-8">
           <div className="brand-text text-3xl sm:text-4xl font-black tracking-tighter mb-1">BEYOND THE LINE</div>
-          <div className="text-[11px] font-black uppercase text-gray-400 tracking-[0.3em]">Deployment tracker - by Eldo</div>
+          <div className="login-eyebrow text-[10px] font-black uppercase">Deployment tracker · by Eldo</div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -71,7 +71,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               onKeyDown={handleEnterSubmit}
               placeholder="081XXXXXXX"
               required
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-red-500 transition-all placeholder:text-gray-600"
+              className="app-input w-full border rounded-2xl px-4 py-3.5 text-white text-sm font-semibold focus:outline-none transition-all placeholder:text-gray-600"
             />
           </div>
 
@@ -88,11 +88,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-red-500 transition-all placeholder:text-gray-600"
+              className="app-input w-full border rounded-2xl px-4 py-3.5 text-white text-sm font-semibold focus:outline-none transition-all placeholder:text-gray-600"
             />
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-[11px] font-semibold text-gray-400">
+          <div className="login-note rounded-2xl border px-4 py-3 text-[11px] font-semibold text-gray-400">
             Utilisez votre numéro de téléphone et votre mot de passe pour vous connecter.
           </div>
 

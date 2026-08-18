@@ -32,10 +32,11 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   };
 
   return (
-    <nav className="fixed bottom-4 left-4 right-4 h-20 bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-3xl z-40 flex items-center justify-around px-2 shadow-2xl">
+    <nav className="app-bottom-nav fixed bottom-4 left-4 right-4 h-20 backdrop-blur-xl border rounded-3xl z-40 flex items-center justify-around px-2">
       <button
         onClick={() => onTabChange('home')}
-        className={`flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${
+        data-active={activeTab === 'home'}
+        className={`app-tab flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${
           activeTab === 'home' ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'
         }`}
       >
@@ -48,7 +49,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
       <button
         onClick={() => onTabChange('tab2')}
-        className={`flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${
+        data-active={activeTab === 'tab2'}
+        className={`app-tab flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${
           activeTab === 'tab2' ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'
         }`}
       >
@@ -61,7 +63,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
       <button
         onClick={() => onTabChange('tab3')}
-        className={`flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${
+        data-active={activeTab === 'tab3'}
+        className={`app-tab flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${
           activeTab === 'tab3' ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'
         }`}
       >
@@ -74,7 +77,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
 
       <button
         onClick={() => onTabChange('chat')}
-        className={`flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${
+        data-active={activeTab === 'chat'}
+        className={`app-tab flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${
           activeTab === 'chat' ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'
         }`}
       >
@@ -95,7 +99,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
       {(userRole === 'admin' || userRole === 'supervisor') && (
         <button
           onClick={() => onTabChange('admin')}
-          className={`flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${
+          data-active={activeTab === 'admin'}
+          className={`app-tab flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${
             activeTab === 'admin' ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'
           }`}
         >

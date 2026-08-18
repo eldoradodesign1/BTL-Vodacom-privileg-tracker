@@ -80,7 +80,9 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
       const report = getReports().find(r => r.id === reportId) || null;
       setActiveReport(report);
       if (report) {
-        setPreviewHtml(getReportPreviewHtml(report));
+        void getReportPreviewHtml(report)
+          .then((html) => setPreviewHtml(html))
+          .catch(() => setPreviewHtml(null));
       }
       setDownloadUrl(null);
       setPreviewUrl(null);

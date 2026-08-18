@@ -2,7 +2,6 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
-import { isSupabaseConfigured } from './utils/supabase';
 
 let audioContext: AudioContext | null = null;
 
@@ -43,9 +42,6 @@ const attachClickSound = () => {
 
 attachClickSound();
 
-console.log('Supabase config check:', isSupabaseConfigured());
-console.log('Supabase URL present:', Boolean(import.meta.env.VITE_SUPABASE_URL));
-console.log('Supabase anon key present:', Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY));
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -744,3 +744,269 @@ body.theme-anthracite .podium-card {
   background: rgba(255, 255, 255, 0.15);
   border-radius: 10px;
 }
+
+/* --------------------------------------------------------------------------
+   Professional glass interface refresh
+   -------------------------------------------------------------------------- */
+:root {
+  --surface-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.17) 0%, rgba(255, 255, 255, 0.055) 100%);
+  --surface-glass-strong: linear-gradient(135deg, rgba(255, 255, 255, 0.23) 0%, rgba(255, 255, 255, 0.08) 100%);
+  --surface-border: rgba(255, 255, 255, 0.22);
+  --surface-border-quiet: rgba(255, 255, 255, 0.13);
+  --shadow-elevation: 0 24px 64px rgba(2, 6, 23, 0.38), 0 2px 0 rgba(255, 255, 255, 0.08) inset;
+  --shadow-floating: 0 30px 80px rgba(2, 6, 23, 0.56), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+  --content-scrim: rgba(5, 8, 14, 0.28);
+}
+
+body.theme-anthracite,
+body.theme-rubis,
+body.theme-silver,
+body.theme-diamond,
+body.theme-sapphire,
+body.theme-ambre {
+  background-position: center center !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  background-attachment: fixed !important;
+}
+
+body.theme-anthracite {
+  background-image: linear-gradient(135deg, rgba(5, 7, 11, 0.8) 0%, rgba(11, 16, 24, 0.48) 54%, rgba(34, 15, 16, 0.48) 100%), url('/theme-backgrounds/anthracite.jpg') !important;
+  --content-scrim: rgba(5, 7, 11, 0.32);
+}
+
+body.theme-rubis {
+  background-image: linear-gradient(135deg, rgba(19, 4, 8, 0.82) 0%, rgba(58, 8, 17, 0.48) 54%, rgba(95, 13, 25, 0.42) 100%), url('/theme-backgrounds/rubis.jpg') !important;
+  --content-scrim: rgba(25, 5, 11, 0.3);
+}
+
+body.theme-silver {
+  background-image: linear-gradient(135deg, rgba(5, 13, 25, 0.8) 0%, rgba(13, 27, 43, 0.45) 54%, rgba(55, 74, 94, 0.4) 100%), url('/theme-backgrounds/silver.jpg') !important;
+  --content-scrim: rgba(5, 13, 25, 0.28);
+}
+
+body.theme-diamond {
+  background-image: linear-gradient(135deg, rgba(5, 11, 27, 0.82) 0%, rgba(11, 20, 44, 0.46) 54%, rgba(28, 23, 60, 0.42) 100%), url('/theme-backgrounds/diamond.jpg') !important;
+  --content-scrim: rgba(5, 10, 25, 0.3);
+}
+
+body.theme-sapphire {
+  background-image: linear-gradient(135deg, rgba(3, 11, 28, 0.82) 0%, rgba(7, 28, 66, 0.45) 54%, rgba(15, 61, 124, 0.36) 100%), url('/theme-backgrounds/sapphire.jpg') !important;
+  --content-scrim: rgba(3, 11, 28, 0.3);
+}
+
+body.theme-ambre {
+  background-image: linear-gradient(135deg, rgba(16, 8, 2, 0.83) 0%, rgba(45, 25, 5, 0.47) 54%, rgba(85, 45, 7, 0.37) 100%), url('/theme-backgrounds/ambre.jpg') !important;
+  --content-scrim: rgba(16, 8, 2, 0.3);
+}
+
+.app-shell,
+.login-shell {
+  position: relative;
+  isolation: isolate;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--content-scrim) 76%, transparent) 0%, color-mix(in srgb, var(--content-scrim) 38%, transparent) 50%, color-mix(in srgb, var(--content-scrim) 60%, transparent) 100%);
+}
+
+.app-shell::before,
+.login-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(circle at 82% 8%, rgba(255, 255, 255, 0.12), transparent 26%), radial-gradient(circle at 10% 90%, rgba(var(--theme-accent-rgb), 0.12), transparent 34%);
+}
+
+.login-shell {
+  min-height: 100vh;
+}
+
+.glass-card {
+  background: var(--surface-glass) !important;
+  border-color: var(--surface-border) !important;
+  box-shadow: var(--shadow-elevation);
+  backdrop-filter: blur(28px) saturate(142%);
+  -webkit-backdrop-filter: blur(28px) saturate(142%);
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.32) !important;
+  box-shadow: 0 28px 68px rgba(2, 6, 23, 0.44), 0 1px 0 rgba(255, 255, 255, 0.16) inset;
+}
+
+.app-header,
+.app-bottom-nav,
+.app-popover {
+  background: linear-gradient(135deg, rgba(8, 12, 20, 0.78) 0%, rgba(15, 22, 35, 0.58) 100%) !important;
+  border-color: var(--surface-border) !important;
+  box-shadow: var(--shadow-elevation);
+  backdrop-filter: blur(28px) saturate(150%);
+  -webkit-backdrop-filter: blur(28px) saturate(150%);
+}
+
+.app-header {
+  border-bottom-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+.app-bottom-nav {
+  box-shadow: var(--shadow-floating);
+}
+
+.app-icon-button {
+  background: rgba(255, 255, 255, 0.075) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.11) inset;
+}
+
+.app-icon-button:hover {
+  background: rgba(255, 255, 255, 0.14) !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
+  transform: translateY(-1px);
+}
+
+.app-input {
+  background: rgba(2, 6, 23, 0.28) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 10px 24px rgba(2, 6, 23, 0.14);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.app-input:focus {
+  border-color: rgba(var(--theme-accent-rgb), 0.82) !important;
+  box-shadow: 0 0 0 4px rgba(var(--theme-accent-rgb), 0.15), 0 12px 28px rgba(2, 6, 23, 0.2) !important;
+}
+
+.login-panel {
+  max-width: 29rem;
+  padding: 2.5rem !important;
+  border-radius: 2rem !important;
+  box-shadow: var(--shadow-floating) !important;
+}
+
+.login-eyebrow {
+  color: var(--theme-text-400);
+  letter-spacing: 0.24em;
+}
+
+.login-note {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+}
+
+.brand-text {
+  background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.82) 50%, rgba(var(--theme-accent-soft-rgb), 0.94) 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: none;
+}
+
+.btn-neon {
+  min-height: 3.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 1.2rem;
+  letter-spacing: 0.12em;
+  box-shadow: 0 12px 30px -10px var(--voda-red-glow), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
+}
+
+.btn-red {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 86%, #ffffff) 0%, var(--theme-accent) 62%, color-mix(in srgb, var(--theme-accent) 84%, #0f172a) 100%);
+}
+
+.btn-red:hover:not(:disabled) {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--theme-accent) 72%, #ffffff) 0%, var(--theme-accent) 56%, color-mix(in srgb, var(--theme-accent) 78%, #0f172a) 100%);
+  transform: translateY(-2px);
+}
+
+.app-tab {
+  position: relative;
+  border-radius: 1rem;
+}
+
+.app-tab::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 0;
+  height: 3px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: var(--theme-accent);
+  box-shadow: 0 0 12px var(--theme-accent-glow);
+  transition: width 0.22s ease;
+}
+
+.app-tab[data-active='true']::after {
+  width: 1.75rem;
+}
+
+.app-tab[data-active='true'] {
+  background: rgba(var(--theme-accent-rgb), 0.14);
+  color: var(--theme-accent) !important;
+}
+
+.modal-sheet {
+  background: linear-gradient(145deg, rgba(16, 20, 30, 0.9), rgba(12, 15, 23, 0.82)) !important;
+  border: 1px solid var(--surface-border) !important;
+  box-shadow: var(--shadow-floating) !important;
+  backdrop-filter: blur(30px) saturate(148%);
+  -webkit-backdrop-filter: blur(30px) saturate(148%);
+}
+
+@media (max-width: 639px) {
+  .login-panel {
+    padding: 1.8rem !important;
+    border-radius: 1.7rem !important;
+  }
+
+  .app-shell main {
+    padding-bottom: 8.5rem !important;
+  }
+
+  .app-bottom-nav {
+    left: 0.8rem !important;
+    right: 0.8rem !important;
+    bottom: 0.8rem !important;
+    height: 4.8rem !important;
+    border-radius: 1.5rem !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-card,
+  .btn-neon,
+  .app-icon-button,
+  .app-tab,
+  .app-tab::after {
+    transition: none !important;
+  }
+}
+
+/* Performance safeguards for graphics-heavy mobile devices. */
+@media (max-width: 639px) {
+  body.theme-anthracite,
+  body.theme-rubis,
+  body.theme-silver,
+  body.theme-diamond,
+  body.theme-sapphire,
+  body.theme-ambre {
+    background-attachment: scroll !important;
+  }
+
+  body::after {
+    display: none;
+  }
+
+  .glass-card,
+  .app-header,
+  .app-bottom-nav,
+  .app-popover,
+  .modal-sheet {
+    backdrop-filter: blur(13px) saturate(118%) !important;
+    -webkit-backdrop-filter: blur(13px) saturate(118%) !important;
+    box-shadow: 0 14px 34px rgba(2, 6, 23, 0.3), 0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
+  }
+}

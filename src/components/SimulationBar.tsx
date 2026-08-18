@@ -30,17 +30,31 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
   }
 
   const activeRole = simulatedRole || effectiveUser.role;
+  const gemLabels: Record<ThemeMode, string> = {
+    anthracite: 'Black Diamond',
+    rubis: 'Ruby',
+    silver: 'Moonstone',
+    diamond: 'Diamond',
+    sapphire: 'Sapphire',
+    ambre: 'Amber'
+  };
   const shellClasses = theme === 'rubis'
-    ? 'border-rose-400/20 bg-gradient-to-r from-rose-950/95 via-red-900/90 to-pink-950/80 shadow-[0_8px_30px_rgba(127,29,29,0.35)]'
+    ? 'border-rose-300/30 shadow-[0_10px_34px_rgba(127,29,29,0.42)]'
     : theme === 'silver'
-      ? 'border-slate-300/25 bg-gradient-to-r from-slate-950/95 via-slate-800/90 to-blue-950/80 shadow-[0_8px_30px_rgba(15,23,42,0.25)]'
+      ? 'border-slate-200/30 shadow-[0_10px_34px_rgba(148,163,184,0.28)]'
       : theme === 'diamond'
-        ? 'border-white/20 bg-gradient-to-r from-slate-950/95 via-indigo-950/90 to-slate-100/10 shadow-[0_8px_30px_rgba(2,6,23,0.35)]'
+        ? 'border-white/35 shadow-[0_10px_34px_rgba(148,163,184,0.28)]'
         : theme === 'sapphire'
-          ? 'border-sky-400/25 bg-gradient-to-r from-slate-950/95 via-blue-900/90 to-sky-600/70 shadow-[0_8px_30px_rgba(30,64,175,0.35)]'
+          ? 'border-blue-300/30 shadow-[0_10px_34px_rgba(30,64,175,0.42)]'
           : theme === 'ambre'
-            ? 'border-amber-300/25 bg-gradient-to-r from-amber-950/95 via-orange-900/90 to-yellow-950/80 shadow-[0_8px_30px_rgba(120,53,15,0.35)]'
-            : 'border-white/10 bg-gradient-to-r from-slate-950/95 via-slate-900/90 to-zinc-900/80 shadow-[0_8px_30px_rgba(15,23,42,0.45)]';
+            ? 'border-amber-200/30 shadow-[0_10px_34px_rgba(146,64,14,0.42)]'
+            : 'border-white/15 shadow-[0_10px_34px_rgba(15,23,42,0.55)]';
+  const themeSurfaceStyle = {
+    backgroundImage: `linear-gradient(90deg, rgba(2, 6, 23, 0.96) 0%, rgba(2, 6, 23, 0.9) 42%, rgba(2, 6, 23, 0.58) 100%), url('/simulation-backgrounds/${theme}.jpg')`,
+    backgroundPosition: 'center, right center',
+    backgroundSize: 'cover, auto 100%',
+    backgroundRepeat: 'no-repeat, no-repeat'
+  };
   const iconClasses = theme === 'rubis'
     ? 'border-rose-400/40 bg-rose-600/20 text-rose-200'
     : theme === 'silver'
@@ -71,7 +85,10 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             : 'bg-white/20 text-white shadow-md shadow-white/20';
 
   return (
-    <div className={`sticky top-0 z-50 border-b px-3 py-2.5 backdrop-blur-xl ${shellClasses}`}>
+    <div
+      className={`sticky top-0 z-50 overflow-hidden border-b px-3 py-2.5 backdrop-blur-xl ${shellClasses}`}
+      style={themeSurfaceStyle}
+    >
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex min-w-0 items-center space-x-2">
           <div className={`flex h-8 w-8 items-center justify-center rounded-xl border shadow-lg ${iconClasses}`}>
@@ -81,8 +98,8 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             <span className="block text-[11px] font-black uppercase tracking-[0.25em] text-white">
               Mode Simulation Master Active
             </span>
-            <span className={`text-[10px] ${theme === 'anthracite' || theme === 'rubis' || theme === 'silver' || theme === 'diamond' || theme === 'sapphire' || theme === 'ambre' ? 'text-white/70' : 'text-zinc-700'}`}>
-              Compte d'origine: <b className="text-white">{masterUser.name} ({masterUser.role.toUpperCase()})</b>
+            <span className="text-[10px] text-white/75">
+              Collection <b className="font-black text-white">{gemLabels[theme]}</b> · Compte d'origine : <b className="text-white">{masterUser.name} ({masterUser.role.toUpperCase()})</b>
             </span>
           </div>
         </div>

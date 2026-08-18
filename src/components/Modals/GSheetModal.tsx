@@ -53,7 +53,7 @@ export const GSheetModal: React.FC<GSheetModalProps> = ({
 
     try {
       const buffer = await file.arrayBuffer();
-      const res = parseXlsxBuffer(buffer, { strictUsers: true });
+      const res = await parseXlsxBuffer(buffer, { strictUsers: true });
       if (res.success) {
         setStatusMsg({ type: 'success', text: res.message });
         onSyncSuccess();
