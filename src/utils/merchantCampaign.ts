@@ -329,3 +329,24 @@ export async function signOutMerchant(): Promise<void> {
   const { error } = await client.auth.signOut();
   fail(error, 'Déconnexion sécurisée impossible');
 }
+
+export async function getMerchantAttendanceTimeline(baId: string, campaignRunId?: string): Promise<BADailyAttendance[]> {
+  const client = getMerchantClient();
+  let query = client
+    .from('ba_daily_attendance')
+    .select('*')
+    .eq('ba_id', baId)
+    .order('activity_date', { ascending: false });
+  if (campaignRunId) query = query.eq('campaign_run_id', campaignRunId);
+  const { data, error } = await query;
+  fail(error, 'Impossible de charger le calendrier de présence BA');
+  return (data || []) as BADailyAttendance[];
+}
+
+export async function getMerchantBAActivityDetail(baId: string, campaignRunId?: string) {
+  const [attendances, transactions] = await Promise.all([
+    getMerchantAttendanceTimeline(baId, campaignRunId),
+    getTransactionsForBA(baId, campaignRunId),
+  ]);
+  return { attendances, transactions };
+}

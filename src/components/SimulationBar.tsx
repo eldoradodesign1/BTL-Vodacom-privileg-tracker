@@ -30,14 +30,6 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
   }
 
   const activeRole = simulatedRole || effectiveUser.role;
-  const gemLabels: Record<ThemeMode, string> = {
-    anthracite: 'Black Diamond',
-    rubis: 'Ruby',
-    silver: 'Moonstone',
-    diamond: 'Diamond',
-    sapphire: 'Sapphire',
-    ambre: 'Amber'
-  };
   const isDiamondTheme = theme === 'diamond';
   const shellClasses = theme === 'rubis'
     ? 'border-rose-300/30 shadow-[0_10px_34px_rgba(127,29,29,0.42)]'
@@ -107,7 +99,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
               Mode Simulation Master Active
             </span>
             <span className={`text-[10px] ${isDiamondTheme ? 'text-slate-600' : 'text-white/75'}`}>
-              Collection <b className={`font-black ${isDiamondTheme ? 'text-slate-900' : 'text-white'}`}>{gemLabels[theme]}</b> · Compte d'origine : <b className={isDiamondTheme ? 'text-slate-800' : 'text-white'}>{masterUser.name} ({masterUser.role.toUpperCase()})</b>
+              Compte d'origine : <b className={isDiamondTheme ? 'text-slate-800' : 'text-white'}>{masterUser.name} ({masterUser.role.toUpperCase()})</b>
             </span>
           </div>
         </div>

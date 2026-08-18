@@ -57,7 +57,9 @@ export const Header: React.FC<HeaderProps> = ({
   }, [localPhotoUrl, profilePhotoUrl, photoError]);
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const unreadCount = safeNotifications.filter(n => !n.is_read).length;
-  const roleLabel = user.role === 'admin' ? 'Admin' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent');
+  const roleLabel = user.role === 'admin'
+    ? 'Admin'
+    : (user.role === 'sub_admin' ? 'Sous-admin' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent'));
   const isDarkTheme = theme === 'anthracite' || theme === 'rubis' || theme === 'silver' || theme === 'diamond' || theme === 'sapphire' || theme === 'ambre';
   const syncState: 'ok' | 'progress' | 'late' = (() => {
     if (online && syncPendingCount === 0) return 'ok';

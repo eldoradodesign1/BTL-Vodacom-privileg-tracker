@@ -130,6 +130,7 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, shops, onClose, on
               <select value={role} onChange={(event) => setRole(event.target.value as UserRole)} className="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-3 text-white text-xs focus:outline-none focus:border-red-500">
                 <option value="agent">Agent</option>
                 <option value="supervisor">Superviseur</option>
+                <option value="sub_admin">Sous-admin</option>
                 <option value="admin">Administrateur</option>
               </select>
             </div>
@@ -179,7 +180,7 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, shops, onClose, on
               <p className="mt-2 text-[10px] text-gray-500">Un agent affecté à plusieurs campagnes choisira sa campagne après connexion.</p>
             </fieldset>
           ) : (
-            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/5 px-3 py-2 text-[10px] text-emerald-200">Les administrateurs et superviseurs accèdent à toutes les campagnes depuis le header.</div>
+            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/5 px-3 py-2 text-[10px] text-emerald-200">Les administrateurs, sous-admins et superviseurs accèdent à toutes les campagnes depuis le header.</div>
           )}
 
           <div>

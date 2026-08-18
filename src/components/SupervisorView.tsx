@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { User, Shop, AgentMasterStatus } from '../types';
-import { getSupervisorLiveView, getReports, getUsers, getLeads, getCheckins, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate,
+import { getSupervisorLiveView, getAdminMasterList, getReports, getUsers, getLeads, getCheckins, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate,
   refreshUsersFromSupabase,
 refreshShopsFromSupabase,
 refreshCheckinsFromSupabase,
@@ -23,6 +23,7 @@ interface SupervisorViewProps {
   onOpenTodayClientsModal?: (agent: AgentMasterStatus) => void;
   onOpenLocationModal?: (agent: AgentMasterStatus) => void;
   onRefreshData?: () => void;
+  globalScope?: boolean;
 }
 
 export const SupervisorView: React.FC<SupervisorViewProps> = ({
@@ -33,7 +34,8 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   onOpenAgentProfile,
   onOpenTodayClientsModal,
   onOpenLocationModal,
-  onRefreshData
+  onRefreshData,
+  globalScope = false
 }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
@@ -108,11 +110,15 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   }, [showHomeCalendar]);
   
 
-  const teamData = getSupervisorLiveView(currentUser.id, selectedDate);
+  const teamData = globalScope
+    ? getAdminMasterList(selectedDate)
+    : getSupervisorLiveView(currentUser.id, selectedDate);
   const allCheckins = getCheckins();
   const allReports = getReports();
   const allUsers = getUsers();
-  const supervisedAgents = allUsers.filter(u => u.role === 'agent' && u.supervisorId === currentUser.id);
+  const supervisedAgents = globalScope
+    ? allUsers.filter(u => u.role === 'agent' && u.userCategory !== 'brand_ambassador')
+    : allUsers.filter(u => u.role === 'agent' && u.supervisorId === currentUser.id);
   const teamAgentIds = supervisedAgents.map((a) => a.id);
   const teamReports = allReports.filter((report) => teamAgentIds.includes(report.agent_id));
   const reportDateList = [...new Set(teamReports.map((r) => r.date))].sort();

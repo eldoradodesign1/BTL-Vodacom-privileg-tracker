@@ -360,7 +360,7 @@ const todayLeads =
         : activeTab === 'tab3'
           ? <MerchantArchivesView currentUser={effectiveUser} />
           : <MerchantBAView currentUser={effectiveUser} />;
-    } else if (isMerchantContext && (effectiveRole === 'admin' || effectiveRole === 'supervisor')) {
+    } else if (isMerchantContext && (effectiveRole === 'admin' || effectiveRole === 'supervisor' || effectiveRole === 'sub_admin')) {
       content = activeTab === 'tab2'
         ? <MerchantMonitoringView />
         : activeTab === 'tab3'
@@ -384,10 +384,11 @@ const todayLeads =
           onRefreshData={refreshData}
         />
       );
-    } else if (effectiveRole === 'supervisor') {
+    } else if (effectiveRole === 'supervisor' || effectiveRole === 'sub_admin') {
       content = (
         <SupervisorView
           currentUser={effectiveUser}
+          globalScope={effectiveRole === 'sub_admin'}
           activeTab={activeTab}
           shops={shops}
           onOpenPdfModal={(url) => setPdfModalUrl(url)}
@@ -464,7 +465,7 @@ const todayLeads =
         theme={theme}
         onSetTheme={setThemeMode}
         activeCampaign={isMerchantContext ? 'merchant-educational' : 'vodacom-privilege'}
-        onSetCampaign={realMasterUser.role === 'admin' || realMasterUser.role === 'supervisor' ? setCampaignContext : undefined}
+        onSetCampaign={realMasterUser.role === 'admin' || realMasterUser.role === 'supervisor' || realMasterUser.role === 'sub_admin' ? setCampaignContext : undefined}
         onMarkNotifsRead={() => {
           markNotifsAsRead(effectiveUser.id);
           markChatAsRead(effectiveUser.id);
