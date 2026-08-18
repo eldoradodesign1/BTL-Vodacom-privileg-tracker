@@ -1231,7 +1231,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <div className="pointer-events-none absolute -left-10 -bottom-10 h-28 w-28 rounded-full bg-amber-400/18 blur-2xl" />
               <div className="pointer-events-none absolute right-3 top-3 h-7 w-7 rounded-full border border-white/20" />
               <span className="text-[9px] font-black uppercase tracking-wider text-gray-300 block group-hover:text-white">Effectif Hôtesses</span>
-              <p className="text-3xl font-black text-white drop-shadow-[0_0_12px_rgba(0,0,0,0.4)]">{dashboardData.kpi.presence}</p>
+              <p className="text-3xl font-black text-white drop-shadow-[0_0_12px_rgba(0,0,0,0.4)]">{agents.length}</p>
               <span className="text-[8px] font-bold text-gray-300 uppercase mt-1 block group-hover:underline">→ Aller au Monitoring</span>
             </div>
           </div>
