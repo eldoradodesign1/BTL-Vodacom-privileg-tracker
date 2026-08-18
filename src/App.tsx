@@ -262,7 +262,11 @@ const refreshData = useCallback(async () => {
   }, []);
 
   if (!currentUser) {
-    return <LoginScreen onLoginSuccess={(u) => { setCurrentUser(u); setMasterUser(u); }} />;
+    return <LoginScreen onLoginSuccess={(u, campaign) => {
+      setCurrentUser(u);
+      setMasterUser(u);
+      if (campaign) setCampaignContext(campaign);
+    }} />;
   }
 
   const realMasterUser = masterUser || currentUser;

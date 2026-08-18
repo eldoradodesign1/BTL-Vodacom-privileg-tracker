@@ -1,17 +1,55 @@
 import React, { useState } from 'react';
-import { User } from '../types';
+import { ChevronRight, Lock, Phone, Trash2 } from 'lucide-react';
+import { User, Campaign } from '../types';
 import { authenticate, purgeAndResetEverything, refreshUsersFromSupabase } from '../utils/storage';
-import { Lock, Phone, Trash2 } from 'lucide-react';
+import { getCampaignsForUser } from '../utils/merchantCampaign';
+
+type CampaignContext = 'vodacom-privilege' | 'merchant-educational';
 
 interface LoginScreenProps {
-  onLoginSuccess: (user: User) => void;
+  onLoginSuccess: (user: User, campaign?: CampaignContext) => void;
 }
+
+const toCampaignContext = (campaign?: Campaign | null): CampaignContext =>
+  campaign?.campaign_type === 'brand_ambassador' || campaign?.code === 'merchant-educational-campaign'
+    ? 'merchant-educational'
+    : 'vodacom-privilege';
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
+  const [availableCampaigns, setAvailableCampaigns] = useState<Campaign[]>([]);
+  const [selectedCampaignId, setSelectedCampaignId] = useState('');
+
+  const finishLogin = (user: User, campaign?: Campaign | null) => {
+    onLoginSuccess(user, toCampaignContext(campaign));
+  };
+
+  const determineCampaign = async (user: User) => {
+    if (user.role !== 'agent') {
+      finishLogin(user);
+      return;
+    }
+
+    try {
+      const campaigns = await getCampaignsForUser(user.id);
+      if (campaigns.length > 1) {
+        setPendingUser(user);
+        setAvailableCampaigns(campaigns);
+        setSelectedCampaignId(campaigns[0].id);
+        return;
+      }
+      finishLogin(user, campaigns[0]);
+    } catch {
+      // The legacy Vodacom connection remains available when the campaign lookup is offline.
+      finishLogin(user, user.userCategory === 'brand_ambassador'
+        ? { campaign_type: 'brand_ambassador', code: 'merchant-educational-campaign' } as Campaign
+        : null);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,14 +65,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       await refreshUsersFromSupabase();
       const result = authenticate(enteredPhone, enteredPassword);
       if (result.success && result.user) {
-        onLoginSuccess(result.user);
+        await determineCampaign(result.user);
       } else {
         setError(result.message || 'Identifiants incorrects.');
       }
     } catch {
       const result = authenticate(enteredPhone, enteredPassword);
       if (result.success && result.user) {
-        onLoginSuccess(result.user);
+        await determineCampaign(result.user);
       } else {
         setError(result.message || 'Identifiants incorrects.');
       }
@@ -46,16 +84,54 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const handleEnterSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const form = (e.currentTarget as HTMLInputElement).form;
-      if (form) {
-        form.requestSubmit();
-      }
+      e.currentTarget.form?.requestSubmit();
     }
   };
 
+  if (pendingUser) {
+    return (
+      <div className="login-shell w-full flex flex-col justify-center items-center p-6 relative overflow-hidden">
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-red-600/20 blur-[120px] rounded-full pointer-events-none" />
+        <div className="login-panel w-full glass-card border relative z-10 animate-pop">
+          <div className="text-center mb-7">
+            <div className="brand-text text-3xl font-black tracking-tighter mb-1">CHOISIR LA CAMPAGNE</div>
+            <p className="text-xs font-semibold text-gray-400">Bienvenue {pendingUser.name.split(' ')[0]}. Sélectionnez l’espace de travail souhaité.</p>
+          </div>
+
+          <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block mb-2">Campagne active</label>
+          <select
+            value={selectedCampaignId}
+            onChange={(e) => setSelectedCampaignId(e.target.value)}
+            className="app-input w-full border rounded-2xl px-4 py-3.5 text-white text-sm font-semibold focus:outline-none"
+          >
+            {availableCampaigns.map((campaign) => (
+              <option key={campaign.id} value={campaign.id}>{campaign.name}</option>
+            ))}
+          </select>
+
+          <button
+            type="button"
+            onClick={() => finishLogin(pendingUser, availableCampaigns.find((campaign) => campaign.id === selectedCampaignId))}
+            className="btn-neon btn-red w-full mt-5 flex items-center justify-center gap-2"
+          >
+            <span>ENTRER DANS LA CAMPAGNE</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setPendingUser(null); setAvailableCampaigns([]); }}
+            className="w-full mt-4 text-[10px] font-bold text-gray-500 hover:text-red-400 uppercase tracking-wider"
+          >
+            Utiliser un autre compte
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="login-shell w-full flex flex-col justify-center items-center p-6 relative overflow-hidden">
-      {/* Background glowing effects */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-red-600/20 blur-[120px] rounded-full pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none" />
 
@@ -105,13 +181,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             Utilisez votre numéro de téléphone et votre mot de passe pour vous connecter.
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-neon btn-red w-full mt-4 flex items-center justify-center space-x-2"
-          >
+          <button type="submit" disabled={loading} className="btn-neon btn-red w-full mt-4 flex items-center justify-center space-x-2">
             <Lock className="w-4 h-4" />
-            <span>{loading ? 'VÉRICATION...' : 'DÉVERROUILLER'}</span>
+            <span>{loading ? 'VÉRIFICATION...' : 'DÉVERROUILLER'}</span>
           </button>
         </form>
 
@@ -125,7 +197,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           <button
             type="button"
             onClick={() => {
-              if (window.confirm("Vider complètement le cache et réinitialiser les données ?")) {
+              if (window.confirm('Vider complètement le cache et réinitialiser les données ?')) {
                 purgeAndResetEverything();
                 window.location.reload();
               }

@@ -135,8 +135,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const allReports = getReports();
   const allUsers = getUsers();
   const supervisors = allUsers.filter(u => u.role === 'supervisor');
-  const agents = allUsers.filter(u => u.role === 'agent');
-  const hostessList = [...masterList].sort((a, b) => a.name.localeCompare(b.name));
+  const agents = allUsers.filter(u => u.role === 'agent' && u.userCategory !== 'brand_ambassador');
+  const hostessIds = new Set(agents.map((agent) => agent.id));
+  const hostessList = masterList
+    .filter((agent) => hostessIds.has(agent.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
   const supervisorsById = supervisors.reduce<Record<string, string>>((acc, sup) => {
     acc[sup.id] = sup.name;
     return acc;
@@ -203,6 +206,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       .sort((a, b) => a.name.localeCompare(b.name))
     : [];
   const filteredMasterList = monitoringMasterList.filter(agent => {
+    if (!hostessIds.has(agent.id)) return false;
     const srcUser = allUsers.find(u => u.id === agent.id);
     const supId = srcUser?.supervisorId || '';
     const matchesSearch = !searchTerm

@@ -28,6 +28,31 @@ function fail(error: { message: string } | null, context: string): void {
   if (error) throw new Error(`${context} : ${error.message}`);
 }
 
+export async function getCampaigns(): Promise<Campaign[]> {
+  const client = getMerchantClient();
+  const { data, error } = await client
+    .from('campaigns')
+    .select('*')
+    .in('status', ['draft', 'active'])
+    .order('name');
+  fail(error, 'Impossible de charger les campagnes');
+  return (data || []) as Campaign[];
+}
+
+export async function assignUserToCampaigns(userId: string, campaignIds: string[]): Promise<void> {
+  if (campaignIds.length === 0) return;
+  const client = getMerchantClient();
+  const payload = campaignIds.map((campaignId) => ({
+    user_id: userId,
+    campaign_id: campaignId,
+    is_active: true,
+  }));
+  const { error } = await client
+    .from('user_campaign_assignments')
+    .upsert(payload, { onConflict: 'user_id,campaign_id' });
+  fail(error, 'Impossible d’affecter les campagnes à l’utilisateur');
+}
+
 export async function getMerchantCampaign(): Promise<Campaign | null> {
   const client = getMerchantClient();
   const { data, error } = await client
@@ -37,6 +62,21 @@ export async function getMerchantCampaign(): Promise<Campaign | null> {
     .maybeSingle();
   fail(error, 'Impossible de charger la campagne');
   return data as Campaign | null;
+}
+
+export async function getCampaignsForUser(userId: string): Promise<Campaign[]> {
+  const client = getMerchantClient();
+  const { data, error } = await client
+    .from('user_campaign_assignments')
+    .select('campaign:campaigns(*)')
+    .eq('user_id', userId)
+    .eq('is_active', true);
+  fail(error, 'Impossible de charger les campagnes de l’utilisateur');
+
+  const campaigns = (data || [])
+    .map((row: { campaign?: Campaign | Campaign[] | null }) => Array.isArray(row.campaign) ? row.campaign[0] : row.campaign)
+    .filter((campaign): campaign is Campaign => Boolean(campaign));
+  return campaigns;
 }
 
 export async function getActiveCampaignRuns(campaignId: string): Promise<CampaignRun[]> {
