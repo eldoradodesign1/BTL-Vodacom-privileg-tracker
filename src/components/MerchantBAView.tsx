@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, CheckCircle2, ClipboardList, Command, FileCheck2, MapPin, PlusCircle, Send, ShoppingBag } from 'lucide-react';
+import { Camera, CheckCircle2, Command, FileCheck2, MapPin, PlusCircle, ShoppingBag } from 'lucide-react';
 import type { BADailyAttendance, BATransaction, CampaignRun, PointOfSale, User } from '../types';
 import {
   createTransaction,
@@ -15,9 +15,11 @@ import {
 } from '../utils/merchantCampaign';
 import { toISO } from '../utils/storage';
 import { MerchantPosCommandPalette } from './Modals/MerchantPosCommandPalette';
+import { MerchantClosingReportModal } from './Modals/MerchantClosingReportModal';
 
 interface MerchantBAViewProps {
   currentUser: User;
+  onPointagePhotoRecorded?: (storagePath: string) => void;
 }
 
 type Geo = { latitude: number; longitude: number; accuracy: number };
@@ -33,7 +35,7 @@ function locate(): Promise<Geo> {
   });
 }
 
-export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser }) => {
+export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onPointagePhotoRecorded }) => {
   const today = toISO(new Date());
   const [run, setRun] = useState<CampaignRun | null>(null);
   const [positions, setPositions] = useState<PointOfSale[]>([]);
@@ -50,10 +52,9 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser }) =
   const [reference, setReference] = useState('');
   const [clientNumber, setClientNumber] = useState('');
   const [comment, setComment] = useState('');
-  const [closingComment, setClosingComment] = useState('');
+  const [isClosingReportOpen, setIsClosingReportOpen] = useState(false);
   const [transactionPhoto, setTransactionPhoto] = useState<File | null>(null);
   const transactionInput = useRef<HTMLInputElement | null>(null);
-  const reportRef = useRef<HTMLDivElement | null>(null);
 
   const refresh = async () => {
     setLoading(true);
@@ -126,6 +127,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser }) =
       const geo = await locate();
       const path = await uploadMerchantEvidence(MERCHANT_CAMPAIGN_CODE, `${currentUser.id}/${today}/checkin-${Date.now()}.jpg`, photo);
       await recordCheckin({ campaign_run_id: run.id, ba_id: currentUser.id, activity_date: today, status: 'open', checkin_at: new Date().toISOString(), checkin_latitude: geo.latitude, checkin_longitude: geo.longitude, checkin_accuracy_m: geo.accuracy, checkin_photo_path: path });
+      onPointagePhotoRecorded?.(path);
       setSuccess('Pointage du matin enregistré avec photo et position GPS.');
       await refresh();
     } catch (caught) {
@@ -152,11 +154,15 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser }) =
 
   const openReportFlow = () => {
     setError('');
-    if (!isCheckedIn) {
-      setError('Validez d’abord votre pointage du matin pour accéder au rapport de clôture.');
+    if (!attendance?.checkin_at) {
+      setError('Validez d’abord votre pointage du matin avant d’ouvrir le rapport de clôture.');
       return;
     }
-    reportRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (isClosed) {
+      setError('Cette journée est déjà clôturée. Consultez les archives pour revoir son rapport.');
+      return;
+    }
+    setIsClosingReportOpen(true);
   };
 
   const recordTransaction = () => void withAction(async () => {
@@ -193,10 +199,11 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser }) =
     setSuccess('Transaction enregistrée avec le POS, le client et la position GPS.');
   });
 
-  const closeDay = () => void withAction(async () => {
+  const closeDay = (closingComment: string) => void withAction(async () => {
     if (!attendance) throw new Error('Le pointage du matin est requis avant la clôture.');
     const geo = await locate();
     await closeDailyAttendance(attendance.id, { checkout_at: new Date().toISOString(), checkout_latitude: geo.latitude, checkout_longitude: geo.longitude, checkout_accuracy_m: geo.accuracy, closing_comment: closingComment.trim() || null, status: 'closed' });
+    setIsClosingReportOpen(false);
     setSuccess('Journée clôturée avec succès.');
   });
 
@@ -231,10 +238,9 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser }) =
 
       {isCheckedIn && !isClosed && <section className="glass-card space-y-3 p-4"><div className="flex items-center gap-3"><div className="rounded-2xl bg-cyan-500/15 p-3 text-cyan-200"><ShoppingBag size={20}/></div><div><h2 className="font-black">Enregistrer une transaction</h2><p className="text-xs text-gray-400">Sélectionnez un POS puis complétez les preuves de la transaction.</p></div></div><button type="button" onClick={openTransactionFlow} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-cyan-300/30 bg-cyan-400/[0.07] p-3 text-left"><div className="flex min-w-0 items-center gap-3"><Command className="shrink-0 text-cyan-200" size={19}/><div className="min-w-0"><span className="block text-[10px] font-black uppercase text-cyan-100/70">POS sélectionné</span><b className="block truncate text-sm">{selectedPos ? `${selectedPos.agent_number} · ${selectedPos.denomination}` : 'Rechercher un POS'}</b><span className="block truncate text-[11px] text-gray-400">{selectedPos ? `${selectedPos.address} · ${selectedPos.pool}` : 'Short-code, marchand, adresse, pool ou MFS'}</span></div></div><span className="shrink-0 rounded-xl border border-cyan-200/30 px-2 py-1 text-[10px] font-black text-cyan-100">RECHERCHER</span></button><div className="grid grid-cols-2 gap-2"><input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" placeholder="Montant" className="app-input rounded-2xl px-4 py-3 text-sm"/><input value={clientNumber} onChange={(event) => setClientNumber(event.target.value)} inputMode="tel" placeholder="N° client" className="app-input rounded-2xl px-4 py-3 text-sm"/></div><input value={reference} onChange={(event) => setReference(event.target.value)} placeholder="N° transaction (optionnel)" className="app-input w-full rounded-2xl px-4 py-3 text-sm"/><input value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Commentaire (optionnel)" className="app-input w-full rounded-2xl px-4 py-3 text-sm"/><input ref={transactionInput} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => setTransactionPhoto(event.target.files?.[0] || null)} /><button type="button" onClick={() => transactionInput.current?.click()} className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-xs font-black uppercase">{transactionPhoto ? `Capture prête : ${transactionPhoto.name}` : 'Ajouter la capture de transaction'}</button><button type="button" disabled={saving || !transactionPhoto} onClick={recordTransaction} className="btn-neon btn-red w-full disabled:opacity-40">{saving ? 'Enregistrement…' : 'Enregistrer la transaction'}</button></section>}
 
-      {isCheckedIn && !isClosed && <section ref={reportRef} className="glass-card space-y-3 p-4"><div className="flex items-center gap-3"><div className="rounded-2xl bg-amber-500/15 p-3 text-amber-200"><ClipboardList size={20}/></div><div><h2 className="font-black">Rapport de clôture</h2><p className="text-xs text-gray-400">Point GPS, indicateurs et commentaire BA.</p></div></div><textarea value={closingComment} onChange={(event) => setClosingComment(event.target.value)} placeholder="Commentaire de clôture (optionnel)" className="app-input min-h-24 w-full rounded-2xl p-4 text-sm"/><button type="button" disabled={saving} onClick={closeDay} className="btn-neon btn-red w-full"><Send size={16}/><span>{saving ? 'Clôture…' : 'Clôturer la journée'}</span></button></section>}
-
       {isClosed && <section className="glass-card border border-emerald-500/25 p-4 text-center"><CheckCircle2 className="mx-auto text-emerald-400"/><b className="mt-2 block">Journée clôturée</b><p className="mt-1 text-xs text-gray-400">{transactions.length} transactions enregistrées pour {visitedCount} POS visités. Retrouvez le rapport dans vos archives.</p></section>}
       <MerchantPosCommandPalette isOpen={isPaletteOpen} positions={positions} selectedPosId={selectedPos?.id} onClose={() => setIsPaletteOpen(false)} onSelect={setSelectedPos} />
+      <MerchantClosingReportModal isOpen={isClosingReportOpen} isSaving={saving} posCount={visitedCount} transactionCount={transactions.length} onClose={() => setIsClosingReportOpen(false)} onSubmit={closeDay} />
     </div>
   );
 };

@@ -310,6 +310,14 @@ export async function uploadMerchantEvidence(campaignId: string, relativePath: s
   return path;
 }
 
+export async function getMerchantEvidencePublicUrl(path?: string | null): Promise<string> {
+  if (!path) return '';
+  const client = getMerchantClient();
+  const { data, error } = await client.storage.from('ba-evidence').createSignedUrl(path, 60 * 60 * 12);
+  fail(error, 'Impossible de préparer la photo de pointage');
+  return data?.signedUrl || '';
+}
+
 export async function getMerchantSession() {
   const client = getMerchantClient();
   const { data, error } = await client.auth.getSession();

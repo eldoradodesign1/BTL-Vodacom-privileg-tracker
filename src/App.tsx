@@ -30,6 +30,7 @@ import {
   fetchLeadsFromSupabase,
   isSupabaseConfigured
 } from './utils/supabase';
+import { getActiveCampaignRuns, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl } from './utils/merchantCampaign';
 
 import { SimulationBar } from './components/SimulationBar';
 import { Header, ThemeMode } from './components/Header';
@@ -122,6 +123,7 @@ export default function App() {
   const [chatUnreadCount, setChatUnreadCount] = useState(0);
   const [syncPendingCount, setSyncPendingCount] = useState(0);
   const [toast, setToast] = useState<{ message: string; level: 'success' | 'error' } | null>(null);
+  const [merchantProfilePhotoUrl, setMerchantProfilePhotoUrl] = useState('');
 
   useEffect(() => {
     if (currentUser) {
@@ -248,6 +250,32 @@ const refreshData = useCallback(async () => {
   }, [currentUser?.id]);
 
   useEffect(() => {
+    const profileUser = simulatedUserId ? users.find((user) => user.id === simulatedUserId) || currentUser : currentUser;
+    if (!profileUser || profileUser.userCategory !== 'brand_ambassador') {
+      setMerchantProfilePhotoUrl('');
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        const campaign = await getMerchantCampaign();
+        if (!campaign) return;
+        const runs = await getActiveCampaignRuns(campaign.id);
+        const activeRun = runs.find((run) => run.status === 'active') || runs[0];
+        if (!activeRun) return;
+        const attendance = await getDailyAttendance(profileUser.id, activeRun.id, toISO(new Date()));
+        const photoUrl = await getMerchantEvidencePublicUrl(attendance?.checkin_photo_path);
+        if (!cancelled) setMerchantProfilePhotoUrl(photoUrl);
+      } catch {
+        if (!cancelled) setMerchantProfilePhotoUrl('');
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [currentUser, simulatedUserId, users]);
+
+  useEffect(() => {
     const onToast = (event: Event) => {
       const custom = event as CustomEvent<{ message?: string; level?: 'success' | 'error' }>;
       const message = custom.detail?.message;
@@ -359,7 +387,7 @@ const todayLeads =
         ? <MerchantTransactionsView currentUser={effectiveUser} onRecordTransaction={() => setActiveTab('home')} />
         : activeTab === 'tab3'
           ? <MerchantArchivesView currentUser={effectiveUser} />
-          : <MerchantBAView currentUser={effectiveUser} />;
+          : <MerchantBAView currentUser={effectiveUser} onPointagePhotoRecorded={(path) => { void getMerchantEvidencePublicUrl(path).then(setMerchantProfilePhotoUrl).catch(() => setMerchantProfilePhotoUrl('')); }} />;
     } else if (isMerchantContext && (effectiveRole === 'admin' || effectiveRole === 'supervisor' || effectiveRole === 'sub_admin')) {
       content = activeTab === 'tab2'
         ? <MerchantMonitoringView />
@@ -460,7 +488,7 @@ const todayLeads =
         unreadChatCount={chatUnreadCount}
         online={online}
         syncPendingCount={syncPendingCount}
-        profilePhotoUrl={todayCheckinPhoto || undefined}
+        profilePhotoUrl={(effectiveUser.userCategory === 'brand_ambassador' ? merchantProfilePhotoUrl : todayCheckinPhoto) || undefined}
         onPointageRecorded={refreshData}
         theme={theme}
         onSetTheme={setThemeMode}
