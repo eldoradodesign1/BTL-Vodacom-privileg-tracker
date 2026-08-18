@@ -38,6 +38,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser }) =
   const [run, setRun] = useState<CampaignRun | null>(null);
   const [positions, setPositions] = useState<PointOfSale[]>([]);
   const [attendance, setAttendance] = useState<BADailyAttendance | null>(null);
+  const [checkinDoneLocal, setCheckinDoneLocal] = useState(false);
   const [transactions, setTransactions] = useState<BATransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -85,11 +86,14 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser }) =
     }
   };
 
-  useEffect(() => { void refresh(); }, [currentUser.id]);
+  useEffect(() => {
+    setCheckinDoneLocal(false);
+    void refresh();
+  }, [currentUser.id]);
 
   const visitedCount = useMemo(() => new Set(transactions.map((transaction) => transaction.pos_id)).size, [transactions]);
   const transactionTarget = 45;
-  const isCheckedIn = Boolean(attendance?.checkin_at);
+  const isCheckedIn = Boolean(attendance?.checkin_at) || checkinDoneLocal;
   const isClosed = Boolean(attendance?.checkout_at);
 
   const withAction = async (action: () => Promise<void>) => {
@@ -106,13 +110,32 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser }) =
     }
   };
 
-  const handleCheckin = (photo: File) => void withAction(async () => {
-    if (!run) throw new Error('Aucune vague active.');
-    const geo = await locate();
-    const path = await uploadMerchantEvidence(MERCHANT_CAMPAIGN_CODE, `${currentUser.id}/${today}/checkin-${Date.now()}.jpg`, photo);
-    await recordCheckin({ campaign_run_id: run.id, ba_id: currentUser.id, activity_date: today, status: 'open', checkin_at: new Date().toISOString(), checkin_latitude: geo.latitude, checkin_longitude: geo.longitude, checkin_accuracy_m: geo.accuracy, checkin_photo_path: path });
-    setSuccess('Pointage du matin enregistré avec photo et position GPS.');
-  });
+  const handleCheckin = async (photo: File) => {
+    if (!run) {
+      setError('Aucune vague active.');
+      return;
+    }
+
+    // Same immediate feedback as the hostess flow: once the camera confirms the picture,
+    // the pointage block disappears while the GPS proof is being persisted.
+    setSaving(true);
+    setError('');
+    setSuccess('Photo confirmée. Enregistrement du pointage GPS…');
+    setCheckinDoneLocal(true);
+    try {
+      const geo = await locate();
+      const path = await uploadMerchantEvidence(MERCHANT_CAMPAIGN_CODE, `${currentUser.id}/${today}/checkin-${Date.now()}.jpg`, photo);
+      await recordCheckin({ campaign_run_id: run.id, ba_id: currentUser.id, activity_date: today, status: 'open', checkin_at: new Date().toISOString(), checkin_latitude: geo.latitude, checkin_longitude: geo.longitude, checkin_accuracy_m: geo.accuracy, checkin_photo_path: path });
+      setSuccess('Pointage du matin enregistré avec photo et position GPS.');
+      await refresh();
+    } catch (caught) {
+      setCheckinDoneLocal(false);
+      setSuccess('');
+      setError(caught instanceof Error ? caught.message : 'Pointage impossible.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const openTransactionFlow = () => {
     setError('');
@@ -204,7 +227,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser }) =
         <button type="button" onClick={openReportFlow} disabled={isClosed} className={`glass-card group flex min-h-36 flex-col items-center justify-center space-y-2 p-6 text-center transition-all ${isClosed ? 'cursor-not-allowed opacity-60' : 'hover:border-amber-300/45 active:scale-[0.98]'}`}><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-200 transition-transform group-hover:scale-110"><FileCheck2 size={24}/></div><span className="text-xs font-black uppercase text-white">{isClosed ? 'Journée clôturée' : 'Mon rapport'}</span><span className="text-[9px] font-semibold text-gray-400">Clôture, GPS & synthèse</span></button>
       </section>
 
-      {!isCheckedIn ? <section className="glass-card p-6 text-center"><h2 className="mb-4 text-xs font-black uppercase tracking-widest text-red-400">Pointage d’arrivée GPS</h2><label className={`btn-neon btn-red flex cursor-pointer items-center justify-center gap-2 ${saving ? 'pointer-events-none opacity-60' : ''}`}><Camera size={16}/><span>{saving ? 'Validation du pointage…' : 'Déverrouiller la journée (prendre photo)'}</span><input type="file" accept="image/*" capture="user" className="hidden" disabled={saving} onChange={(event) => { const photo = event.target.files?.[0]; if (photo) handleCheckin(photo); event.currentTarget.value = ''; }} /></label><p className="mt-3 text-[10px] font-bold text-gray-400">La photo, le GPS et l’horodatage sont enregistrés en une seule étape.</p></section> : <section className="glass-card flex items-center gap-3 border border-emerald-500/25 p-4"><CheckCircle2 className="text-emerald-400"/><div><b className="text-sm">Journée déverrouillée</b><p className="text-xs text-gray-400">{new Date(attendance!.checkin_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} · GPS enregistré</p></div></section>}
+      {!isCheckedIn && <section className="glass-card p-6 text-center"><h2 className="mb-4 text-xs font-black uppercase tracking-widest text-red-400">Pointage d’arrivée GPS</h2><div className="space-y-3"><label className="btn-neon btn-red flex cursor-pointer items-center justify-center gap-2"><Camera size={16}/><span>Déverrouiller la journée (prendre photo)</span><input type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => { const photo = event.target.files?.[0]; if (photo) void handleCheckin(photo); event.currentTarget.value = ''; }} /></label><p className="text-[10px] font-bold text-gray-400">Photo, GPS et horodatage sont confirmés en une seule étape.</p></div></section>}
 
       {isCheckedIn && !isClosed && <section className="glass-card space-y-3 p-4"><div className="flex items-center gap-3"><div className="rounded-2xl bg-cyan-500/15 p-3 text-cyan-200"><ShoppingBag size={20}/></div><div><h2 className="font-black">Enregistrer une transaction</h2><p className="text-xs text-gray-400">Sélectionnez un POS puis complétez les preuves de la transaction.</p></div></div><button type="button" onClick={openTransactionFlow} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-cyan-300/30 bg-cyan-400/[0.07] p-3 text-left"><div className="flex min-w-0 items-center gap-3"><Command className="shrink-0 text-cyan-200" size={19}/><div className="min-w-0"><span className="block text-[10px] font-black uppercase text-cyan-100/70">POS sélectionné</span><b className="block truncate text-sm">{selectedPos ? `${selectedPos.agent_number} · ${selectedPos.denomination}` : 'Rechercher un POS'}</b><span className="block truncate text-[11px] text-gray-400">{selectedPos ? `${selectedPos.address} · ${selectedPos.pool}` : 'Short-code, marchand, adresse, pool ou MFS'}</span></div></div><span className="shrink-0 rounded-xl border border-cyan-200/30 px-2 py-1 text-[10px] font-black text-cyan-100">RECHERCHER</span></button><div className="grid grid-cols-2 gap-2"><input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" placeholder="Montant" className="app-input rounded-2xl px-4 py-3 text-sm"/><input value={clientNumber} onChange={(event) => setClientNumber(event.target.value)} inputMode="tel" placeholder="N° client" className="app-input rounded-2xl px-4 py-3 text-sm"/></div><input value={reference} onChange={(event) => setReference(event.target.value)} placeholder="N° transaction (optionnel)" className="app-input w-full rounded-2xl px-4 py-3 text-sm"/><input value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Commentaire (optionnel)" className="app-input w-full rounded-2xl px-4 py-3 text-sm"/><input ref={transactionInput} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => setTransactionPhoto(event.target.files?.[0] || null)} /><button type="button" onClick={() => transactionInput.current?.click()} className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-xs font-black uppercase">{transactionPhoto ? `Capture prête : ${transactionPhoto.name}` : 'Ajouter la capture de transaction'}</button><button type="button" disabled={saving || !transactionPhoto} onClick={recordTransaction} className="btn-neon btn-red w-full disabled:opacity-40">{saving ? 'Enregistrement…' : 'Enregistrer la transaction'}</button></section>}
 
