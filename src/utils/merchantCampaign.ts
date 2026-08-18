@@ -119,6 +119,20 @@ export async function getTransactionsForDay(baId: string, runId: string, activit
   return (data || []) as BATransaction[];
 }
 
+export async function getAttendanceHistoryForBA(baId: string, campaignRunId?: string): Promise<BADailyAttendance[]> {
+  const client = getMerchantClient();
+  let query = client
+    .from('ba_daily_attendance')
+    .select('*')
+    .eq('ba_id', baId)
+    .eq('status', 'closed')
+    .order('activity_date', { ascending: false });
+  if (campaignRunId) query = query.eq('campaign_run_id', campaignRunId);
+  const { data, error } = await query;
+  fail(error, 'Impossible de charger les archives BA');
+  return (data || []) as BADailyAttendance[];
+}
+
 export async function getTransactionsForBA(baId: string, campaignRunId?: string): Promise<BATransaction[]> {
   const client = getMerchantClient();
   let query = client

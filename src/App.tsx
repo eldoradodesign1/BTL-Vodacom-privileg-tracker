@@ -52,6 +52,7 @@ const LocationModal = lazy(() => import('./components/Modals/LocationModal').the
 const MerchantBAView = lazy(() => import('./components/MerchantBAView').then(({ MerchantBAView: component }) => ({ default: component })));
 const MerchantSupervisorView = lazy(() => import('./components/MerchantSupervisorView').then(({ MerchantSupervisorView: component }) => ({ default: component })));
 const MerchantTransactionsView = lazy(() => import('./components/MerchantTransactionsView').then(({ MerchantTransactionsView: component }) => ({ default: component })));
+const MerchantArchivesView = lazy(() => import('./components/MerchantArchivesView').then(({ MerchantArchivesView: component }) => ({ default: component })));
 
 const SectionLoader = () => (
   <div className="flex min-h-[12rem] items-center justify-center">
@@ -353,8 +354,10 @@ const todayLeads =
       content = <ChatView currentUser={effectiveUser} onDataChanged={refreshData} />;
     } else if (effectiveUser.userCategory === 'brand_ambassador') {
       content = activeTab === 'tab2'
-        ? <MerchantTransactionsView currentUser={effectiveUser} />
-        : <MerchantBAView currentUser={effectiveUser} />;
+        ? <MerchantTransactionsView currentUser={effectiveUser} onRecordTransaction={() => setActiveTab('home')} />
+        : activeTab === 'tab3'
+          ? <MerchantArchivesView currentUser={effectiveUser} />
+          : <MerchantBAView currentUser={effectiveUser} />;
     } else if (isMerchantContext && (effectiveRole === 'admin' || effectiveRole === 'supervisor')) {
       content = <MerchantSupervisorView currentUser={effectiveUser} />;
     } else if (effectiveRole === 'admin') {
