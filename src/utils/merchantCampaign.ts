@@ -146,6 +146,118 @@ export async function getTransactionsForBA(baId: string, campaignRunId?: string)
   return (data || []) as BATransaction[];
 }
 
+export interface MerchantTeamActivity {
+  ba: { id: string; name: string; phone: string };
+  attendance: BADailyAttendance | null;
+  transactions: BATransaction[];
+  status: 'absent' | 'present' | 'closed';
+  visitedPosCount: number;
+  transactionCount: number;
+  totalAmount: number;
+}
+
+export interface MerchantArchiveSummary {
+  attendance: BADailyAttendance;
+  ba: { id: string; name: string; phone: string };
+  transactions: BATransaction[];
+  visitedPosCount: number;
+  transactionCount: number;
+  totalAmount: number;
+}
+
+function activityWindow(activityDate: string) {
+  return {
+    start: `${activityDate}T00:00:00+01:00`,
+    end: `${activityDate}T23:59:59.999+01:00`,
+  };
+}
+
+async function getMerchantBAs() {
+  const client = getMerchantClient();
+  const { data, error } = await client
+    .from('users')
+    .select('id,full_name,phone')
+    .eq('user_category', 'brand_ambassador')
+    .order('full_name');
+  fail(error, 'Impossible de charger les Brand Ambassadors');
+  return (data || []).map((user: { id: string; full_name?: string | null; phone?: string | null }) => ({
+    id: user.id,
+    name: user.full_name || 'Brand Ambassador',
+    phone: user.phone || '',
+  }));
+}
+
+export async function getMerchantMonitoring(runId: string, activityDate: string): Promise<MerchantTeamActivity[]> {
+  const client = getMerchantClient();
+  const { start, end } = activityWindow(activityDate);
+  const [bas, attendanceResponse, transactionResponse] = await Promise.all([
+    getMerchantBAs(),
+    client.from('ba_daily_attendance').select('*').eq('campaign_run_id', runId).eq('activity_date', activityDate),
+    client.from('ba_transactions').select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)').eq('campaign_run_id', runId).gte('occurred_at', start).lte('occurred_at', end),
+  ]);
+  fail(attendanceResponse.error, 'Impossible de charger les pointages Merchant');
+  fail(transactionResponse.error, 'Impossible de charger les transactions Merchant');
+
+  const attendances = (attendanceResponse.data || []) as BADailyAttendance[];
+  const transactions = (transactionResponse.data || []) as BATransaction[];
+  return bas.map((ba) => {
+    const attendance = attendances.find((item) => item.ba_id === ba.id) || null;
+    const baTransactions = transactions.filter((item) => item.ba_id === ba.id);
+    return {
+      ba,
+      attendance,
+      transactions: baTransactions,
+      status: attendance?.status === 'closed' ? 'closed' : attendance?.checkin_at ? 'present' : 'absent',
+      visitedPosCount: new Set(baTransactions.map((item) => item.pos_id)).size,
+      transactionCount: baTransactions.length,
+      totalAmount: baTransactions.reduce((total, item) => total + Number(item.amount || 0), 0),
+    };
+  });
+}
+
+export async function getMerchantArchives(runId: string, startDate?: string, endDate?: string): Promise<MerchantArchiveSummary[]> {
+  const client = getMerchantClient();
+  let attendanceQuery = client
+    .from('ba_daily_attendance')
+    .select('*')
+    .eq('campaign_run_id', runId)
+    .eq('status', 'closed')
+    .order('activity_date', { ascending: false });
+  if (startDate) attendanceQuery = attendanceQuery.gte('activity_date', startDate);
+  if (endDate) attendanceQuery = attendanceQuery.lte('activity_date', endDate);
+  const [bas, attendanceResponse] = await Promise.all([getMerchantBAs(), attendanceQuery]);
+  fail(attendanceResponse.error, 'Impossible de charger les archives Merchant');
+  const attendances = (attendanceResponse.data || []) as BADailyAttendance[];
+  if (attendances.length === 0) return [];
+
+  const minDate = attendances[attendances.length - 1].activity_date;
+  const maxDate = attendances[0].activity_date;
+  const { start } = activityWindow(minDate);
+  const { end } = activityWindow(maxDate);
+  const { data, error } = await client
+    .from('ba_transactions')
+    .select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)')
+    .eq('campaign_run_id', runId)
+    .gte('occurred_at', start)
+    .lte('occurred_at', end)
+    .order('occurred_at', { ascending: false });
+  fail(error, 'Impossible de charger les transactions des archives Merchant');
+  const transactions = (data || []) as BATransaction[];
+
+  return attendances.map((attendance) => {
+    const ba = bas.find((item) => item.id === attendance.ba_id) || { id: attendance.ba_id, name: 'Brand Ambassador', phone: '' };
+    const dayTransactions = transactions.filter((item) => item.ba_id === attendance.ba_id && item.occurred_at.slice(0, 10) === attendance.activity_date);
+    return {
+      attendance,
+      ba,
+      transactions: dayTransactions,
+      visitedPosCount: new Set(dayTransactions.map((item) => item.pos_id)).size,
+      transactionCount: dayTransactions.length,
+      totalAmount: dayTransactions.reduce((total, item) => total + Number(item.amount || 0), 0),
+    };
+  });
+}
+
 export async function getCampaignPos(campaignId: string, pool?: string): Promise<PointOfSale[]> {
   const client = getMerchantClient();
   let query = client
