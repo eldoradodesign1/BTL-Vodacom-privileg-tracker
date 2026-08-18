@@ -38,46 +38,54 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
     sapphire: 'Sapphire',
     ambre: 'Amber'
   };
+  const isDiamondTheme = theme === 'diamond';
   const shellClasses = theme === 'rubis'
     ? 'border-rose-300/30 shadow-[0_10px_34px_rgba(127,29,29,0.42)]'
     : theme === 'silver'
       ? 'border-slate-200/30 shadow-[0_10px_34px_rgba(148,163,184,0.28)]'
-      : theme === 'diamond'
-        ? 'border-white/35 shadow-[0_10px_34px_rgba(148,163,184,0.28)]'
+      : isDiamondTheme
+        ? 'border-slate-300/80 shadow-[0_12px_30px_rgba(100,116,139,0.22)]'
         : theme === 'sapphire'
           ? 'border-blue-300/30 shadow-[0_10px_34px_rgba(30,64,175,0.42)]'
           : theme === 'ambre'
             ? 'border-amber-200/30 shadow-[0_10px_34px_rgba(146,64,14,0.42)]'
             : 'border-white/15 shadow-[0_10px_34px_rgba(15,23,42,0.55)]';
-  const themeSurfaceStyle = {
-    backgroundImage: `linear-gradient(90deg, rgba(2, 6, 23, 0.96) 0%, rgba(2, 6, 23, 0.9) 42%, rgba(2, 6, 23, 0.58) 100%), url('/simulation-backgrounds/${theme}.jpg')`,
-    backgroundPosition: 'center, right center',
-    backgroundSize: 'cover, auto 100%',
-    backgroundRepeat: 'no-repeat, no-repeat'
-  };
+  const themeSurfaceStyle = isDiamondTheme
+    ? {
+      backgroundImage: "linear-gradient(90deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.86) 46%, rgba(247,245,242,0.55) 100%), url('/simulation-backgrounds/diamond-light.jpg')",
+      backgroundPosition: 'center, right center',
+      backgroundSize: 'cover, auto 100%',
+      backgroundRepeat: 'no-repeat, no-repeat'
+    }
+    : {
+      backgroundImage: `linear-gradient(90deg, rgba(2, 6, 23, 0.96) 0%, rgba(2, 6, 23, 0.9) 42%, rgba(2, 6, 23, 0.58) 100%), url('/simulation-backgrounds/${theme}.jpg')`,
+      backgroundPosition: 'center, right center',
+      backgroundSize: 'cover, auto 100%',
+      backgroundRepeat: 'no-repeat, no-repeat'
+    };
   const iconClasses = theme === 'rubis'
     ? 'border-rose-400/40 bg-rose-600/20 text-rose-200'
     : theme === 'silver'
       ? 'border-slate-300/30 bg-slate-500/20 text-slate-200'
-      : theme === 'diamond'
-        ? 'border-white/25 bg-white/10 text-slate-100'
+      : isDiamondTheme
+        ? 'border-slate-300 bg-white/75 text-slate-700'
         : theme === 'sapphire'
           ? 'border-sky-400/30 bg-sky-600/20 text-sky-100'
           : theme === 'ambre'
             ? 'border-amber-300/35 bg-amber-600/20 text-amber-100'
             : 'border-white/20 bg-white/10 text-white';
-  const selectClasses = theme === 'anthracite' || theme === 'rubis' || theme === 'silver' || theme === 'diamond' || theme === 'sapphire' || theme === 'ambre'
-    ? 'border-white/15 bg-black/50 text-white'
-    : 'border-zinc-300 bg-white text-zinc-800';
-  const chipBaseClasses = theme === 'anthracite' || theme === 'rubis' || theme === 'silver' || theme === 'diamond' || theme === 'sapphire' || theme === 'ambre'
-    ? 'border-white/10 bg-black/40 text-gray-200'
-    : 'border-zinc-300 bg-white/80 text-zinc-800';
+  const selectClasses = isDiamondTheme
+    ? 'border-slate-300 bg-white/80 text-slate-800'
+    : 'border-white/15 bg-black/50 text-white';
+  const chipBaseClasses = isDiamondTheme
+    ? 'border-slate-300/90 bg-white/75 text-slate-700 shadow-sm'
+    : 'border-white/10 bg-black/40 text-gray-200';
   const activeChipClasses = theme === 'rubis'
     ? 'bg-rose-600 text-white shadow-md shadow-rose-600/30'
     : theme === 'silver'
       ? 'bg-slate-400 text-slate-950 shadow-md shadow-slate-400/25'
-      : theme === 'diamond'
-        ? 'bg-white/20 text-white shadow-md shadow-white/20'
+      : isDiamondTheme
+        ? 'bg-slate-800 text-white shadow-md shadow-slate-400/30'
         : theme === 'sapphire'
           ? 'bg-sky-500 text-white shadow-md shadow-sky-500/25'
           : theme === 'ambre'
@@ -95,11 +103,11 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             <Shield className="w-4 h-4 animate-pulse" />
           </div>
           <div>
-            <span className="block text-[11px] font-black uppercase tracking-[0.25em] text-white">
+            <span className={`block text-[11px] font-black uppercase tracking-[0.25em] ${isDiamondTheme ? 'text-slate-800' : 'text-white'}`}>
               Mode Simulation Master Active
             </span>
-            <span className="text-[10px] text-white/75">
-              Collection <b className="font-black text-white">{gemLabels[theme]}</b> · Compte d'origine : <b className="text-white">{masterUser.name} ({masterUser.role.toUpperCase()})</b>
+            <span className={`text-[10px] ${isDiamondTheme ? 'text-slate-600' : 'text-white/75'}`}>
+              Collection <b className={`font-black ${isDiamondTheme ? 'text-slate-900' : 'text-white'}`}>{gemLabels[theme]}</b> · Compte d'origine : <b className={isDiamondTheme ? 'text-slate-800' : 'text-white'}>{masterUser.name} ({masterUser.role.toUpperCase()})</b>
             </span>
           </div>
         </div>
@@ -121,7 +129,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             <button
               onClick={() => onSimulateRole('agent')}
               className={`rounded-lg px-2.5 py-1 text-[10px] font-black uppercase transition-all ${
-                activeRole === 'agent' ? activeChipClasses : 'text-gray-300 hover:text-white'
+                activeRole === 'agent' ? activeChipClasses : (isDiamondTheme ? 'text-slate-600 hover:text-slate-900' : 'text-gray-300 hover:text-white')
               }`}
             >
               Agent
@@ -129,7 +137,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             <button
               onClick={() => onSimulateRole('supervisor')}
               className={`rounded-lg px-2.5 py-1 text-[10px] font-black uppercase transition-all ${
-                activeRole === 'supervisor' ? activeChipClasses : 'text-gray-300 hover:text-white'
+                activeRole === 'supervisor' ? activeChipClasses : (isDiamondTheme ? 'text-slate-600 hover:text-slate-900' : 'text-gray-300 hover:text-white')
               }`}
             >
               Sup
@@ -137,7 +145,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             <button
               onClick={() => onSimulateRole('admin')}
               className={`rounded-lg px-2.5 py-1 text-[10px] font-black uppercase transition-all ${
-                activeRole === 'admin' ? activeChipClasses : 'text-gray-300 hover:text-white'
+                activeRole === 'admin' ? activeChipClasses : (isDiamondTheme ? 'text-slate-600 hover:text-slate-900' : 'text-gray-300 hover:text-white')
               }`}
             >
               Admin
@@ -147,7 +155,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
           {simulatedRole && (
             <button
               onClick={onResetSimulation}
-              className={`flex items-center space-x-1 rounded-xl px-2.5 py-1.5 text-[10px] font-bold transition-all ${theme === 'anthracite' || theme === 'rubis' || theme === 'silver' || theme === 'diamond' || theme === 'sapphire' || theme === 'ambre' ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-zinc-100 text-zinc-800 hover:bg-zinc-200'}`}
+              className={`flex items-center space-x-1 rounded-xl px-2.5 py-1.5 text-[10px] font-bold transition-all ${isDiamondTheme ? 'border border-slate-300 bg-white/80 text-slate-700 hover:bg-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
               title="Quitter la simulation"
             >
               <RotateCcw className="w-3 h-3" />

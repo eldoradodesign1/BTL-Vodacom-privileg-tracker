@@ -119,18 +119,24 @@ body.theme-silver {
 }
 
 body.theme-diamond {
-  background-color: #0b1120 !important;
-  background-image: radial-gradient(circle at 20% 20%, rgba(255,255,255,0.28) 0%, transparent 18%), radial-gradient(circle at 80% 0%, rgba(244,114,182,0.25) 0%, transparent 20%), linear-gradient(135deg, #0b1120 0%, #111827 40%, #1f2937 70%, #e2e8f0 100%) !important;
-  color: #f8fafc !important;
-  --theme-text-300: rgba(248, 250, 252, 0.98);
-  --theme-text-400: rgba(240, 245, 255, 0.94);
-  --theme-text-500: rgba(226, 232, 240, 0.84);
-  --theme-accent: #22d3ee;
-  --theme-accent-rgb: 34, 211, 238;
-  --theme-accent-soft-rgb: 103, 232, 249;
-  --theme-accent-glow: rgba(34, 211, 238, 0.5);
+  background-color: #f6f4f1 !important;
+  background-image: linear-gradient(135deg, rgba(255,255,255,0.88) 0%, rgba(244,243,246,0.8) 54%, rgba(225,221,228,0.74) 100%) !important;
+  color: #28303a !important;
+  --theme-text-300: rgba(43, 52, 62, 0.98);
+  --theme-text-400: rgba(62, 72, 84, 0.9);
+  --theme-text-500: rgba(88, 98, 112, 0.78);
+  --theme-accent: #64748b;
+  --theme-accent-rgb: 100, 116, 139;
+  --theme-accent-soft-rgb: 148, 163, 184;
+  --theme-accent-glow: rgba(100, 116, 139, 0.34);
   --voda-red: var(--theme-accent);
   --voda-red-glow: var(--theme-accent-glow);
+  --surface-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.84) 0%, rgba(255, 255, 255, 0.62) 100%);
+  --surface-glass-strong: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(247, 246, 248, 0.74) 100%);
+  --surface-border: rgba(148, 163, 184, 0.42);
+  --surface-border-quiet: rgba(148, 163, 184, 0.26);
+  --shadow-elevation: 0 18px 42px rgba(100, 116, 139, 0.18), 0 1px 0 rgba(255, 255, 255, 0.9) inset;
+  --shadow-floating: 0 24px 54px rgba(100, 116, 139, 0.22), 0 1px 0 rgba(255, 255, 255, 0.94) inset;
 }
 
 body.theme-sapphire {
@@ -166,7 +172,6 @@ body.theme-ambre {
 body.theme-anthracite .glass-card,
 body.theme-rubis .glass-card,
 body.theme-silver .glass-card,
-body.theme-diamond .glass-card,
 body.theme-sapphire .glass-card,
 body.theme-ambre .glass-card {
   background: rgba(255, 255, 255, 0.16);
@@ -786,8 +791,8 @@ body.theme-silver {
 }
 
 body.theme-diamond {
-  background-image: linear-gradient(135deg, rgba(5, 11, 27, 0.82) 0%, rgba(11, 20, 44, 0.46) 54%, rgba(28, 23, 60, 0.42) 100%), url('/theme-backgrounds/diamond.jpg') !important;
-  --content-scrim: rgba(5, 10, 25, 0.3);
+  background-image: linear-gradient(135deg, rgba(255,255,255,0.66) 0%, rgba(249,248,246,0.4) 54%, rgba(225,221,228,0.26) 100%), url('/theme-backgrounds/diamond-light.jpg') !important;
+  --content-scrim: rgba(255, 255, 255, 0.22);
 }
 
 body.theme-sapphire {
@@ -1009,4 +1014,56 @@ body.theme-ambre {
     -webkit-backdrop-filter: blur(13px) saturate(118%) !important;
     box-shadow: 0 14px 34px rgba(2, 6, 23, 0.3), 0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
   }
+}
+
+/* Diamond — light platinum glass system */
+body.theme-diamond .app-header,
+body.theme-diamond .app-bottom-nav,
+body.theme-diamond .app-popover {
+  background: linear-gradient(135deg, rgba(255,255,255,0.91) 0%, rgba(245,244,247,0.78) 100%) !important;
+  border-color: rgba(148, 163, 184, 0.36) !important;
+  box-shadow: 0 14px 38px rgba(100, 116, 139, 0.17), 0 1px 0 rgba(255,255,255,0.96) inset;
+}
+
+body.theme-diamond .app-icon-button,
+body.theme-diamond .app-input,
+body.theme-diamond .login-note {
+  background: rgba(255,255,255,0.72) !important;
+  border-color: rgba(148, 163, 184, 0.32) !important;
+  color: #334155 !important;
+}
+
+body.theme-diamond .glass-card:hover {
+  border-color: rgba(100, 116, 139, 0.48) !important;
+  box-shadow: 0 24px 54px rgba(100, 116, 139, 0.22), 0 1px 0 rgba(255,255,255,0.96) inset;
+}
+
+body.theme-diamond .app-header .text-white,
+body.theme-diamond .app-bottom-nav .text-white,
+body.theme-diamond .app-popover .text-white,
+body.theme-diamond .glass-card .text-white {
+  color: #273241 !important;
+}
+
+body.theme-diamond .glass-card .bg-black\/20,
+body.theme-diamond .glass-card .bg-black\/30,
+body.theme-diamond .glass-card .bg-black\/40,
+body.theme-diamond .glass-card .bg-black\/50,
+body.theme-diamond .glass-card .bg-black\/60 {
+  background-color: rgba(226, 232, 240, 0.58) !important;
+  border-color: rgba(148, 163, 184, 0.24) !important;
+}
+
+body.theme-diamond .brand-text {
+  background: linear-gradient(135deg, #1e293b 0%, #475569 55%, #94a3b8 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+body.theme-diamond .app-bottom-nav .text-gray-300,
+body.theme-diamond .app-bottom-nav .text-gray-400,
+body.theme-diamond .app-header .text-gray-300,
+body.theme-diamond .app-header .text-gray-400 {
+  color: #64748b !important;
 }

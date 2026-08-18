@@ -288,15 +288,30 @@ const todayLeads =
     ? getLeads().filter((l) => l.agent_id === selectedAgentForTodayClients.id && toISO(l.timestamp) === todayStr)
     : [];
 
+  const resetSimulationContext = () => {
+    setActiveTab('home');
+    setHomeTabPressCount(0);
+    setSelectedAgentForProfile(null);
+    setSelectedAgentForTodayClients(null);
+    setSelectedLocationAgent(null);
+    setPdfModalUrl(null);
+  };
+
   const handleSimulateUserChange = (userId: string) => {
-    setSimulatedUserId(userId);
     const found = users.find((u) => u.id === userId);
-    if (found) {
-      setSimulatedRole(found.role);
-    }
+    if (!found) return;
+    resetSimulationContext();
+    setSimulatedUserId(userId);
+    setSimulatedRole(found.role);
+  };
+
+  const handleSimulateRoleChange = (role: UserRole) => {
+    resetSimulationContext();
+    setSimulatedRole(role);
   };
 
   const handleResetSimulation = () => {
+    resetSimulationContext();
     setSimulatedRole(null);
     setSimulatedUserId(null);
   };
@@ -321,7 +336,7 @@ const todayLeads =
           activeTab={activeTab}
           homeTabPressCount={homeTabPressCount}
           onRequestTabChange={(tab) => setActiveTab(tab)}
-          onSimulateRole={(role) => setSimulatedRole(role)}
+          onSimulateRole={handleSimulateRoleChange}
           onOpenUserModal={() => setIsUserModalOpen(true)}
           onOpenShopModal={() => setIsShopModalOpen(true)}
           onOpenAgentProfile={(agent) => setSelectedAgentForProfile(agent)}
@@ -361,7 +376,13 @@ const todayLeads =
       );
     }
 
-    return <Suspense fallback={<SectionLoader />}>{content}</Suspense>;
+    return (
+      <Suspense fallback={<SectionLoader />}>
+        <React.Fragment key={`${effectiveRole}-${effectiveUser.id}`}>
+          {content}
+        </React.Fragment>
+      </Suspense>
+    );
   };
 
   const themeSurfaceStyle = theme === 'anthracite'
@@ -371,7 +392,7 @@ const todayLeads =
       : theme === 'silver'
         ? { backgroundColor: '#0f172a', backgroundImage: 'linear-gradient(135deg, #0f172a 0%, #334155 46%, #dbeafe 100%)', color: '#f8fafc' }
         : theme === 'diamond'
-          ? { backgroundColor: '#0b1120', backgroundImage: 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.28) 0%, transparent 18%), radial-gradient(circle at 80% 0%, rgba(244,114,182,0.25) 0%, transparent 20%), linear-gradient(135deg, #0b1120 0%, #111827 40%, #1f2937 70%, #e2e8f0 100%)', color: '#f8fafc' }
+          ? { backgroundColor: '#f6f4f1', backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(242,242,247,0.88) 52%, rgba(225,221,228,0.9) 100%)', color: '#28303a' }
           : theme === 'sapphire'
             ? { backgroundColor: '#071120', backgroundImage: 'linear-gradient(135deg, #071120 0%, #1d4ed8 48%, #93c5fd 100%)', color: '#f8fbff' }
             : theme === 'ambre'
@@ -389,7 +410,7 @@ const todayLeads =
         users={users}
         simulatedRole={simulatedRole}
         theme={theme}
-        onSimulateRole={(role) => setSimulatedRole(role)}
+        onSimulateRole={handleSimulateRoleChange}
         onSimulateUserChange={handleSimulateUserChange}
         onResetSimulation={handleResetSimulation}
       />

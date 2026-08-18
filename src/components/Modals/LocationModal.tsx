@@ -33,8 +33,8 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, agent, onC
               {formatAgentLocationLine({
                 shop: agent.shop,
                 status: agent.status,
-                arrivalTime: agent.arrivalTime,
-                departureTime: agent.departureTime
+                arrivalTime: agent.arrivalTime || agent.reportObj?.arrival_time,
+                departureTime: agent.departureTime || agent.reportObj?.departure_time
               })}
             </p>
           </div>
