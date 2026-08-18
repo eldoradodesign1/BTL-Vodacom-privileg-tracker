@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Banknote, CalendarDays, Hash, Plus, RefreshCw, Smartphone } from 'lucide-react';
-import type { BATransaction, CampaignRun, User } from '../types';
+import type { BATransaction, User } from '../types';
 import { getActiveCampaignRuns, getMerchantCampaign, getTransactionsForBA } from '../utils/merchantCampaign';
 
 interface MerchantTransactionsViewProps {
@@ -10,7 +10,6 @@ interface MerchantTransactionsViewProps {
 
 export const MerchantTransactionsView: React.FC<MerchantTransactionsViewProps> = ({ currentUser, onRecordTransaction }) => {
   const [transactions, setTransactions] = useState<BATransaction[]>([]);
-  const [run, setRun] = useState<CampaignRun | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -22,7 +21,6 @@ export const MerchantTransactionsView: React.FC<MerchantTransactionsViewProps> =
       if (!campaign) throw new Error('Campagne Merchant introuvable.');
       const runs = await getActiveCampaignRuns(campaign.id);
       const activeRun = runs.find((item) => item.status === 'active') || runs[0] || null;
-      setRun(activeRun);
       setTransactions(await getTransactionsForBA(currentUser.id, activeRun?.id));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Impossible de charger les transactions.');
@@ -47,11 +45,11 @@ export const MerchantTransactionsView: React.FC<MerchantTransactionsViewProps> =
           <div className="mt-1 flex items-start justify-between gap-3">
             <div>
               <h1 className="text-xl font-black text-white">Mes transactions</h1>
-              <p className="mt-1 max-w-xs text-xs font-semibold leading-relaxed text-gray-300">Historique des transactions enregistrées{run ? ` · ${run.name}` : ''}</p>
+              <p className="mt-1 max-w-xs text-xs font-semibold leading-relaxed text-gray-300">Historique des transactions enregistrées</p>
             </div>
             <button type="button" onClick={() => void refresh()} aria-label="Actualiser les transactions" className="rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 text-cyan-100 transition-colors hover:bg-white/10"><RefreshCw size={16}/></button>
           </div>
-          <button type="button" onClick={onRecordTransaction} className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-200/30 bg-cyan-300/10 px-4 py-3 text-xs font-black uppercase tracking-wide text-cyan-50 transition-all hover:bg-cyan-300/20">
+          <button type="button" onClick={onRecordTransaction} className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/70 bg-cyan-300 px-4 py-3 text-xs font-black uppercase tracking-wide text-slate-950 shadow-[0_10px_24px_rgba(34,211,238,0.22)] transition-all hover:-translate-y-0.5 hover:bg-cyan-200 hover:shadow-[0_14px_30px_rgba(34,211,238,0.3)] active:translate-y-0">
             <Plus size={17} /> Enregistrer un POS / une transaction
           </button>
           <div className="mt-4 grid grid-cols-2 divide-x divide-white/10 rounded-2xl border border-white/[0.08] bg-black/10 text-center">

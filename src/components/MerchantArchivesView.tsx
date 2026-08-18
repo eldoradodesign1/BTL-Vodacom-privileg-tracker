@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Archive, CalendarDays, CheckCircle2, Clock3, FileText, MapPin, RefreshCw, ShoppingBag } from 'lucide-react';
-import type { BADailyAttendance, BATransaction, CampaignRun, User } from '../types';
+import type { BADailyAttendance, BATransaction, User } from '../types';
 import { getActiveCampaignRuns, getAttendanceHistoryForBA, getMerchantCampaign, getTransactionsForBA } from '../utils/merchantCampaign';
 
 interface MerchantArchivesViewProps {
@@ -12,7 +12,6 @@ const formatActivityDate = (date: string) => new Date(`${date}T12:00:00`).toLoca
 });
 
 export const MerchantArchivesView: React.FC<MerchantArchivesViewProps> = ({ currentUser }) => {
-  const [run, setRun] = useState<CampaignRun | null>(null);
   const [reports, setReports] = useState<BADailyAttendance[]>([]);
   const [transactions, setTransactions] = useState<BATransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +25,6 @@ export const MerchantArchivesView: React.FC<MerchantArchivesViewProps> = ({ curr
       if (!campaign) throw new Error('Campagne Merchant introuvable.');
       const runs = await getActiveCampaignRuns(campaign.id);
       const activeRun = runs.find((item) => item.status === 'active') || runs[0] || null;
-      setRun(activeRun);
       const [nextReports, nextTransactions] = await Promise.all([
         getAttendanceHistoryForBA(currentUser.id, activeRun?.id),
         getTransactionsForBA(currentUser.id, activeRun?.id),
@@ -58,7 +56,7 @@ export const MerchantArchivesView: React.FC<MerchantArchivesViewProps> = ({ curr
       <section className="glass-card relative overflow-hidden border border-amber-300/15 p-4">
         <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-amber-300/10 blur-3xl" />
         <div className="relative flex items-start justify-between gap-3">
-          <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200/70">Merchant Educational Campaign</p><h1 className="mt-1 text-xl font-black text-white">Mes archives</h1><p className="mt-1 text-xs font-semibold text-gray-300">Rapports journaliers clôturés{run ? ` · ${run.name}` : ''}</p></div>
+          <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-200/70">Merchant Educational Campaign</p><h1 className="mt-1 text-xl font-black text-white">Mes archives</h1><p className="mt-1 text-xs font-semibold text-gray-300">Rapports journaliers clôturés</p></div>
           <button type="button" onClick={() => void refresh()} aria-label="Actualiser les archives" className="rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 text-amber-100 transition-colors hover:bg-white/10"><RefreshCw size={16}/></button>
         </div>
         <div className="relative mt-4 flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-black/10 p-3"><Archive className="text-amber-200" size={19}/><div><b className="block text-lg font-black text-white">{reports.length}</b><span className="text-[9px] font-black uppercase text-gray-400">Rapports clôturés</span></div></div>

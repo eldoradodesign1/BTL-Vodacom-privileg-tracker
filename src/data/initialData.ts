@@ -19,7 +19,7 @@ export const INITIAL_USERS: User[] = [
   { id: 'sup-0001-4a11-a881-100000000001', phone: '0812923941', name: 'Hervé Ntalu', role: 'supervisor', permanentShopId: 'S001' },
   { id: 'sup-0002-4a11-a881-100000000002', phone: '0810000001', name: 'Supervisor', role: 'supervisor', permanentShopId: 'S002' },
   { id: 'arnold-koma-sub-admin', phone: '0823031980', name: 'Arnold Koma', role: 'sub_admin', userCategory: 'operations', password: 'test', permanentShopId: 'global-operations' },
-  { id: 'agt-0001-4a11-a881-200000000001', phone: '0821000001', name: 'Agent', role: 'agent', supervisorId: 'sup-0002-4a11-a881-100000000002', permanentShopId: 'S002' },
+  { id: 'agt-test-ba-herve-0821000001', phone: '0821000001', name: 'Agent Test', role: 'agent', userCategory: 'brand_ambassador', password: 'password', supervisorId: 'sup-0001-4a11-a881-100000000001', permanentShopId: 'S002' },
   { id: 'agt-0001-4a11-a881-200000000002', phone: '0821000002', name: 'Agent2', role: 'agent', supervisorId: 'sup-0002-4a11-a881-100000000002', permanentShopId: 'S002' },
   { id: 'agt-0001-4a11-a881-200000000004', phone: '0827666847', name: 'Djenny Fondo', role: 'agent', supervisorId: 'sup-0001-4a11-a881-100000000001', permanentShopId: 'S001' },
   { id: 'agt-0001-4a11-a881-200000000005', phone: '0824895691', name: 'Harmonie Mbelani', role: 'agent', supervisorId: 'sup-0001-4a11-a881-100000000001', permanentShopId: 'S001' },
