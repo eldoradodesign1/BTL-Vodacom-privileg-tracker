@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { User, NotificationItem } from '../types';
-import { Bell, LogOut, Shield, FileSpreadsheet, Palette, Camera, X } from 'lucide-react';
+import { Bell, LogOut, Shield, FileSpreadsheet, Palette, Camera, X, BriefcaseBusiness } from 'lucide-react';
 import { addCheckin, getShopById, resolveStoredPhotoUrl } from '../utils/storage';
 
 export type ThemeMode = 'anthracite' | 'rubis' | 'silver' | 'diamond' | 'sapphire' | 'ambre';
@@ -21,6 +21,8 @@ interface HeaderProps {
   onPointageRecorded?: () => void;
   theme?: ThemeMode;
   onSetTheme?: (theme: ThemeMode) => void;
+  activeCampaign?: 'vodacom-privilege' | 'merchant-educational';
+  onSetCampaign?: (campaign: 'vodacom-privilege' | 'merchant-educational') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -37,10 +39,13 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenGSheetModal,
   onPointageRecorded,
   theme = 'anthracite',
-  onSetTheme
+  onSetTheme,
+  activeCampaign = 'vodacom-privilege',
+  onSetCampaign
 }) => {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
+  const [showCampaignMenu, setShowCampaignMenu] = useState(false);
   const [photoError, setPhotoError] = useState(false);
   const [localPhotoUrl, setLocalPhotoUrl] = useState(profilePhotoUrl || '');
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
@@ -67,16 +72,17 @@ export const Header: React.FC<HeaderProps> = ({
   }, [profilePhotoUrl]);
 
   useEffect(() => {
-    if (!showNotifPanel && !showThemeMenu) return;
+    if (!showNotifPanel && !showThemeMenu && !showCampaignMenu) return;
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       if (target.closest('[data-header-actions]')) return;
       setShowNotifPanel(false);
       setShowThemeMenu(false);
+      setShowCampaignMenu(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showNotifPanel, showThemeMenu]);
+  }, [showNotifPanel, showThemeMenu, showCampaignMenu]);
 
   const handlePointageCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -213,6 +219,41 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0" data-header-actions>
+          {onSetCampaign && (
+            <div className="relative">
+              <button
+                onClick={() => setShowCampaignMenu((prev) => !prev)}
+                className={`app-icon-button p-2 rounded-xl border transition-all ${
+                  isDarkTheme ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
+                }`}
+                title="Changer de campagne"
+              >
+                <BriefcaseBusiness className="w-4 h-4" />
+              </button>
+              {showCampaignMenu && (
+                <div className={`app-popover absolute right-0 top-11 w-56 border rounded-2xl p-1.5 shadow-2xl z-50 ${
+                  isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
+                }`}>
+                  {[
+                    { key: 'vodacom-privilege', label: 'Vodacom Privilège', note: 'Hôtesses' },
+                    { key: 'merchant-educational', label: 'Merchant Education', note: 'Brand Ambassadors' }
+                  ].map((campaign) => (
+                    <button
+                      key={campaign.key}
+                      onClick={() => { onSetCampaign(campaign.key as 'vodacom-privilege' | 'merchant-educational'); setShowCampaignMenu(false); }}
+                      className={`w-full text-left px-3 py-2.5 rounded-xl transition-all ${
+                        activeCampaign === campaign.key ? 'bg-red-600 text-white' : (isDarkTheme ? 'hover:bg-white/10 text-gray-100' : 'hover:bg-zinc-100 text-zinc-700')
+                      }`}
+                    >
+                      <span className="block text-xs font-black uppercase">{campaign.label}</span>
+                      <span className="block mt-0.5 text-[9px] font-bold opacity-70">{campaign.note}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {onSetTheme && (
             <div className="relative">
               <button
@@ -244,6 +285,7 @@ export const Header: React.FC<HeaderProps> = ({
                       onClick={() => {
                         onSetTheme(opt.key as ThemeMode);
                         setShowThemeMenu(false);
+      setShowCampaignMenu(false);
                       }}
                       className={`w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase transition-all ${
                         theme === opt.key

@@ -1,5 +1,8 @@
 export type UserRole = 'agent' | 'supervisor' | 'admin';
 
+export type UserCategory = 'hostess' | 'brand_ambassador' | 'operations';
+export type CampaignType = 'hostess' | 'brand_ambassador';
+
 export interface User {
   id: string;
   phone: string;
@@ -8,8 +11,97 @@ export interface User {
   password?: string;
   supervisorId?: string;
   permanentShopId: string;
+  userCategory?: UserCategory;
+  authUserId?: string;
   created_at?: string;
   last_login?: string;
+}
+
+export interface Campaign {
+  id: string;
+  code: string;
+  name: string;
+  campaign_type: CampaignType;
+  status: 'draft' | 'active' | 'archived';
+  starts_on?: string | null;
+  ends_on?: string | null;
+  daily_pos_target?: number | null;
+  transactions_per_pos_target?: number | null;
+}
+
+export interface CampaignRun {
+  id: string;
+  campaign_id: string;
+  name: string;
+  starts_on: string;
+  ends_on: string;
+  status: 'draft' | 'active' | 'closed' | 'archived';
+  daily_pos_target: number;
+  transactions_per_pos_target: number;
+}
+
+export interface PointOfSale {
+  id: string;
+  campaign_id: string;
+  denomination: string;
+  agent_number: string;
+  address: string;
+  activity?: string | null;
+  mfs_name?: string | null;
+  pool: 'Funa' | 'Mont amba' | 'Tshangu' | 'Lukunga';
+  latitude?: number | null;
+  longitude?: number | null;
+  is_active: boolean;
+}
+
+export interface BADailyAssignment {
+  id: string;
+  campaign_run_id: string;
+  activity_date: string;
+  ba_id: string;
+  pos_id: string;
+  status: 'planned' | 'in_progress' | 'visited' | 'not_visited' | 'cancelled';
+  source: 'manual' | 'csv' | 'xlsx';
+  assigned_by?: string | null;
+  origin_assignment_id?: string | null;
+  carried_from_date?: string | null;
+  carry_reason?: string | null;
+  point_of_sale?: PointOfSale;
+}
+
+export interface BADailyAttendance {
+  id: string;
+  campaign_run_id: string;
+  ba_id: string;
+  activity_date: string;
+  status: 'open' | 'closed' | 'alerted';
+  checkin_at?: string | null;
+  checkin_latitude?: number | null;
+  checkin_longitude?: number | null;
+  checkin_accuracy_m?: number | null;
+  checkin_photo_path?: string | null;
+  checkout_at?: string | null;
+  checkout_latitude?: number | null;
+  checkout_longitude?: number | null;
+  checkout_accuracy_m?: number | null;
+  closing_comment?: string | null;
+}
+
+export interface BATransaction {
+  id: string;
+  campaign_run_id: string;
+  ba_id: string;
+  pos_id: string;
+  pos_visit_id?: string | null;
+  transaction_reference?: string | null;
+  amount: number;
+  evidence_path: string;
+  occurred_at: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy_m?: number | null;
+  comment?: string | null;
+  status: 'recorded' | 'verified' | 'rejected';
 }
 
 export interface Shop {

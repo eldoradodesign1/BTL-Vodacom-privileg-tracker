@@ -83,7 +83,9 @@ export async function syncLocalDataToSupabase(payload: {
   await upsertRows(client, 'users', (payload.users || []).map((item) => ({
     ...item,
     supervisor_id: item.supervisorId,
-    permanent_shop_id: item.permanentShopId
+    permanent_shop_id: item.permanentShopId,
+    user_category: item.userCategory,
+    auth_user_id: item.authUserId
   })));
 
   await upsertRows(client, 'shops', (payload.shops || []).map((item) => ({
@@ -237,6 +239,8 @@ export async function fetchUsersFromSupabase(): Promise<User[]> {
     password: u.password_hash,
     supervisorId: u.supervisor_id,
     permanentShopId: u.permanent_shop_id,
+    userCategory: u.user_category || undefined,
+    authUserId: u.auth_user_id || undefined,
     created_at: u.created_at,
     last_login: u.last_login
   })) as User[];

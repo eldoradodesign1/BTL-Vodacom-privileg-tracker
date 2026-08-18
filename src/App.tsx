@@ -49,6 +49,9 @@ const AgentProfileModal = lazy(() => import('./components/Modals/AgentProfileMod
 const TodayClientsModal = lazy(() => import('./components/Modals/TodayClientsModal').then(({ TodayClientsModal: component }) => ({ default: component })));
 const GSheetModal = lazy(() => import('./components/Modals/GSheetModal').then(({ GSheetModal: component }) => ({ default: component })));
 const LocationModal = lazy(() => import('./components/Modals/LocationModal').then(({ LocationModal: component }) => ({ default: component })));
+const MerchantBAView = lazy(() => import('./components/MerchantBAView').then(({ MerchantBAView: component }) => ({ default: component })));
+const MerchantSupervisorView = lazy(() => import('./components/MerchantSupervisorView').then(({ MerchantSupervisorView: component }) => ({ default: component })));
+const MerchantAssignmentImportModal = lazy(() => import('./components/Modals/MerchantAssignmentImportModal').then(({ MerchantAssignmentImportModal: component }) => ({ default: component })));
 
 const SectionLoader = () => (
   <div className="flex min-h-[12rem] items-center justify-center">
@@ -88,6 +91,14 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState<TabType>('home');
+  const [activeCampaign, setActiveCampaign] = useState<'vodacom-privilege' | 'merchant-educational'>(() => {
+    try {
+      const saved = localStorage.getItem('btl_active_campaign');
+      return saved === 'merchant-educational' ? 'merchant-educational' : 'vodacom-privilege';
+    } catch {
+      return 'vodacom-privilege';
+    }
+  });
   const [homeTabPressCount, setHomeTabPressCount] = useState(0);
   const [users, setUsers] = useState<User[]>(() => getUsers());
   const [shops, setShops] = useState<Shop[]>(() => getShops());
@@ -100,6 +111,7 @@ export default function App() {
   const [isShopModalOpen, setIsShopModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isGSheetModalOpen, setIsGSheetModalOpen] = useState(false);
+  const [isMerchantAssignmentImportOpen, setIsMerchantAssignmentImportOpen] = useState(false);
   const [pdfModalUrl, setPdfModalUrl] = useState<string | null>(null);
   const [selectedAgentForProfile, setSelectedAgentForProfile] = useState<AgentMasterStatus | null>(null);
   const [selectedAgentForTodayClients, setSelectedAgentForTodayClients] = useState<AgentMasterStatus | null>(null);
@@ -128,6 +140,12 @@ export default function App() {
 
   const setThemeMode = (nextTheme: ThemeMode) => {
     setTheme(nextTheme);
+  };
+
+  const setCampaignContext = (campaign: 'vodacom-privilege' | 'merchant-educational') => {
+    setActiveCampaign(campaign);
+    localStorage.setItem('btl_active_campaign', campaign);
+    setActiveTab('home');
   };
 
 const refreshData = useCallback(async () => {
@@ -260,6 +278,8 @@ const refreshData = useCallback(async () => {
     role: effectiveRole
   };
 
+  const isMerchantContext = effectiveUser.userCategory === 'brand_ambassador' || activeCampaign === 'merchant-educational';
+
   const todayStr = toISO(new Date());
 
 const allCheckins = getCheckins();
@@ -328,6 +348,10 @@ const todayLeads =
 
     if (activeTab === 'chat') {
       content = <ChatView currentUser={effectiveUser} onDataChanged={refreshData} />;
+    } else if (effectiveUser.userCategory === 'brand_ambassador') {
+      content = <MerchantBAView currentUser={effectiveUser} />;
+    } else if (isMerchantContext && (effectiveRole === 'admin' || effectiveRole === 'supervisor')) {
+      content = <MerchantSupervisorView currentUser={effectiveUser} onOpenImport={effectiveRole === 'admin' ? () => setIsMerchantAssignmentImportOpen(true) : undefined} />;
     } else if (effectiveRole === 'admin') {
       content = (
         <AdminView
@@ -425,6 +449,8 @@ const todayLeads =
         onPointageRecorded={refreshData}
         theme={theme}
         onSetTheme={setThemeMode}
+        activeCampaign={isMerchantContext ? 'merchant-educational' : 'vodacom-privilege'}
+        onSetCampaign={realMasterUser.role === 'admin' || realMasterUser.role === 'supervisor' ? setCampaignContext : undefined}
         onMarkNotifsRead={() => {
           markNotifsAsRead(effectiveUser.id);
           markChatAsRead(effectiveUser.id);
@@ -550,6 +576,20 @@ const todayLeads =
       {selectedLocationAgent && (
         <Suspense fallback={null}>
           <LocationModal isOpen agent={selectedLocationAgent} onClose={() => setSelectedLocationAgent(null)} />
+        </Suspense>
+      )}
+
+      {isMerchantAssignmentImportOpen && (
+        <Suspense fallback={null}>
+          <MerchantAssignmentImportModal
+            isOpen
+            currentUser={effectiveUser}
+            onClose={() => setIsMerchantAssignmentImportOpen(false)}
+            onImported={() => {
+              setIsMerchantAssignmentImportOpen(false);
+              setDataRevision((prev) => prev + 1);
+            }}
+          />
         </Suspense>
       )}
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User } from '../types';
-import { authenticate, purgeAndResetEverything } from '../utils/storage';
+import { authenticate, purgeAndResetEverything, refreshUsersFromSupabase } from '../utils/storage';
 import { Lock, Phone, Trash2 } from 'lucide-react';
 
 interface LoginScreenProps {
@@ -13,7 +13,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const phoneValue = (e.currentTarget as HTMLFormElement).elements.namedItem('phone') as HTMLInputElement | null;
     const passwordValue = (e.currentTarget as HTMLFormElement).elements.namedItem('password') as HTMLInputElement | null;
@@ -23,15 +23,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     setLoading(true);
     setError('');
 
-    setTimeout(() => {
+    try {
+      await refreshUsersFromSupabase();
       const result = authenticate(enteredPhone, enteredPassword);
-      setLoading(false);
       if (result.success && result.user) {
         onLoginSuccess(result.user);
       } else {
         setError(result.message || 'Identifiants incorrects.');
       }
-    }, 400);
+    } catch {
+      const result = authenticate(enteredPhone, enteredPassword);
+      if (result.success && result.user) {
+        onLoginSuccess(result.user);
+      } else {
+        setError(result.message || 'Identifiants incorrects.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEnterSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {

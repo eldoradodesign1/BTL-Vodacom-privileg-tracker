@@ -241,6 +241,8 @@ function mergeUsersWithSeedData(storedUsers: User[]): User[] {
       password: candidate.password ?? existing.password,
       supervisorId: candidate.supervisorId ?? existing.supervisorId,
       permanentShopId: candidate.permanentShopId ?? existing.permanentShopId,
+      userCategory: candidate.userCategory ?? existing.userCategory,
+      authUserId: candidate.authUserId ?? existing.authUserId,
       created_at: candidate.created_at || existing.created_at,
       last_login: candidate.last_login || existing.last_login
     };
