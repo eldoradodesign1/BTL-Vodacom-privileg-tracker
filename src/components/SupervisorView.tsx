@@ -249,6 +249,26 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
       const totalB = b.stats.priv + b.stats.roam + b.stats.bund;
       return totalB - totalA;
     });
+  const historicalDailyLeaders = reportDateList
+    .filter((date) => date <= selectedDate)
+    .map((date) => {
+      const totals = new Map<string, number>();
+      teamReports.filter((report) => report.date === date).forEach((report) => {
+        totals.set(report.agent_id, (totals.get(report.agent_id) || 0) + report.priv + report.roam + report.bund);
+      });
+      const winner = Array.from(totals.entries()).sort((left, right) => right[1] - left[1])[0];
+      return winner ? { date, agentId: winner[0] } : null;
+    })
+    .filter((item): item is { date: string; agentId: string } => Boolean(item))
+    .sort((left, right) => right.date.localeCompare(left.date));
+  const currentPodiumLeader = sortedPodium[0];
+  let platinumStreak = 0;
+  if (currentPodiumLeader) {
+    for (const leader of historicalDailyLeaders) {
+      if (leader.agentId === currentPodiumLeader.id) platinumStreak += 1;
+      else break;
+    }
+  }
 
   const handleGenerateSupervisorReport = async () => {
   if (reportsStartDate > reportsEndDate) return;
@@ -1331,10 +1351,16 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xs font-black uppercase text-amber-400 tracking-wider flex items-center space-x-1.5">
             <Trophy className="w-4 h-4" />
-            <span>🏆 Podium Performance Équipe</span>
+            <span>Podium Performance Équipe</span>
           </h2>
         </div>
 
+        {currentPodiumLeader && platinumStreak >= 5 && (
+          <div className="relative mb-3 overflow-hidden rounded-2xl border border-slate-100/40 bg-[linear-gradient(135deg,rgba(226,232,240,0.26),rgba(100,116,139,0.20))] p-3">
+            <Trophy className="pointer-events-none absolute -right-2 -bottom-8 h-28 w-28 -rotate-12 text-slate-100/30" />
+            <div className="relative flex items-center gap-2"><Trophy className="text-slate-100" size={20}/><div><p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-100">Coupe platine</p><p className="text-xs font-black text-white">{currentPodiumLeader.name} conserve la première place depuis {platinumStreak} journées.</p></div></div>
+          </div>
+        )}
         <div className="space-y-2">
           {sortedPodium.length === 0 ? (
             <div className="text-[10px] text-gray-400 italic">Aucune activité réelle aujourd'hui pour le podium.</div>
@@ -1347,21 +1373,21 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   'border-slate-300/40 bg-slate-400/10 text-slate-300',
                   'border-amber-700/40 bg-amber-800/10 text-amber-600'
                 ];
-                const trophyName = idx === 0 ? 'Gold' : (idx === 1 ? 'Silver' : 'Bronze');
+                const trophyColor = idx === 0 ? 'text-amber-300' : (idx === 1 ? 'text-slate-200' : 'text-orange-400');
                 return (
                   <div
                     key={item.id}
-                    className={`podium-card p-3 rounded-2xl border flex items-center justify-between ${colors[idx] || 'border-white/10 bg-white/5'}`}
-                    style={{ ['--podium-watermark' as string]: `url('/trophees/Trophee_${trophyName}.png')` }}
+                    className={`podium-card relative overflow-hidden p-3 rounded-2xl border flex items-center justify-between ${colors[idx] || 'border-white/10 bg-white/5'}`}
                   >
-                    <div className="flex items-center space-x-3">
+                    <Trophy className={`pointer-events-none absolute -right-3 -bottom-7 h-28 w-28 -rotate-12 opacity-[0.20] ${trophyColor}`} />
+                    <div className="relative flex items-center space-x-3">
                       <span className="text-lg font-black w-6 text-center">#{idx + 1}</span>
                       <div>
                         <p className="text-xs font-black uppercase text-white">{item.name}</p>
                         <p className="text-[9px] text-gray-400 font-bold uppercase">{item.shop}</p>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="relative text-right">
                       <span className="text-sm font-black text-white">{total}</span>
                       <span className="text-[8px] text-gray-400 font-bold uppercase block">Leads</span>
                     </div>

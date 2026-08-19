@@ -44,15 +44,15 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             : 'border-white/15 shadow-[0_10px_34px_rgba(15,23,42,0.55)]';
   const themeSurfaceStyle = isDiamondTheme
     ? {
-      backgroundImage: "linear-gradient(90deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.86) 46%, rgba(247,245,242,0.55) 100%), url('/simulation-backgrounds/diamond-light.jpg')",
-      backgroundPosition: 'center, right center',
-      backgroundSize: 'cover, auto 100%',
+      backgroundImage: "linear-gradient(90deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.88) 46%, rgba(247,245,242,0.60) 100%), url('/simulation-backgrounds/vip-luminous.jpg')",
+      backgroundPosition: 'center, center',
+      backgroundSize: 'cover, cover',
       backgroundRepeat: 'no-repeat, no-repeat'
     }
     : {
-      backgroundImage: `linear-gradient(90deg, rgba(2, 6, 23, 0.96) 0%, rgba(2, 6, 23, 0.9) 42%, rgba(2, 6, 23, 0.58) 100%), url('/simulation-backgrounds/${theme}.jpg')`,
-      backgroundPosition: 'center, right center',
-      backgroundSize: 'cover, auto 100%',
+      backgroundImage: "linear-gradient(90deg, rgba(3, 8, 20, 0.86) 0%, rgba(7, 14, 28, 0.72) 46%, rgba(8, 15, 30, 0.30) 100%), url('/simulation-backgrounds/vip-luminous.jpg')",
+      backgroundPosition: 'center, center',
+      backgroundSize: 'cover, cover',
       backgroundRepeat: 'no-repeat, no-repeat'
     };
   const iconClasses = theme === 'rubis'

@@ -563,23 +563,6 @@ body.theme-anthracite .podium-card {
   box-shadow: 0 12px 34px rgba(0, 0, 0, 0.62), 0 0 20px rgba(0, 0, 0, 0.42);
 }
 
-.rank-card-podium::before,
-.podium-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: var(--podium-watermark, none);
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 72% auto;
-  opacity: 0.48;
-  pointer-events: none;
-  mix-blend-mode: screen;
-  filter: saturate(1.15) contrast(1.05);
-  transform: rotate(-6deg);
-  z-index: 0;
-}
-
 .rank-card-podium > *,
 .podium-card > * {
   position: relative;
@@ -599,22 +582,6 @@ body.theme-anthracite .podium-card {
 .podium-bronze {
   border-color: rgba(205, 127, 50, 0.45);
   background: linear-gradient(135deg, rgba(205, 127, 50, 0.08) 0%, rgba(255, 255, 255, 0.03) 100%);
-}
-
-.podium-bronze::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: url('../Trophees/Trophee_bronze.png');
-  background-repeat: no-repeat;
-  background-position: right bottom;
-  background-size: 72% auto;
-  opacity: 0.48;
-  pointer-events: none;
-  mix-blend-mode: screen;
-  filter: saturate(1.15) contrast(1.05);
-  transform: rotate(-6deg);
-  z-index: 0;
 }
 
 

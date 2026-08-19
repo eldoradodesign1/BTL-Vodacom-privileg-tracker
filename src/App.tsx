@@ -57,6 +57,8 @@ const MerchantPosVisitsView = lazy(() => import('./components/MerchantPosVisitsV
 const MerchantArchivesView = lazy(() => import('./components/MerchantArchivesView').then(({ MerchantArchivesView: component }) => ({ default: component })));
 const MerchantMonitoringView = lazy(() => import('./components/MerchantMonitoringView').then(({ MerchantMonitoringView: component }) => ({ default: component })));
 const MerchantSupervisorArchivesView = lazy(() => import('./components/MerchantSupervisorArchivesView').then(({ MerchantSupervisorArchivesView: component }) => ({ default: component })));
+const MerchantAdminDashboard = lazy(() => import('./components/MerchantAdminDashboard').then(({ MerchantAdminDashboard: component }) => ({ default: component })));
+const MerchantPodiumView = lazy(() => import('./components/MerchantPodiumView').then(({ MerchantPodiumView: component }) => ({ default: component })));
 
 const SectionLoader = () => (
   <div className="flex min-h-[12rem] items-center justify-center">
@@ -397,7 +399,11 @@ const todayLeads =
         ? <MerchantMonitoringView />
         : activeTab === 'tab3'
           ? <MerchantSupervisorArchivesView />
-          : <MerchantSupervisorView currentUser={effectiveUser} />;
+          : activeTab === 'admin'
+            ? <MerchantSupervisorView currentUser={effectiveUser} />
+            : effectiveRole === 'admin'
+              ? <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} />
+              : <MerchantPodiumView />;
     } else if (effectiveRole === 'admin') {
       content = (
         <AdminView

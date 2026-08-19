@@ -38,6 +38,7 @@ export interface CampaignRun {
   status: 'draft' | 'active' | 'closed' | 'archived';
   daily_pos_target: number;
   transactions_per_pos_target: number;
+  campaign_pos_target?: number;
 }
 
 export interface PointOfSale {
