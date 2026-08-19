@@ -87,6 +87,24 @@ export interface BADailyAttendance {
   closing_comment?: string | null;
 }
 
+export interface BAPosVisit {
+  id: string;
+  daily_assignment_id?: string | null;
+  campaign_run_id: string;
+  ba_id: string;
+  pos_id: string;
+  activity_date: string;
+  visited_at?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  accuracy_m?: number | null;
+  arrival_photo_path?: string | null;
+  status: 'planned' | 'visited' | 'alerted' | 'not_visited';
+  comment?: string | null;
+  point_of_sale?: PointOfSale;
+  transactions?: BATransaction[];
+}
+
 export interface BATransaction {
   id: string;
   campaign_run_id: string;

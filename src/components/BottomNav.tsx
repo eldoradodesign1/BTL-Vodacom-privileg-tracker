@@ -1,8 +1,8 @@
 import React from 'react';
 import { UserRole } from '../types';
-import { Home, Users, FolderOpen, MessageSquare, Settings } from 'lucide-react';
+import { Home, Users, FolderOpen, MapPinned, MessageSquare, Settings } from 'lucide-react';
 
-export type TabType = 'home' | 'tab2' | 'tab3' | 'chat' | 'admin';
+export type TabType = 'home' | 'tab2' | 'pos' | 'tab3' | 'chat' | 'admin';
 
 interface BottomNavProps {
   userRole: UserRole;
@@ -62,6 +62,22 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <div className="w-1.5 h-1.5 bg-red-500 rounded-full" style={{ boxShadow: '0 0 8px var(--theme-accent)' }} />
         )}
       </button>
+
+      {merchantContext && userRole === 'agent' && (
+        <button
+          onClick={() => onTabChange('pos')}
+          data-active={activeTab === 'pos'}
+          className={`app-tab flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${
+            activeTab === 'pos' ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'
+          }`}
+        >
+          <MapPinned className={`w-6 h-6 transition-transform ${activeTab === 'pos' ? '-translate-y-1 scale-110' : ''}`} />
+          <span className="text-[9px] font-black uppercase tracking-wider">Mes POS</span>
+          {activeTab === 'pos' && (
+            <div className="w-1.5 h-1.5 bg-red-500 rounded-full" style={{ boxShadow: '0 0 8px var(--theme-accent)' }} />
+          )}
+        </button>
+      )}
 
       <button
         onClick={() => onTabChange('tab3')}

@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Camera, CheckCircle2, FileCheck2, MapPin, PlusCircle } from 'lucide-react';
-import type { BADailyAttendance, BATransaction, CampaignRun, PointOfSale, User } from '../types';
+import type { BADailyAttendance, BAPosVisit, BATransaction, CampaignRun, PointOfSale, User } from '../types';
 import {
   getActiveCampaignRuns,
   getCampaignPos,
   getDailyAttendance,
   getMerchantCampaign,
+  getPosVisitsForDay,
   getTransactionsForDay,
   MERCHANT_CAMPAIGN_CODE,
   recordCheckin,
@@ -44,6 +45,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
   const [attendance, setAttendance] = useState<BADailyAttendance | null>(null);
   const [checkinDoneLocal, setCheckinDoneLocal] = useState(false);
   const [transactions, setTransactions] = useState<BATransaction[]>([]);
+  const [posVisits, setPosVisits] = useState<BAPosVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -64,16 +66,19 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
         setPositions([]);
         setAttendance(null);
         setTransactions([]);
+        setPosVisits([]);
         return;
       }
-      const [nextPositions, nextAttendance, nextTransactions] = await Promise.all([
+      const [nextPositions, nextAttendance, nextTransactions, nextVisits] = await Promise.all([
         getCampaignPos(campaign.id),
         getDailyAttendance(currentUser.id, active.id, today),
         getTransactionsForDay(currentUser.id, active.id, today),
+        getPosVisitsForDay(currentUser.id, active.id, today),
       ]);
       setPositions(nextPositions);
       setAttendance(nextAttendance);
       setTransactions(nextTransactions);
+      setPosVisits(nextVisits);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Chargement de la journée impossible.');
     } finally {
@@ -86,7 +91,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
     void refresh();
   }, [currentUser.id]);
 
-  const visitedCount = useMemo(() => new Set(transactions.map((transaction) => transaction.pos_id)).size, [transactions]);
+  const visitedCount = useMemo(() => posVisits.length, [posVisits]);
   const transactionTarget = 45;
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinDoneLocal;
   const isClosed = Boolean(attendance?.checkout_at);
@@ -213,7 +218,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
 
       {isClosed && <section className="glass-card border border-emerald-500/25 p-4 text-center"><CheckCircle2 className="mx-auto text-emerald-400"/><b className="mt-2 block">Journée clôturée</b><p className="mt-1 text-xs text-gray-400">{transactions.length} transactions enregistrées pour {visitedCount} POS visités. Retrouvez le rapport dans vos archives.</p></section>}
       <MerchantClosingReportModal isOpen={isClosingReportOpen} isSaving={saving} posCount={visitedCount} transactionCount={transactions.length} onClose={() => setIsClosingReportOpen(false)} onSubmit={closeDay} />
-      <MerchantTransactionModal isOpen={isTransactionModalOpen} currentUser={currentUser} run={run} positions={positions} activityDate={today} onClose={() => setIsTransactionModalOpen(false)} onRecorded={() => { setSuccess('Transaction enregistrée avec le POS, le client et la position GPS.'); void refresh(false); }} />
+      <MerchantTransactionModal isOpen={isTransactionModalOpen} currentUser={currentUser} run={run} positions={positions} visits={posVisits} activityDate={today} onClose={() => setIsTransactionModalOpen(false)} onRecorded={() => { setSuccess('Transaction enregistrée avec le POS, le client et la position GPS.'); void refresh(false); }} onPosArrivalRecorded={(visit) => { setPosVisits((current) => current.some((item) => item.id === visit.id) ? current : [visit, ...current]); setSuccess('Arrivée au POS enregistrée avec photo, heure et position GPS.'); void refresh(false); }} />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type {
   BADailyAttendance,
+  BAPosVisit,
   BATransaction,
   Campaign,
   CampaignRun,
@@ -117,6 +118,25 @@ export async function getTransactionsForDay(baId: string, runId: string, activit
     .order('occurred_at', { ascending: false });
   fail(error, 'Impossible de charger les transactions');
   return (data || []) as BATransaction[];
+}
+
+export async function getPosVisitsForDay(baId: string, runId: string, activityDate: string): Promise<BAPosVisit[]> {
+  const client = getMerchantClient();
+  const [visitsResponse, transactions] = await Promise.all([
+    client
+      .from('ba_pos_visits')
+      .select('*, point_of_sale:points_of_sale(*)')
+      .eq('ba_id', baId)
+      .eq('campaign_run_id', runId)
+      .eq('activity_date', activityDate)
+      .order('visited_at', { ascending: false }),
+    getTransactionsForDay(baId, runId, activityDate),
+  ]);
+  fail(visitsResponse.error, 'Impossible de charger les POS visités');
+  return ((visitsResponse.data || []) as BAPosVisit[]).map((visit) => ({
+    ...visit,
+    transactions: transactions.filter((transaction) => transaction.pos_visit_id === visit.id || transaction.pos_id === visit.pos_id),
+  }));
 }
 
 export async function getAttendanceHistoryForBA(baId: string, campaignRunId?: string): Promise<BADailyAttendance[]> {
@@ -293,6 +313,28 @@ export async function closeDailyAttendance(id: string, input: Pick<BADailyAttend
     .single();
   fail(error, 'Impossible de clôturer la journée');
   return data as BADailyAttendance;
+}
+
+export async function recordPosArrival(input: Omit<BAPosVisit, 'id' | 'created_at' | 'updated_at' | 'point_of_sale' | 'transactions'>): Promise<BAPosVisit> {
+  const client = getMerchantClient();
+  const { data: existing, error: lookupError } = await client
+    .from('ba_pos_visits')
+    .select('*, point_of_sale:points_of_sale(*)')
+    .eq('campaign_run_id', input.campaign_run_id)
+    .eq('ba_id', input.ba_id)
+    .eq('pos_id', input.pos_id)
+    .eq('activity_date', input.activity_date)
+    .maybeSingle();
+  fail(lookupError, 'Impossible de vérifier le POS du jour');
+  if (existing) return existing as BAPosVisit;
+
+  const { data, error } = await client
+    .from('ba_pos_visits')
+    .insert(input)
+    .select('*, point_of_sale:points_of_sale(*)')
+    .single();
+  fail(error, 'Impossible d’enregistrer l’arrivée au POS');
+  return data as BAPosVisit;
 }
 
 export async function createTransaction(input: Omit<BATransaction, 'id' | 'created_at' | 'updated_at'>): Promise<BATransaction> {

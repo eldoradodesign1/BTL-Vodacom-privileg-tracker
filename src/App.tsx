@@ -53,6 +53,7 @@ const LocationModal = lazy(() => import('./components/Modals/LocationModal').the
 const MerchantBAView = lazy(() => import('./components/MerchantBAView').then(({ MerchantBAView: component }) => ({ default: component })));
 const MerchantSupervisorView = lazy(() => import('./components/MerchantSupervisorView').then(({ MerchantSupervisorView: component }) => ({ default: component })));
 const MerchantTransactionsView = lazy(() => import('./components/MerchantTransactionsView').then(({ MerchantTransactionsView: component }) => ({ default: component })));
+const MerchantPosVisitsView = lazy(() => import('./components/MerchantPosVisitsView').then(({ MerchantPosVisitsView: component }) => ({ default: component })));
 const MerchantArchivesView = lazy(() => import('./components/MerchantArchivesView').then(({ MerchantArchivesView: component }) => ({ default: component })));
 const MerchantMonitoringView = lazy(() => import('./components/MerchantMonitoringView').then(({ MerchantMonitoringView: component }) => ({ default: component })));
 const MerchantSupervisorArchivesView = lazy(() => import('./components/MerchantSupervisorArchivesView').then(({ MerchantSupervisorArchivesView: component }) => ({ default: component })));
@@ -386,9 +387,11 @@ const todayLeads =
     } else if (effectiveUser.userCategory === 'brand_ambassador') {
       content = activeTab === 'tab2'
         ? <MerchantTransactionsView currentUser={effectiveUser} onRecordTransaction={() => { setMerchantTransactionRequested(true); setActiveTab('home'); }} />
-        : activeTab === 'tab3'
-          ? <MerchantArchivesView currentUser={effectiveUser} />
-          : <MerchantBAView currentUser={effectiveUser} openTransactionRequested={merchantTransactionRequested} onTransactionRequestHandled={() => setMerchantTransactionRequested(false)} onPointagePhotoRecorded={(path) => { void getMerchantEvidencePublicUrl(path).then(setMerchantProfilePhotoUrl).catch(() => setMerchantProfilePhotoUrl('')); }} />;
+        : activeTab === 'pos'
+          ? <MerchantPosVisitsView currentUser={effectiveUser} />
+          : activeTab === 'tab3'
+            ? <MerchantArchivesView currentUser={effectiveUser} />
+            : <MerchantBAView currentUser={effectiveUser} openTransactionRequested={merchantTransactionRequested} onTransactionRequestHandled={() => setMerchantTransactionRequested(false)} onPointagePhotoRecorded={(path) => { void getMerchantEvidencePublicUrl(path).then(setMerchantProfilePhotoUrl).catch(() => setMerchantProfilePhotoUrl('')); }} />;
     } else if (isMerchantContext && (effectiveRole === 'admin' || effectiveRole === 'supervisor' || effectiveRole === 'sub_admin')) {
       content = activeTab === 'tab2'
         ? <MerchantMonitoringView />
