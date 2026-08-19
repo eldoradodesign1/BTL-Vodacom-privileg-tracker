@@ -124,6 +124,7 @@ export default function App() {
   const [syncPendingCount, setSyncPendingCount] = useState(0);
   const [toast, setToast] = useState<{ message: string; level: 'success' | 'error' } | null>(null);
   const [merchantProfilePhotoUrl, setMerchantProfilePhotoUrl] = useState('');
+  const [merchantTransactionRequested, setMerchantTransactionRequested] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -384,10 +385,10 @@ const todayLeads =
       content = <ChatView currentUser={effectiveUser} onDataChanged={refreshData} />;
     } else if (effectiveUser.userCategory === 'brand_ambassador') {
       content = activeTab === 'tab2'
-        ? <MerchantTransactionsView currentUser={effectiveUser} onRecordTransaction={() => setActiveTab('home')} />
+        ? <MerchantTransactionsView currentUser={effectiveUser} onRecordTransaction={() => { setMerchantTransactionRequested(true); setActiveTab('home'); }} />
         : activeTab === 'tab3'
           ? <MerchantArchivesView currentUser={effectiveUser} />
-          : <MerchantBAView currentUser={effectiveUser} onPointagePhotoRecorded={(path) => { void getMerchantEvidencePublicUrl(path).then(setMerchantProfilePhotoUrl).catch(() => setMerchantProfilePhotoUrl('')); }} />;
+          : <MerchantBAView currentUser={effectiveUser} openTransactionRequested={merchantTransactionRequested} onTransactionRequestHandled={() => setMerchantTransactionRequested(false)} onPointagePhotoRecorded={(path) => { void getMerchantEvidencePublicUrl(path).then(setMerchantProfilePhotoUrl).catch(() => setMerchantProfilePhotoUrl('')); }} />;
     } else if (isMerchantContext && (effectiveRole === 'admin' || effectiveRole === 'supervisor' || effectiveRole === 'sub_admin')) {
       content = activeTab === 'tab2'
         ? <MerchantMonitoringView />
