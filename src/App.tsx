@@ -394,17 +394,17 @@ const todayLeads =
           : activeTab === 'tab3'
             ? <MerchantArchivesView currentUser={effectiveUser} />
             : <MerchantBAView currentUser={effectiveUser} openTransactionRequested={merchantTransactionRequested} onTransactionRequestHandled={() => setMerchantTransactionRequested(false)} onPointagePhotoRecorded={(path) => { void getMerchantEvidencePublicUrl(path).then(setMerchantProfilePhotoUrl).catch(() => setMerchantProfilePhotoUrl('')); }} />;
-    } else if (isMerchantContext && (effectiveRole === 'admin' || effectiveRole === 'supervisor' || effectiveRole === 'sub_admin')) {
+    } else if (isMerchantContext && (effectiveRole === 'admin' || effectiveRole === 'super_admin' || effectiveRole === 'supervisor' || effectiveRole === 'sub_admin')) {
       content = activeTab === 'tab2'
         ? <MerchantMonitoringView />
         : activeTab === 'tab3'
           ? <MerchantSupervisorArchivesView />
           : activeTab === 'admin'
             ? <MerchantSupervisorView currentUser={effectiveUser} />
-            : effectiveRole === 'admin'
+            : (effectiveRole === 'admin' || effectiveRole === 'super_admin')
               ? <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} />
               : <MerchantPodiumView />;
-    } else if (effectiveRole === 'admin') {
+    } else if (effectiveRole === 'admin' || effectiveRole === 'super_admin') {
       content = (
         <AdminView
           currentUser={effectiveUser}
@@ -481,7 +481,7 @@ const todayLeads =
       className="app-shell h-screen flex flex-col relative overflow-hidden font-sans select-none transition-colors"
       style={{ color: themeSurfaceStyle.color }}
     >
-      <SimulationBar
+      {realMasterUser.role === 'super_admin' && <SimulationBar
         masterUser={realMasterUser}
         effectiveUser={effectiveUser}
         users={users}
@@ -490,7 +490,7 @@ const todayLeads =
         onSimulateRole={handleSimulateRoleChange}
         onSimulateUserChange={handleSimulateUserChange}
         onResetSimulation={handleResetSimulation}
-      />
+      />}
 
       <Header
         user={effectiveUser}
@@ -503,7 +503,7 @@ const todayLeads =
         theme={theme}
         onSetTheme={setThemeMode}
         activeCampaign={isMerchantContext ? 'merchant-educational' : 'vodacom-privilege'}
-        onSetCampaign={realMasterUser.role === 'admin' || realMasterUser.role === 'supervisor' || realMasterUser.role === 'sub_admin' ? setCampaignContext : undefined}
+        onSetCampaign={realMasterUser.role === 'admin' || realMasterUser.role === 'super_admin' || realMasterUser.role === 'supervisor' || realMasterUser.role === 'sub_admin' ? setCampaignContext : undefined}
         onMarkNotifsRead={() => {
           markNotifsAsRead(effectiveUser.id);
           markChatAsRead(effectiveUser.id);
@@ -515,7 +515,7 @@ const todayLeads =
         }}
         onLogout={handleLogout}
         onOpenPasswordModal={() => setIsPasswordModalOpen(true)}
-        onOpenGSheetModal={realMasterUser.role === 'admin' ? () => setIsGSheetModalOpen(true) : undefined}
+        onOpenGSheetModal={realMasterUser.role === 'admin' || realMasterUser.role === 'super_admin' ? () => setIsGSheetModalOpen(true) : undefined}
       />
 
       <main className="flex-1 min-h-0 px-3 sm:px-4 pt-3 pb-32 max-w-2xl mx-auto w-full overflow-y-auto overflow-x-hidden">

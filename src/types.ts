@@ -1,4 +1,4 @@
-export type UserRole = 'agent' | 'supervisor' | 'sub_admin' | 'admin';
+export type UserRole = 'agent' | 'supervisor' | 'sub_admin' | 'admin' | 'super_admin';
 
 export type UserCategory = 'hostess' | 'brand_ambassador' | 'operations';
 export type CampaignType = 'hostess' | 'brand_ambassador';

@@ -20,7 +20,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   merchantContext = false
 }) => {
   const getTab2Label = () => {
-    if (userRole === 'admin' || userRole === 'supervisor' || userRole === 'sub_admin') return 'Monitoring';
+    if (userRole === 'admin' || userRole === 'super_admin' || userRole === 'supervisor' || userRole === 'sub_admin') return 'Monitoring';
     return merchantContext ? 'Mes Transactions' : 'Mes Clients';
   };
 
@@ -114,7 +114,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         )}
       </button>
 
-      {(userRole === 'admin' || userRole === 'supervisor' || userRole === 'sub_admin') && (
+      {(userRole === 'admin' || userRole === 'super_admin' || userRole === 'supervisor' || userRole === 'sub_admin') && (
         <button
           onClick={() => onTabChange('admin')}
           data-active={activeTab === 'admin'}

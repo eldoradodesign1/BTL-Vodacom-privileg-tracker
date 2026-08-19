@@ -78,7 +78,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onDataChanged }
               <div className="flex items-center space-x-1.5 mb-1 px-1">
                 <span className="chat-meta-name text-[9px] font-black text-gray-400 uppercase">{msg.sender_name}</span>
                 <span className="chat-meta-time text-[8px] font-bold text-gray-500">{msg.timestamp}</span>
-                {currentUser.role === 'admin' && (
+                {(currentUser.role === 'admin' || currentUser.role === 'super_admin') && (
                   <button
                     onClick={() => handleDeleteMessage(msg.id)}
                     className="chat-delete-btn p-0.5 rounded text-gray-500 hover:text-red-400"

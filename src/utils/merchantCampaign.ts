@@ -10,6 +10,16 @@ import type {
 import { getSupabaseConfig } from './supabase';
 
 export const MERCHANT_CAMPAIGN_CODE = 'merchant-educational-campaign';
+export const MERCHANT_CAMPAIGN_START = '2026-08-18';
+
+export const merchantTodayIso = () => new Date().toISOString().slice(0, 10);
+
+export function clampMerchantActivityDate(value?: string): string {
+  const selected = value || merchantTodayIso();
+  if (selected < MERCHANT_CAMPAIGN_START) return MERCHANT_CAMPAIGN_START;
+  if (selected > merchantTodayIso()) return merchantTodayIso();
+  return selected;
+}
 
 function getMerchantClient(): SupabaseClient {
   const config = getSupabaseConfig();
@@ -209,12 +219,13 @@ async function getMerchantBAs() {
 
 export async function getMerchantMonitoring(runId: string, activityDate: string): Promise<MerchantTeamActivity[]> {
   const client = getMerchantClient();
-  const { start, end } = activityWindow(activityDate);
+  const safeActivityDate = clampMerchantActivityDate(activityDate);
+  const { start, end } = activityWindow(safeActivityDate);
   const [bas, attendanceResponse, transactionResponse, visitResponse] = await Promise.all([
     getMerchantBAs(),
-    client.from('ba_daily_attendance').select('*').eq('campaign_run_id', runId).eq('activity_date', activityDate),
+    client.from('ba_daily_attendance').select('*').eq('campaign_run_id', runId).eq('activity_date', safeActivityDate),
     client.from('ba_transactions').select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)').eq('campaign_run_id', runId).gte('occurred_at', start).lte('occurred_at', end),
-    client.from('ba_pos_visits').select('id,ba_id,pos_id').eq('campaign_run_id', runId).eq('activity_date', activityDate),
+    client.from('ba_pos_visits').select('id,ba_id,pos_id').eq('campaign_run_id', runId).eq('activity_date', safeActivityDate).neq('status', 'alerted'),
   ]);
   fail(attendanceResponse.error, 'Impossible de charger les pointages Merchant');
   fail(transactionResponse.error, 'Impossible de charger les transactions Merchant');
@@ -241,14 +252,15 @@ export async function getMerchantMonitoring(runId: string, activityDate: string)
 
 export async function getMerchantArchives(runId: string, startDate?: string, endDate?: string): Promise<MerchantArchiveSummary[]> {
   const client = getMerchantClient();
+  const safeStartDate = clampMerchantActivityDate(startDate || MERCHANT_CAMPAIGN_START);
+  const safeEndDate = clampMerchantActivityDate(endDate || merchantTodayIso());
   let attendanceQuery = client
     .from('ba_daily_attendance')
     .select('*')
     .eq('campaign_run_id', runId)
     .eq('status', 'closed')
     .order('activity_date', { ascending: false });
-  if (startDate) attendanceQuery = attendanceQuery.gte('activity_date', startDate);
-  if (endDate) attendanceQuery = attendanceQuery.lte('activity_date', endDate);
+  attendanceQuery = attendanceQuery.gte('activity_date', safeStartDate).lte('activity_date', safeEndDate);
   const [bas, attendanceResponse] = await Promise.all([getMerchantBAs(), attendanceQuery]);
   fail(attendanceResponse.error, 'Impossible de charger les archives Merchant');
   const attendances = (attendanceResponse.data || []) as BADailyAttendance[];
@@ -321,22 +333,29 @@ export async function closeDailyAttendance(id: string, input: Pick<BADailyAttend
 
 export async function recordPosArrival(input: Omit<BAPosVisit, 'id' | 'created_at' | 'updated_at' | 'point_of_sale' | 'transactions'>): Promise<BAPosVisit> {
   const client = getMerchantClient();
+  const activityDate = clampMerchantActivityDate(input.activity_date);
   const { data: existing, error: lookupError } = await client
     .from('ba_pos_visits')
     .select('*, point_of_sale:points_of_sale(*)')
     .eq('campaign_run_id', input.campaign_run_id)
-    .eq('ba_id', input.ba_id)
     .eq('pos_id', input.pos_id)
-    .eq('activity_date', input.activity_date)
+    .eq('activity_date', activityDate)
+    .neq('status', 'alerted')
     .maybeSingle();
   fail(lookupError, 'Impossible de vérifier le POS du jour');
-  if (existing) return existing as BAPosVisit;
+  if (existing) {
+    if (existing.ba_id === input.ba_id) return existing as BAPosVisit;
+    throw new Error('Ce POS a déjà été pris en charge aujourd’hui par un autre Brand Ambassador.');
+  }
 
   const { data, error } = await client
     .from('ba_pos_visits')
-    .insert(input)
+    .insert({ ...input, activity_date: activityDate })
     .select('*, point_of_sale:points_of_sale(*)')
     .single();
+  if (error?.code === '23505') {
+    throw new Error('Ce POS vient d’être pris en charge par un autre Brand Ambassador. Veuillez sélectionner un autre point de vente.');
+  }
   fail(error, 'Impossible d’enregistrer l’arrivée au POS');
   return data as BAPosVisit;
 }
@@ -470,9 +489,9 @@ export async function updateMerchantTargetSettings(runId: string, targets: Merch
 async function getRunActivityData(runId: string) {
   const client = getMerchantClient();
   const [visitsResponse, transactionsResponse, attendanceResponse] = await Promise.all([
-    client.from('ba_pos_visits').select('*, point_of_sale:points_of_sale(*)').eq('campaign_run_id', runId).order('visited_at', { ascending: true }),
-    client.from('ba_transactions').select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)').eq('campaign_run_id', runId).neq('status', 'rejected').order('occurred_at', { ascending: true }),
-    client.from('ba_daily_attendance').select('*').eq('campaign_run_id', runId).order('activity_date', { ascending: true }),
+    client.from('ba_pos_visits').select('*, point_of_sale:points_of_sale(*)').eq('campaign_run_id', runId).gte('activity_date', MERCHANT_CAMPAIGN_START).neq('status', 'alerted').order('visited_at', { ascending: true }),
+    client.from('ba_transactions').select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)').eq('campaign_run_id', runId).gte('occurred_at', `${MERCHANT_CAMPAIGN_START}T00:00:00+01:00`).neq('status', 'rejected').order('occurred_at', { ascending: true }),
+    client.from('ba_daily_attendance').select('*').eq('campaign_run_id', runId).gte('activity_date', MERCHANT_CAMPAIGN_START).order('activity_date', { ascending: true }),
   ]);
   fail(visitsResponse.error, 'Impossible de charger les visites POS Merchant');
   fail(transactionsResponse.error, 'Impossible de charger les transactions Merchant');
@@ -485,8 +504,9 @@ async function getRunActivityData(runId: string) {
 }
 
 export async function getMerchantDashboardSummary(run: CampaignRun, activityDate = isoDate(new Date())): Promise<MerchantDashboardSummary> {
+  const safeActivityDate = clampMerchantActivityDate(activityDate);
   const [team, bas, activity] = await Promise.all([
-    getMerchantMonitoring(run.id, activityDate),
+    getMerchantMonitoring(run.id, safeActivityDate),
     getMerchantBAs(),
     getRunActivityData(run.id),
   ]);
@@ -495,8 +515,8 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
     daily_pos_target: Number(run.daily_pos_target || 15),
     transactions_per_pos_target: Number(run.transactions_per_pos_target || 3),
   };
-  const todayVisits = activity.visits.filter((item) => item.activity_date === activityDate);
-  const todayTransactions = activity.transactions.filter((item) => item.occurred_at.slice(0, 10) === activityDate);
+  const todayVisits = activity.visits.filter((item) => item.activity_date === safeActivityDate);
+  const todayTransactions = activity.transactions.filter((item) => item.occurred_at.slice(0, 10) === safeActivityDate);
   const activeBas = team.filter((item) => item.status !== 'absent').length;
   const distinctCampaignPos = new Set(activity.visits.map((item) => item.pos_id));
   const transactionCountByPos = new Map<string, number>();
@@ -504,7 +524,7 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
   const activePos = Array.from(distinctCampaignPos).filter((posId) => (transactionCountByPos.get(posId) || 0) < targets.transactions_per_pos_target).length;
   const completedPos = Array.from(distinctCampaignPos).filter((posId) => (transactionCountByPos.get(posId) || 0) >= targets.transactions_per_pos_target).length;
   const untouchedPos = Math.max(0, targets.campaign_pos_target - distinctCampaignPos.size);
-  const days = getDateRange(7, new Date(`${activityDate}T12:00:00`));
+  const days = getDateRange(7, new Date(`${safeActivityDate}T12:00:00`)).filter((day) => day >= MERCHANT_CAMPAIGN_START);
   const timeline = days.map((day) => {
     const present = activity.attendances.filter((item) => item.activity_date === day && Boolean(item.checkin_at)).length;
     return {
@@ -539,8 +559,9 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
 }
 
 export async function getMerchantPodium(runId: string, activityDate = isoDate(new Date())): Promise<MerchantPodiumEntry[]> {
+  const safeActivityDate = clampMerchantActivityDate(activityDate);
   const [team, activity] = await Promise.all([
-    getMerchantMonitoring(runId, activityDate),
+    getMerchantMonitoring(runId, safeActivityDate),
     getRunActivityData(runId),
   ]);
   const firstArrivalByBa = new Map<string, string>();
@@ -564,7 +585,7 @@ export async function getMerchantPodium(runId: string, activityDate = isoDate(ne
     .filter((item) => firstArrivalByBa.has(item.ba.id))
     .sort((left, right) => new Date(firstArrivalByBa.get(left.ba.id) as string).getTime() - new Date(firstArrivalByBa.get(right.ba.id) as string).getTime());
   return ranked.slice(0, 3).map((activityItem, index) => {
-    const orderedDays = Array.from(dailyWinnerByDate.keys()).filter((date) => date <= activityDate).sort((a, b) => b.localeCompare(a));
+    const orderedDays = Array.from(dailyWinnerByDate.keys()).filter((date) => date >= MERCHANT_CAMPAIGN_START && date <= safeActivityDate).sort((a, b) => b.localeCompare(a));
     let platinumStreak = 0;
     for (const day of orderedDays) {
       if (dailyWinnerByDate.get(day)?.baId === activityItem.ba.id) platinumStreak += 1;
@@ -609,4 +630,77 @@ export async function getMerchantPosControl(run: CampaignRun): Promise<MerchantP
 export async function getMerchantPosDetail(run: CampaignRun, posId: string): Promise<MerchantPosControlItem | null> {
   const items = await getMerchantPosControl(run);
   return items.find((item) => item.pos.id === posId) || null;
+}
+
+export type MerchantSupervisorReportKind = 'daily' | 'weekly' | 'compiled';
+
+export interface MerchantSupervisorReport {
+  kind: MerchantSupervisorReportKind;
+  startsOn: string;
+  endsOn: string;
+  targets: MerchantTargetSettings;
+  totals: { pos: number; transactions: number; amount: number; activeBas: number; executionRate: number };
+  byBa: Array<{ id: string; name: string; phone: string; pos: number; transactions: number; amount: number; firstArrival?: string | null }>;
+  daily: Array<{ date: string; pos: number; transactions: number; activeBas: number }>;
+}
+
+const addCalendarDays = (iso: string, offset: number): string => {
+  const date = new Date(`${iso}T12:00:00`);
+  date.setDate(date.getDate() + offset);
+  return isoDate(date);
+};
+
+export async function getMerchantSupervisorReport(run: CampaignRun, kind: MerchantSupervisorReportKind): Promise<MerchantSupervisorReport> {
+  const today = merchantTodayIso();
+  const startsOn = kind === 'daily'
+    ? today
+    : kind === 'weekly'
+      ? (addCalendarDays(today, -6) < MERCHANT_CAMPAIGN_START ? MERCHANT_CAMPAIGN_START : addCalendarDays(today, -6))
+      : MERCHANT_CAMPAIGN_START;
+  const endsOn = today;
+  const [bas, activity] = await Promise.all([getMerchantBAs(), getRunActivityData(run.id)]);
+  const inRange = (value: string) => value >= startsOn && value <= endsOn;
+  const visits = activity.visits.filter((item) => inRange(item.activity_date));
+  const transactions = activity.transactions.filter((item) => inRange(item.occurred_at.slice(0, 10)));
+  const attendance = activity.attendances.filter((item) => inRange(item.activity_date) && Boolean(item.checkin_at));
+  const targets: MerchantTargetSettings = {
+    campaign_pos_target: Number(run.campaign_pos_target || 0),
+    daily_pos_target: Number(run.daily_pos_target || 15),
+    transactions_per_pos_target: Number(run.transactions_per_pos_target || 3),
+  };
+  const periodDays = Math.max(1, Math.round((new Date(`${endsOn}T12:00:00`).getTime() - new Date(`${startsOn}T12:00:00`).getTime()) / 86400000) + 1);
+  const activeBas = new Set(attendance.map((item) => item.ba_id)).size;
+  const targetVisits = Math.max(1, activeBas * targets.daily_pos_target * periodDays);
+  const byBa = bas.map((ba) => {
+    const baVisits = visits.filter((item) => item.ba_id === ba.id);
+    const baTransactions = transactions.filter((item) => item.ba_id === ba.id);
+    return {
+      ...ba,
+      pos: baVisits.length,
+      transactions: baTransactions.length,
+      amount: baTransactions.reduce((total, item) => total + Number(item.amount || 0), 0),
+      firstArrival: baVisits.filter((item) => Boolean(item.visited_at)).sort((a, b) => new Date(a.visited_at as string).getTime() - new Date(b.visited_at as string).getTime())[0]?.visited_at || null,
+    };
+  }).filter((item) => item.pos > 0 || item.transactions > 0).sort((a, b) => b.pos - a.pos || b.transactions - a.transactions || a.name.localeCompare(b.name));
+  const dates = Array.from({ length: periodDays }, (_, index) => addCalendarDays(startsOn, index));
+  return {
+    kind,
+    startsOn,
+    endsOn,
+    targets,
+    totals: {
+      pos: visits.length,
+      transactions: transactions.length,
+      amount: transactions.reduce((total, item) => total + Number(item.amount || 0), 0),
+      activeBas,
+      executionRate: Math.min(100, Math.round((visits.length / targetVisits) * 100)),
+    },
+    byBa,
+    daily: dates.map((date) => ({
+      date,
+      pos: visits.filter((item) => item.activity_date === date).length,
+      transactions: transactions.filter((item) => item.occurred_at.slice(0, 10) === date).length,
+      activeBas: new Set(attendance.filter((item) => item.activity_date === date).map((item) => item.ba_id)).size,
+    })),
+  };
 }

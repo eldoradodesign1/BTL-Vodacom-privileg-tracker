@@ -6,6 +6,8 @@ interface MerchantClosingReportModalProps {
   isSaving?: boolean;
   posCount: number;
   transactionCount: number;
+  posTarget: number;
+  transactionsPerPosTarget: number;
   onClose: () => void;
   onSubmit: (comment: string) => void;
 }
@@ -15,14 +17,30 @@ export const MerchantClosingReportModal: React.FC<MerchantClosingReportModalProp
   isSaving = false,
   posCount,
   transactionCount,
+  posTarget,
+  transactionsPerPosTarget,
   onClose,
   onSubmit,
 }) => {
   const [comment, setComment] = useState('');
+  const [requiresConfirmation, setRequiresConfirmation] = useState(false);
+  const transactionTarget = posTarget * transactionsPerPosTarget;
+  const isBelowTarget = posCount < posTarget || transactionCount < transactionTarget;
 
   useEffect(() => {
-    if (isOpen) setComment('');
+    if (isOpen) {
+      setComment('');
+      setRequiresConfirmation(false);
+    }
   }, [isOpen]);
+
+  const requestClose = () => {
+    if (isBelowTarget && !requiresConfirmation) {
+      setRequiresConfirmation(true);
+      return;
+    }
+    onSubmit(comment);
+  };
 
   if (!isOpen) return null;
 
@@ -41,16 +59,17 @@ export const MerchantClosingReportModal: React.FC<MerchantClosingReportModalProp
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 text-center"><b className="block text-xl font-black text-cyan-200">{posCount}</b><span className="text-[9px] font-black uppercase text-gray-400">POS visités</span></div>
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 text-center"><b className="block text-xl font-black text-amber-200">{transactionCount}</b><span className="text-[9px] font-black uppercase text-gray-400">Transactions</span></div>
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 text-center"><b className="block text-xl font-black text-cyan-200">{posCount}<span className="text-sm text-cyan-100/55">/{posTarget}</span></b><span className="text-[9px] font-black uppercase text-gray-400">POS visités</span></div>
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 text-center"><b className="block text-xl font-black text-amber-200">{transactionCount}<span className="text-sm text-amber-100/55">/{transactionTarget}</span></b><span className="text-[9px] font-black uppercase text-gray-400">Transactions</span></div>
         </div>
+        {requiresConfirmation && <div className="mt-4 rounded-2xl border border-amber-300/35 bg-amber-500/10 p-3 text-xs font-semibold leading-relaxed text-amber-100"><b className="block text-[10px] font-black uppercase tracking-[0.12em] text-amber-200">Objectif non atteint</b><p className="mt-1">Vous n’avez pas atteint votre objectif de {posTarget} POS et {transactionTarget} transactions. Voulez-vous vraiment clôturer ?</p></div>}
 
         <label className="mt-5 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400" htmlFor="merchant-closing-comment">Commentaire de clôture <span className="normal-case font-semibold">(optionnel)</span></label>
         <textarea id="merchant-closing-comment" value={comment} onChange={(event) => setComment(event.target.value)} disabled={isSaving} placeholder="Ajoutez un résumé, une alerte ou une information terrain…" className="app-input mt-2 min-h-28 w-full rounded-2xl p-4 text-sm" />
 
         <div className="mt-5 flex gap-3">
           <button type="button" onClick={onClose} disabled={isSaving} className="flex-1 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-xs font-black uppercase transition hover:bg-white/10 disabled:opacity-40">Annuler</button>
-          <button type="button" onClick={() => onSubmit(comment)} disabled={isSaving} className="btn-neon btn-red flex flex-1 items-center justify-center gap-2 disabled:opacity-40"><Send size={16} /><span>{isSaving ? 'Clôture…' : 'Clôturer'}</span></button>
+          <button type="button" onClick={requestClose} disabled={isSaving} className="btn-neon btn-red flex flex-1 items-center justify-center gap-2 disabled:opacity-40"><Send size={16} /><span>{isSaving ? 'Clôture…' : (requiresConfirmation ? 'Clôturer quand même' : 'Clôturer')}</span></button>
         </div>
       </div>
     </div>

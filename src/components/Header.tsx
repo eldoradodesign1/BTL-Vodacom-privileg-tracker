@@ -57,9 +57,13 @@ export const Header: React.FC<HeaderProps> = ({
   }, [localPhotoUrl, profilePhotoUrl, photoError]);
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
   const unreadCount = safeNotifications.filter(n => !n.is_read).length;
-  const roleLabel = user.role === 'admin'
-    ? 'Admin'
-    : (user.role === 'sub_admin' ? 'Sous-admin' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent'));
+  const roleLabel = user.role === 'super_admin'
+    ? 'Super-admin'
+    : (user.role === 'admin' ? 'Admin' : (user.role === 'sub_admin' ? 'Sous-admin' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent')));
+  const topbarOverlay = theme === 'diamond'
+    ? 'linear-gradient(100deg, rgba(255,255,255,0.96), rgba(246,244,241,0.84), rgba(255,255,255,0.90))'
+    : 'linear-gradient(100deg, rgba(5,7,12,0.68), rgba(10,14,22,0.34), rgba(8,10,17,0.56))';
+  const topbarStyle = { backgroundImage: `${topbarOverlay}, url(/topbar-backgrounds/${theme}-gem.jpg)`, backgroundSize: 'cover', backgroundPosition: 'center' };
   const isDarkTheme = theme === 'anthracite' || theme === 'rubis' || theme === 'silver' || theme === 'diamond' || theme === 'sapphire' || theme === 'ambre';
   const syncState: 'ok' | 'progress' | 'late' = (() => {
     if (online && syncPendingCount === 0) return 'ok';
@@ -156,10 +160,10 @@ export const Header: React.FC<HeaderProps> = ({
     : (syncState === 'progress' ? 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40 text-amber-500' : 'bg-red-500/10 hover:bg-red-500/20 border-red-500/40 text-red-500');
 
   return (
-    <header className={`app-header px-3 sm:px-6 py-2.5 backdrop-blur-md border-b shrink-0 relative z-40 transition-colors ${
+    <header style={topbarStyle} className={`app-header px-3 sm:px-6 py-2.5 backdrop-blur-md border-b shrink-0 relative z-40 transition-colors ${
       isDarkTheme
-        ? 'bg-black/40 border-white/10 text-white'
-        : 'bg-white/90 border-zinc-200 text-zinc-900 shadow-xl'
+        ? 'border-white/10 text-white'
+        : 'border-zinc-200 text-zinc-900 shadow-xl'
     }`}>
       <div className="flex items-start justify-between gap-2 sm:gap-3">
         <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">

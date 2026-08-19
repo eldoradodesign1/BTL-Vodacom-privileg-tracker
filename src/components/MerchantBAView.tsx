@@ -92,7 +92,9 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
   }, [currentUser.id]);
 
   const visitedCount = useMemo(() => posVisits.length, [posVisits]);
-  const transactionTarget = 45;
+  const posTarget = run?.daily_pos_target || 15;
+  const transactionsPerPosTarget = run?.transactions_per_pos_target || 3;
+  const transactionTarget = posTarget * transactionsPerPosTarget;
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinDoneLocal;
   const isClosed = Boolean(attendance?.checkout_at);
 
@@ -197,9 +199,9 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
         <div className="relative">
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/70">Merchant Educational Campaign</p>
           <h1 className="mt-1 text-2xl font-black tracking-tight text-white">Bonjour, {currentUser.name.split(' ')[0]}</h1>
-          <p className="mt-1 text-xs font-semibold text-gray-300">{new Date(`${today}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · Objectif : 15 POS / 45 transactions</p>
+          <p className="mt-1 text-xs font-semibold text-gray-300">{new Date(`${today}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · Objectif : {posTarget} POS / {transactionTarget} transactions</p>
           <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3"><b className="block text-lg font-black text-white">15</b><span className="text-[9px] font-black uppercase text-gray-400">Objectif POS</span></div>
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3"><b className="block text-lg font-black text-white">{posTarget}</b><span className="text-[9px] font-black uppercase text-gray-400">Objectif POS</span></div>
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3"><b className="block text-lg font-black text-emerald-300">{visitedCount}</b><span className="text-[9px] font-black uppercase text-gray-400">POS visités</span></div>
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3"><b className="block text-lg font-black text-amber-200">{transactions.length}/{transactionTarget}</b><span className="text-[9px] font-black uppercase text-gray-400">Transactions</span></div>
           </div>
@@ -217,7 +219,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
       {!isCheckedIn && <section className="glass-card p-6 text-center"><h2 className="mb-4 text-xs font-black uppercase tracking-widest text-red-400">Pointage d’arrivée GPS</h2><div className="space-y-3"><label className="btn-neon btn-red flex cursor-pointer items-center justify-center gap-2"><Camera size={16}/><span>Déverrouiller la journée (prendre photo)</span><input type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => { const photo = event.target.files?.[0]; if (photo) void handleCheckin(photo); event.currentTarget.value = ''; }} /></label></div></section>}
 
       {isClosed && <section className="glass-card border border-emerald-500/25 p-4 text-center"><CheckCircle2 className="mx-auto text-emerald-400"/><b className="mt-2 block">Journée clôturée</b><p className="mt-1 text-xs text-gray-400">{transactions.length} transactions enregistrées pour {visitedCount} POS visités. Retrouvez le rapport dans vos archives.</p></section>}
-      <MerchantClosingReportModal isOpen={isClosingReportOpen} isSaving={saving} posCount={visitedCount} transactionCount={transactions.length} onClose={() => setIsClosingReportOpen(false)} onSubmit={closeDay} />
+      <MerchantClosingReportModal isOpen={isClosingReportOpen} isSaving={saving} posCount={visitedCount} transactionCount={transactions.length} posTarget={posTarget} transactionsPerPosTarget={transactionsPerPosTarget} onClose={() => setIsClosingReportOpen(false)} onSubmit={closeDay} />
       <MerchantTransactionModal isOpen={isTransactionModalOpen} currentUser={currentUser} run={run} positions={positions} visits={posVisits} activityDate={today} onClose={() => setIsTransactionModalOpen(false)} onRecorded={() => { setSuccess('Transaction enregistrée avec le POS, le client et la position GPS.'); void refresh(false); }} onPosArrivalRecorded={(visit) => { setPosVisits((current) => current.some((item) => item.id === visit.id) ? current : [visit, ...current]); setSuccess('Arrivée au POS enregistrée avec photo, heure et position GPS.'); void refresh(false); }} />
     </div>
   );

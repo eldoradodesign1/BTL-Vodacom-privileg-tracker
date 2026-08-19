@@ -24,13 +24,12 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
   onSimulateUserChange,
   onResetSimulation
 }) => {
-  // Always visible if master user is admin or a simulation is active
-  if (masterUser.role !== 'admin' && !simulatedRole) {
-    return null;
-  }
+  // Le bac à sable opérationnel est réservé au compte super_admin.
+  if (masterUser.role !== 'super_admin') return null;
 
   const activeRole = simulatedRole || effectiveUser.role;
   const isDiamondTheme = theme === 'diamond';
+  const simulationBackground = theme === 'diamond' ? 'diamond-light.jpg' : `${theme}.jpg`;
   const shellClasses = theme === 'rubis'
     ? 'border-rose-300/30 shadow-[0_10px_34px_rgba(127,29,29,0.42)]'
     : theme === 'silver'
@@ -44,13 +43,13 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             : 'border-white/15 shadow-[0_10px_34px_rgba(15,23,42,0.55)]';
   const themeSurfaceStyle = isDiamondTheme
     ? {
-      backgroundImage: "linear-gradient(90deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.88) 46%, rgba(247,245,242,0.60) 100%), url('/simulation-backgrounds/vip-luminous.jpg')",
+      backgroundImage: `linear-gradient(90deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.88) 46%, rgba(247,245,242,0.60) 100%), url('/simulation-backgrounds/${simulationBackground}')`,
       backgroundPosition: 'center, center',
       backgroundSize: 'cover, cover',
       backgroundRepeat: 'no-repeat, no-repeat'
     }
     : {
-      backgroundImage: "linear-gradient(90deg, rgba(3, 8, 20, 0.86) 0%, rgba(7, 14, 28, 0.72) 46%, rgba(8, 15, 30, 0.30) 100%), url('/simulation-backgrounds/vip-luminous.jpg')",
+      backgroundImage: `linear-gradient(90deg, rgba(3, 8, 20, 0.86) 0%, rgba(7, 14, 28, 0.72) 46%, rgba(8, 15, 30, 0.30) 100%), url('/simulation-backgrounds/${simulationBackground}')`,
       backgroundPosition: 'center, center',
       backgroundSize: 'cover, cover',
       backgroundRepeat: 'no-repeat, no-repeat'

@@ -1357,7 +1357,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
         {currentPodiumLeader && platinumStreak >= 5 && (
           <div className="relative mb-3 overflow-hidden rounded-2xl border border-slate-100/40 bg-[linear-gradient(135deg,rgba(226,232,240,0.26),rgba(100,116,139,0.20))] p-3">
-            <Trophy className="pointer-events-none absolute -right-2 -bottom-8 h-28 w-28 -rotate-12 text-slate-100/30" />
+            <img src="/podium-trophies/platinum-trophy.png" alt="" className="pointer-events-none absolute -right-4 -bottom-12 h-40 w-40 -rotate-12 object-contain opacity-25" />
             <div className="relative flex items-center gap-2"><Trophy className="text-slate-100" size={20}/><div><p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-100">Coupe platine</p><p className="text-xs font-black text-white">{currentPodiumLeader.name} conserve la première place depuis {platinumStreak} journées.</p></div></div>
           </div>
         )}
@@ -1373,13 +1373,13 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   'border-slate-300/40 bg-slate-400/10 text-slate-300',
                   'border-amber-700/40 bg-amber-800/10 text-amber-600'
                 ];
-                const trophyColor = idx === 0 ? 'text-amber-300' : (idx === 1 ? 'text-slate-200' : 'text-orange-400');
+                const trophyImage = idx === 0 ? '/podium-trophies/gold-trophy.png' : (idx === 1 ? '/podium-trophies/silver-trophy.png' : '/podium-trophies/bronze-trophy.png');
                 return (
                   <div
                     key={item.id}
                     className={`podium-card relative overflow-hidden p-3 rounded-2xl border flex items-center justify-between ${colors[idx] || 'border-white/10 bg-white/5'}`}
                   >
-                    <Trophy className={`pointer-events-none absolute -right-3 -bottom-7 h-28 w-28 -rotate-12 opacity-[0.20] ${trophyColor}`} />
+                    <img src={trophyImage} alt="" className="pointer-events-none absolute -right-4 -bottom-10 h-40 w-40 -rotate-12 object-contain opacity-25" />
                     <div className="relative flex items-center space-x-3">
                       <span className="text-lg font-black w-6 text-center">#{idx + 1}</span>
                       <div>
