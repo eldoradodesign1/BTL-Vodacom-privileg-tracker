@@ -806,7 +806,6 @@ body.theme-ambre {
   box-shadow: 0 28px 68px rgba(2, 6, 23, 0.44), 0 1px 0 rgba(255, 255, 255, 0.16) inset;
 }
 
-.app-header,
 .app-bottom-nav,
 .app-popover {
   background: linear-gradient(135deg, rgba(8, 12, 20, 0.78) 0%, rgba(15, 22, 35, 0.58) 100%) !important;
@@ -817,7 +816,11 @@ body.theme-ambre {
 }
 
 .app-header {
-  border-bottom-color: rgba(255, 255, 255, 0.14) !important;
+  border-color: var(--surface-border) !important;
+  border-bottom-color: rgba(255, 255, 255, 0.20) !important;
+  box-shadow: var(--shadow-elevation);
+  backdrop-filter: blur(10px) saturate(118%);
+  -webkit-backdrop-filter: blur(10px) saturate(118%);
 }
 
 .app-bottom-nav {

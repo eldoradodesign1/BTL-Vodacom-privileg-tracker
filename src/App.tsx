@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { User, Shop, AgentMasterStatus, UserRole } from './types';
 import {
   getUsers,
@@ -111,6 +111,7 @@ export default function App() {
   const [shops, setShops] = useState<Shop[]>(() => getShops());
   const [activeShopId, setActiveShopId] = useState<string>('');
   const [, setDataRevision] = useState(0);
+  const directoryRefreshAtRef = useRef(0);
 
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -164,10 +165,10 @@ const refreshData = useCallback(async () => {
   }
 
   try {
-    const [usersData, shopsData] = await Promise.all([
-      fetchUsersFromSupabase(),
-      fetchShopsFromSupabase()
-    ]);
+    const directoryIsFresh = Date.now() - directoryRefreshAtRef.current < 5 * 60 * 1000;
+    const [usersData, shopsData] = directoryIsFresh
+      ? [getUsers(), getShops()]
+      : await Promise.all([fetchUsersFromSupabase(), fetchShopsFromSupabase()]);
 
     await Promise.all([
       refreshLeadsFromSupabase(),
@@ -175,8 +176,11 @@ const refreshData = useCallback(async () => {
       refreshReportsFromSupabase()
     ]);
 
-    saveUsers(usersData);
-    saveShops(shopsData);
+    if (!directoryIsFresh) {
+      saveUsers(usersData);
+      saveShops(shopsData);
+      directoryRefreshAtRef.current = Date.now();
+    }
     setUsers(usersData);
     setShops(shopsData);
     setDataRevision((prev) => prev + 1);
@@ -277,7 +281,7 @@ const refreshData = useCallback(async () => {
     })();
 
     return () => { cancelled = true; };
-  }, [currentUser, simulatedUserId, users]);
+  }, [currentUser?.id, currentUser?.userCategory, simulatedUserId]);
 
   useEffect(() => {
     const onToast = (event: Event) => {

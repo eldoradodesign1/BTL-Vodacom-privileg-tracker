@@ -59,7 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
   const unreadCount = safeNotifications.filter(n => !n.is_read).length;
   const roleLabel = user.role === 'super_admin'
     ? 'Super-admin'
-    : (user.role === 'admin' ? 'Admin' : (user.role === 'sub_admin' ? 'Sous-admin' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent')));
+    : (user.role === 'admin' ? 'Admin' : (user.role === 'sub_admin' ? 'Ops' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent')));
   const topbarOverlay = theme === 'diamond'
     ? 'linear-gradient(100deg, rgba(255,255,255,0.96), rgba(246,244,241,0.84), rgba(255,255,255,0.90))'
     : 'linear-gradient(100deg, rgba(5,7,12,0.68), rgba(10,14,22,0.34), rgba(8,10,17,0.56))';
