@@ -42,6 +42,14 @@ const attachClickSound = () => {
 
 attachClickSound();
 
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    const serviceWorkerUrl = `${import.meta.env.BASE_URL}service-worker.js`;
+    void navigator.serviceWorker.register(serviceWorkerUrl).catch(() => {
+      // L'application reste totalement fonctionnelle si le cache PWA est indisponible.
+    });
+  });
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
