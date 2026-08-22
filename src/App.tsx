@@ -649,6 +649,7 @@ const todayLeads =
         <Suspense fallback={null}>
           <SystemConfigurationModal
             isOpen
+            currentUser={realMasterUser}
             onClose={() => setIsSystemConfigurationOpen(false)}
             onRefreshData={() => { void refreshData(); }}
           />

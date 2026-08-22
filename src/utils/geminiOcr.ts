@@ -1,56 +1,37 @@
-import { getGeminiApiKey } from './appConfig';
+import { getRuntimeSupabaseConfig } from './appConfig';
+
+export type TransactionOcrStatus = 'identified' | 'unreadable' | 'date_mismatch' | 'not_configured' | 'unavailable' | 'invalid_image';
 
 export interface TransactionOcrResult {
   transactionId: string | null;
   available: boolean;
+  status: TransactionOcrStatus;
 }
 
-function toBase64(file: File): Promise<{ mimeType: string; data: string }> {
+function toDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      const raw = String(reader.result || '');
-      const match = raw.match(/^data:(.+);base64,(.+)$/);
-      if (!match) return reject(new Error('Format image non pris en charge.'));
-      resolve({ mimeType: match[1], data: match[2] });
-    };
+    reader.onload = () => resolve(String(reader.result || ''));
     reader.onerror = () => reject(new Error('Lecture de la capture impossible.'));
     reader.readAsDataURL(file);
   });
 }
 
-function extractIdentifier(value: string): string | null {
-  const normalized = value.trim();
-  if (!normalized || /null|illisible|non visible|inconnu/i.test(normalized)) return null;
-  const direct = normalized.match(/[A-Z0-9][A-Z0-9\-_/]{4,}/i);
-  return direct ? direct[0] : null;
-}
-
-export async function identifyTransactionReference(file: File): Promise<TransactionOcrResult> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) return { transactionId: null, available: false };
-  const image = await toBase64(file);
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${encodeURIComponent(apiKey)}`, {
+export async function identifyTransactionReference(file: File, transactionDate: string): Promise<TransactionOcrResult> {
+  const config = getRuntimeSupabaseConfig();
+  if (!config) return { transactionId: null, available: false, status: 'not_configured' };
+  const imageDataUrl = await toDataUrl(file);
+  const response = await fetch(`${config.url.replace(/\/$/, '')}/functions/v1/merchant-transaction-ocr`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      generationConfig: { temperature: 0, responseMimeType: 'application/json' },
-      contents: [{
-        role: 'user',
-        parts: [
-          { text: 'Analyse cette capture de transaction. Retourne uniquement un objet JSON {"transactionId":"..."} avec le numéro ou identifiant de transaction lisible. Si aucun identifiant n’est clairement visible, retourne {"transactionId":null}. Ne devine jamais.' },
-          { inlineData: { mimeType: image.mimeType, data: image.data } }
-        ]
-      }]
-    })
+    headers: { 'Content-Type': 'application/json', apikey: config.anonKey },
+    body: JSON.stringify({ imageDataUrl, transactionDate }),
   });
-  if (!response.ok) throw new Error('Analyse OCR indisponible.');
-  const payload = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('') || '';
-  try {
-    const parsed = JSON.parse(text) as { transactionId?: string | null };
-    return { transactionId: extractIdentifier(parsed.transactionId || ''), available: true };
-  } catch {
-    return { transactionId: extractIdentifier(text), available: true };
-  }
+  const payload = await response.json() as { transactionId?: string | null; status?: TransactionOcrStatus };
+  const status = payload.status || 'unavailable';
+  if (!response.ok) return { transactionId: null, available: false, status };
+  return {
+    transactionId: payload.transactionId?.trim() || null,
+    available: status !== 'not_configured' && status !== 'unavailable',
+    status,
+  };
 }
