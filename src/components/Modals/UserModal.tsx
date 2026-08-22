@@ -4,6 +4,7 @@ import { saveUser, getUsers } from '../../utils/storage';
 import { syncLocalDataToSupabase } from '../../utils/supabase';
 import { assignUserToCampaigns, getCampaigns } from '../../utils/merchantCampaign';
 import { UserPlus, X } from 'lucide-react';
+import { cleanPhoneNumber, formatMsisdn, isValidMsisdn } from '../../utils/phoneValidator';
 
 interface UserModalProps {
   isOpen: boolean;
@@ -58,6 +59,10 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, shops, onClose, on
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!name || !phone) return;
+    if (!isValidMsisdn(phone)) {
+      setError('Format téléphone invalide : utilisez 081… (10 chiffres) ou +24381… (13 caractères).');
+      return;
+    }
     if (role === 'agent' && category === 'hostess' && !shopId) {
       setError('Sélectionnez la boutique permanente de cette hôtesse.');
       return;
@@ -73,9 +78,10 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, shops, onClose, on
     const userCategory: UserCategory = role === 'agent' ? category : 'operations';
 
     try {
+      const normalizedPhone = formatMsisdn(cleanPhoneNumber(phone));
       const createdUser = saveUser({
         name,
-        phone,
+        phone: normalizedPhone,
         role,
         supervisorId: role === 'agent' ? supervisorId || undefined : undefined,
         permanentShopId,
@@ -121,7 +127,8 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, shops, onClose, on
 
           <div>
             <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">MSISDN (Téléphone)</label>
-            <input type="text" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Ex: 0813333333" required className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500" />
+            <input type="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="0813333333 ou +243813333333" required className={`w-full rounded-2xl border px-4 py-3 text-sm text-white focus:outline-none ${phone && !isValidMsisdn(phone) ? 'border-amber-400/70 bg-amber-500/5 focus:border-amber-300' : 'border-white/10 bg-white/5 focus:border-red-500'}`} />
+            <p className="mt-1 text-[10px] text-gray-500">Formats acceptés : 081… (10 chiffres) ou +24381… (13 caractères).</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

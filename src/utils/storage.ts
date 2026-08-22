@@ -1,7 +1,6 @@
 import { User, UserRole, Shop, Checkin, Lead, DailyReport, NotificationItem, ChatMessage, ShopTargets, AgentMasterStatus } from '../types';
 import { INITIAL_SHOPS, INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_REPORTS, INITIAL_NOTIFICATIONS, INITIAL_CHAT } from '../data/initialData';
 import type { PDFReportData } from './pdfGenerator';
-import { pushToGoogleSheetWebhook, getGSheetConfig, syncFromGoogleSheetUrl, fetchChatMessagesFromSheet } from './googleSheetsSync';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
 import {
   isSupabaseConfigured,
@@ -40,6 +39,48 @@ const STORAGE_KEYS = {
 };
 
 const memoryStore = new Map<string, unknown>();
+const OFFLINE_OUTBOX_KEY = 'btl_supabase_outbox_v1';
+type OfflinePayload = Parameters<typeof syncLocalDataToSupabase>[0];
+
+function readOfflineOutbox(): OfflinePayload[] {
+  try {
+    const raw = localStorage.getItem(OFFLINE_OUTBOX_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed as OfflinePayload[] : [];
+  } catch {
+    return [];
+  }
+}
+
+function enqueueOfflinePayload(payload: OfflinePayload): void {
+  const queued = readOfflineOutbox();
+  queued.push(payload);
+  localStorage.setItem(OFFLINE_OUTBOX_KEY, JSON.stringify(queued.slice(-150)));
+}
+
+export async function flushOfflineOutbox(): Promise<void> {
+  if (!isSupabaseConfigured() || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+  const queued = readOfflineOutbox();
+  if (!queued.length) return;
+  const remaining: OfflinePayload[] = [];
+  for (const payload of queued) {
+    try {
+      await syncLocalDataToSupabase(payload);
+    } catch {
+      remaining.push(payload);
+    }
+  }
+  if (remaining.length) localStorage.setItem(OFFLINE_OUTBOX_KEY, JSON.stringify(remaining));
+  else localStorage.removeItem(OFFLINE_OUTBOX_KEY);
+}
+
+function persistOrQueue(payload: OfflinePayload): void {
+  if (!isSupabaseConfigured() || (typeof navigator !== 'undefined' && !navigator.onLine)) {
+    enqueueOfflinePayload(payload);
+    return;
+  }
+  void syncLocalDataToSupabase(payload).catch(() => enqueueOfflinePayload(payload));
+}
 
 const SHARED_API_BASE = (() => {
   if (typeof window === 'undefined') return '';
@@ -86,12 +127,6 @@ function syncSharedNotifications(list: NotificationItem[]): void {
   } catch {}
 }
 
-export const DRIVE_FOLDERS = {
-  REPORTS_FOLDER_URL: 'https://drive.google.com/drive/folders/1gYV6G84pJ0WyrVSmmk2-969ZJt9s1LBq?usp=drive_link',
-  PHOTOS_FOLDER_URL: 'https://drive.google.com/drive/folders/1AVox_j8VMle_cDdDZrM-g0x7E7GkREtv?usp=drive_link',
-  REPORTS_PHOTOS_URL: 'https://drive.google.com/drive/folders/1Xer27VuJuhd1C3DNJ9nyWhzDLaYPKRIS?usp=drive_link'
-};
-
 function requestBrowserNotificationPermission(): Promise<'granted' | 'denied' | 'default'> {
   if (typeof window === 'undefined' || !('Notification' in window)) {
     return Promise.resolve('denied');
@@ -125,7 +160,7 @@ function emitAppToast(message: string, level: 'success' | 'error' = 'success'): 
   } catch {}
 }
 
-function syncUserUpdateToGSheet(user: User): void {
+function syncUserUpdateToSupabase(user: User): void {
   void (async () => {
     try {
       if (!isSupabaseConfigured()) return;
@@ -554,7 +589,7 @@ export function updateUserShopAssignment(userId: string, shopId: string): boolea
     }
 
     emitAppToast(`Affectation mise à jour: ${before.name} → ${shop?.name || shopId}.`);
-    syncUserUpdateToGSheet(users[index]);
+    syncUserUpdateToSupabase(users[index]);
 
     return true;
   }
@@ -583,7 +618,7 @@ export function updateUserSupervisor(userId: string, supervisorId: string): bool
     }
 
     emitAppToast(`Superviseur mis à jour pour ${target.name}.`);
-    syncUserUpdateToGSheet(users[index]);
+    syncUserUpdateToSupabase(users[index]);
 
     return true;
   }
@@ -642,25 +677,7 @@ export function updateUserPassword(userId: string, oldPass: string, newPass: str
   users[index].password = cleanNew;
   saveItem(STORAGE_KEYS.USERS, users);
 
-  // Persist password changes to Users sheet through Apps Script webhook.
-  pushToGoogleSheetWebhook({
-    type: 'user-update',
-    data: {
-      id: users[index].id,
-      phone: users[index].phone,
-      name: users[index].name,
-      role: users[index].role,
-      supervisorId: users[index].supervisorId || '',
-      permanentShopId: users[index].permanentShopId,
-      password: users[index].password,
-      updated_at: new Date().toISOString()
-    }
-  }).then(() => {
-    const cfg = getGSheetConfig();
-    if (cfg.sheetCsvUrl) {
-      syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
-    }
-  }).catch(() => {});
+  syncUserUpdateToSupabase(users[index]);
 
   return { success: true, message: "Clé de sécurité mise à jour avec succès !" };
 }
@@ -844,29 +861,6 @@ export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
     }
   })();
 
-  pushToGoogleSheetWebhook({
-    type: 'checkin',
-    data: newCheckin,
-    folders: {
-      photos: DRIVE_FOLDERS.PHOTOS_FOLDER_URL
-    }
-  }).then((confirmed) => {
-    if (confirmed) {
-      const cfg = getGSheetConfig();
-      if (cfg.sheetCsvUrl) {
-        syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
-      }
-      return;
-    }
-
-    // Keep a pending flag if webhook confirmation failed.
-    const latest = getCheckins();
-    const idx = latest.findIndex((c) => c.id === newCheckin.id);
-    if (idx >= 0 && latest[idx].status !== 'pending') {
-      latest[idx] = { ...latest[idx], status: 'pending' };
-      saveCheckins(latest);
-    }
-  }).catch(() => {});
   return newCheckin;
 }
 
@@ -1009,40 +1003,7 @@ export function addLead(leadData: Omit<Lead, 'id'>): Lead {
 
   console.log('ADDLEAD', newLead);
 
-  void (async () => {
-    try {
-      if (isSupabaseConfigured()) {
-        await syncLocalDataToSupabase({
-          leads: [newLead]
-        });
-      }
-    } catch (error) {
-      console.warn('Supabase lead sync failed', error);
-    }
-  })();
-  pushToGoogleSheetWebhook({ type: 'lead', data: newLead }).then((confirmed) => {
-    if (confirmed) {
-      const latest = getLeads();
-      const idx = latest.findIndex((lead) => lead.id === newLead.id);
-      if (idx >= 0 && latest[idx].status !== 'synced') {
-        latest[idx] = { ...latest[idx], status: 'synced' };
-        saveLeads(latest);
-      }
-
-      const cfg = getGSheetConfig();
-      if (cfg.sheetCsvUrl) {
-        syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
-      }
-      return;
-    }
-
-    const latest = getLeads();
-    const idx = latest.findIndex((lead) => lead.id === newLead.id);
-    if (idx >= 0 && latest[idx].status !== 'pending') {
-      latest[idx] = { ...latest[idx], status: 'pending' };
-      saveLeads(latest);
-    }
-  }).catch(() => {});
+  persistOrQueue({ leads: [newLead] });
   return newLead;
 }
 
@@ -1086,33 +1047,8 @@ export async function addReport(reportData: Omit<DailyReport, 'id'>): Promise<Da
 
   console.log('ADDREPORT', newReport);
 
-  void (async () => {
-    try {
-      if (isSupabaseConfigured()) {
-        await syncLocalDataToSupabase({
-          reports: [newReport]
-        });
-      }
-    } catch (error) {
-      console.error('Supabase report sync failed', error);
-      throw error;
-    }
-  })();
+  persistOrQueue({ reports: [newReport] });
   
-  pushToGoogleSheetWebhook({
-    type: 'report',
-    data: newReport,
-    folders: {
-      reports: DRIVE_FOLDERS.REPORTS_FOLDER_URL,
-      reportPhotos: DRIVE_FOLDERS.REPORTS_PHOTOS_URL
-    }
-  }).then(() => {
-    const cfg = getGSheetConfig();
-    if (cfg.sheetCsvUrl) {
-      syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
-    }
-  }).catch(() => {});
-
   const supervisor = findSupervisorForAgent(newReport.agent_id);
   if (supervisor) {
     pushNotification(
@@ -1188,34 +1124,6 @@ export async function getReportPdf(report: DailyReport): Promise<string> {
 
   pdfCache.set(report.id, generatedUrl);
 
-  // If report has no Drive URL yet, push generated PDF for remote save and future preview.
-  const pushed = await pushToGoogleSheetWebhook({
-    type: 'report',
-    data: {
-      ...report,
-      pdf_url: generatedUrl,
-      pointage_photo: pointagePhoto
-    },
-    folders: {
-      reports: DRIVE_FOLDERS.REPORTS_FOLDER_URL,
-      reportPhotos: DRIVE_FOLDERS.REPORTS_PHOTOS_URL
-    }
-  }).catch(() => false);
-
-  if (pushed) {
-    const updated = getReports().find(r => r.id === report.id);
-    if (updated?.drive_pdf_url && updated.drive_pdf_url.startsWith('http')) {
-      return updated.drive_pdf_url;
-    }
-  }
-
-  if (pushed) {
-    const cfg = getGSheetConfig();
-    if (cfg.sheetCsvUrl) {
-      syncFromGoogleSheetUrl(cfg.sheetCsvUrl).catch(() => {});
-    }
-  }
-
   return generatedUrl;
 }
 
@@ -1280,15 +1188,6 @@ export function clearNotifications(userId: string): void {
 
 // --- CHAT ---
 export async function getChatMessages(): Promise<ChatMessage[]> {
-  try {
-    const sharedMessages = await fetchChatMessagesFromSheet();
-    if (sharedMessages && Array.isArray(sharedMessages)) {
-      const normalized = sharedMessages.filter(message => !message.deleted);
-      syncSharedChatMessages(normalized);
-      return normalized;
-    }
-  } catch {}
-
   return loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT).filter(message => !message.deleted);
 }
 
@@ -1310,7 +1209,7 @@ export async function sendChatMessage(sender: User, message: string): Promise<Ch
   const currentMsgs = await getChatMessages();
   const nextMsgs = [...currentMsgs, newMsg];
   syncSharedChatMessages(nextMsgs);
-  void pushToGoogleSheetWebhook({ type: 'chat', data: newMsg });
+  persistOrQueue({ chatMessages: [newMsg] });
 
   if (sender.role === 'admin') {
     recipients.forEach(uid => {
@@ -1340,16 +1239,8 @@ export async function deleteChatMessage(messageId: string, actor: User): Promise
 
   syncSharedChatMessages(updated);
 
-  try {
-    await pushToGoogleSheetWebhook({
-      action: 'deleteChatMessage',
-      type: 'chat-delete',
-      tab: 'Chat',
-      id: messageId,
-      deleted_by: actor.id,
-      deleted_at: deletedAt
-    });
-  } catch {}
+  const deleted = updated.find((message) => message.id === messageId);
+  if (deleted) persistOrQueue({ chatMessages: [deleted] });
 
   return true;
 }

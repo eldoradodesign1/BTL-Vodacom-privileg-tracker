@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { ChatMessage, Checkin, DailyReport, Lead, NotificationItem, Shop, User } from '../types';
+import { getRuntimeSupabaseConfig } from './appConfig';
 
 export interface SupabaseConfig {
   url: string;
@@ -23,8 +24,9 @@ function readEnv(name: string): string | undefined {
 }
 
 export function getSupabaseConfig(overrides?: Partial<SupabaseConfig>): SupabaseConfig | null {
-  const url = overrides?.url || readEnv('VITE_SUPABASE_URL') || readEnv('SUPABASE_URL');
-  const anonKey = overrides?.anonKey || readEnv('VITE_SUPABASE_ANON_KEY') || readEnv('SUPABASE_ANON_KEY');
+  const runtimeConfig = getRuntimeSupabaseConfig();
+  const url = overrides?.url || runtimeConfig?.url || readEnv('VITE_SUPABASE_URL') || readEnv('SUPABASE_URL');
+  const anonKey = overrides?.anonKey || runtimeConfig?.anonKey || readEnv('VITE_SUPABASE_ANON_KEY') || readEnv('SUPABASE_ANON_KEY');
 
   if (!url || !anonKey) {
     return null;

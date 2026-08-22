@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { User, NotificationItem } from '../types';
-import { Bell, LogOut, Shield, FileSpreadsheet, Palette, Camera, X, BriefcaseBusiness } from 'lucide-react';
+import { Bell, LogOut, Shield, RefreshCw, Palette, Camera, X, BriefcaseBusiness } from 'lucide-react';
 import { addCheckin, getShopById, resolveStoredPhotoUrl } from '../utils/storage';
 
 export type ThemeMode = 'anthracite' | 'rubis' | 'silver' | 'diamond' | 'sapphire' | 'ambre';
@@ -17,7 +17,7 @@ interface HeaderProps {
   onClearNotifications?: () => void;
   onLogout: () => void;
   onOpenPasswordModal: () => void;
-  onOpenGSheetModal?: () => void;
+  onRefreshData?: () => void;
   onPointageRecorded?: () => void;
   theme?: ThemeMode;
   onSetTheme?: (theme: ThemeMode) => void;
@@ -36,7 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   onClearNotifications,
   onLogout,
   onOpenPasswordModal,
-  onOpenGSheetModal,
+  onRefreshData,
   onPointageRecorded,
   theme = 'anthracite',
   onSetTheme,
@@ -155,7 +155,7 @@ export const Header: React.FC<HeaderProps> = ({
   const syncDotClass = syncState === 'ok'
     ? 'bg-emerald-500 shadow-emerald-500/60'
     : (syncState === 'progress' ? 'bg-amber-400 shadow-amber-400/60' : 'bg-red-500 shadow-red-500/60');
-  const gsheetBtnClass = syncState === 'ok'
+  const refreshBtnClass = syncState === 'ok'
     ? 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/40 text-emerald-500'
     : (syncState === 'progress' ? 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/40 text-amber-500' : 'bg-red-500/10 hover:bg-red-500/20 border-red-500/40 text-red-500');
 
@@ -307,14 +307,14 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
-          {/* Google Sheets Sync Button (Only provided for Admin) */}
-          {onOpenGSheetModal && (
+          {/* Actualisation des données pour les comptes non super_admin */}
+          {onRefreshData && (
             <button
-              onClick={onOpenGSheetModal}
-              className={`p-2 border rounded-xl transition-all shadow-sm ${gsheetBtnClass}`}
-              title="Connexion & Sync Google Sheets"
+              onClick={onRefreshData}
+              className={`p-2 border rounded-xl transition-all shadow-sm ${refreshBtnClass}`}
+              title="Actualiser les données"
             >
-              <FileSpreadsheet className="w-4 h-4" />
+              <RefreshCw className="w-4 h-4" />
             </button>
           )}
 

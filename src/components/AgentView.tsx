@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Lead, Checkin, DailyReport } from '../types';
 import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSyncPendingCount, isMatchAgent, toISO, getUsers, resolveStoredPhotoUrl } from '../utils/storage';
-import { formatDriveImageUrl, getGSheetConfig, syncFromGoogleSheetUrl } from '../utils/googleSheetsSync';
 import { TabType } from './BottomNav';
 import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archive, Eye, Search, Filter, RefreshCw } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
@@ -41,31 +40,6 @@ export const AgentView: React.FC<AgentViewProps> = ({
   const [clientActionFilter, setClientActionFilter] = useState('ALL');
   const todayStr = new Date().toISOString().split('T')[0];
   const [clientDateFilter, setClientDateFilter] = useState<string>(todayStr);
-  const [isSyncingGSheet, setIsSyncingGSheet] = useState(false);
-  const online = typeof navigator !== 'undefined' ? navigator.onLine : true;
-  const pendingCount = getSyncPendingCount();
-  const syncState: 'ok' | 'progress' | 'late' = isSyncingGSheet
-    ? 'progress'
-    : (online && pendingCount === 0 ? 'ok' : (online ? 'progress' : (pendingCount > 0 ? 'late' : 'progress')));
-  const syncBtnClass = syncState === 'ok'
-    ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-500 border-emerald-500/40'
-    : (syncState === 'progress'
-      ? 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-500 border-amber-500/40'
-      : 'bg-red-500/20 hover:bg-red-500/30 text-red-500 border-red-500/40');
-
-  const handleManualSync = async () => {
-    setIsSyncingGSheet(true);
-    try {
-      const cfg = getGSheetConfig();
-      if (cfg.sheetCsvUrl) {
-        await syncFromGoogleSheetUrl(cfg.sheetCsvUrl);
-        if (onRefreshData) onRefreshData();
-      }
-    } catch {} finally {
-      setIsSyncingGSheet(false);
-    }
-  };
-
   useEffect(() => {
     const allCheckins = getCheckins();
     const myTodayIn = allCheckins
@@ -74,7 +48,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
     const fallback = myTodayIn[0] || todayCheckin || null;
     const rawPhoto = withPhoto?.photo_drive_url || withPhoto?.photo || fallback?.photo_drive_url || fallback?.photo || null;
     const resolved = resolveStoredPhotoUrl(rawPhoto || '');
-    setPhotoPreview(resolved ? formatDriveImageUrl(resolved) : null);
+    setPhotoPreview(resolved || null);
   }, [currentUser.id, todayCheckin?.photo, todayStr]);
 
   const { checkinDone, reportDone } = checkDailyStatus(currentUser.id, todayStr);
@@ -249,16 +223,6 @@ export const AgentView: React.FC<AgentViewProps> = ({
           </div>
 
           <div className="flex items-center space-x-2">
-            <button
-              onClick={handleManualSync}
-              disabled={isSyncingGSheet}
-              className={`px-3 py-2 border rounded-2xl text-xs font-black uppercase flex items-center space-x-1.5 shadow-md transition-all ${syncBtnClass}`}
-              title="Actualiser en direct depuis Google Sheet"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingGSheet ? 'animate-spin' : ''}`} />
-              <span>{isSyncingGSheet ? 'Synchro...' : 'Live GSheet'}</span>
-            </button>
-
             <button
               onClick={onOpenLeadModal}
               disabled={reportDone}

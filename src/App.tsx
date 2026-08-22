@@ -21,6 +21,7 @@ import {
   refreshCheckinsFromSupabase,
   refreshReportsFromSupabase,
   refreshLeadsFromSupabase,
+  flushOfflineOutbox,
 } from './utils/storage';
 
 
@@ -48,7 +49,7 @@ const PasswordModal = lazy(() => import('./components/Modals/PasswordModal').the
 const PdfViewerModal = lazy(() => import('./components/Modals/PdfViewerModal').then(({ PdfViewerModal: component }) => ({ default: component })));
 const AgentProfileModal = lazy(() => import('./components/Modals/AgentProfileModal').then(({ AgentProfileModal: component }) => ({ default: component })));
 const TodayClientsModal = lazy(() => import('./components/Modals/TodayClientsModal').then(({ TodayClientsModal: component }) => ({ default: component })));
-const GSheetModal = lazy(() => import('./components/Modals/GSheetModal').then(({ GSheetModal: component }) => ({ default: component })));
+const SystemConfigurationModal = lazy(() => import('./components/Modals/SystemConfigurationModal').then(({ SystemConfigurationModal: component }) => ({ default: component })));
 const LocationModal = lazy(() => import('./components/Modals/LocationModal').then(({ LocationModal: component }) => ({ default: component })));
 const MerchantBAView = lazy(() => import('./components/MerchantBAView').then(({ MerchantBAView: component }) => ({ default: component })));
 const MerchantSupervisorView = lazy(() => import('./components/MerchantSupervisorView').then(({ MerchantSupervisorView: component }) => ({ default: component })));
@@ -118,7 +119,7 @@ export default function App() {
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isShopModalOpen, setIsShopModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [isGSheetModalOpen, setIsGSheetModalOpen] = useState(false);
+  const [isSystemConfigurationOpen, setIsSystemConfigurationOpen] = useState(false);
   const [pdfModalUrl, setPdfModalUrl] = useState<string | null>(null);
   const [selectedAgentForProfile, setSelectedAgentForProfile] = useState<AgentMasterStatus | null>(null);
   const [selectedAgentForTodayClients, setSelectedAgentForTodayClients] = useState<AgentMasterStatus | null>(null);
@@ -165,6 +166,7 @@ const refreshData = useCallback(async () => {
   }
 
   try {
+    await flushOfflineOutbox();
     const directoryIsFresh = Date.now() - directoryRefreshAtRef.current < 5 * 60 * 1000;
     const [usersData, shopsData] = directoryIsFresh
       ? [getUsers(), getShops()]
@@ -206,7 +208,7 @@ const refreshData = useCallback(async () => {
         setSimulatedRole(null);
         setSimulatedUserId(null);
         setToast({
-          message: 'Votre compte a ete retire de la feuille Google Sheets. Reconnectez-vous avec un compte actif.',
+          message: 'Votre compte n’est plus actif dans la base. Reconnectez-vous avec un compte valide.',
           level: 'error'
         });
         return;
@@ -519,10 +521,16 @@ const todayLeads =
         }}
         onLogout={handleLogout}
         onOpenPasswordModal={() => setIsPasswordModalOpen(true)}
-        onOpenGSheetModal={realMasterUser.role === 'admin' || realMasterUser.role === 'super_admin' ? () => setIsGSheetModalOpen(true) : undefined}
+        onRefreshData={realMasterUser.role === 'super_admin' ? undefined : () => { void refreshData(); }}
       />
 
       <main className="flex-1 min-h-0 px-3 sm:px-4 pt-3 pb-32 max-w-2xl mx-auto w-full overflow-y-auto overflow-x-hidden">
+        {activeTab === 'admin' && realMasterUser.role === 'super_admin' && (
+          <button type="button" onClick={() => setIsSystemConfigurationOpen(true)} className="glass-card mb-3 flex w-full items-center justify-between border border-fuchsia-300/25 bg-fuchsia-400/[0.06] px-4 py-3 text-left transition hover:bg-fuchsia-400/[0.1]">
+            <span><b className="block text-xs font-black uppercase tracking-wide text-fuchsia-100">Paramètres de la base</b><span className="mt-1 block text-[10px] font-semibold text-gray-400">Supabase, Gemini OCR, schéma, export et cache</span></span>
+            <span className="rounded-xl border border-fuchsia-200/25 px-2 py-1 text-[10px] font-black text-fuchsia-100">OUVRIR</span>
+          </button>
+        )}
         {renderContent()}
       </main>
 
@@ -637,14 +645,12 @@ const todayLeads =
         </Suspense>
       )}
 
-      {isGSheetModalOpen && (
+      {isSystemConfigurationOpen && (
         <Suspense fallback={null}>
-          <GSheetModal
+          <SystemConfigurationModal
             isOpen
-            onClose={() => setIsGSheetModalOpen(false)}
-            onSyncSuccess={() => {
-              refreshData();
-            }}
+            onClose={() => setIsSystemConfigurationOpen(false)}
+            onRefreshData={() => { void refreshData(); }}
           />
         </Suspense>
       )}
