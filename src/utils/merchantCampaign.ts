@@ -575,7 +575,7 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
   };
 }
 
-export async function getMerchantPodium(runId: string, activityDate = isoDate(new Date())): Promise<MerchantPodiumEntry[]> {
+export async function getMerchantStandings(runId: string, activityDate = isoDate(new Date())): Promise<MerchantPodiumEntry[]> {
   const safeActivityDate = clampMerchantActivityDate(activityDate);
   const client = getMerchantClient();
   const [team, activity, runResponse] = await Promise.all([
@@ -623,7 +623,7 @@ export async function getMerchantPodium(runId: string, activityDate = isoDate(ne
     .sort((left, right) => String(targetReachedAtByBa.get(left.ba.id)).localeCompare(String(targetReachedAtByBa.get(right.ba.id))))
     .slice(0, 3);
   const lockedIds = new Set(locked.map((item) => item.ba.id));
-  const ranked = [...locked, ...eligible.filter((item) => !lockedIds.has(item.ba.id)).sort(compareVolume)].slice(0, 3);
+  const ranked = [...locked, ...eligible.filter((item) => !lockedIds.has(item.ba.id)).sort(compareVolume)];
 
   const dailyVolume = new Map<string, Map<string, { transactionCount: number; visitedPos: Set<string>; totalAmount: number; firstArrival: string }>>();
   activity.visits.filter((visit) => Boolean(visit.visited_at)).forEach((visit) => {
@@ -672,6 +672,10 @@ export async function getMerchantPodium(runId: string, activityDate = isoDate(ne
       dailyTransactionTarget,
     };
   });
+}
+
+export async function getMerchantPodium(runId: string, activityDate = isoDate(new Date())): Promise<MerchantPodiumEntry[]> {
+  return (await getMerchantStandings(runId, activityDate)).slice(0, 3);
 }
 
 export async function getMerchantPosControl(run: CampaignRun): Promise<MerchantPosControlItem[]> {
