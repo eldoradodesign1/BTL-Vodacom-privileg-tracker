@@ -6,6 +6,7 @@ import {
   getCampaignPos,
   getDailyAttendance,
   getMerchantCampaign,
+  getMerchantEvidencePublicUrl,
   getMerchantStandings,
   getPosVisitsForDay,
   getTransactionsForDay,
@@ -49,6 +50,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
   const [transactions, setTransactions] = useState<BATransaction[]>([]);
   const [posVisits, setPosVisits] = useState<BAPosVisit[]>([]);
   const [standings, setStandings] = useState<MerchantPodiumEntry[]>([]);
+  const [podiumPhotoUrls, setPodiumPhotoUrls] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -71,6 +73,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
         setTransactions([]);
         setPosVisits([]);
         setStandings([]);
+        setPodiumPhotoUrls({});
         return;
       }
       const [nextPositions, nextAttendance, nextTransactions, nextVisits, nextStandings] = await Promise.all([
@@ -85,6 +88,16 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
       setTransactions(nextTransactions);
       setPosVisits(nextVisits);
       setStandings(nextStandings);
+      const topPhotoEntries = await Promise.all(nextStandings.slice(0, 3).map(async (entry) => {
+        const storagePath = entry.activity.attendance?.checkin_photo_path;
+        if (!storagePath) return [entry.activity.ba.id, ''] as const;
+        try {
+          return [entry.activity.ba.id, await getMerchantEvidencePublicUrl(storagePath)] as const;
+        } catch {
+          return [entry.activity.ba.id, ''] as const;
+        }
+      }));
+      setPodiumPhotoUrls(Object.fromEntries(topPhotoEntries));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Chargement de la journée impossible.');
     } finally {
@@ -218,9 +231,9 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
 
       <section className="glass-card relative overflow-hidden border border-amber-300/20 p-3">
         <div className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-amber-400/[0.10] blur-2xl"/>
-        <div className="relative flex items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-2"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-300/25 bg-amber-500/[0.10] text-amber-200"><Trophy size={15}/></div><div><p className="text-[9px] font-black uppercase tracking-[0.16em] text-amber-100">Podium du jour</p><p className="text-[10px] text-gray-400">Classement par volume Merchant</p></div></div>{personalStanding && <div className="rounded-xl border border-cyan-300/25 bg-cyan-400/[0.08] px-2 py-1 text-right"><span className="block text-[8px] font-black uppercase text-cyan-100/70">Votre place</span><b className="block text-sm font-black text-cyan-100">#{personalStanding.rank}</b></div>}</div>
-        <div className="relative mt-3 grid grid-cols-3 gap-1.5">{[0, 1, 2].map((index) => { const entry = leaders[index]; const isCurrent = entry?.activity.ba.id === currentUser.id; const color = index === 0 ? 'border-amber-300/35 bg-amber-500/[0.11] text-amber-100' : index === 1 ? 'border-slate-200/25 bg-slate-200/[0.08] text-slate-100' : 'border-orange-300/25 bg-orange-500/[0.08] text-orange-100'; return <div key={entry?.activity.ba.id || `empty-${index}`} className={`min-w-0 rounded-xl border p-2 ${color} ${isCurrent ? 'ring-1 ring-cyan-200/70' : ''}`}>{entry ? <><div className="flex items-center justify-between gap-1"><span className="flex h-5 w-5 items-center justify-center rounded-lg bg-black/15 text-[9px] font-black">{index + 1}</span>{isCurrent && <Medal size={13} className="text-cyan-100"/>}</div><b className="mt-1 block truncate text-[10px]">{entry.activity.ba.name.split(' ')[0]}</b><span className="mt-0.5 block text-[9px] font-bold opacity-75">{entry.activity.transactionCount} Tx · {entry.activity.visitedPosCount} POS</span></> : <><span className="flex h-5 w-5 items-center justify-center rounded-lg bg-black/10 text-[9px] font-black">{index + 1}</span><span className="mt-2 block text-[9px] font-bold opacity-50">À saisir</span></>}</div>; })}</div>
-        <div className="relative mt-2 rounded-xl border border-white/[0.08] bg-black/10 px-2.5 py-2 text-[10px] font-semibold text-gray-300">{personalStanding ? <>Vous êtes <b className="text-white">#{personalStanding.rank}</b> avec <b className="text-amber-100">{personalStanding.activity.transactionCount} transactions</b> et <b className="text-cyan-100">{personalStanding.activity.visitedPosCount} POS</b>{personalStanding.isLocked ? <span className="ml-1 text-amber-200">· place verrouillée</span> : ''}.</> : standings.length ? <>Vous n’êtes pas encore classé. Enregistrez votre premier POS pour entrer dans le classement.</> : <>Le podium attend le premier POS visité aujourd’hui.</>}</div>
+        <div className="relative flex items-center gap-2"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-amber-300/25 bg-amber-500/[0.10] text-amber-200"><Trophy size={15}/></div><div><p className="text-[9px] font-black uppercase tracking-[0.16em] text-amber-100">Podium du jour</p><p className="text-[10px] text-gray-400">Classement par volume Merchant</p></div></div>
+        <div className="relative mt-3 grid grid-cols-3 gap-1.5">{[0, 1, 2].map((index) => { const entry = leaders[index]; const isCurrent = entry?.activity.ba.id === currentUser.id; const photoUrl = entry ? podiumPhotoUrls[entry.activity.ba.id] : ''; const color = index === 0 ? 'border-amber-300/35 bg-amber-500/[0.11] text-amber-100' : index === 1 ? 'border-slate-200/25 bg-slate-200/[0.08] text-slate-100' : 'border-orange-300/25 bg-orange-500/[0.08] text-orange-100'; return <div key={entry?.activity.ba.id || `empty-${index}`} className={`relative min-w-0 overflow-hidden rounded-lg border p-2 ${color} ${isCurrent ? 'ring-1 ring-cyan-200/70' : ''}`}>{photoUrl && <img src={photoUrl} alt="" aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-10"/>}<div className="relative">{entry ? <><div className="flex items-center justify-between gap-1"><span className="flex h-5 w-5 items-center justify-center rounded-lg bg-black/15 text-[9px] font-black">{index + 1}</span>{isCurrent && <Medal size={13} className="text-cyan-100"/>}</div><b className="mt-1 block truncate text-[10px]">{entry.activity.ba.name.split(' ')[0]}</b><span className="mt-0.5 block text-[9px] font-bold opacity-75">{entry.activity.transactionCount} Tx · {entry.activity.visitedPosCount} POS</span></> : <><span className="flex h-5 w-5 items-center justify-center rounded-lg bg-black/10 text-[9px] font-black">{index + 1}</span><span className="mt-2 block text-[9px] font-bold opacity-50">À saisir</span></>}</div></div>; })}</div>
+        <div className="relative mt-2 rounded-xl border border-white/[0.08] bg-black/10 px-2.5 py-2 text-[10px] font-semibold text-gray-300">{personalStanding ? <><b className="text-white">Vous #{personalStanding.rank}</b> avec <b className="text-amber-100">{personalStanding.activity.transactionCount} transactions</b> et <b className="text-cyan-100">{personalStanding.activity.visitedPosCount} POS</b>{personalStanding.isLocked ? <span className="ml-1 text-amber-200">· place verrouillée</span> : ''}.</> : standings.length ? <>Vous n’êtes pas encore classé. Enregistrez votre premier POS pour entrer dans le classement.</> : <>Le podium attend le premier POS visité aujourd’hui.</>}</div>
       </section>
 
       {error && <div className="rounded-2xl border border-red-400/50 bg-red-950/50 p-3 text-xs font-bold text-red-200">{error}</div>}

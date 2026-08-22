@@ -486,10 +486,9 @@ function getDateRange(days: number, end = new Date()): string[] {
   });
 }
 
-export async function updateMerchantTargetSettings(runId: string, targets: MerchantTargetSettings): Promise<CampaignRun> {
+export async function updateMerchantTargetSettings(runId: string, targets: Pick<MerchantTargetSettings, 'daily_pos_target' | 'transactions_per_pos_target'>): Promise<CampaignRun> {
   const client = getMerchantClient();
   const payload = {
-    campaign_pos_target: Math.max(0, Math.round(targets.campaign_pos_target)),
     daily_pos_target: Math.max(1, Math.round(targets.daily_pos_target)),
     transactions_per_pos_target: Math.max(1, Math.round(targets.transactions_per_pos_target)),
   };
@@ -522,13 +521,14 @@ async function getRunActivityData(runId: string) {
 
 export async function getMerchantDashboardSummary(run: CampaignRun, activityDate = isoDate(new Date())): Promise<MerchantDashboardSummary> {
   const safeActivityDate = clampMerchantActivityDate(activityDate);
-  const [team, bas, activity] = await Promise.all([
+  const [team, bas, activity, campaignPos] = await Promise.all([
     getMerchantMonitoring(run.id, safeActivityDate),
     getMerchantBAs(),
     getRunActivityData(run.id),
+    getCampaignPos(run.campaign_id),
   ]);
   const targets: MerchantTargetSettings = {
-    campaign_pos_target: Number((run as CampaignRun & { campaign_pos_target?: number }).campaign_pos_target || 0),
+    campaign_pos_target: campaignPos.length,
     daily_pos_target: Number(run.daily_pos_target || 15),
     transactions_per_pos_target: Number(run.transactions_per_pos_target || 3),
   };
@@ -736,13 +736,13 @@ export async function getMerchantSupervisorReport(run: CampaignRun, kind: Mercha
       ? (addCalendarDays(today, -6) < MERCHANT_CAMPAIGN_START ? MERCHANT_CAMPAIGN_START : addCalendarDays(today, -6))
       : MERCHANT_CAMPAIGN_START;
   const endsOn = today;
-  const [bas, activity] = await Promise.all([getMerchantBAs(), getRunActivityData(run.id)]);
+  const [bas, activity, campaignPos] = await Promise.all([getMerchantBAs(), getRunActivityData(run.id), getCampaignPos(run.campaign_id)]);
   const inRange = (value: string) => value >= startsOn && value <= endsOn;
   const visits = activity.visits.filter((item) => inRange(item.activity_date));
   const transactions = activity.transactions.filter((item) => inRange(item.occurred_at.slice(0, 10)));
   const attendance = activity.attendances.filter((item) => inRange(item.activity_date) && Boolean(item.checkin_at));
   const targets: MerchantTargetSettings = {
-    campaign_pos_target: Number(run.campaign_pos_target || 0),
+    campaign_pos_target: campaignPos.length,
     daily_pos_target: Number(run.daily_pos_target || 15),
     transactions_per_pos_target: Number(run.transactions_per_pos_target || 3),
   };
