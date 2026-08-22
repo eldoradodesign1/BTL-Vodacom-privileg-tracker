@@ -8,6 +8,7 @@ interface MerchantClosingReportModalProps {
   transactionCount: number;
   posTarget: number;
   transactionsPerPosTarget: number;
+  inactivePosCount?: number;
   onClose: () => void;
   onSubmit: (comment: string) => void;
 }
@@ -19,12 +20,13 @@ export const MerchantClosingReportModal: React.FC<MerchantClosingReportModalProp
   transactionCount,
   posTarget,
   transactionsPerPosTarget,
+  inactivePosCount = 0,
   onClose,
   onSubmit,
 }) => {
   const [comment, setComment] = useState('');
   const [requiresConfirmation, setRequiresConfirmation] = useState(false);
-  const transactionTarget = posTarget * transactionsPerPosTarget;
+  const transactionTarget = Math.max(0, (posTarget - inactivePosCount) * transactionsPerPosTarget);
   const isBelowTarget = posCount < posTarget || transactionCount < transactionTarget;
 
   useEffect(() => {
@@ -62,6 +64,7 @@ export const MerchantClosingReportModal: React.FC<MerchantClosingReportModalProp
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 text-center"><b className="block text-xl font-black text-cyan-200">{posCount}<span className="text-sm text-cyan-100/55">/{posTarget}</span></b><span className="text-[9px] font-black uppercase text-gray-400">POS visités</span></div>
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 text-center"><b className="block text-xl font-black text-amber-200">{transactionCount}<span className="text-sm text-amber-100/55">/{transactionTarget}</span></b><span className="text-[9px] font-black uppercase text-gray-400">Transactions</span></div>
         </div>
+        {inactivePosCount > 0 && <p className="mt-3 rounded-xl border border-amber-300/25 bg-amber-500/[0.08] px-3 py-2 text-[10px] font-semibold text-amber-100">{inactivePosCount} POS non actif{inactivePosCount > 1 ? 's' : ''} : la cible transactionnelle est ajustée à {transactionTarget}.</p>}
         {requiresConfirmation && <div className="mt-4 rounded-2xl border border-amber-300/35 bg-amber-500/10 p-3 text-xs font-semibold leading-relaxed text-amber-100"><b className="block text-[10px] font-black uppercase tracking-[0.12em] text-amber-200">Objectif non atteint</b><p className="mt-1">Vous n’avez pas atteint votre objectif de {posTarget} POS et {transactionTarget} transactions. Voulez-vous vraiment clôturer ?</p></div>}
 
         <label className="mt-5 block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400" htmlFor="merchant-closing-comment">Commentaire de clôture <span className="normal-case font-semibold">(optionnel)</span></label>

@@ -113,7 +113,8 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
   const visitedCount = useMemo(() => posVisits.length, [posVisits]);
   const posTarget = run?.daily_pos_target || 15;
   const transactionsPerPosTarget = run?.transactions_per_pos_target || 3;
-  const transactionTarget = posTarget * transactionsPerPosTarget;
+  const inactivePosCount = useMemo(() => posVisits.filter((visit) => visit.operational_status === 'inactive').length, [posVisits]);
+  const transactionTarget = Math.max(0, (posTarget - inactivePosCount) * transactionsPerPosTarget);
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinDoneLocal;
   const isClosed = Boolean(attendance?.checkout_at);
   const leaders = standings.slice(0, 3);
@@ -247,7 +248,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
       {!isCheckedIn && <section className="glass-card p-6 text-center"><h2 className="mb-4 text-xs font-black uppercase tracking-widest text-red-400">Pointage d’arrivée GPS</h2><div className="space-y-3"><label className="btn-neon btn-red flex cursor-pointer items-center justify-center gap-2"><Camera size={16}/><span>Déverrouiller la journée (prendre photo)</span><input type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => { const photo = event.target.files?.[0]; if (photo) void handleCheckin(photo); event.currentTarget.value = ''; }} /></label></div></section>}
 
       {isClosed && <section className="glass-card border border-emerald-500/25 p-4 text-center"><CheckCircle2 className="mx-auto text-emerald-400"/><b className="mt-2 block">Journée clôturée</b><p className="mt-1 text-xs text-gray-400">{transactions.length} transactions enregistrées pour {visitedCount} POS visités. Retrouvez le rapport dans vos archives.</p></section>}
-      <MerchantClosingReportModal isOpen={isClosingReportOpen} isSaving={saving} posCount={visitedCount} transactionCount={transactions.length} posTarget={posTarget} transactionsPerPosTarget={transactionsPerPosTarget} onClose={() => setIsClosingReportOpen(false)} onSubmit={closeDay} />
+      <MerchantClosingReportModal isOpen={isClosingReportOpen} isSaving={saving} posCount={visitedCount} transactionCount={transactions.length} posTarget={posTarget} transactionsPerPosTarget={transactionsPerPosTarget} inactivePosCount={inactivePosCount} onClose={() => setIsClosingReportOpen(false)} onSubmit={closeDay} />
       <MerchantTransactionModal isOpen={isTransactionModalOpen} currentUser={currentUser} run={run} positions={positions} visits={posVisits} activityDate={today} onClose={() => setIsTransactionModalOpen(false)} onRecorded={() => { setSuccess('Transaction enregistrée avec le POS, le client et la position GPS.'); void refresh(false); }} onPosArrivalRecorded={(visit) => { setPosVisits((current) => current.some((item) => item.id === visit.id) ? current : [visit, ...current]); setSuccess('Arrivée au POS enregistrée avec photo, heure et position GPS.'); void refresh(false); }} />
     </div>
   );

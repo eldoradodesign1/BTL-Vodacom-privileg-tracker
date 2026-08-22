@@ -182,6 +182,7 @@ export interface MerchantTeamActivity {
   transactions: BATransaction[];
   status: 'absent' | 'present' | 'closed';
   visitedPosCount: number;
+  inactivePosCount: number;
   transactionCount: number;
   totalAmount: number;
 }
@@ -225,7 +226,7 @@ export async function getMerchantMonitoring(runId: string, activityDate: string)
     getMerchantBAs(),
     client.from('ba_daily_attendance').select('*').eq('campaign_run_id', runId).eq('activity_date', safeActivityDate),
     client.from('ba_transactions').select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)').eq('campaign_run_id', runId).gte('occurred_at', start).lte('occurred_at', end),
-    client.from('ba_pos_visits').select('id,ba_id,pos_id').eq('campaign_run_id', runId).eq('activity_date', safeActivityDate).neq('status', 'alerted'),
+    client.from('ba_pos_visits').select('id,ba_id,pos_id,operational_status').eq('campaign_run_id', runId).eq('activity_date', safeActivityDate).neq('status', 'alerted'),
   ]);
   fail(attendanceResponse.error, 'Impossible de charger les pointages Merchant');
   fail(transactionResponse.error, 'Impossible de charger les transactions Merchant');
@@ -233,7 +234,7 @@ export async function getMerchantMonitoring(runId: string, activityDate: string)
 
   const attendances = (attendanceResponse.data || []) as BADailyAttendance[];
   const transactions = (transactionResponse.data || []) as BATransaction[];
-  const visits = (visitResponse.data || []) as Array<Pick<BAPosVisit, 'id' | 'ba_id' | 'pos_id'>>;
+  const visits = (visitResponse.data || []) as Array<Pick<BAPosVisit, 'id' | 'ba_id' | 'pos_id' | 'operational_status'>>;
   return bas.map((ba) => {
     const attendance = attendances.find((item) => item.ba_id === ba.id) || null;
     const baTransactions = transactions.filter((item) => item.ba_id === ba.id);
@@ -244,6 +245,7 @@ export async function getMerchantMonitoring(runId: string, activityDate: string)
       transactions: baTransactions,
       status: attendance?.status === 'closed' ? 'closed' : attendance?.checkin_at ? 'present' : 'absent',
       visitedPosCount: baVisits.length,
+      inactivePosCount: baVisits.filter((item) => item.operational_status === 'inactive').length,
       transactionCount: baTransactions.length,
       totalAmount: baTransactions.reduce((total, item) => total + Number(item.amount || 0), 0),
     };
@@ -469,7 +471,7 @@ export interface MerchantPodiumEntry {
 
 export interface MerchantPosControlItem {
   pos: PointOfSale;
-  status: 'pending' | 'active' | 'completed';
+  status: 'pending' | 'active' | 'inactive' | 'completed';
   transactionCount: number;
   ba: { id: string; name: string; phone: string } | null;
   visit: BAPosVisit | null;
@@ -538,8 +540,14 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
   const distinctCampaignPos = new Set(activity.visits.map((item) => item.pos_id));
   const transactionCountByPos = new Map<string, number>();
   activity.transactions.forEach((item) => transactionCountByPos.set(item.pos_id, (transactionCountByPos.get(item.pos_id) || 0) + 1));
-  const activePos = Array.from(distinctCampaignPos).filter((posId) => (transactionCountByPos.get(posId) || 0) < targets.transactions_per_pos_target).length;
-  const completedPos = Array.from(distinctCampaignPos).filter((posId) => (transactionCountByPos.get(posId) || 0) >= targets.transactions_per_pos_target).length;
+  const latestVisitByPos = new Map<string, BAPosVisit>();
+  activity.visits.forEach((visit) => {
+    const current = latestVisitByPos.get(visit.pos_id);
+    if (!current || new Date(visit.visited_at || 0).getTime() > new Date(current.visited_at || 0).getTime()) latestVisitByPos.set(visit.pos_id, visit);
+  });
+  const inactivePos = Array.from(distinctCampaignPos).filter((posId) => latestVisitByPos.get(posId)?.operational_status === 'inactive').length;
+  const activePos = Array.from(distinctCampaignPos).filter((posId) => latestVisitByPos.get(posId)?.operational_status !== 'inactive' && (transactionCountByPos.get(posId) || 0) < targets.transactions_per_pos_target).length;
+  const completedPos = Array.from(distinctCampaignPos).filter((posId) => latestVisitByPos.get(posId)?.operational_status !== 'inactive' && (transactionCountByPos.get(posId) || 0) >= targets.transactions_per_pos_target).length;
   const untouchedPos = Math.max(0, targets.campaign_pos_target - distinctCampaignPos.size);
   const days = getDateRange(7, new Date(`${safeActivityDate}T12:00:00`)).filter((day) => day >= MERCHANT_CAMPAIGN_START);
   const timeline = days.map((day) => {
@@ -561,6 +569,7 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
     donut: [
       { name: 'Complétés', value: completedPos, color: '#34d399' },
       { name: 'Actifs', value: activePos, color: '#38bdf8' },
+      { name: 'Non actifs', value: inactivePos, color: '#f59e0b' },
       { name: 'À couvrir', value: untouchedPos, color: '#a78bfa' },
     ],
     byBa: team.map((item) => ({
@@ -607,8 +616,13 @@ export async function getMerchantStandings(runId: string, activityDate = isoDate
     });
   const targetReachedAtByBa = new Map<string, string>();
   team.forEach((item) => {
-    const targetVisit = (visitsTodayByBa.get(item.ba.id) || []).sort((left, right) => String(left.visited_at).localeCompare(String(right.visited_at)))[dailyPosTarget - 1]?.visited_at;
-    const targetTransaction = (transactionsTodayByBa.get(item.ba.id) || []).sort((left, right) => left.occurred_at.localeCompare(right.occurred_at))[dailyTransactionTarget - 1]?.occurred_at;
+    const baVisits = (visitsTodayByBa.get(item.ba.id) || []).sort((left, right) => String(left.visited_at).localeCompare(String(right.visited_at)));
+    const inactiveCount = baVisits.filter((visit) => visit.operational_status === 'inactive').length;
+    const requiredTransactionTarget = Math.max(0, (dailyPosTarget - inactiveCount) * Math.max(1, Number(runResponse.data?.transactions_per_pos_target || 3)));
+    const targetVisit = baVisits[dailyPosTarget - 1]?.visited_at;
+    const targetTransaction = requiredTransactionTarget > 0
+      ? (transactionsTodayByBa.get(item.ba.id) || []).sort((left, right) => left.occurred_at.localeCompare(right.occurred_at))[requiredTransactionTarget - 1]?.occurred_at
+      : targetVisit;
     if (targetVisit && targetTransaction) targetReachedAtByBa.set(item.ba.id, new Date(Math.max(new Date(targetVisit).getTime(), new Date(targetTransaction).getTime())).toISOString());
   });
   const compareVolume = (left: MerchantTeamActivity, right: MerchantTeamActivity) => {
@@ -693,7 +707,13 @@ export async function getMerchantPosControl(run: CampaignRun): Promise<MerchantP
     const visits = activity.visits.filter((visit) => visit.pos_id === item.id).sort((left, right) => new Date(right.visited_at || 0).getTime() - new Date(left.visited_at || 0).getTime());
     const visit = visits[0] || null;
     const transactionCount = transactions.length;
-    const status: MerchantPosControlItem['status'] = transactionCount >= target ? 'completed' : visit ? 'active' : 'pending';
+    const status: MerchantPosControlItem['status'] = visit?.operational_status === 'inactive'
+      ? 'inactive'
+      : transactionCount >= target
+        ? 'completed'
+        : visit
+          ? 'active'
+          : 'pending';
     return {
       pos: item,
       status,
