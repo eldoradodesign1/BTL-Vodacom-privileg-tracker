@@ -461,6 +461,10 @@ export interface MerchantPodiumEntry {
   activity: MerchantTeamActivity;
   firstArrival: string;
   platinumStreak: number;
+  isLocked: boolean;
+  targetReachedAt: string | null;
+  dailyPosTarget: number;
+  dailyTransactionTarget: number;
 }
 
 export interface MerchantPosControlItem {
@@ -573,35 +577,88 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
 
 export async function getMerchantPodium(runId: string, activityDate = isoDate(new Date())): Promise<MerchantPodiumEntry[]> {
   const safeActivityDate = clampMerchantActivityDate(activityDate);
-  const [team, activity] = await Promise.all([
+  const client = getMerchantClient();
+  const [team, activity, runResponse] = await Promise.all([
     getMerchantMonitoring(runId, safeActivityDate),
     getRunActivityData(runId),
+    client.from('campaign_runs').select('daily_pos_target,transactions_per_pos_target').eq('id', runId).single(),
   ]);
+  fail(runResponse.error, 'Impossible de charger les objectifs Merchant du podium');
+  const dailyPosTarget = Math.max(1, Number(runResponse.data?.daily_pos_target || 15));
+  const dailyTransactionTarget = dailyPosTarget * Math.max(1, Number(runResponse.data?.transactions_per_pos_target || 3));
   const firstArrivalByBa = new Map<string, string>();
+  const visitsTodayByBa = new Map<string, BAPosVisit[]>();
+  const transactionsTodayByBa = new Map<string, BATransaction[]>();
   activity.visits
-    .filter((visit) => visit.activity_date === activityDate && visit.visited_at)
+    .filter((visit) => visit.activity_date === safeActivityDate && visit.visited_at)
     .forEach((visit) => {
       const current = firstArrivalByBa.get(visit.ba_id);
-      if (!current || new Date(visit.visited_at as string).getTime() < new Date(current).getTime()) {
-        firstArrivalByBa.set(visit.ba_id, visit.visited_at as string);
-      }
+      if (!current || new Date(visit.visited_at as string).getTime() < new Date(current).getTime()) firstArrivalByBa.set(visit.ba_id, visit.visited_at as string);
+      const rows = visitsTodayByBa.get(visit.ba_id) || [];
+      rows.push(visit);
+      visitsTodayByBa.set(visit.ba_id, rows);
     });
-  const dailyWinnerByDate = new Map<string, { baId: string; at: string }>();
-  activity.visits.filter((visit) => Boolean(visit.visited_at)).forEach((visit) => {
-    const existing = dailyWinnerByDate.get(visit.activity_date);
-    const at = visit.visited_at as string;
-    if (!existing || new Date(at).getTime() < new Date(existing.at).getTime()) {
-      dailyWinnerByDate.set(visit.activity_date, { baId: visit.ba_id, at });
-    }
+  activity.transactions
+    .filter((transaction) => transaction.occurred_at.slice(0, 10) === safeActivityDate)
+    .forEach((transaction) => {
+      const rows = transactionsTodayByBa.get(transaction.ba_id) || [];
+      rows.push(transaction);
+      transactionsTodayByBa.set(transaction.ba_id, rows);
+    });
+  const targetReachedAtByBa = new Map<string, string>();
+  team.forEach((item) => {
+    const targetVisit = (visitsTodayByBa.get(item.ba.id) || []).sort((left, right) => String(left.visited_at).localeCompare(String(right.visited_at)))[dailyPosTarget - 1]?.visited_at;
+    const targetTransaction = (transactionsTodayByBa.get(item.ba.id) || []).sort((left, right) => left.occurred_at.localeCompare(right.occurred_at))[dailyTransactionTarget - 1]?.occurred_at;
+    if (targetVisit && targetTransaction) targetReachedAtByBa.set(item.ba.id, new Date(Math.max(new Date(targetVisit).getTime(), new Date(targetTransaction).getTime())).toISOString());
   });
-  const ranked = team
-    .filter((item) => firstArrivalByBa.has(item.ba.id))
-    .sort((left, right) => new Date(firstArrivalByBa.get(left.ba.id) as string).getTime() - new Date(firstArrivalByBa.get(right.ba.id) as string).getTime());
-  return ranked.slice(0, 3).map((activityItem, index) => {
-    const orderedDays = Array.from(dailyWinnerByDate.keys()).filter((date) => date >= MERCHANT_CAMPAIGN_START && date <= safeActivityDate).sort((a, b) => b.localeCompare(a));
+  const compareVolume = (left: MerchantTeamActivity, right: MerchantTeamActivity) => {
+    if (right.transactionCount !== left.transactionCount) return right.transactionCount - left.transactionCount;
+    if (right.visitedPosCount !== left.visitedPosCount) return right.visitedPosCount - left.visitedPosCount;
+    if (right.totalAmount !== left.totalAmount) return right.totalAmount - left.totalAmount;
+    return new Date(firstArrivalByBa.get(left.ba.id) || 0).getTime() - new Date(firstArrivalByBa.get(right.ba.id) || 0).getTime();
+  };
+  const eligible = team.filter((item) => firstArrivalByBa.has(item.ba.id));
+  const locked = eligible
+    .filter((item) => targetReachedAtByBa.has(item.ba.id))
+    .sort((left, right) => String(targetReachedAtByBa.get(left.ba.id)).localeCompare(String(targetReachedAtByBa.get(right.ba.id))))
+    .slice(0, 3);
+  const lockedIds = new Set(locked.map((item) => item.ba.id));
+  const ranked = [...locked, ...eligible.filter((item) => !lockedIds.has(item.ba.id)).sort(compareVolume)].slice(0, 3);
+
+  const dailyVolume = new Map<string, Map<string, { transactionCount: number; visitedPos: Set<string>; totalAmount: number; firstArrival: string }>>();
+  activity.visits.filter((visit) => Boolean(visit.visited_at)).forEach((visit) => {
+    const day = visit.activity_date;
+    const byBa = dailyVolume.get(day) || new Map<string, { transactionCount: number; visitedPos: Set<string>; totalAmount: number; firstArrival: string }>();
+    const current = byBa.get(visit.ba_id) || { transactionCount: 0, visitedPos: new Set<string>(), totalAmount: 0, firstArrival: String(visit.visited_at) };
+    current.visitedPos.add(visit.pos_id);
+    if (new Date(visit.visited_at as string).getTime() < new Date(current.firstArrival).getTime()) current.firstArrival = String(visit.visited_at);
+    byBa.set(visit.ba_id, current);
+    dailyVolume.set(day, byBa);
+  });
+  activity.transactions.forEach((transaction) => {
+    const day = transaction.occurred_at.slice(0, 10);
+    const byBa = dailyVolume.get(day) || new Map<string, { transactionCount: number; visitedPos: Set<string>; totalAmount: number; firstArrival: string }>();
+    const current = byBa.get(transaction.ba_id) || { transactionCount: 0, visitedPos: new Set<string>(), totalAmount: 0, firstArrival: transaction.occurred_at };
+    current.transactionCount += 1;
+    current.totalAmount += Number(transaction.amount || 0);
+    byBa.set(transaction.ba_id, current);
+    dailyVolume.set(day, byBa);
+  });
+  const dailyWinnerByDate = new Map<string, string>();
+  dailyVolume.forEach((byBa, day) => {
+    const winner = Array.from(byBa.entries()).sort(([, left], [, right]) => {
+      if (right.transactionCount !== left.transactionCount) return right.transactionCount - left.transactionCount;
+      if (right.visitedPos.size !== left.visitedPos.size) return right.visitedPos.size - left.visitedPos.size;
+      if (right.totalAmount !== left.totalAmount) return right.totalAmount - left.totalAmount;
+      return new Date(left.firstArrival).getTime() - new Date(right.firstArrival).getTime();
+    })[0];
+    if (winner) dailyWinnerByDate.set(day, winner[0]);
+  });
+  const orderedDays = Array.from(dailyWinnerByDate.keys()).filter((date) => date >= MERCHANT_CAMPAIGN_START && date <= safeActivityDate).sort((left, right) => right.localeCompare(left));
+  return ranked.map((activityItem, index) => {
     let platinumStreak = 0;
     for (const day of orderedDays) {
-      if (dailyWinnerByDate.get(day)?.baId === activityItem.ba.id) platinumStreak += 1;
+      if (dailyWinnerByDate.get(day) === activityItem.ba.id) platinumStreak += 1;
       else break;
     }
     return {
@@ -609,6 +666,10 @@ export async function getMerchantPodium(runId: string, activityDate = isoDate(ne
       activity: activityItem,
       firstArrival: firstArrivalByBa.get(activityItem.ba.id) as string,
       platinumStreak,
+      isLocked: lockedIds.has(activityItem.ba.id),
+      targetReachedAt: targetReachedAtByBa.get(activityItem.ba.id) || null,
+      dailyPosTarget,
+      dailyTransactionTarget,
     };
   });
 }
