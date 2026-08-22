@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { jsPDF } from 'jspdf';
 import { BarChart3, Download, FileText, RefreshCw, X } from 'lucide-react';
 import type { CampaignRun } from '../../types';
 import { getMerchantSupervisorReport, type MerchantSupervisorReport, type MerchantSupervisorReportKind } from '../../utils/merchantCampaign';
@@ -23,7 +24,6 @@ export const MerchantSupervisorReportsModal: React.FC<MerchantSupervisorReportsM
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState('');
-  const printRef = useRef<HTMLDivElement | null>(null);
 
   const load = async () => {
     if (!run) return;
@@ -43,29 +43,154 @@ export const MerchantSupervisorReportsModal: React.FC<MerchantSupervisorReportsM
   }, [isOpen, kind, run?.id]);
 
   const exportPdf = async () => {
-    if (!printRef.current || !report) return;
+    if (!report) return;
     setExporting(true);
+    setError('');
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
-      const canvas = await html2canvas(printRef.current, { backgroundColor: '#0c111c', scale: 2, useCORS: true });
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const imageHeight = (canvas.height * pageWidth) / canvas.width;
-      let offset = 0;
-      let remaining = imageHeight;
-      const image = canvas.toDataURL('image/png');
-      while (remaining > 0) {
-        pdf.addImage(image, 'PNG', 0, offset, pageWidth, imageHeight);
-        remaining -= pageHeight;
-        if (remaining > 0) {
-          pdf.addPage();
-          offset -= pageHeight;
-        }
+      const margin = 14;
+      const contentWidth = pageWidth - (margin * 2);
+      let y = 14;
+      const addFooter = () => {
+        pdf.setDrawColor(203, 213, 225);
+        pdf.line(margin, pageHeight - 11, pageWidth - margin, pageHeight - 11);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text('BTL VODACOM PRIVILEGE TRACKER - MERCHANT EDUCATIONAL CAMPAIGN', margin, pageHeight - 7);
+        pdf.text(`Page ${pdf.getNumberOfPages()}`, pageWidth - margin, pageHeight - 7, { align: 'right' });
+      };
+      const nextPage = () => {
+        addFooter();
+        pdf.addPage();
+        y = 14;
+      };
+      const ensureSpace = (height: number) => { if (y + height > pageHeight - 16) nextPage(); };
+      const sectionTitle = (title: string) => {
+        ensureSpace(11);
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(margin, y, contentWidth, 8, 2, 2, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(9);
+        pdf.setTextColor(255, 255, 255);
+        pdf.text(title.toUpperCase(), margin + 4, y + 5.2);
+        y += 12;
+      };
+      const metric = (x: number, label: string, value: string, color: [number, number, number]) => {
+        pdf.setFillColor(248, 250, 252);
+        pdf.setDrawColor(226, 232, 240);
+        pdf.roundedRect(x, y, 42, 23, 3, 3, 'FD');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(14);
+        pdf.setTextColor(...color);
+        pdf.text(value, x + 4, y + 10);
+        pdf.setFontSize(6.5);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text(label.toUpperCase(), x + 4, y + 17);
+      };
+
+      pdf.setFillColor(8, 47, 73);
+      pdf.roundedRect(margin, y, contentWidth, 36, 5, 5, 'F');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(8);
+      pdf.setTextColor(165, 243, 252);
+      pdf.text('MERCHANT EDUCATIONAL CAMPAIGN', margin + 6, y + 9);
+      pdf.setFontSize(19);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(`Rapport ${reportLabels[report.kind].toLowerCase()}`, margin + 6, y + 19);
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(8.5);
+      pdf.setTextColor(207, 250, 254);
+      pdf.text(`Du ${formatDate(report.startsOn)} au ${formatDate(report.endsOn)}`, margin + 6, y + 27);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(18);
+      pdf.setTextColor(103, 232, 249);
+      pdf.text(`${report.totals.executionRate}%`, pageWidth - margin - 6, y + 16, { align: 'right' });
+      pdf.setFontSize(6.5);
+      pdf.text('EXECUTION POS', pageWidth - margin - 6, y + 24, { align: 'right' });
+      y += 43;
+
+      metric(margin, 'POS visites', String(report.totals.pos), [8, 145, 178]);
+      metric(margin + 45, 'Transactions', String(report.totals.transactions), [180, 83, 9]);
+      metric(margin + 90, 'BA actifs', String(report.totals.activeBas), [5, 150, 105]);
+      metric(margin + 135, 'Montant cumule', report.totals.amount.toLocaleString('fr-FR').replace(/\s/g, ' '), [126, 34, 206]);
+      y += 30;
+
+      sectionTitle('Activite de la periode');
+      report.daily.forEach((item) => {
+        ensureSpace(8);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(51, 65, 85);
+        pdf.text(formatDate(item.date), margin, y);
+        pdf.setTextColor(8, 145, 178);
+        pdf.text(`${item.pos} POS`, margin + 72, y);
+        pdf.setTextColor(180, 83, 9);
+        pdf.text(`${item.transactions} transactions`, margin + 105, y);
+        pdf.setTextColor(5, 150, 105);
+        pdf.text(`${item.activeBas} BA`, pageWidth - margin, y, { align: 'right' });
+        y += 6;
+      });
+      y += 3;
+
+      sectionTitle('Performance par Brand Ambassador');
+      pdf.setFillColor(226, 232, 240);
+      pdf.rect(margin, y, contentWidth, 8, 'F');
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7);
+      pdf.setTextColor(51, 65, 85);
+      pdf.text('BA', margin + 3, y + 5);
+      pdf.text('POS', margin + 96, y + 5, { align: 'center' });
+      pdf.text('TX', margin + 116, y + 5, { align: 'center' });
+      pdf.text('MONTANT', pageWidth - margin - 3, y + 5, { align: 'right' });
+      y += 8;
+      if (!report.byBa.length) {
+        pdf.setFont('helvetica', 'italic');
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text('Aucune activite validee sur cette periode.', margin + 3, y + 7);
+        y += 12;
       }
-      pdf.save(`rapport-merchant-${kind}-${report.startsOn}-${report.endsOn}.pdf`);
+      report.byBa.forEach((item) => {
+        ensureSpace(9);
+        pdf.setDrawColor(226, 232, 240);
+        pdf.line(margin, y, pageWidth - margin, y);
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(8);
+        pdf.setTextColor(15, 23, 42);
+        const name = pdf.splitTextToSize(item.name, 87)[0] || item.name;
+        pdf.text(name, margin + 3, y + 5.5);
+        pdf.setTextColor(8, 145, 178);
+        pdf.text(String(item.pos), margin + 96, y + 5.5, { align: 'center' });
+        pdf.setTextColor(180, 83, 9);
+        pdf.text(String(item.transactions), margin + 116, y + 5.5, { align: 'center' });
+        pdf.setTextColor(5, 150, 105);
+        pdf.text(item.amount.toLocaleString('fr-FR').replace(/\s/g, ' '), pageWidth - margin - 3, y + 5.5, { align: 'right' });
+        y += 8;
+      });
+      ensureSpace(12);
+      y += 4;
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(7);
+      pdf.setTextColor(100, 116, 139);
+      pdf.text(`Objectifs de reference : ${report.targets.daily_pos_target} POS / BA / jour - ${report.targets.transactions_per_pos_target} transactions / POS.`, margin, y);
+      addFooter();
+
+      const filename = `rapport-merchant-${kind}-${report.startsOn}-${report.endsOn}.pdf`;
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Export PDF impossible.');
+      setError(caught instanceof Error ? `Export PDF impossible : ${caught.message}` : 'Export PDF impossible.');
     } finally {
       setExporting(false);
     }
@@ -83,7 +208,7 @@ export const MerchantSupervisorReportsModal: React.FC<MerchantSupervisorReportsM
       <div className="mt-4 flex gap-2 overflow-x-auto pb-1">{(Object.keys(reportLabels) as MerchantSupervisorReportKind[]).map((option) => <button key={option} type="button" onClick={() => setKind(option)} className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase transition ${kind === option ? 'border-cyan-300/50 bg-cyan-500/20 text-cyan-100' : 'border-white/10 bg-white/5 text-gray-400 hover:text-white'}`}>{reportLabels[option]}</button>)}</div>
       {error && <div className="mt-4 rounded-2xl border border-red-400/40 bg-red-950/45 p-3 text-xs font-bold text-red-100">{error}</div>}
       {loading && <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center text-xs font-black uppercase tracking-[0.16em] text-gray-400">Préparation du rapport…</div>}
-      {report && !loading && <div ref={printRef} className="mt-5 overflow-hidden rounded-[1.5rem] border border-cyan-300/15 bg-[radial-gradient(circle_at_92%_0%,rgba(34,211,238,0.16),transparent_33%),linear-gradient(145deg,#101827,#0b101a)] p-4 text-white sm:p-6">
+      {report && !loading && <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-cyan-300/15 bg-[radial-gradient(circle_at_92%_0%,rgba(34,211,238,0.16),transparent_33%),linear-gradient(145deg,#101827,#0b101a)] p-4 text-white sm:p-6">
         <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-4"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-200">Merchant Educational Campaign</p><h3 className="mt-1 text-lg font-black">Rapport {reportLabels[report.kind].toLowerCase()}</h3><p className="mt-1 text-[11px] text-gray-300">Du {formatDate(report.startsOn)} au {formatDate(report.endsOn)}</p></div><div className="rounded-2xl border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 text-right"><b className="block text-xl font-black text-cyan-100">{report.totals.executionRate}%</b><span className="text-[8px] font-black uppercase text-cyan-200/75">Exécution POS</span></div></div>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"><div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"><b className="text-lg text-cyan-100">{report.totals.pos}</b><span className="mt-1 block text-[8px] font-black uppercase text-gray-400">POS visités</span></div><div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"><b className="text-lg text-amber-100">{report.totals.transactions}</b><span className="mt-1 block text-[8px] font-black uppercase text-gray-400">Transactions</span></div><div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"><b className="text-lg text-emerald-100">{report.totals.activeBas}</b><span className="mt-1 block text-[8px] font-black uppercase text-gray-400">BA actifs</span></div><div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"><b className="text-lg text-fuchsia-100">{report.totals.amount.toLocaleString('fr-FR')}</b><span className="mt-1 block text-[8px] font-black uppercase text-gray-400">Montant cumulé</span></div></div>
         <section className="mt-5"><div className="flex items-center gap-2"><BarChart3 size={16} className="text-cyan-200"/><h4 className="text-xs font-black uppercase tracking-[0.14em] text-cyan-100">Activité de la période</h4></div><div className="mt-3 flex h-28 items-end gap-2 rounded-2xl border border-white/10 bg-black/15 p-3">{report.daily.map((item) => <div key={item.date} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1"><div className="w-full rounded-t-lg bg-gradient-to-t from-cyan-500/45 to-cyan-200" style={{ height: `${Math.max(8, Math.round((item.pos / maxPos) * 74))}px` }}/><span className="text-[8px] font-bold text-gray-400">{item.date.slice(8, 10)}</span></div>)}</div></section>
