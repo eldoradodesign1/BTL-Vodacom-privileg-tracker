@@ -367,6 +367,19 @@ export async function createTransaction(input: Omit<BATransaction, 'id' | 'creat
   return data as BATransaction;
 }
 
+export async function updateMerchantTransactionReference(transactionId: string, reference: string | null): Promise<BATransaction> {
+  const client = getMerchantClient();
+  const normalized = reference?.trim() || null;
+  const { data, error } = await client
+    .from('ba_transactions')
+    .update({ transaction_reference: normalized })
+    .eq('id', transactionId)
+    .select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)')
+    .single();
+  fail(error, 'Impossible de mettre à jour l’identifiant de transaction');
+  return data as BATransaction;
+}
+
 export async function uploadMerchantEvidence(campaignId: string, relativePath: string, file: Blob): Promise<string> {
   const client = getMerchantClient();
   const path = `${campaignId}/${relativePath}`;
