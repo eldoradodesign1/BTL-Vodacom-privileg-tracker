@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User } from '../../types';
 import { updateUserPassword } from '../../utils/storage';
-import { Lock, X, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Lock, X, AlertCircle, CheckCircle2, Camera, MapPin, Loader2, ShieldCheck } from 'lucide-react';
 
 interface PasswordModalProps {
   isOpen: boolean;
@@ -9,11 +9,20 @@ interface PasswordModalProps {
   onClose: () => void;
 }
 
+type PermissionFeedback = {
+  kind: 'success' | 'error' | 'info';
+  text: string;
+};
+
+const permissionHelp = 'Si le navigateur ne propose plus de fenêtre, ouvrez les réglages du site ou de l’application installée pour réactiver cette autorisation.';
+
 export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUser, onClose }) => {
   const [oldPass, setOldPass] = useState('');
   const [newPass, setNewPass] = useState('');
   const [msg, setMsg] = useState('');
   const [isError, setIsError] = useState(false);
+  const [requesting, setRequesting] = useState<'camera' | 'gps' | null>(null);
+  const [permissionFeedback, setPermissionFeedback] = useState<PermissionFeedback | null>(null);
 
   if (!isOpen) return null;
 
@@ -36,6 +45,69 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUse
     }
   };
 
+  const requestCameraPermission = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setPermissionFeedback({ kind: 'error', text: 'La caméra n’est pas prise en charge par cet appareil ou ce navigateur.' });
+      return;
+    }
+
+    setRequesting('camera');
+    setPermissionFeedback({ kind: 'info', text: 'Demande d’autorisation caméra en cours…' });
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      });
+      stream.getTracks().forEach((track) => track.stop());
+      setPermissionFeedback({ kind: 'success', text: 'Caméra autorisée. Elle sera demandée uniquement lors des photos de pointage ou de preuve.' });
+    } catch (error) {
+      const name = error instanceof DOMException ? error.name : '';
+      const text = name === 'NotAllowedError' || name === 'SecurityError'
+        ? `Caméra toujours refusée. ${permissionHelp}`
+        : 'La caméra est indisponible pour le moment. Vérifiez qu’aucune autre application ne l’utilise.';
+      setPermissionFeedback({ kind: 'error', text });
+    } finally {
+      setRequesting(null);
+    }
+  };
+
+  const requestGpsPermission = () => {
+    if (!navigator.geolocation) {
+      setPermissionFeedback({ kind: 'error', text: 'Le GPS n’est pas pris en charge par cet appareil ou ce navigateur.' });
+      return;
+    }
+
+    setRequesting('gps');
+    setPermissionFeedback({ kind: 'info', text: 'Demande d’autorisation GPS en cours…' });
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setPermissionFeedback({
+          kind: 'success',
+          text: `GPS autorisé (précision d’environ ${Math.round(position.coords.accuracy || 0)} m).`,
+        });
+        setRequesting(null);
+      },
+      (error) => {
+        const text = error.code === error.PERMISSION_DENIED
+          ? `GPS toujours refusé. ${permissionHelp}`
+          : error.code === error.TIMEOUT
+            ? 'La demande GPS a expiré. Vérifiez que la localisation est activée puis réessayez.'
+            : 'La position est indisponible pour le moment. Vérifiez votre réseau et réessayez.';
+        setPermissionFeedback({ kind: 'error', text });
+        setRequesting(null);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  };
+
+  const feedbackStyle = permissionFeedback?.kind === 'success'
+    ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
+    : permissionFeedback?.kind === 'error'
+      ? 'bg-red-950/50 border-red-500/40 text-red-300'
+      : 'bg-cyan-950/50 border-cyan-400/30 text-cyan-100';
+
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-pop" onClick={onClose}>
       <div className="modal-sheet relative w-full max-w-md text-center" onClick={(e) => e.stopPropagation()}>
@@ -43,14 +115,56 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUse
         <button
           onClick={onClose}
           className="absolute top-6 right-6 text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10"
+          aria-label="Fermer"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-xl font-black uppercase text-red-500 tracking-wider mb-2">Clé de Sécurité</h2>
-        <p className="text-xs text-gray-400 mb-6 font-semibold">
+        <h2 className="text-xl font-black uppercase text-red-500 tracking-wider mb-2">Sécuriser mon accès</h2>
+        <p className="text-xs text-gray-400 mb-5 font-semibold">
           Compte: <b className="text-white">{currentUser?.name || 'Agent'}</b>
         </p>
+
+        <section className="text-left rounded-[1.45rem] border border-white/10 bg-black/15 p-3.5 mb-5" aria-label="Autorisations de l’appareil">
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <ShieldCheck className="w-4 h-4 text-cyan-300" />
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100">Autorisations de l’appareil</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">Relancez la demande après un refus.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={requestCameraPermission}
+              disabled={requesting !== null}
+              className="rounded-2xl border border-cyan-300/25 bg-cyan-400/10 p-3 text-left transition-all hover:bg-cyan-400/15 active:scale-[0.98] disabled:opacity-60"
+            >
+              <span className="flex items-center justify-between gap-2">
+                <Camera className="w-4 h-4 text-cyan-200" />
+                {requesting === 'camera' && <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-100" />}
+              </span>
+              <span className="block mt-2 text-[11px] font-black uppercase tracking-wide text-white">Autoriser caméra</span>
+            </button>
+            <button
+              type="button"
+              onClick={requestGpsPermission}
+              disabled={requesting !== null}
+              className="rounded-2xl border border-amber-300/25 bg-amber-400/10 p-3 text-left transition-all hover:bg-amber-400/15 active:scale-[0.98] disabled:opacity-60"
+            >
+              <span className="flex items-center justify-between gap-2">
+                <MapPin className="w-4 h-4 text-amber-200" />
+                {requesting === 'gps' && <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-100" />}
+              </span>
+              <span className="block mt-2 text-[11px] font-black uppercase tracking-wide text-white">Autoriser GPS</span>
+            </button>
+          </div>
+          {permissionFeedback && (
+            <div className={`mt-3 rounded-2xl border px-3 py-2.5 text-[11px] font-semibold leading-relaxed ${feedbackStyle}`}>
+              {permissionFeedback.text}
+            </div>
+          )}
+        </section>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <input
