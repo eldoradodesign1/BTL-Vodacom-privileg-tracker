@@ -373,10 +373,12 @@ const todayLeads =
     resetSimulationContext();
     if (realMasterUser.role === 'super_admin') {
       const target = role === 'agent'
-        ? users.find((user) => user.phone === '0821000001' || user.name.trim().toLowerCase() === 'agent test')
+        ? users.find((user) => user.name.trim().toLowerCase() === 'jesly bamwangi')
         : role === 'supervisor'
           ? users.find((user) => user.name.trim().toLowerCase() === 'hervé ntalu' || user.name.trim().toLowerCase() === 'herve ntalu')
-          : null;
+          : role === 'admin'
+            ? users.find((user) => user.name.trim().toLowerCase() === 'bradley izamaboko')
+            : null;
       if (target) {
         setSimulatedUserId(target.id);
         setSimulatedRole(role);
