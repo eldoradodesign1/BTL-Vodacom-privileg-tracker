@@ -17,6 +17,8 @@ export interface MigrationSummary {
   chatMessages: number;
 }
 
+const supabaseClientCache = new Map<string, SupabaseClient>();
+
 function readEnv(name: string): string | undefined {
   const env = (typeof import.meta !== 'undefined' ? (import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env : undefined);
   const value = env ? env[name] : undefined;
@@ -43,9 +45,15 @@ export function getSupabaseClient(overrides?: Partial<SupabaseConfig>): Supabase
   const config = getSupabaseConfig(overrides);
   if (!config) return null;
 
-  return createClient(config.url, config.anonKey, {
-    auth: { persistSession: false, autoRefreshToken: false }
+  const cacheKey = `${config.url}|${config.anonKey}`;
+  const cached = supabaseClientCache.get(cacheKey);
+  if (cached) return cached;
+
+  const client = createClient(config.url, config.anonKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
   });
+  supabaseClientCache.set(cacheKey, client);
+  return client;
 }
 
 function sanitizeRecord<T extends Record<string, unknown>>(record: T): T {

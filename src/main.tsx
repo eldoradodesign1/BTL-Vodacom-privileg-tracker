@@ -41,21 +41,30 @@ const attachClickSound = () => {
   window.addEventListener('click', playClickSound, { passive: true });
 };
 
-attachClickSound();
+if (typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches) {
+  attachClickSound();
+}
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     const serviceWorkerUrl = `${import.meta.env.BASE_URL}service-worker.js`;
-    void navigator.serviceWorker.register(serviceWorkerUrl).catch(() => {
+    void navigator.serviceWorker.register(serviceWorkerUrl, {
+      scope: import.meta.env.BASE_URL,
+      updateViaCache: 'none',
+    }).then((registration) => {
+      void registration.update();
+      if (registration.waiting) registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+    }).catch(() => {
       // L'application reste totalement fonctionnelle si le cache PWA est indisponible.
     });
   });
 }
 
-void loadSharedRuntimeConfig().finally(() => {
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <App />
-    </StrictMode>,
-  );
-});
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
+
+// La configuration partagée rafraîchit ensuite le cache, sans jamais bloquer le premier rendu PWA.
+void loadSharedRuntimeConfig();
