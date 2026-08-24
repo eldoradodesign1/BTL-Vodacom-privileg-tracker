@@ -9,6 +9,53 @@ import type {
 } from '../types';
 import { getSupabaseConfig } from './supabase';
 
+const MERCHANT_CACHE_PREFIX = 'btl_merchant_cache_v1:';
+export const MERCHANT_CACHE_TTL_MS = 60 * 60 * 1000;
+type MerchantCacheEntry<T> = { savedAt: number; value: T };
+let merchantClient: SupabaseClient | null = null;
+let merchantClientKey = '';
+
+function readMerchantCache<T>(key: string): T | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = window.localStorage.getItem(`${MERCHANT_CACHE_PREFIX}${key}`);
+    if (!raw) return null;
+    const entry = JSON.parse(raw) as MerchantCacheEntry<T>;
+    if (!entry || Date.now() - entry.savedAt >= MERCHANT_CACHE_TTL_MS) return null;
+    return entry.value;
+  } catch {
+    return null;
+  }
+}
+
+function writeMerchantCache<T>(key: string, value: T): T {
+  if (typeof window === 'undefined') return value;
+  try {
+    window.localStorage.setItem(`${MERCHANT_CACHE_PREFIX}${key}`, JSON.stringify({ savedAt: Date.now(), value } satisfies MerchantCacheEntry<T>));
+  } catch {
+    // Le cache est une optimisation facultative : la consultation réseau reste disponible.
+  }
+  return value;
+}
+
+async function withMerchantCache<T>(key: string, loader: () => Promise<T>): Promise<T> {
+  const cached = readMerchantCache<T>(key);
+  if (cached !== null) return cached;
+  return writeMerchantCache(key, await loader());
+}
+
+export function invalidateMerchantCache(scope?: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const prefix = `${MERCHANT_CACHE_PREFIX}${scope || ''}`;
+    Object.keys(window.localStorage)
+      .filter((key) => key.startsWith(prefix))
+      .forEach((key) => window.localStorage.removeItem(key));
+  } catch {
+    // Le cache ne doit jamais bloquer une opération terrain.
+  }
+}
+
 export const MERCHANT_CAMPAIGN_CODE = 'merchant-educational-campaign';
 export const MERCHANT_CAMPAIGN_START = '2026-08-18';
 
@@ -24,14 +71,18 @@ export function clampMerchantActivityDate(value?: string): string {
 function getMerchantClient(): SupabaseClient {
   const config = getSupabaseConfig();
   if (!config) throw new Error('La configuration Supabase est indisponible.');
+  const nextKey = `${config.url}|${config.anonKey}`;
+  if (merchantClient && merchantClientKey === nextKey) return merchantClient;
 
-  return createClient(config.url, config.anonKey, {
+  merchantClient = createClient(config.url, config.anonKey, {
     auth: {
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
     },
   });
+  merchantClientKey = nextKey;
+  return merchantClient;
 }
 
 function fail(error: { message: string } | null, context: string): void {
@@ -64,14 +115,16 @@ export async function assignUserToCampaigns(userId: string, campaignIds: string[
 }
 
 export async function getMerchantCampaign(): Promise<Campaign | null> {
-  const client = getMerchantClient();
-  const { data, error } = await client
-    .from('campaigns')
-    .select('*')
-    .eq('code', MERCHANT_CAMPAIGN_CODE)
-    .maybeSingle();
-  fail(error, 'Impossible de charger la campagne');
-  return data as Campaign | null;
+  return withMerchantCache('campaign', async () => {
+    const client = getMerchantClient();
+    const { data, error } = await client
+      .from('campaigns')
+      .select('*')
+      .eq('code', MERCHANT_CAMPAIGN_CODE)
+      .maybeSingle();
+    fail(error, 'Impossible de charger la campagne');
+    return data as Campaign | null;
+  });
 }
 
 export async function getCampaignsForUser(userId: string): Promise<Campaign[]> {
@@ -90,63 +143,71 @@ export async function getCampaignsForUser(userId: string): Promise<Campaign[]> {
 }
 
 export async function getActiveCampaignRuns(campaignId: string): Promise<CampaignRun[]> {
-  const client = getMerchantClient();
-  const { data, error } = await client
-    .from('campaign_runs')
-    .select('*')
-    .eq('campaign_id', campaignId)
-    .in('status', ['draft', 'active'])
-    .order('starts_on', { ascending: false });
-  fail(error, 'Impossible de charger les vagues de campagne');
-  return (data || []) as CampaignRun[];
+  return withMerchantCache(`runs:${campaignId}`, async () => {
+    const client = getMerchantClient();
+    const { data, error } = await client
+      .from('campaign_runs')
+      .select('*')
+      .eq('campaign_id', campaignId)
+      .in('status', ['draft', 'active'])
+      .order('starts_on', { ascending: false });
+    fail(error, 'Impossible de charger les vagues de campagne');
+    return (data || []) as CampaignRun[];
+  });
 }
 
 export async function getDailyAttendance(baId: string, runId: string, activityDate: string): Promise<BADailyAttendance | null> {
-  const client = getMerchantClient();
-  const { data, error } = await client
-    .from('ba_daily_attendance')
-    .select('*')
-    .eq('ba_id', baId)
-    .eq('campaign_run_id', runId)
-    .eq('activity_date', activityDate)
-    .maybeSingle();
-  fail(error, 'Impossible de charger le pointage');
-  return data as BADailyAttendance | null;
-}
-
-export async function getTransactionsForDay(baId: string, runId: string, activityDate: string): Promise<BATransaction[]> {
-  const client = getMerchantClient();
-  const start = `${activityDate}T00:00:00+01:00`;
-  const end = `${activityDate}T23:59:59.999+01:00`;
-  const { data, error } = await client
-    .from('ba_transactions')
-    .select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)')
-    .eq('ba_id', baId)
-    .eq('campaign_run_id', runId)
-    .gte('occurred_at', start)
-    .lte('occurred_at', end)
-    .order('occurred_at', { ascending: false });
-  fail(error, 'Impossible de charger les transactions');
-  return (data || []) as BATransaction[];
-}
-
-export async function getPosVisitsForDay(baId: string, runId: string, activityDate: string): Promise<BAPosVisit[]> {
-  const client = getMerchantClient();
-  const [visitsResponse, transactions] = await Promise.all([
-    client
-      .from('ba_pos_visits')
-      .select('*, point_of_sale:points_of_sale(*)')
+  return withMerchantCache(`attendance:${runId}:${baId}:${activityDate}`, async () => {
+    const client = getMerchantClient();
+    const { data, error } = await client
+      .from('ba_daily_attendance')
+      .select('*')
       .eq('ba_id', baId)
       .eq('campaign_run_id', runId)
       .eq('activity_date', activityDate)
-      .order('visited_at', { ascending: false }),
-    getTransactionsForDay(baId, runId, activityDate),
-  ]);
-  fail(visitsResponse.error, 'Impossible de charger les POS visités');
-  return ((visitsResponse.data || []) as BAPosVisit[]).map((visit) => ({
-    ...visit,
-    transactions: transactions.filter((transaction) => transaction.pos_visit_id === visit.id || transaction.pos_id === visit.pos_id),
-  }));
+      .maybeSingle();
+    fail(error, 'Impossible de charger le pointage');
+    return data as BADailyAttendance | null;
+  });
+}
+
+export async function getTransactionsForDay(baId: string, runId: string, activityDate: string): Promise<BATransaction[]> {
+  return withMerchantCache(`transactions:${runId}:${baId}:${activityDate}`, async () => {
+    const client = getMerchantClient();
+    const start = `${activityDate}T00:00:00+01:00`;
+    const end = `${activityDate}T23:59:59.999+01:00`;
+    const { data, error } = await client
+      .from('ba_transactions')
+      .select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)')
+      .eq('ba_id', baId)
+      .eq('campaign_run_id', runId)
+      .gte('occurred_at', start)
+      .lte('occurred_at', end)
+      .order('occurred_at', { ascending: false });
+    fail(error, 'Impossible de charger les transactions');
+    return (data || []) as BATransaction[];
+  });
+}
+
+export async function getPosVisitsForDay(baId: string, runId: string, activityDate: string): Promise<BAPosVisit[]> {
+  return withMerchantCache(`visits:${runId}:${baId}:${activityDate}`, async () => {
+    const client = getMerchantClient();
+    const [visitsResponse, transactions] = await Promise.all([
+      client
+        .from('ba_pos_visits')
+        .select('*, point_of_sale:points_of_sale(*)')
+        .eq('ba_id', baId)
+        .eq('campaign_run_id', runId)
+        .eq('activity_date', activityDate)
+        .order('visited_at', { ascending: false }),
+      getTransactionsForDay(baId, runId, activityDate),
+    ]);
+    fail(visitsResponse.error, 'Impossible de charger les POS visités');
+    return ((visitsResponse.data || []) as BAPosVisit[]).map((visit) => ({
+      ...visit,
+      transactions: transactions.filter((transaction) => transaction.pos_visit_id === visit.id || transaction.pos_id === visit.pos_id),
+    }));
+  });
 }
 
 export async function getAttendanceHistoryForBA(baId: string, campaignRunId?: string): Promise<BADailyAttendance[]> {
@@ -204,51 +265,55 @@ function activityWindow(activityDate: string) {
 }
 
 async function getMerchantBAs() {
-  const client = getMerchantClient();
-  const { data, error } = await client
-    .from('users')
-    .select('id,full_name,phone')
-    .eq('user_category', 'brand_ambassador')
-    .order('full_name');
-  fail(error, 'Impossible de charger les Brand Ambassadors');
-  return (data || []).map((user: { id: string; full_name?: string | null; phone?: string | null }) => ({
-    id: user.id,
-    name: user.full_name || 'Brand Ambassador',
-    phone: user.phone || '',
-  }));
+  return withMerchantCache('bas', async () => {
+    const client = getMerchantClient();
+    const { data, error } = await client
+      .from('users')
+      .select('id,full_name,phone')
+      .eq('user_category', 'brand_ambassador')
+      .order('full_name');
+    fail(error, 'Impossible de charger les Brand Ambassadors');
+    return (data || []).map((user: { id: string; full_name?: string | null; phone?: string | null }) => ({
+      id: user.id,
+      name: user.full_name || 'Brand Ambassador',
+      phone: user.phone || '',
+    }));
+  });
 }
 
 export async function getMerchantMonitoring(runId: string, activityDate: string): Promise<MerchantTeamActivity[]> {
-  const client = getMerchantClient();
   const safeActivityDate = clampMerchantActivityDate(activityDate);
-  const { start, end } = activityWindow(safeActivityDate);
-  const [bas, attendanceResponse, transactionResponse, visitResponse] = await Promise.all([
-    getMerchantBAs(),
-    client.from('ba_daily_attendance').select('*').eq('campaign_run_id', runId).eq('activity_date', safeActivityDate),
-    client.from('ba_transactions').select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)').eq('campaign_run_id', runId).gte('occurred_at', start).lte('occurred_at', end),
-    client.from('ba_pos_visits').select('id,ba_id,pos_id,operational_status').eq('campaign_run_id', runId).eq('activity_date', safeActivityDate).neq('status', 'alerted'),
-  ]);
-  fail(attendanceResponse.error, 'Impossible de charger les pointages Merchant');
-  fail(transactionResponse.error, 'Impossible de charger les transactions Merchant');
-  fail(visitResponse.error, 'Impossible de charger les arrivées POS Merchant');
+  return withMerchantCache(`monitoring:${runId}:${safeActivityDate}`, async () => {
+    const client = getMerchantClient();
+    const { start, end } = activityWindow(safeActivityDate);
+    const [bas, attendanceResponse, transactionResponse, visitResponse] = await Promise.all([
+      getMerchantBAs(),
+      client.from('ba_daily_attendance').select('*').eq('campaign_run_id', runId).eq('activity_date', safeActivityDate),
+      client.from('ba_transactions').select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)').eq('campaign_run_id', runId).gte('occurred_at', start).lte('occurred_at', end),
+      client.from('ba_pos_visits').select('id,ba_id,pos_id,operational_status').eq('campaign_run_id', runId).eq('activity_date', safeActivityDate).neq('status', 'alerted'),
+    ]);
+    fail(attendanceResponse.error, 'Impossible de charger les pointages Merchant');
+    fail(transactionResponse.error, 'Impossible de charger les transactions Merchant');
+    fail(visitResponse.error, 'Impossible de charger les arrivées POS Merchant');
 
-  const attendances = (attendanceResponse.data || []) as BADailyAttendance[];
-  const transactions = (transactionResponse.data || []) as BATransaction[];
-  const visits = (visitResponse.data || []) as Array<Pick<BAPosVisit, 'id' | 'ba_id' | 'pos_id' | 'operational_status'>>;
-  return bas.map((ba) => {
-    const attendance = attendances.find((item) => item.ba_id === ba.id) || null;
-    const baTransactions = transactions.filter((item) => item.ba_id === ba.id);
-    const baVisits = visits.filter((item) => item.ba_id === ba.id);
-    return {
-      ba,
-      attendance,
-      transactions: baTransactions,
-      status: attendance?.status === 'closed' ? 'closed' : attendance?.checkin_at ? 'present' : 'absent',
-      visitedPosCount: baVisits.length,
-      inactivePosCount: baVisits.filter((item) => item.operational_status === 'inactive').length,
-      transactionCount: baTransactions.length,
-      totalAmount: baTransactions.reduce((total, item) => total + Number(item.amount || 0), 0),
-    };
+    const attendances = (attendanceResponse.data || []) as BADailyAttendance[];
+    const transactions = (transactionResponse.data || []) as BATransaction[];
+    const visits = (visitResponse.data || []) as Array<Pick<BAPosVisit, 'id' | 'ba_id' | 'pos_id' | 'operational_status'>>;
+    return bas.map((ba) => {
+      const attendance = attendances.find((item) => item.ba_id === ba.id) || null;
+      const baTransactions = transactions.filter((item) => item.ba_id === ba.id);
+      const baVisits = visits.filter((item) => item.ba_id === ba.id);
+      return {
+        ba,
+        attendance,
+        transactions: baTransactions,
+        status: attendance?.status === 'closed' ? 'closed' : attendance?.checkin_at ? 'present' : 'absent',
+        visitedPosCount: baVisits.length,
+        inactivePosCount: baVisits.filter((item) => item.operational_status === 'inactive').length,
+        transactionCount: baTransactions.length,
+        totalAmount: baTransactions.reduce((total, item) => total + Number(item.amount || 0), 0),
+      };
+    });
   });
 }
 
@@ -338,21 +403,24 @@ export async function createMerchantPos(input: MerchantPosCreateInput): Promise<
     .select('*')
     .single();
   fail(error, 'Impossible de créer le POS');
+  invalidateMerchantCache();
   return data as PointOfSale;
 }
 
 export async function getCampaignPos(campaignId: string, pool?: string): Promise<PointOfSale[]> {
-  const client = getMerchantClient();
-  let query = client
-    .from('points_of_sale')
-    .select('*')
-    .eq('campaign_id', campaignId)
-    .eq('is_active', true)
-    .order('denomination');
-  if (pool) query = query.eq('pool', pool);
-  const { data, error } = await query;
-  fail(error, 'Impossible de charger les POS');
-  return (data || []) as PointOfSale[];
+  return withMerchantCache(`pos:${campaignId}:${pool || 'all'}`, async () => {
+    const client = getMerchantClient();
+    let query = client
+      .from('points_of_sale')
+      .select('*')
+      .eq('campaign_id', campaignId)
+      .eq('is_active', true)
+      .order('denomination');
+    if (pool) query = query.eq('pool', pool);
+    const { data, error } = await query;
+    fail(error, 'Impossible de charger les POS');
+    return (data || []) as PointOfSale[];
+  });
 }
 
 export async function recordCheckin(input: Omit<BADailyAttendance, 'id' | 'created_at' | 'updated_at' | 'checkout_at' | 'checkout_latitude' | 'checkout_longitude' | 'checkout_accuracy_m' | 'closing_comment'>): Promise<BADailyAttendance> {
@@ -365,6 +433,7 @@ export async function recordCheckin(input: Omit<BADailyAttendance, 'id' | 'creat
     .select()
     .single();
   fail(error, 'Impossible d’enregistrer le pointage du matin');
+  invalidateMerchantCache();
   return data as BADailyAttendance;
 }
 
@@ -442,6 +511,7 @@ export async function markIncompleteMerchantPosVisits({ runId, baId, activityDat
     .update({ status: 'incomplete' })
     .in('id', incompleteIds);
   fail(updateError, 'Impossible de marquer les POS inachevés');
+  invalidateMerchantCache();
   return incompleteIds.length;
 }
 
@@ -490,6 +560,7 @@ export async function finalizePriorMerchantDays(runId: string, baId: string, cur
     .update({ status: 'incomplete' })
     .in('id', incompleteIds);
   fail(updateError, 'Impossible de finaliser les POS inachevés des jours antérieurs');
+  invalidateMerchantCache();
   return incompleteIds.length;
 }
 
@@ -514,6 +585,7 @@ export async function closeDailyAttendance(id: string, input: Pick<BADailyAttend
     .select()
     .single();
   fail(error, 'Impossible de clôturer la journée');
+  invalidateMerchantCache();
   return data as BADailyAttendance;
 }
 
@@ -549,6 +621,7 @@ export async function recordPosArrival(input: Omit<BAPosVisit, 'id' | 'created_a
     throw new Error('Ce POS vient d’être pris en charge par un autre Brand Ambassador. Veuillez sélectionner un autre point de vente.');
   }
   fail(error, 'Impossible d’enregistrer l’arrivée au POS');
+  invalidateMerchantCache();
   return data as BAPosVisit;
 }
 
@@ -575,6 +648,7 @@ export async function createTransaction(input: Omit<BATransaction, 'id' | 'creat
       fail(restoreError, 'Impossible de rétablir le POS complété');
     }
   }
+  invalidateMerchantCache();
   return data as BATransaction;
 }
 
@@ -588,6 +662,7 @@ export async function updateMerchantTransactionReference(transactionId: string, 
     .select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)')
     .single();
   fail(error, 'Impossible de mettre à jour l’identifiant de transaction');
+  invalidateMerchantCache();
   return data as BATransaction;
 }
 
@@ -710,24 +785,68 @@ export async function updateMerchantTargetSettings(runId: string, targets: Pick<
     .select()
     .single();
   fail(error, 'Impossible de mettre à jour les objectifs Merchant');
+  invalidateMerchantCache();
   return data as CampaignRun;
 }
 
 async function getRunActivityData(runId: string) {
+  return withMerchantCache(`activity:${runId}`, async () => {
+    const client = getMerchantClient();
+    const [visitsResponse, transactionsResponse, attendanceResponse] = await Promise.all([
+      client.from('ba_pos_visits').select('*, point_of_sale:points_of_sale(*)').eq('campaign_run_id', runId).gte('activity_date', MERCHANT_CAMPAIGN_START).neq('status', 'alerted').order('visited_at', { ascending: true }),
+      client.from('ba_transactions').select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)').eq('campaign_run_id', runId).gte('occurred_at', `${MERCHANT_CAMPAIGN_START}T00:00:00+01:00`).neq('status', 'rejected').order('occurred_at', { ascending: true }),
+      client.from('ba_daily_attendance').select('*').eq('campaign_run_id', runId).gte('activity_date', MERCHANT_CAMPAIGN_START).order('activity_date', { ascending: true }),
+    ]);
+    fail(visitsResponse.error, 'Impossible de charger les visites POS Merchant');
+    fail(transactionsResponse.error, 'Impossible de charger les transactions Merchant');
+    fail(attendanceResponse.error, 'Impossible de charger les présences Merchant');
+    return {
+      visits: (visitsResponse.data || []) as BAPosVisit[],
+      transactions: (transactionsResponse.data || []) as BATransaction[],
+      attendances: (attendanceResponse.data || []) as BADailyAttendance[],
+    };
+  });
+}
+
+function getIncompleteMerchantVisitIds(
+  visits: BAPosVisit[],
+  transactions: BATransaction[],
+  attendances: BADailyAttendance[],
+  transactionTarget: number,
+): Set<string> {
+  const closedDays = new Set(attendances
+    .filter((attendance) => attendance.status === 'closed' || Boolean(attendance.checkout_at))
+    .map((attendance) => `${attendance.ba_id}:${attendance.activity_date}`));
+  const countByVisitId = new Map<string, number>();
+  const countByPosAndDate = new Map<string, number>();
+  transactions.filter((transaction) => transaction.status !== 'rejected').forEach((transaction) => {
+    if (transaction.pos_visit_id) countByVisitId.set(transaction.pos_visit_id, (countByVisitId.get(transaction.pos_visit_id) || 0) + 1);
+    const key = `${transaction.pos_id}:${transaction.occurred_at.slice(0, 10)}`;
+    countByPosAndDate.set(key, (countByPosAndDate.get(key) || 0) + 1);
+  });
+
+  return new Set(visits
+    .filter((visit) => {
+      if (visit.operational_status === 'inactive') return false;
+      const transactionCount = countByVisitId.get(visit.id) ?? countByPosAndDate.get(`${visit.pos_id}:${visit.activity_date}`) ?? 0;
+      const wasClosed = closedDays.has(`${visit.ba_id}:${visit.activity_date}`);
+      return transactionCount < transactionTarget && (visit.status === 'incomplete' || wasClosed);
+    })
+    .map((visit) => visit.id));
+}
+
+async function persistHistoricalIncompleteVisits(runId: string, incompleteIds: Set<string>): Promise<void> {
+  const visitIds = Array.from(incompleteIds);
+  if (!visitIds.length) return;
   const client = getMerchantClient();
-  const [visitsResponse, transactionsResponse, attendanceResponse] = await Promise.all([
-    client.from('ba_pos_visits').select('*, point_of_sale:points_of_sale(*)').eq('campaign_run_id', runId).gte('activity_date', MERCHANT_CAMPAIGN_START).neq('status', 'alerted').order('visited_at', { ascending: true }),
-    client.from('ba_transactions').select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)').eq('campaign_run_id', runId).gte('occurred_at', `${MERCHANT_CAMPAIGN_START}T00:00:00+01:00`).neq('status', 'rejected').order('occurred_at', { ascending: true }),
-    client.from('ba_daily_attendance').select('*').eq('campaign_run_id', runId).gte('activity_date', MERCHANT_CAMPAIGN_START).order('activity_date', { ascending: true }),
-  ]);
-  fail(visitsResponse.error, 'Impossible de charger les visites POS Merchant');
-  fail(transactionsResponse.error, 'Impossible de charger les transactions Merchant');
-  fail(attendanceResponse.error, 'Impossible de charger les présences Merchant');
-  return {
-    visits: (visitsResponse.data || []) as BAPosVisit[],
-    transactions: (transactionsResponse.data || []) as BATransaction[],
-    attendances: (attendanceResponse.data || []) as BADailyAttendance[],
-  };
+  const { error } = await client
+    .from('ba_pos_visits')
+    .update({ status: 'incomplete' })
+    .eq('campaign_run_id', runId)
+    .eq('operational_status', 'active')
+    .eq('status', 'visited')
+    .in('id', visitIds);
+  if (!error) invalidateMerchantCache(`activity:${runId}`);
 }
 
 export async function getMerchantDashboardSummary(run: CampaignRun, activityDate = isoDate(new Date())): Promise<MerchantDashboardSummary> {
@@ -743,6 +862,8 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
     daily_pos_target: Number(run.daily_pos_target || 15),
     transactions_per_pos_target: Number(run.transactions_per_pos_target || 3),
   };
+  const incompleteVisitIds = getIncompleteMerchantVisitIds(activity.visits, activity.transactions, activity.attendances, targets.transactions_per_pos_target);
+  await persistHistoricalIncompleteVisits(run.id, incompleteVisitIds);
   const todayVisits = activity.visits.filter((item) => item.activity_date === safeActivityDate);
   const todayTransactions = activity.transactions.filter((item) => item.occurred_at.slice(0, 10) === safeActivityDate);
   const activeBas = team.filter((item) => item.status !== 'absent').length;
@@ -755,8 +876,14 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
     if (!current || new Date(visit.visited_at || 0).getTime() > new Date(current.visited_at || 0).getTime()) latestVisitByPos.set(visit.pos_id, visit);
   });
   const inactivePos = Array.from(distinctCampaignPos).filter((posId) => latestVisitByPos.get(posId)?.operational_status === 'inactive').length;
-  const incompletePos = Array.from(distinctCampaignPos).filter((posId) => latestVisitByPos.get(posId)?.operational_status !== 'inactive' && latestVisitByPos.get(posId)?.status === 'incomplete' && (transactionCountByPos.get(posId) || 0) < targets.transactions_per_pos_target).length;
-  const activePos = Array.from(distinctCampaignPos).filter((posId) => latestVisitByPos.get(posId)?.operational_status !== 'inactive' && latestVisitByPos.get(posId)?.status !== 'incomplete' && (transactionCountByPos.get(posId) || 0) < targets.transactions_per_pos_target).length;
+  const incompletePos = Array.from(distinctCampaignPos).filter((posId) => {
+    const visit = latestVisitByPos.get(posId);
+    return visit?.operational_status !== 'inactive' && Boolean(visit && incompleteVisitIds.has(visit.id)) && (transactionCountByPos.get(posId) || 0) < targets.transactions_per_pos_target;
+  }).length;
+  const activePos = Array.from(distinctCampaignPos).filter((posId) => {
+    const visit = latestVisitByPos.get(posId);
+    return visit?.operational_status !== 'inactive' && !Boolean(visit && incompleteVisitIds.has(visit.id)) && (transactionCountByPos.get(posId) || 0) < targets.transactions_per_pos_target;
+  }).length;
   const completedPos = Array.from(distinctCampaignPos).filter((posId) => latestVisitByPos.get(posId)?.operational_status !== 'inactive' && (transactionCountByPos.get(posId) || 0) >= targets.transactions_per_pos_target).length;
   const untouchedPos = Math.max(0, targets.campaign_pos_target - distinctCampaignPos.size);
   const days = getDateRange(7, new Date(`${safeActivityDate}T12:00:00`)).filter((day) => day >= MERCHANT_CAMPAIGN_START);
@@ -913,6 +1040,8 @@ export async function getMerchantPosControl(run: CampaignRun): Promise<MerchantP
   const pos = await getCampaignPos(campaign.id);
   const baById = new Map(bas.map((ba) => [ba.id, ba]));
   const target = Number(run.transactions_per_pos_target || 3);
+  const incompleteVisitIds = getIncompleteMerchantVisitIds(activity.visits, activity.transactions, activity.attendances, target);
+  await persistHistoricalIncompleteVisits(run.id, incompleteVisitIds);
   const transactionsByPos = new Map<string, BATransaction[]>();
   activity.transactions.forEach((transaction) => {
     const rows = transactionsByPos.get(transaction.pos_id) || [];
@@ -936,7 +1065,7 @@ export async function getMerchantPosControl(run: CampaignRun): Promise<MerchantP
       ? 'inactive'
       : transactionCount >= target
         ? 'completed'
-        : visit?.status === 'incomplete'
+        : visit && incompleteVisitIds.has(visit.id)
           ? 'incomplete'
           : visit
             ? 'active'

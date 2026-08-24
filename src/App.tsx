@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { User, Shop, AgentMasterStatus, UserRole } from './types';
 import {
   getUsers,
@@ -31,7 +31,7 @@ import {
   fetchLeadsFromSupabase,
   isSupabaseConfigured
 } from './utils/supabase';
-import { getActiveCampaignRuns, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl } from './utils/merchantCampaign';
+import { getActiveCampaignRuns, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, invalidateMerchantCache } from './utils/merchantCampaign';
 
 import { SimulationBar } from './components/SimulationBar';
 import { Header, ThemeMode } from './components/Header';
@@ -60,6 +60,9 @@ const MerchantMonitoringView = lazy(() => import('./components/MerchantMonitorin
 const MerchantSupervisorArchivesView = lazy(() => import('./components/MerchantSupervisorArchivesView').then(({ MerchantSupervisorArchivesView: component }) => ({ default: component })));
 const MerchantAdminDashboard = lazy(() => import('./components/MerchantAdminDashboard').then(({ MerchantAdminDashboard: component }) => ({ default: component })));
 const MerchantPodiumView = lazy(() => import('./components/MerchantPodiumView').then(({ MerchantPodiumView: component }) => ({ default: component })));
+
+const APP_DATA_SYNC_KEY = 'btl_last_full_data_sync_at';
+const APP_DATA_SYNC_INTERVAL_MS = 60 * 60 * 1000;
 
 const SectionLoader = () => (
   <div className="flex min-h-[12rem] items-center justify-center">
@@ -111,8 +114,7 @@ export default function App() {
   const [users, setUsers] = useState<User[]>(() => getUsers());
   const [shops, setShops] = useState<Shop[]>(() => getShops());
   const [activeShopId, setActiveShopId] = useState<string>('');
-  const [, setDataRevision] = useState(0);
-  const directoryRefreshAtRef = useRef(0);
+  const [dataRevision, setDataRevision] = useState(0);
 
   const [isLeadModalOpen, setIsLeadModalOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -158,8 +160,16 @@ export default function App() {
     setActiveTab('home');
   };
 
-const refreshData = useCallback(async () => {
+const refreshData = useCallback(async (force = false) => {
   if (!isSupabaseConfigured()) {
+    setUsers(getUsers());
+    setShops(getShops());
+    return;
+  }
+
+  const lastSyncAt = Number(localStorage.getItem(APP_DATA_SYNC_KEY) || 0);
+  const cacheIsFresh = !force && Date.now() - lastSyncAt < APP_DATA_SYNC_INTERVAL_MS;
+  if (cacheIsFresh) {
     setUsers(getUsers());
     setShops(getShops());
     return;
@@ -167,22 +177,16 @@ const refreshData = useCallback(async () => {
 
   try {
     await flushOfflineOutbox();
-    const directoryIsFresh = Date.now() - directoryRefreshAtRef.current < 5 * 60 * 1000;
-    const [usersData, shopsData] = directoryIsFresh
-      ? [getUsers(), getShops()]
-      : await Promise.all([fetchUsersFromSupabase(), fetchShopsFromSupabase()]);
-
+    const [usersData, shopsData] = await Promise.all([fetchUsersFromSupabase(), fetchShopsFromSupabase()]);
     await Promise.all([
       refreshLeadsFromSupabase(),
       refreshCheckinsFromSupabase(),
-      refreshReportsFromSupabase()
+      refreshReportsFromSupabase(),
     ]);
-
-    if (!directoryIsFresh) {
-      saveUsers(usersData);
-      saveShops(shopsData);
-      directoryRefreshAtRef.current = Date.now();
-    }
+    saveUsers(usersData);
+    saveShops(shopsData);
+    localStorage.setItem(APP_DATA_SYNC_KEY, String(Date.now()));
+    invalidateMerchantCache();
     setUsers(usersData);
     setShops(shopsData);
     setDataRevision((prev) => prev + 1);
@@ -224,6 +228,13 @@ const refreshData = useCallback(async () => {
 
   useEffect(() => {
     void refreshData();
+    const hourlySync = window.setInterval(() => { void refreshData(); }, APP_DATA_SYNC_INTERVAL_MS);
+    const onOnline = () => { void refreshData(); };
+    window.addEventListener('online', onOnline);
+    return () => {
+      window.clearInterval(hourlySync);
+      window.removeEventListener('online', onOnline);
+    };
   }, [refreshData]);
 
   useEffect(() => {
@@ -475,7 +486,7 @@ const todayLeads =
 
     return (
       <Suspense fallback={<SectionLoader />}>
-        <React.Fragment key={`${effectiveRole}-${effectiveUser.id}`}>
+        <React.Fragment key={`${effectiveRole}-${effectiveUser.id}-${dataRevision}`}>
           {content}
         </React.Fragment>
       </Suspense>
@@ -535,7 +546,7 @@ const todayLeads =
         }}
         onLogout={handleLogout}
         onOpenPasswordModal={() => setIsPasswordModalOpen(true)}
-        onRefreshData={realMasterUser.role === 'super_admin' ? undefined : () => { void refreshData(); }}
+        onRefreshData={realMasterUser.role === 'super_admin' ? undefined : () => { void refreshData(true); }}
       />
 
       <main className="flex-1 min-h-0 px-3 sm:px-4 pt-3 pb-32 max-w-2xl mx-auto w-full overflow-y-auto overflow-x-hidden">
