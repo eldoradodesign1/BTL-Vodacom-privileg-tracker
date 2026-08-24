@@ -3,6 +3,7 @@ import { Camera, CheckCircle2, CircleOff, Command, MapPin, Save, Store, X, Zap }
 import type { BAPosVisit, CampaignRun, PointOfSale, User } from '../../types';
 import { MERCHANT_CAMPAIGN_CODE, recordPosArrival, uploadMerchantEvidence } from '../../utils/merchantCampaign';
 import { MerchantPosCommandPalette } from './MerchantPosCommandPalette';
+import { ImageLightboxModal, type LightboxImage } from './ImageLightboxModal';
 
 interface MerchantPosValidationModalProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [isComplete, setIsComplete] = useState(false);
+  const [lightbox, setLightbox] = useState<LightboxImage | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const existingVisit = useMemo(() => selectedPos ? visits.find((visit) => visit.pos_id === selectedPos.id) || null : null, [selectedPos, visits]);
@@ -54,6 +56,7 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
     setNote('');
     setError('');
     setIsComplete(false);
+    setLightbox(null);
   };
 
   useEffect(() => {
@@ -122,7 +125,7 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
         {existingVisit && <div className={`rounded-2xl border p-3 text-xs font-semibold ${currentStatus === 'inactive' ? 'border-amber-300/35 bg-amber-500/10 text-amber-100' : 'border-emerald-300/30 bg-emerald-500/[0.08] text-emerald-100'}`}><b className="block text-[10px] font-black uppercase tracking-[0.12em]">POS déjà validé</b><p className="mt-1">Ce POS est déjà enregistré comme {currentStatus === 'inactive' ? 'non actif' : 'actif'} dans votre journée.</p></div>}
         {selectedPos && !existingVisit && <><section className="rounded-2xl border border-white/10 bg-white/[0.03] p-3"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-400">État constaté sur place</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => setOperationalStatus('active')} className={`rounded-2xl border p-3 text-left transition ${operationalStatus === 'active' ? 'border-emerald-300/55 bg-emerald-500/15 text-emerald-100' : 'border-white/10 bg-black/20 text-gray-400 hover:bg-white/[0.06]'}`}><Zap size={17}/><b className="mt-2 block text-xs">POS actif</b><span className="mt-1 block text-[10px] leading-relaxed opacity-75">Trois activations sont attendues pour ce POS.</span></button><button type="button" onClick={() => setOperationalStatus('inactive')} className={`rounded-2xl border p-3 text-left transition ${operationalStatus === 'inactive' ? 'border-amber-300/55 bg-amber-500/15 text-amber-100' : 'border-white/10 bg-black/20 text-gray-400 hover:bg-white/[0.06]'}`}><CircleOff size={17}/><b className="mt-2 block text-xs">POS non actif</b><span className="mt-1 block text-[10px] leading-relaxed opacity-75">Il compte comme couvert, sans activations exigées.</span></button></div></section>
           <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => { choosePhoto(event.target.files?.[0] || null); event.currentTarget.value = ''; }} />
-          <button type="button" onClick={() => photoInputRef.current?.click()} disabled={saving} className="group relative flex min-h-32 w-full items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-white/5 transition hover:border-emerald-200/50 hover:bg-white/10 disabled:opacity-40">{preview ? <><img src={preview} alt="Aperçu de la validation POS" className="h-36 w-full object-cover"/><span className="absolute inset-0 flex items-end justify-center bg-black/0 pb-2 text-[10px] font-black uppercase text-white opacity-0 transition group-hover:bg-black/45 group-hover:opacity-100">Modifier la photo</span></> : <span className="flex items-center gap-2 text-xs font-black uppercase text-emerald-100"><Camera size={16}/>Prendre la photo du POS</span>}</button>
+          {preview ? <div className="overflow-hidden rounded-2xl border border-white/15 bg-white/5"><button type="button" onClick={() => setLightbox({ url: preview, alt: 'Aperçu de la validation POS' })} className="group relative block h-36 w-full overflow-hidden text-left" aria-label="Ouvrir la photo du POS en plein écran"><img src={preview} alt="Aperçu de la validation POS" className="h-full w-full object-cover transition duration-200 group-hover:scale-[1.03]"/><span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent px-3 pb-3 pt-8 text-[10px] font-black uppercase tracking-wide text-white opacity-0 transition group-hover:opacity-100">Voir en entier</span></button><button type="button" onClick={() => photoInputRef.current?.click()} disabled={saving} className="w-full border-t border-white/10 px-3 py-2 text-[10px] font-black uppercase text-emerald-100 transition hover:bg-white/[0.06] disabled:opacity-40">Modifier la photo</button></div> : <button type="button" onClick={() => photoInputRef.current?.click()} disabled={saving} className="flex min-h-32 w-full items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-white/5 transition hover:border-emerald-200/50 hover:bg-white/10 disabled:opacity-40"><span className="flex items-center gap-2 text-xs font-black uppercase text-emerald-100"><Camera size={16}/>Prendre la photo du POS</span></button>}
           <textarea value={note} onChange={(event) => setNote(event.target.value)} disabled={saving} placeholder={operationalStatus === 'inactive' ? 'Pourquoi le POS est-il non actif ? (optionnel)' : 'Observation terrain (optionnel)'} className="app-input min-h-20 w-full rounded-2xl p-3 text-sm" />
           <p className="rounded-xl bg-black/20 px-3 py-2 text-[10px] font-semibold text-gray-400"><MapPin size={13} className="mr-1 inline text-cyan-200"/>La validation enregistre l’heure, votre position GPS et la photo de preuve.</p>
           <button type="button" disabled={saving || !photo} onClick={() => void validate()} className="btn-neon btn-red flex w-full items-center justify-center gap-2 disabled:opacity-40"><Save size={16}/><span>{saving ? 'Validation…' : 'Valider ce POS'}</span></button>
@@ -130,5 +133,6 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
       </div>}
     </section>
     <MerchantPosCommandPalette isOpen={isPaletteOpen} positions={positions} selectedPosId={selectedPos?.id} onClose={() => setIsPaletteOpen(false)} onSelect={(pos) => { setSelectedPos(pos); setError(''); }}/>
+    <ImageLightboxModal image={lightbox} onClose={() => setLightbox(null)} />
   </div>;
 };
