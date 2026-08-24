@@ -472,7 +472,7 @@ body::after {
   border-radius: var(--radius-xl);
   padding: 24px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-card:active {
@@ -494,7 +494,7 @@ body::after {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  transition: all 0.3s ease;
+  transition: transform 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .btn-neon:disabled {
@@ -980,9 +980,29 @@ body.theme-ambre {
   .app-bottom-nav,
   .app-popover,
   .modal-sheet {
-    backdrop-filter: blur(13px) saturate(118%) !important;
-    -webkit-backdrop-filter: blur(13px) saturate(118%) !important;
-    box-shadow: 0 14px 34px rgba(2, 6, 23, 0.3), 0 1px 0 rgba(255, 255, 255, 0.08) inset !important;
+    backdrop-filter: blur(7px) saturate(112%) !important;
+    -webkit-backdrop-filter: blur(7px) saturate(112%) !important;
+    box-shadow: 0 10px 24px rgba(2, 6, 23, 0.26), 0 1px 0 rgba(255, 255, 255, 0.07) inset !important;
+  }
+
+  .app-input {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.07) inset !important;
+  }
+
+  .glass-card:hover,
+  .app-icon-button:hover,
+  .btn-red:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .merchant-chart-glow {
+    display: none;
+  }
+
+  .merchant-inventory-shell {
+    contain: layout paint;
   }
 }
 

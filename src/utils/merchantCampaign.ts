@@ -296,6 +296,51 @@ export async function getMerchantArchives(runId: string, startDate?: string, end
   });
 }
 
+export interface MerchantPosCreateInput {
+  campaign_id: string;
+  denomination: string;
+  agent_number: string;
+  address: string;
+  pool: PointOfSale['pool'];
+  activity?: string | null;
+  mfs_name?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+export async function createMerchantPos(input: MerchantPosCreateInput): Promise<PointOfSale> {
+  const client = getMerchantClient();
+  const clean = {
+    ...input,
+    denomination: input.denomination.trim(),
+    agent_number: input.agent_number.trim(),
+    address: input.address.trim(),
+    activity: input.activity?.trim() || null,
+    mfs_name: input.mfs_name?.trim() || null,
+    is_active: true,
+  };
+  if (!clean.denomination || !clean.agent_number || !clean.address) {
+    throw new Error('La dénomination, le short-code et l’adresse sont requis.');
+  }
+
+  const { data: duplicate, error: duplicateError } = await client
+    .from('points_of_sale')
+    .select('id,denomination,agent_number')
+    .eq('campaign_id', clean.campaign_id)
+    .eq('agent_number', clean.agent_number)
+    .maybeSingle();
+  fail(duplicateError, 'Impossible de vérifier le short-code');
+  if (duplicate) throw new Error(`Le short-code ${clean.agent_number} existe déjà pour « ${duplicate.denomination} », déjà présent dans le référentiel.`);
+
+  const { data, error } = await client
+    .from('points_of_sale')
+    .insert(clean)
+    .select('*')
+    .single();
+  fail(error, 'Impossible de créer le POS');
+  return data as PointOfSale;
+}
+
 export async function getCampaignPos(campaignId: string, pool?: string): Promise<PointOfSale[]> {
   const client = getMerchantClient();
   let query = client
@@ -702,10 +747,24 @@ export async function getMerchantPosControl(run: CampaignRun): Promise<MerchantP
   const pos = await getCampaignPos(campaign.id);
   const baById = new Map(bas.map((ba) => [ba.id, ba]));
   const target = Number(run.transactions_per_pos_target || 3);
+  const transactionsByPos = new Map<string, BATransaction[]>();
+  activity.transactions.forEach((transaction) => {
+    const rows = transactionsByPos.get(transaction.pos_id) || [];
+    rows.push(transaction);
+    transactionsByPos.set(transaction.pos_id, rows);
+  });
+  const latestVisitByPos = new Map<string, BAPosVisit>();
+  activity.visits.forEach((visit) => {
+    const current = latestVisitByPos.get(visit.pos_id);
+    if (!current || new Date(visit.visited_at || 0).getTime() > new Date(current.visited_at || 0).getTime()) {
+      latestVisitByPos.set(visit.pos_id, visit);
+    }
+  });
+  transactionsByPos.forEach((rows) => rows.sort((left, right) => new Date(right.occurred_at).getTime() - new Date(left.occurred_at).getTime()));
+
   return pos.map((item) => {
-    const transactions = activity.transactions.filter((transaction) => transaction.pos_id === item.id);
-    const visits = activity.visits.filter((visit) => visit.pos_id === item.id).sort((left, right) => new Date(right.visited_at || 0).getTime() - new Date(left.visited_at || 0).getTime());
-    const visit = visits[0] || null;
+    const transactions = transactionsByPos.get(item.id) || [];
+    const visit = latestVisitByPos.get(item.id) || null;
     const transactionCount = transactions.length;
     const status: MerchantPosControlItem['status'] = visit?.operational_status === 'inactive'
       ? 'inactive'
@@ -720,7 +779,7 @@ export async function getMerchantPosControl(run: CampaignRun): Promise<MerchantP
       transactionCount,
       ba: visit ? baById.get(visit.ba_id) || null : null,
       visit,
-      transactions: transactions.sort((left, right) => new Date(right.occurred_at).getTime() - new Date(left.occurred_at).getTime()),
+      transactions,
     };
   });
 }
