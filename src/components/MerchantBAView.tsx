@@ -8,6 +8,7 @@ import {
   getMerchantCampaign,
   getMerchantEvidencePublicUrl,
   getMerchantStandings,
+  finalizePriorMerchantDays,
   getPosVisitsForDay,
   getTransactionsForDay,
   MERCHANT_CAMPAIGN_CODE,
@@ -76,7 +77,8 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
         setPodiumPhotoUrls({});
         return;
       }
-      const [nextPositions, nextAttendance, nextTransactions, nextVisits, nextStandings] = await Promise.all([
+      const [, nextPositions, nextAttendance, nextTransactions, nextVisits, nextStandings] = await Promise.all([
+        finalizePriorMerchantDays(active.id, currentUser.id, today, Number(active.transactions_per_pos_target || 3)),
         getCampaignPos(campaign.id),
         getDailyAttendance(currentUser.id, active.id, today),
         getTransactionsForDay(currentUser.id, active.id, today),

@@ -100,7 +100,7 @@ export interface BAPosVisit {
   longitude?: number | null;
   accuracy_m?: number | null;
   arrival_photo_path?: string | null;
-  status: 'planned' | 'visited' | 'alerted' | 'not_visited';
+  status: 'planned' | 'visited' | 'incomplete' | 'alerted' | 'not_visited';
   operational_status?: 'active' | 'inactive';
   operational_confirmed_at?: string | null;
   operational_note?: string | null;

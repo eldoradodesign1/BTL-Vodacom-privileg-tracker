@@ -357,17 +357,156 @@ export async function getCampaignPos(campaignId: string, pool?: string): Promise
 
 export async function recordCheckin(input: Omit<BADailyAttendance, 'id' | 'created_at' | 'updated_at' | 'checkout_at' | 'checkout_latitude' | 'checkout_longitude' | 'checkout_accuracy_m' | 'closing_comment'>): Promise<BADailyAttendance> {
   const client = getMerchantClient();
+  const activityDate = clampMerchantActivityDate(input.activity_date);
+  await finalizePriorMerchantDays(input.campaign_run_id, input.ba_id, activityDate);
   const { data, error } = await client
     .from('ba_daily_attendance')
-    .upsert(input, { onConflict: 'campaign_run_id,ba_id,activity_date' })
+    .upsert({ ...input, activity_date: activityDate }, { onConflict: 'campaign_run_id,ba_id,activity_date' })
     .select()
     .single();
   fail(error, 'Impossible d’enregistrer le pointage du matin');
   return data as BADailyAttendance;
 }
 
+const merchantDayBounds = (activityDate: string) => {
+  const start = `${activityDate}T00:00:00+00:00`;
+  const nextDay = new Date(`${activityDate}T12:00:00+00:00`);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+  return { start, end: `${nextDay.toISOString().slice(0, 10)}T00:00:00+00:00` };
+};
+
+async function getMerchantTransactionTarget(runId: string): Promise<number> {
+  const client = getMerchantClient();
+  const { data, error } = await client
+    .from('campaign_runs')
+    .select('transactions_per_pos_target')
+    .eq('id', runId)
+    .single();
+  fail(error, 'Impossible de charger l’objectif transactionnel Merchant');
+  return Math.max(1, Number(data?.transactions_per_pos_target || 3));
+}
+
+export interface MarkIncompleteMerchantPosVisitsInput {
+  runId: string;
+  baId: string;
+  activityDate: string;
+  exceptPosId?: string;
+  target?: number;
+}
+
+/**
+ * Finalise une journée ou un changement de POS sans jamais assimiler un POS non actif
+ * à un POS inachevé. Les comptes sont indexés par visite afin d’éviter toute comparaison N×M.
+ */
+export async function markIncompleteMerchantPosVisits({ runId, baId, activityDate, exceptPosId, target }: MarkIncompleteMerchantPosVisitsInput): Promise<number> {
+  const client = getMerchantClient();
+  const safeActivityDate = clampMerchantActivityDate(activityDate);
+  const transactionTarget = target ?? await getMerchantTransactionTarget(runId);
+  const { data: visitsData, error: visitsError } = await client
+    .from('ba_pos_visits')
+    .select('id,pos_id,status,operational_status')
+    .eq('campaign_run_id', runId)
+    .eq('ba_id', baId)
+    .eq('activity_date', safeActivityDate)
+    .eq('status', 'visited');
+  fail(visitsError, 'Impossible de charger les visites à finaliser');
+
+  const visits = (visitsData || []) as Pick<BAPosVisit, 'id' | 'pos_id' | 'status' | 'operational_status'>[];
+  const eligibleVisits = visits.filter((visit) => visit.operational_status !== 'inactive' && visit.pos_id !== exceptPosId);
+  if (eligibleVisits.length === 0) return 0;
+
+  const { start, end } = merchantDayBounds(safeActivityDate);
+  const { data: transactionsData, error: transactionsError } = await client
+    .from('ba_transactions')
+    .select('pos_visit_id,pos_id')
+    .eq('campaign_run_id', runId)
+    .eq('ba_id', baId)
+    .gte('occurred_at', start)
+    .lt('occurred_at', end)
+    .neq('status', 'rejected');
+  fail(transactionsError, 'Impossible de compter les transactions des visites');
+
+  const countByVisitId = new Map<string, number>();
+  const countByPosId = new Map<string, number>();
+  (transactionsData || []).forEach((transaction) => {
+    if (transaction.pos_visit_id) countByVisitId.set(transaction.pos_visit_id, (countByVisitId.get(transaction.pos_visit_id) || 0) + 1);
+    countByPosId.set(transaction.pos_id, (countByPosId.get(transaction.pos_id) || 0) + 1);
+  });
+  const incompleteIds = eligibleVisits
+    .filter((visit) => (countByVisitId.get(visit.id) ?? countByPosId.get(visit.pos_id) ?? 0) < transactionTarget)
+    .map((visit) => visit.id);
+  if (incompleteIds.length === 0) return 0;
+
+  const { error: updateError } = await client
+    .from('ba_pos_visits')
+    .update({ status: 'incomplete' })
+    .in('id', incompleteIds);
+  fail(updateError, 'Impossible de marquer les POS inachevés');
+  return incompleteIds.length;
+}
+
+/** Finalise les visites ouvertes d’un BA avant la journée en cours. */
+export async function finalizePriorMerchantDays(runId: string, baId: string, currentActivityDate: string, target?: number): Promise<number> {
+  const client = getMerchantClient();
+  const safeCurrentDate = clampMerchantActivityDate(currentActivityDate);
+  const transactionTarget = target ?? await getMerchantTransactionTarget(runId);
+  const { data: visitsData, error: visitsError } = await client
+    .from('ba_pos_visits')
+    .select('id,pos_id,activity_date,status,operational_status')
+    .eq('campaign_run_id', runId)
+    .eq('ba_id', baId)
+    .lt('activity_date', safeCurrentDate)
+    .eq('status', 'visited');
+  fail(visitsError, 'Impossible de charger les jours Merchant antérieurs');
+
+  const visits = (visitsData || []) as Array<Pick<BAPosVisit, 'id' | 'pos_id' | 'activity_date' | 'status' | 'operational_status'>>;
+  const eligibleVisits = visits.filter((visit) => visit.operational_status !== 'inactive');
+  if (eligibleVisits.length === 0) return 0;
+
+  const { start: beforeCurrentDay } = merchantDayBounds(safeCurrentDate);
+  const { data: transactionsData, error: transactionsError } = await client
+    .from('ba_transactions')
+    .select('pos_visit_id,pos_id,occurred_at')
+    .eq('campaign_run_id', runId)
+    .eq('ba_id', baId)
+    .lt('occurred_at', beforeCurrentDay)
+    .neq('status', 'rejected');
+  fail(transactionsError, 'Impossible de compter les transactions historiques Merchant');
+
+  const countByVisitId = new Map<string, number>();
+  const countByPosAndDate = new Map<string, number>();
+  (transactionsData || []).forEach((transaction) => {
+    if (transaction.pos_visit_id) countByVisitId.set(transaction.pos_visit_id, (countByVisitId.get(transaction.pos_visit_id) || 0) + 1);
+    const key = `${transaction.pos_id}:${transaction.occurred_at.slice(0, 10)}`;
+    countByPosAndDate.set(key, (countByPosAndDate.get(key) || 0) + 1);
+  });
+  const incompleteIds = eligibleVisits
+    .filter((visit) => (countByVisitId.get(visit.id) ?? countByPosAndDate.get(`${visit.pos_id}:${visit.activity_date}`) ?? 0) < transactionTarget)
+    .map((visit) => visit.id);
+  if (incompleteIds.length === 0) return 0;
+
+  const { error: updateError } = await client
+    .from('ba_pos_visits')
+    .update({ status: 'incomplete' })
+    .in('id', incompleteIds);
+  fail(updateError, 'Impossible de finaliser les POS inachevés des jours antérieurs');
+  return incompleteIds.length;
+}
+
 export async function closeDailyAttendance(id: string, input: Pick<BADailyAttendance, 'checkout_at' | 'checkout_latitude' | 'checkout_longitude' | 'checkout_accuracy_m' | 'closing_comment' | 'status'>): Promise<BADailyAttendance> {
   const client = getMerchantClient();
+  const { data: attendance, error: attendanceError } = await client
+    .from('ba_daily_attendance')
+    .select('campaign_run_id,ba_id,activity_date')
+    .eq('id', id)
+    .single();
+  fail(attendanceError, 'Impossible de préparer la clôture de journée');
+  await markIncompleteMerchantPosVisits({
+    runId: attendance.campaign_run_id,
+    baId: attendance.ba_id,
+    activityDate: attendance.activity_date,
+  });
+
   const { data, error } = await client
     .from('ba_daily_attendance')
     .update(input)
@@ -381,6 +520,12 @@ export async function closeDailyAttendance(id: string, input: Pick<BADailyAttend
 export async function recordPosArrival(input: Omit<BAPosVisit, 'id' | 'created_at' | 'updated_at' | 'point_of_sale' | 'transactions'>): Promise<BAPosVisit> {
   const client = getMerchantClient();
   const activityDate = clampMerchantActivityDate(input.activity_date);
+  await markIncompleteMerchantPosVisits({
+    runId: input.campaign_run_id,
+    baId: input.ba_id,
+    activityDate,
+    exceptPosId: input.pos_id,
+  });
   const { data: existing, error: lookupError } = await client
     .from('ba_pos_visits')
     .select('*, point_of_sale:points_of_sale(*)')
@@ -407,10 +552,29 @@ export async function recordPosArrival(input: Omit<BAPosVisit, 'id' | 'created_a
   return data as BAPosVisit;
 }
 
-export async function createTransaction(input: Omit<BATransaction, 'id' | 'created_at' | 'updated_at'>): Promise<BATransaction> {
+export async function createTransaction(input: Omit<BATransaction, 'id' | 'created_at' | 'updated_at'>, target?: number): Promise<BATransaction> {
   const client = getMerchantClient();
   const { data, error } = await client.from('ba_transactions').insert(input).select().single();
   fail(error, 'Impossible d’enregistrer la transaction');
+
+  if (input.pos_visit_id) {
+    const transactionTarget = target ?? await getMerchantTransactionTarget(input.campaign_run_id);
+    const { count, error: countError } = await client
+      .from('ba_transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('pos_visit_id', input.pos_visit_id)
+      .neq('status', 'rejected');
+    fail(countError, 'Impossible de vérifier la progression du POS');
+    if ((count || 0) >= transactionTarget) {
+      const { error: restoreError } = await client
+        .from('ba_pos_visits')
+        .update({ status: 'visited' })
+        .eq('id', input.pos_visit_id)
+        .eq('operational_status', 'active')
+        .eq('status', 'incomplete');
+      fail(restoreError, 'Impossible de rétablir le POS complété');
+    }
+  }
   return data as BATransaction;
 }
 
@@ -516,7 +680,7 @@ export interface MerchantPodiumEntry {
 
 export interface MerchantPosControlItem {
   pos: PointOfSale;
-  status: 'pending' | 'active' | 'inactive' | 'completed';
+  status: 'pending' | 'active' | 'inactive' | 'incomplete' | 'completed';
   transactionCount: number;
   ba: { id: string; name: string; phone: string } | null;
   visit: BAPosVisit | null;
@@ -591,7 +755,8 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
     if (!current || new Date(visit.visited_at || 0).getTime() > new Date(current.visited_at || 0).getTime()) latestVisitByPos.set(visit.pos_id, visit);
   });
   const inactivePos = Array.from(distinctCampaignPos).filter((posId) => latestVisitByPos.get(posId)?.operational_status === 'inactive').length;
-  const activePos = Array.from(distinctCampaignPos).filter((posId) => latestVisitByPos.get(posId)?.operational_status !== 'inactive' && (transactionCountByPos.get(posId) || 0) < targets.transactions_per_pos_target).length;
+  const incompletePos = Array.from(distinctCampaignPos).filter((posId) => latestVisitByPos.get(posId)?.operational_status !== 'inactive' && latestVisitByPos.get(posId)?.status === 'incomplete' && (transactionCountByPos.get(posId) || 0) < targets.transactions_per_pos_target).length;
+  const activePos = Array.from(distinctCampaignPos).filter((posId) => latestVisitByPos.get(posId)?.operational_status !== 'inactive' && latestVisitByPos.get(posId)?.status !== 'incomplete' && (transactionCountByPos.get(posId) || 0) < targets.transactions_per_pos_target).length;
   const completedPos = Array.from(distinctCampaignPos).filter((posId) => latestVisitByPos.get(posId)?.operational_status !== 'inactive' && (transactionCountByPos.get(posId) || 0) >= targets.transactions_per_pos_target).length;
   const untouchedPos = Math.max(0, targets.campaign_pos_target - distinctCampaignPos.size);
   const days = getDateRange(7, new Date(`${safeActivityDate}T12:00:00`)).filter((day) => day >= MERCHANT_CAMPAIGN_START);
@@ -614,6 +779,7 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
     donut: [
       { name: 'Complétés', value: completedPos, color: '#34d399' },
       { name: 'Actifs', value: activePos, color: '#38bdf8' },
+      { name: 'Inachevés', value: incompletePos, color: '#fb7185' },
       { name: 'Non actifs', value: inactivePos, color: '#f59e0b' },
       { name: 'À couvrir', value: untouchedPos, color: '#a78bfa' },
     ],
@@ -770,9 +936,11 @@ export async function getMerchantPosControl(run: CampaignRun): Promise<MerchantP
       ? 'inactive'
       : transactionCount >= target
         ? 'completed'
-        : visit
-          ? 'active'
-          : 'pending';
+        : visit?.status === 'incomplete'
+          ? 'incomplete'
+          : visit
+            ? 'active'
+            : 'pending';
     return {
       pos: item,
       status,

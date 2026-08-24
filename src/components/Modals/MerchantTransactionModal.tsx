@@ -162,7 +162,7 @@ export const MerchantTransactionModal: React.FC<MerchantTransactionModalProps> =
     try {
       const geo = await locate();
       const path = await uploadMerchantEvidence(MERCHANT_CAMPAIGN_CODE, `${currentUser.id}/${activityDate}/transaction-${Date.now()}.jpg`, transactionPhoto);
-      await createTransaction({ campaign_run_id: run.id, ba_id: currentUser.id, pos_id: selectedPos.id, pos_visit_id: posVisit.id, transaction_reference: hasUnreadableReference ? null : reference.trim() || null, client_number: formatMsisdn(cleanPhoneNumber(clientNumber)), amount: numericAmount, evidence_path: path, occurred_at: new Date().toISOString(), latitude: geo.latitude, longitude: geo.longitude, accuracy_m: geo.accuracy, comment: comment.trim() || null, status: 'recorded' });
+      await createTransaction({ campaign_run_id: run.id, ba_id: currentUser.id, pos_id: selectedPos.id, pos_visit_id: posVisit.id, transaction_reference: hasUnreadableReference ? null : reference.trim() || null, client_number: formatMsisdn(cleanPhoneNumber(clientNumber)), amount: numericAmount, evidence_path: path, occurred_at: new Date().toISOString(), latitude: geo.latitude, longitude: geo.longitude, accuracy_m: geo.accuracy, comment: comment.trim() || null, status: 'recorded' }, Number(run.transactions_per_pos_target || 3));
       setIsComplete(true); onRecorded();
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Transaction impossible.'); }
     finally { setSaving(false); }
