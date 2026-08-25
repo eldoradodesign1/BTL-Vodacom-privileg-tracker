@@ -407,6 +407,19 @@ export async function createMerchantPos(input: MerchantPosCreateInput): Promise<
   return data as PointOfSale;
 }
 
+export async function updateMerchantPosMfs(posId: string, mfsName: string): Promise<PointOfSale> {
+  const client = getMerchantClient();
+  const { data, error } = await client
+    .from('points_of_sale')
+    .update({ mfs_name: mfsName.trim() || null })
+    .eq('id', posId)
+    .select('*')
+    .single();
+  fail(error, 'Impossible de mettre à jour le MFS du POS');
+  invalidateMerchantCache();
+  return data as PointOfSale;
+}
+
 export async function getCampaignPos(campaignId: string, pool?: string): Promise<PointOfSale[]> {
   return withMerchantCache(`pos:${campaignId}:${pool || 'all'}`, async () => {
     const client = getMerchantClient();
