@@ -1,9 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, CheckCircle2, CircleOff, Command, MapPin, Save, Store, X, Zap } from 'lucide-react';
 import type { BAPosVisit, CampaignRun, PointOfSale, User } from '../../types';
-import { MERCHANT_CAMPAIGN_CODE, recordPosArrival, updateMerchantPosMfs, uploadMerchantEvidence } from '../../utils/merchantCampaign';
-import { OTHER_MFS_VALUE, sameMerchantMfs } from '../../data/merchantMfs';
-import { MerchantMfsPicker } from './MerchantMfsPicker';
+import { MERCHANT_CAMPAIGN_CODE, recordPosArrival, uploadMerchantEvidence } from '../../utils/merchantCampaign';
+import { sameMerchantMfs } from '../../data/merchantMfs';
 import { MerchantPosCommandPalette } from './MerchantPosCommandPalette';
 import { ImageLightboxModal, type LightboxImage } from './ImageLightboxModal';
 
@@ -14,6 +13,7 @@ interface MerchantPosValidationModalProps {
   positions: PointOfSale[];
   visits: BAPosVisit[];
   activityDate: string;
+  mfsName?: string;
   onClose: () => void;
   onValidated: (visit: BAPosVisit) => void;
 }
@@ -33,11 +33,9 @@ function locate(): Promise<Geo> {
 }
 
 export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProps> = ({
-  isOpen, currentUser, run, positions, visits, activityDate, onClose, onValidated,
+  isOpen, currentUser, run, positions, visits, activityDate, mfsName = '', onClose, onValidated,
 }) => {
   const [selectedPos, setSelectedPos] = useState<PointOfSale | null>(null);
-  const [mfsSelection, setMfsSelection] = useState('');
-  const [otherMfsName, setOtherMfsName] = useState('');
   const [operationalStatus, setOperationalStatus] = useState<OperationalStatus>('active');
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState('');
@@ -50,29 +48,16 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const existingVisit = useMemo(() => selectedPos ? visits.find((visit) => visit.pos_id === selectedPos.id) || null : null, [selectedPos, visits]);
-  const filteredPositions = useMemo(() => mfsSelection && mfsSelection !== OTHER_MFS_VALUE ? positions.filter((pos) => sameMerchantMfs(pos.mfs_name, mfsSelection)) : positions, [mfsSelection, positions]);
-  const availableMfsNames = useMemo(() => positions.map((pos) => pos.mfs_name || '').filter(Boolean), [positions]);
-  const selectedMfsName = mfsSelection === OTHER_MFS_VALUE ? otherMfsName.trim() : mfsSelection;
-
-  const chooseMfs = (value: string) => {
-    setMfsSelection(value);
-    if (value !== OTHER_MFS_VALUE) setOtherMfsName('');
-    if (selectedPos && value !== OTHER_MFS_VALUE && value && !sameMerchantMfs(selectedPos.mfs_name, value)) setSelectedPos(null);
-    setError('');
-  };
+  const filteredPositions = useMemo(() => mfsName ? positions.filter((pos) => sameMerchantMfs(pos.mfs_name, mfsName)) : positions, [mfsName, positions]);
 
   const choosePos = (pos: PointOfSale) => {
     setSelectedPos(pos);
-    setMfsSelection(pos.mfs_name?.trim() || '');
-    setOtherMfsName('');
     setError('');
   };
 
   const reset = () => {
     if (preview) URL.revokeObjectURL(preview);
     setSelectedPos(null);
-    setMfsSelection('');
-    setOtherMfsName('');
     setOperationalStatus('active');
     setPhoto(null);
     setPreview('');
@@ -101,11 +86,9 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
     if (!run || !selectedPos) return setError('Sélectionnez le POS à valider.');
     if (existingVisit) return setError('Ce POS a déjà été validé dans votre journée.');
     if (!photo) return setError('Prenez une photo du POS avec son numéro marchand visible.');
-    if (mfsSelection === OTHER_MFS_VALUE && !selectedMfsName) return setError('Saisissez le nom du MFS concerné.');
     if (operationalStatus === 'inactive' && !note.trim()) return setError('Expliquez pourquoi ce POS est déclaré non actif.');
     setSaving(true);
     try {
-      if (mfsSelection === OTHER_MFS_VALUE && selectedMfsName && !sameMerchantMfs(selectedPos.mfs_name, selectedMfsName)) await updateMerchantPosMfs(selectedPos.id, selectedMfsName);
       const geo = await locate();
       const path = await uploadMerchantEvidence(
         MERCHANT_CAMPAIGN_CODE,
@@ -147,9 +130,8 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
       <div className="flex items-start justify-between gap-4"><div className="flex items-center gap-3"><div className="rounded-2xl bg-emerald-500/15 p-3 text-emerald-200"><Store size={21}/></div><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200/70">Merchant · Mes POS</p><h2 id="merchant-pos-validation-title" className="mt-1 text-lg font-black">Ajouter un POS</h2></div></div><button type="button" onClick={onClose} disabled={saving} className="rounded-xl border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:bg-white/10 disabled:opacity-40" aria-label="Fermer"><X size={18}/></button></div>
       {isComplete ? <div className="py-10 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300"><CheckCircle2 size={30}/></div><h3 className="mt-4 text-lg font-black">POS validé</h3><p className="mx-auto mt-2 max-w-sm text-sm text-gray-400">{operationalStatus === 'inactive' ? 'POS signalé non actif : il compte comme POS couvert et aucune activation n’est attendue.' : 'POS actif : vous pouvez maintenant y enregistrer jusqu’à trois transactions.'}</p><div className="mt-6 grid grid-cols-2 gap-3"><button type="button" onClick={reset} className="rounded-2xl border border-emerald-300/30 bg-emerald-400/[0.07] px-4 py-3 text-xs font-black uppercase text-emerald-100">Ajouter un POS</button><button type="button" onClick={onClose} className="btn-neon btn-red px-4 py-3 text-xs">Terminé</button></div></div> : <div className="mt-5 space-y-3">
         {error && <div className="rounded-2xl border border-red-400/50 bg-red-950/50 p-3 text-xs font-bold text-red-200">{error}</div>}
-        <MerchantMfsPicker value={mfsSelection} onChange={chooseMfs} disabled={saving} accent="emerald" availableNames={availableMfsNames}/>
-        {mfsSelection === OTHER_MFS_VALUE && <input value={otherMfsName} onChange={(event) => { setOtherMfsName(event.target.value); setError(''); }} disabled={saving} placeholder="Nom complet du MFS" className="app-input w-full rounded-2xl px-4 py-3 text-sm" />}
-        <button type="button" onClick={() => setIsPaletteOpen(true)} disabled={saving} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/30 bg-emerald-400/[0.07] p-3 text-left disabled:opacity-40"><div className="flex min-w-0 items-center gap-3"><Command className="shrink-0 text-emerald-200" size={19}/><div className="min-w-0"><span className="block text-[10px] font-black uppercase text-emerald-100/70">POS à valider</span><b className="block truncate text-sm">{selectedPos ? `${selectedPos.agent_number} · ${selectedPos.denomination}` : 'Rechercher un POS'}</b><span className="block truncate text-[11px] text-gray-400">{selectedPos ? `${selectedPos.address} · ${selectedPos.pool}${selectedPos.mfs_name ? ` · ${selectedPos.mfs_name}` : ''}` : mfsSelection && mfsSelection !== OTHER_MFS_VALUE ? `${filteredPositions.length} POS disponibles pour ce MFS` : 'Short-code, marchand, adresse, pool ou MFS'}</span></div></div><span className="shrink-0 rounded-xl border border-emerald-200/30 px-2 py-1 text-[10px] font-black text-emerald-100">RECHERCHER</span></button>
+        <div className="rounded-2xl border border-fuchsia-300/20 bg-fuchsia-500/[0.06] px-3 py-2 text-[10px] font-black uppercase text-fuchsia-100">MFS du jour · <span className="text-white">{mfsName || 'Non renseigné'}</span></div>
+        <button type="button" onClick={() => setIsPaletteOpen(true)} disabled={saving} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/30 bg-emerald-400/[0.07] p-3 text-left disabled:opacity-40"><div className="flex min-w-0 items-center gap-3"><Command className="shrink-0 text-emerald-200" size={19}/><div className="min-w-0"><span className="block text-[10px] font-black uppercase text-emerald-100/70">POS à valider</span><b className="block truncate text-sm">{selectedPos ? `${selectedPos.agent_number} · ${selectedPos.denomination}` : 'Rechercher un POS'}</b><span className="block truncate text-[11px] text-gray-400">{selectedPos ? `${selectedPos.address} · ${selectedPos.pool}${selectedPos.mfs_name ? ` · ${selectedPos.mfs_name}` : ''}` : mfsName ? `${filteredPositions.length} POS disponibles pour ce MFS` : 'Short-code, marchand, adresse ou pool'}</span></div></div><span className="shrink-0 rounded-xl border border-emerald-200/30 px-2 py-1 text-[10px] font-black text-emerald-100">RECHERCHER</span></button>
         {existingVisit && <div className={`rounded-2xl border p-3 text-xs font-semibold ${currentStatus === 'inactive' ? 'border-amber-300/35 bg-amber-500/10 text-amber-100' : 'border-emerald-300/30 bg-emerald-500/[0.08] text-emerald-100'}`}><b className="block text-[10px] font-black uppercase tracking-[0.12em]">POS déjà validé</b><p className="mt-1">Ce POS est déjà enregistré comme {currentStatus === 'inactive' ? 'non actif' : 'actif'} dans votre journée.</p></div>}
         {selectedPos && !existingVisit && <><section className="rounded-2xl border border-white/10 bg-white/[0.03] p-3"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-gray-400">État constaté sur place</p><div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => setOperationalStatus('active')} className={`rounded-2xl border p-3 text-left transition ${operationalStatus === 'active' ? 'border-emerald-300/55 bg-emerald-500/15 text-emerald-100' : 'border-white/10 bg-black/20 text-gray-400 hover:bg-white/[0.06]'}`}><Zap size={17}/><b className="mt-2 block text-xs">POS actif</b><span className="mt-1 block text-[10px] leading-relaxed opacity-75">Trois activations sont attendues pour ce POS.</span></button><button type="button" onClick={() => setOperationalStatus('inactive')} className={`rounded-2xl border p-3 text-left transition ${operationalStatus === 'inactive' ? 'border-amber-300/55 bg-amber-500/15 text-amber-100' : 'border-white/10 bg-black/20 text-gray-400 hover:bg-white/[0.06]'}`}><CircleOff size={17}/><b className="mt-2 block text-xs">POS non actif</b><span className="mt-1 block text-[10px] leading-relaxed opacity-75">Il compte comme couvert, sans activations exigées.</span></button></div></section>
           <input ref={photoInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(event) => { choosePhoto(event.target.files?.[0] || null); event.currentTarget.value = ''; }} />

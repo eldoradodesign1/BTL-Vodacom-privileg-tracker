@@ -1,9 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { CalendarDays, CheckCircle2, FileText, MapPin, UserRound, X } from 'lucide-react';
+import { Banknote, CalendarDays, CheckCircle2, FileText, ImageIcon, MapPin, ReceiptText, Store, TrendingUp, UserRound, X } from 'lucide-react';
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { CampaignRun } from '../../types';
 import type { MerchantTeamActivity } from '../../utils/merchantCampaign';
-import { getMerchantBAActivityDetail } from '../../utils/merchantCampaign';
+import { getMerchantBAActivityDetail, getMerchantEvidencePublicUrl, MERCHANT_CAMPAIGN_START, merchantTodayIso } from '../../utils/merchantCampaign';
+import { ImageLightboxModal, type LightboxImage } from './ImageLightboxModal';
+import { MerchantVisitedPosModal } from './MerchantVisitedPosModal';
+import { MerchantTransactionsDetailModal } from './MerchantTransactionsDetailModal';
 
 type MerchantOperation = 'profile' | 'report' | 'location' | 'calendar';
 
@@ -25,15 +29,23 @@ export const MerchantBAOperationsModal: React.FC<MerchantBAOperationsModalProps>
   const [transactions, setTransactions] = useState<Awaited<ReturnType<typeof getMerchantBAActivityDetail>>['transactions']>([]);
   const [locationMoment, setLocationMoment] = useState<'checkin' | 'checkout'>('checkin');
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
+  const [checkinPhotoUrl, setCheckinPhotoUrl] = useState('');
+  const [lightbox, setLightbox] = useState<LightboxImage | null>(null);
+  const [showVisitedPos, setShowVisitedPos] = useState(false);
+  const [showTransactions, setShowTransactions] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !activity) return;
     setLoading(true);
     setLocationMoment(activity.attendance?.checkout_latitude != null ? 'checkout' : 'checkin');
     void getMerchantBAActivityDetail(activity.ba.id, run?.id)
-      .then(({ attendances: attendanceHistory, transactions: transactionHistory }) => {
+      .then(async ({ attendances: attendanceHistory, transactions: transactionHistory }) => {
         setAttendances(attendanceHistory);
         setTransactions(transactionHistory);
+        const photoPath = activity.attendance?.checkin_photo_path;
+        if (photoPath) {
+          try { setCheckinPhotoUrl(await getMerchantEvidencePublicUrl(photoPath)); } catch { setCheckinPhotoUrl(''); }
+        } else setCheckinPhotoUrl('');
       })
       .finally(() => setLoading(false));
   }, [isOpen, activity?.ba.id, run?.id]);
@@ -59,10 +71,21 @@ export const MerchantBAOperationsModal: React.FC<MerchantBAOperationsModalProps>
       const day = index - startOffset + 1;
       if (day < 1 || day > days) return null;
       const iso = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const status = attendances.find((attendance) => attendance.activity_date === iso)?.status || 'absent';
+      const status = iso < MERCHANT_CAMPAIGN_START || iso > merchantTodayIso()
+        ? 'outside'
+        : attendances.find((attendance) => attendance.activity_date === iso)?.status || 'absent';
       return { day, iso, status };
     });
   }, [attendances, calendarMonth]);
+
+  const profileProgress = useMemo(() => {
+    if (!activity || !run) return [];
+    const transactionTarget = Math.max(0, (Number(run.daily_pos_target || 15) - activity.inactivePosCount) * Number(run.transactions_per_pos_target || 3));
+    return [
+      { label: 'POS', réalisé: activity.visitedPosCount, objectif: Number(run.daily_pos_target || 15) },
+      { label: 'Tx', réalisé: activity.transactionCount, objectif: transactionTarget },
+    ];
+  }, [activity, run]);
 
   if (!isOpen || !activity) return null;
 
@@ -90,9 +113,11 @@ export const MerchantBAOperationsModal: React.FC<MerchantBAOperationsModalProps>
 
         {loading ? <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-xs font-black uppercase tracking-widest text-gray-400">Chargement…</div> : <>
           {mode === 'profile' && <div className="space-y-3">
-            <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-4"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Statut du {formatDate(attendance?.activity_date)}</p><p className="mt-1 font-black text-white">{attendance ? `Pointage ${formatTime(attendance.checkin_at)}` : 'Aucun pointage enregistré'}</p></div><span className={`rounded-xl border px-3 py-1 text-[10px] font-black uppercase ${statusClass}`}>{activity.status === 'closed' ? 'Clôturé' : activity.status === 'present' ? 'En activité' : 'Absent'}</span></div>
-            <div className="grid grid-cols-3 gap-2 text-center"><div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"><b className="block text-lg text-cyan-100">{activity.visitedPosCount}</b><span className="text-[9px] font-black uppercase text-gray-500">POS</span></div><div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"><b className="block text-lg text-amber-100">{activity.transactionCount}</b><span className="text-[9px] font-black uppercase text-gray-500">Transactions</span></div><div className="rounded-2xl border border-white/10 bg-white/[0.04] p-3"><b className="block text-lg text-emerald-100">{formatNumber(activity.totalAmount)}</b><span className="text-[9px] font-black uppercase text-gray-500">Montant</span></div></div>
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-3"><p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Dernières transactions</p>{transactions.slice(0, 4).map((transaction) => <div key={transaction.id} className="flex items-center justify-between border-t border-white/5 py-2 first:border-0"><div><p className="text-xs font-bold text-white">{transaction.point_of_sale?.denomination || 'POS Merchant'}</p><p className="text-[10px] text-gray-500">{transaction.point_of_sale?.agent_number || '—'} · Client {transaction.client_number || '—'}</p></div><b className="text-xs text-emerald-100">{formatNumber(transaction.amount)}</b></div>)}{transactions.length === 0 && <p className="text-xs text-gray-500">Aucune transaction disponible.</p>}</div>
+            <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-4"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Statut du {formatDate(attendance?.activity_date)}</p><p className="mt-1 font-black text-white">{attendance ? `Pointage ${formatTime(attendance.checkin_at)}` : 'Aucun pointage enregistré'}</p>{activity.mfsNames.length > 0 && <p className="mt-1 text-[10px] font-bold text-fuchsia-200">MFS · {activity.mfsNames.join(' · ')}</p>}</div><span className={`rounded-xl border px-3 py-1 text-[10px] font-black uppercase ${statusClass}`}>{activity.status === 'closed' ? 'Clôturé' : activity.status === 'present' ? 'En activité' : 'Absent'}</span></div>
+            {(checkinPhotoUrl || mapCoordinates) && <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{checkinPhotoUrl && <button type="button" onClick={() => setLightbox({ url: checkinPhotoUrl, alt: `Pointage de ${activity.ba.name}` })} className="group relative h-40 overflow-hidden rounded-2xl border border-white/10 text-left"><img src={checkinPhotoUrl} alt={`Pointage de ${activity.ba.name}`} className="h-full w-full object-cover transition group-hover:scale-[1.03]"/><span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-3 pt-8 text-[10px] font-black uppercase text-white"><ImageIcon className="mr-1 inline" size={13}/>Photo de pointage</span></button>}{mapCoordinates && <button type="button" onClick={() => setLocationMoment('checkin')} className="overflow-hidden rounded-2xl border border-white/10 text-left" title="Voir la localisation de pointage"><div className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-[10px] font-black uppercase text-rose-100"><MapPin size={13}/>Localisation du pointage</div><iframe title={`Carte pointage ${activity.ba.name}`} src={`https://www.google.com/maps?q=${mapCoordinates.latitude},${mapCoordinates.longitude}&output=embed`} className="pointer-events-none h-28 w-full border-0" loading="lazy" referrerPolicy="no-referrer"/></button>}</div>}
+            <section className="rounded-2xl border border-emerald-300/15 bg-emerald-500/[0.04] p-3"><div className="flex items-center gap-2"><TrendingUp size={15} className="text-emerald-200"/><div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-200">Progression du jour</p><p className="text-[10px] text-gray-400">Réalisé et objectifs du BA.</p></div></div><div className="mt-2 h-36"><ResponsiveContainer width="100%" height="100%"><LineChart data={profileProgress} margin={{ top: 10, right: 8, left: -22, bottom: 0 }}><CartesianGrid stroke="#ffffff12" vertical={false}/><XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false}/><YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} allowDecimals={false} axisLine={false} tickLine={false}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Legend wrapperStyle={{ fontSize: '10px' }}/><Line type="monotone" dataKey="réalisé" name="Réalisé" stroke="#34d399" strokeWidth={3} dot={{ r: 4 }} isAnimationActive={false}/><Line type="monotone" dataKey="objectif" name="Objectif" stroke="#fbbf24" strokeWidth={2} strokeDasharray="6 5" dot={false} isAnimationActive={false}/></LineChart></ResponsiveContainer></div></section>
+            <div className="grid grid-cols-3 gap-2 text-center"><button type="button" onClick={() => setShowVisitedPos(true)} className="rounded-2xl border border-cyan-300/20 bg-cyan-400/[0.06] p-3 transition hover:bg-cyan-400/[0.12]"><Store className="mx-auto mb-1 text-cyan-100" size={14}/><b className="block text-lg text-cyan-100">{activity.visitedPosCount}</b><span className="text-[9px] font-black uppercase text-gray-500">POS</span></button><button type="button" onClick={() => setShowTransactions(true)} className="rounded-2xl border border-amber-300/20 bg-amber-500/[0.06] p-3 transition hover:bg-amber-500/[0.12]"><ReceiptText className="mx-auto mb-1 text-amber-100" size={14}/><b className="block text-lg text-amber-100">{activity.transactionCount}</b><span className="text-[9px] font-black uppercase text-gray-500">Transactions</span></button><button type="button" onClick={() => setShowTransactions(true)} className="rounded-2xl border border-emerald-300/20 bg-emerald-500/[0.06] p-3 transition hover:bg-emerald-500/[0.12]"><Banknote className="mx-auto mb-1 text-emerald-100" size={14}/><b className="block text-lg text-emerald-100">{formatNumber(activity.totalAmount)}</b><span className="text-[9px] font-black uppercase text-gray-500">Montant</span></button></div>
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-3"><p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Dernières transactions</p>{transactions.slice(0, 4).map((transaction) => <button type="button" key={transaction.id} onClick={() => setShowTransactions(true)} className="flex w-full items-center justify-between border-t border-white/5 py-2 text-left first:border-0 transition hover:bg-white/[0.04]"><div><p className="text-xs font-bold text-white">{transaction.point_of_sale?.denomination || 'POS Merchant'}</p><p className="text-[10px] text-gray-500">{transaction.point_of_sale?.agent_number || '—'} · Client {transaction.client_number || '—'}</p></div><b className="text-xs text-emerald-100">{formatNumber(transaction.amount)}</b></button>)}{transactions.length === 0 && <p className="text-xs text-gray-500">Aucune transaction disponible.</p>}</div>
           </div>}
 
           {mode === 'report' && <div className="space-y-3">
@@ -105,9 +130,12 @@ export const MerchantBAOperationsModal: React.FC<MerchantBAOperationsModalProps>
 
           {mode === 'location' && <div className="space-y-3"><div className="grid grid-cols-2 gap-2"><button onClick={() => setLocationMoment('checkin')} className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase ${locationMoment === 'checkin' ? 'border-cyan-300/40 bg-cyan-400/15 text-cyan-100' : 'border-white/10 bg-white/5 text-gray-400'}`}>GPS arrivée</button><button onClick={() => setLocationMoment('checkout')} disabled={!attendance?.checkout_at} className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase ${locationMoment === 'checkout' ? 'border-emerald-300/40 bg-emerald-400/15 text-emerald-100' : 'border-white/10 bg-white/5 text-gray-400 disabled:opacity-40'}`}>GPS clôture</button></div>{mapCoordinates ? <div className="overflow-hidden rounded-2xl border border-white/10"><iframe title={`Carte ${activity.ba.name}`} src={`https://www.google.com/maps?q=${mapCoordinates.latitude},${mapCoordinates.longitude}&output=embed`} className="h-72 w-full border-0" loading="lazy" referrerPolicy="no-referrer"/></div> : <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-center text-sm text-gray-400">Aucune coordonnée disponible pour ce pointage.</div>}</div>}
 
-          {mode === 'calendar' && <div><div className="mb-4 flex items-center justify-between"><button onClick={() => setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-200">Précédent</button><p className="text-sm font-black uppercase text-white">{calendarMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</p><button onClick={() => setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-200">Suivant</button></div><div className="mb-1 grid grid-cols-7 gap-1">{['Lu','Ma','Me','Je','Ve','Sa','Di'].map((day) => <div key={day} className="py-1 text-center text-[9px] font-black uppercase text-gray-500">{day}</div>)}</div><div className="grid grid-cols-7 gap-1">{calendarCells.map((cell, index) => { if (!cell) return <div key={index} className="h-10"/>; const colors = cell.status === 'closed' ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100' : cell.status === 'open' ? 'border-cyan-400/40 bg-cyan-500/20 text-cyan-100' : cell.status === 'alerted' ? 'border-amber-400/40 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-white/[0.04] text-gray-500'; return <div key={cell.iso} title={`${cell.iso} · ${cell.status === 'closed' ? 'Clôturé' : cell.status === 'open' ? 'Présent' : cell.status === 'alerted' ? 'Alerté' : 'Absent'}`} className={`flex h-10 items-center justify-center rounded-xl border text-xs font-black ${colors}`}>{cell.day}</div>; })}</div><div className="mt-4 flex flex-wrap justify-center gap-3 text-[9px] font-black uppercase text-gray-400"><span>Vert · Clôturé</span><span>Bleu · Présent</span><span>Ambre · Alerté</span><span>Gris · Absent</span></div></div>}
+          {mode === 'calendar' && <div><div className="mb-4 flex items-center justify-between"><button onClick={() => setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() - 1, 1))} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-200">Précédent</button><p className="text-sm font-black uppercase text-white">{calendarMonth.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</p><button onClick={() => setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() + 1, 1))} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-gray-200">Suivant</button></div><div className="mb-1 grid grid-cols-7 gap-1">{['Lu','Ma','Me','Je','Ve','Sa','Di'].map((day) => <div key={day} className="py-1 text-center text-[9px] font-black uppercase text-gray-500">{day}</div>)}</div><div className="grid grid-cols-7 gap-1">{calendarCells.map((cell, index) => { if (!cell) return <div key={index} className="h-10"/>; const colors = cell.status === 'outside' ? 'border-white/[0.03] bg-black/25 text-gray-700 opacity-55' : cell.status === 'closed' ? 'border-emerald-400/40 bg-emerald-500/20 text-emerald-100' : cell.status === 'open' ? 'border-cyan-400/40 bg-cyan-500/20 text-cyan-100' : cell.status === 'alerted' ? 'border-amber-400/40 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-white/[0.04] text-gray-500'; return <div key={cell.iso} title={`${cell.iso} · ${cell.status === 'outside' ? 'Hors campagne' : cell.status === 'closed' ? 'Clôturé' : cell.status === 'open' ? 'Présent' : cell.status === 'alerted' ? 'Alerté' : 'Absent'}`} className={`flex h-10 items-center justify-center rounded-xl border text-xs font-black ${colors}`}>{cell.day}</div>; })}</div><div className="mt-4 flex flex-wrap justify-center gap-3 text-[9px] font-black uppercase text-gray-400"><span>Vert · Clôturé</span><span>Bleu · Présent</span><span>Ambre · Alerté</span><span>Gris · Absent</span></div></div>}
         </>}
       </div>
+      <MerchantVisitedPosModal isOpen={showVisitedPos} activity={activity} run={run} onClose={() => setShowVisitedPos(false)}/>
+      <MerchantTransactionsDetailModal isOpen={showTransactions} activity={activity} onClose={() => setShowTransactions(false)}/>
+      <ImageLightboxModal image={lightbox} onClose={() => setLightbox(null)}/>
     </div>,
     document.body
   );

@@ -86,6 +86,7 @@ export interface BADailyAttendance {
   checkout_longitude?: number | null;
   checkout_accuracy_m?: number | null;
   closing_comment?: string | null;
+  mfs_name?: string | null;
 }
 
 export interface BAPosVisit {

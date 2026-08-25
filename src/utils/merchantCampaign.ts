@@ -57,9 +57,24 @@ export function invalidateMerchantCache(scope?: string): void {
 }
 
 export const MERCHANT_CAMPAIGN_CODE = 'merchant-educational-campaign';
-export const MERCHANT_CAMPAIGN_START = '2026-08-18';
+export const MERCHANT_CAMPAIGN_START = '2026-08-24';
+export const MERCHANT_TIME_ZONE = 'Africa/Kinshasa';
 
-export const merchantTodayIso = () => new Date().toISOString().slice(0, 10);
+function merchantClockParts(now = new Date()): { date: string; hour: number } {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: MERCHANT_TIME_ZONE,
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23',
+  }).formatToParts(now);
+  const byType = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
+  return { date: `${byType.year}-${byType.month}-${byType.day}`, hour: Number(byType.hour || 0) };
+}
+
+export const merchantTodayIso = () => merchantClockParts().date;
+
+export function isMerchantActivityExpired(activityDate: string, now = new Date()): boolean {
+  const clock = merchantClockParts(now);
+  return activityDate < clock.date || (activityDate === clock.date && clock.hour >= 20);
+}
 
 export function clampMerchantActivityDate(value?: string): string {
   const selected = value || merchantTodayIso();
@@ -246,6 +261,7 @@ export interface MerchantTeamActivity {
   inactivePosCount: number;
   transactionCount: number;
   totalAmount: number;
+  mfsNames: string[];
 }
 
 export interface MerchantArchiveSummary {
@@ -290,7 +306,7 @@ export async function getMerchantMonitoring(runId: string, activityDate: string)
       getMerchantBAs(),
       client.from('ba_daily_attendance').select('*').eq('campaign_run_id', runId).eq('activity_date', safeActivityDate),
       client.from('ba_transactions').select('*, point_of_sale:points_of_sale(agent_number,denomination,pool)').eq('campaign_run_id', runId).gte('occurred_at', start).lte('occurred_at', end),
-      client.from('ba_pos_visits').select('id,ba_id,pos_id,operational_status').eq('campaign_run_id', runId).eq('activity_date', safeActivityDate).neq('status', 'alerted'),
+      client.from('ba_pos_visits').select('id,ba_id,pos_id,operational_status,point_of_sale:points_of_sale(mfs_name)').eq('campaign_run_id', runId).eq('activity_date', safeActivityDate).neq('status', 'alerted'),
     ]);
     fail(attendanceResponse.error, 'Impossible de charger les pointages Merchant');
     fail(transactionResponse.error, 'Impossible de charger les transactions Merchant');
@@ -298,7 +314,7 @@ export async function getMerchantMonitoring(runId: string, activityDate: string)
 
     const attendances = (attendanceResponse.data || []) as BADailyAttendance[];
     const transactions = (transactionResponse.data || []) as BATransaction[];
-    const visits = (visitResponse.data || []) as Array<Pick<BAPosVisit, 'id' | 'ba_id' | 'pos_id' | 'operational_status'>>;
+    const visits = (visitResponse.data || []) as Array<Pick<BAPosVisit, 'id' | 'ba_id' | 'pos_id' | 'operational_status'> & { point_of_sale?: Pick<PointOfSale, 'mfs_name'> | null }>;
     return bas.map((ba) => {
       const attendance = attendances.find((item) => item.ba_id === ba.id) || null;
       const baTransactions = transactions.filter((item) => item.ba_id === ba.id);
@@ -312,6 +328,7 @@ export async function getMerchantMonitoring(runId: string, activityDate: string)
         inactivePosCount: baVisits.filter((item) => item.operational_status === 'inactive').length,
         transactionCount: baTransactions.length,
         totalAmount: baTransactions.reduce((total, item) => total + Number(item.amount || 0), 0),
+        mfsNames: Array.from(new Set([attendance?.mfs_name?.trim() || '', ...baVisits.map((item) => item.point_of_sale?.mfs_name?.trim() || '')].filter(Boolean))),
       };
     });
   });
@@ -602,6 +619,19 @@ export async function closeDailyAttendance(id: string, input: Pick<BADailyAttend
   return data as BADailyAttendance;
 }
 
+export async function updateMerchantAttendanceMfs(attendanceId: string, mfsName: string): Promise<BADailyAttendance> {
+  const client = getMerchantClient();
+  const { data, error } = await client
+    .from('ba_daily_attendance')
+    .update({ mfs_name: mfsName.trim() || null })
+    .eq('id', attendanceId)
+    .select()
+    .single();
+  fail(error, 'Impossible d’enregistrer le MFS du jour');
+  invalidateMerchantCache();
+  return data as BADailyAttendance;
+}
+
 export async function recordPosArrival(input: Omit<BAPosVisit, 'id' | 'created_at' | 'updated_at' | 'point_of_sale' | 'transactions'>): Promise<BAPosVisit> {
   const client = getMerchantClient();
   const activityDate = clampMerchantActivityDate(input.activity_date);
@@ -843,7 +873,7 @@ function getIncompleteMerchantVisitIds(
       if (visit.operational_status === 'inactive') return false;
       const transactionCount = countByVisitId.get(visit.id) ?? countByPosAndDate.get(`${visit.pos_id}:${visit.activity_date}`) ?? 0;
       const wasClosed = closedDays.has(`${visit.ba_id}:${visit.activity_date}`);
-      return transactionCount < transactionTarget && (visit.status === 'incomplete' || wasClosed);
+      return transactionCount < transactionTarget && (visit.status === 'incomplete' || wasClosed || isMerchantActivityExpired(visit.activity_date));
     })
     .map((visit) => visit.id));
 }
@@ -1117,10 +1147,11 @@ const addCalendarDays = (iso: string, offset: number): string => {
   return isoDate(date);
 };
 
-export async function getMerchantSupervisorReport(run: CampaignRun, kind: MerchantSupervisorReportKind): Promise<MerchantSupervisorReport> {
+export async function getMerchantSupervisorReport(run: CampaignRun, kind: MerchantSupervisorReportKind, activityDate = merchantTodayIso()): Promise<MerchantSupervisorReport> {
   const today = merchantTodayIso();
+  const selectedDay = clampMerchantActivityDate(activityDate);
   const startsOn = kind === 'daily'
-    ? today
+    ? selectedDay
     : kind === 'weekly'
       ? (addCalendarDays(today, -6) < MERCHANT_CAMPAIGN_START ? MERCHANT_CAMPAIGN_START : addCalendarDays(today, -6))
       : MERCHANT_CAMPAIGN_START;
