@@ -504,6 +504,25 @@ export async function markMerchantPosVisitInactive(visitId: string, operationalN
   const note = operationalNote.trim();
   if (!note) throw new Error('Le constat terrain est obligatoire pour déclarer un POS non actif.');
   const client = getMerchantClient();
+  const { data: visitData, error: visitError } = await client
+    .from('ba_pos_visits')
+    .select('id,campaign_run_id,ba_id,pos_id,activity_date')
+    .eq('id', visitId)
+    .single();
+  fail(visitError, 'Impossible de vérifier ce POS avant correction');
+  const visitToCheck = visitData as Pick<BAPosVisit, 'id' | 'campaign_run_id' | 'ba_id' | 'pos_id' | 'activity_date'>;
+  const { start, end } = activityWindow(visitToCheck.activity_date);
+  const { count, error: transactionError } = await client
+    .from('ba_transactions')
+    .select('id', { count: 'exact', head: true })
+    .eq('campaign_run_id', visitToCheck.campaign_run_id)
+    .eq('ba_id', visitToCheck.ba_id)
+    .eq('pos_id', visitToCheck.pos_id)
+    .gte('occurred_at', start)
+    .lte('occurred_at', end);
+  fail(transactionError, 'Impossible de vérifier les transactions du POS');
+  if ((count || 0) > 0) throw new Error('Ce POS possède déjà au moins une transaction et ne peut plus être déclaré non actif.');
+
   const { data, error } = await client
     .from('ba_pos_visits')
     .update({ operational_status: 'inactive', operational_note: note, status: 'visited', updated_at: new Date().toISOString() })
