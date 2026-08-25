@@ -272,7 +272,6 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/70">Merchant Educational Campaign</p>
           <h1 className="mt-1 text-2xl font-black tracking-tight text-white">Bonjour, {currentUser.name.split(' ')[0]}</h1>
           <p className="mt-1 text-xs font-semibold text-gray-300">{new Date(`${today}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · Objectif : {posTarget} POS / {transactionTarget} transactions</p>{hasMfs && <p className="mt-2 inline-flex items-center gap-1.5 rounded-xl border border-fuchsia-300/20 bg-fuchsia-500/[0.08] px-2.5 py-1 text-[10px] font-black text-fuchsia-100"><UsersRound size={13}/>MFS · {mfsName}</p>}
-          <p className="mt-4 rounded-2xl border border-white/[0.08] bg-black/10 px-3 py-2 text-center text-[11px] font-semibold text-gray-300">{personalStanding ? <><b className="text-white">Vous #{personalStanding.rank}</b> avec <b className="text-amber-100">{transactions.length}/{transactionTarget} transactions</b> et <b className="text-emerald-100">{visitedCount}/{posTarget} POS visités</b>.</> : <><b className="text-amber-100">{transactions.length}/{transactionTarget} transactions</b> et <b className="text-emerald-100">{visitedCount}/{posTarget} POS visités</b>.</>}</p>
         </div>
       </section>
 

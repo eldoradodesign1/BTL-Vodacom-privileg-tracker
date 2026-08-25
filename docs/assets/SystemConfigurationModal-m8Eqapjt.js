@@ -1,4 +1,4 @@
-import{r as s,j as e,X as A,a7 as U,a8 as M,a9 as B,aa as G,ab as T,a3 as P,T as q,f as F}from"./vendor-react-DS-VKmM8.js";import{J as I,K as D,L as O,M as V,b as $,N as J,g as H,d as Q,j as X}from"./index-DZGnaEth.js";import"./vendor-supabase-CG6S1lgy.js";const W=`-- BTL Vodacom Privilege Tracker — schéma opérationnel
+import{r as s,j as e,X as A,a7 as U,a8 as M,a9 as B,aa as G,ab as T,a3 as P,T as q,f as F}from"./vendor-react-DS-VKmM8.js";import{J as I,K as D,L as O,M as V,b as $,N as J,g as H,d as Q,j as X}from"./index-DoWgrjTb.js";import"./vendor-supabase-CG6S1lgy.js";const W=`-- BTL Vodacom Privilege Tracker — schéma opérationnel
 -- Les migrations versionnées dans supabase/migrations restent la source d’exécution.
 
 create table public.users (

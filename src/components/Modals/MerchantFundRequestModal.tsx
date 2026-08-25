@@ -16,7 +16,8 @@ interface MerchantFundRequestModalProps {
 
 export const MerchantFundRequestModal: React.FC<MerchantFundRequestModalProps> = ({ isOpen, currentUser, run, positions, visits, mfsName, onClose, onSubmitted }) => {
   const [posId, setPosId] = useState('');
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState('4.5');
+  const [baPhone, setBaPhone] = useState(currentUser.phone || '');
   const [note, setNote] = useState('');
   const [query, setQuery] = useState('');
   const [showPosList, setShowPosList] = useState(false);
@@ -36,7 +37,8 @@ export const MerchantFundRequestModal: React.FC<MerchantFundRequestModalProps> =
     const mostRecentVisit = [...visits].sort((a, b) => String(b.visited_at || '').localeCompare(String(a.visited_at || '')))[0];
     const fallback = mostRecentVisit?.pos_id || (mfsName ? positions.find((pos) => (pos.mfs_name || '').trim().toLowerCase() === mfsName.trim().toLowerCase())?.id : positions[0]?.id) || '';
     setPosId(fallback);
-    setAmount('');
+    setAmount('4.5');
+    setBaPhone(currentUser.phone || '');
     setNote('');
     setQuery('');
     setShowPosList(false);
@@ -59,9 +61,9 @@ export const MerchantFundRequestModal: React.FC<MerchantFundRequestModalProps> =
         supervisor_id: currentUser.supervisorId || null,
         pos_id: posId,
         mfs_name: mfsName || null,
-        ba_phone: currentUser.phone || null,
+        ba_phone: baPhone.trim() || null,
         amount: numericAmount,
-        note: note.trim() || null,
+        note: [baPhone.trim() && baPhone.trim() !== (currentUser.phone || '').trim() ? `N° BA renseigné : ${baPhone.trim()}` : '', note.trim()].filter(Boolean).join(' · ') || null,
       });
       onSubmitted();
       onClose();
@@ -79,7 +81,7 @@ export const MerchantFundRequestModal: React.FC<MerchantFundRequestModalProps> =
         <button type="button" onClick={onClose} className="rounded-xl border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:bg-white/10" aria-label="Fermer"><X size={18}/></button>
       </header>
       <div className="space-y-4 p-4 pt-0 sm:p-5 sm:pt-0">
-        <div className="grid grid-cols-2 gap-3"><div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-3"><span className="text-[9px] font-black uppercase text-gray-500">BA</span><b className="mt-1 block text-xs text-white">{currentUser.name}</b></div><div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-3"><span className="text-[9px] font-black uppercase text-gray-500">Numéro BA</span><b className="mt-1 block text-xs text-white">{currentUser.phone || 'Non renseigné'}</b></div></div>
+        <div className="grid grid-cols-2 gap-3"><div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-3"><span className="text-[9px] font-black uppercase text-gray-500">BA</span><b className="mt-1 block text-xs text-white">{currentUser.name}</b></div><label className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-3"><span className="text-[9px] font-black uppercase text-gray-500">Numéro BA</span><input value={baPhone} onChange={(event) => setBaPhone(event.target.value)} inputMode="tel" placeholder="Numéro BA" className="mt-1 w-full bg-transparent text-xs font-bold text-white outline-none placeholder:text-gray-600"/><span className="mt-1 block text-[8px] text-gray-500">Modifiable ; la variation est ajoutée à la note.</span></label></div>
         <div className="rounded-2xl border border-fuchsia-300/20 bg-fuchsia-500/[0.06] px-3 py-2"><span className="text-[9px] font-black uppercase text-fuchsia-200/75">MFS qui accompagne</span><b className="mt-1 block text-xs text-fuchsia-50">{mfsName || 'MFS non renseigné'}</b></div>
         <div><label className="mb-2 block text-[10px] font-black uppercase tracking-wide text-gray-400">POS concerné</label><button type="button" onClick={() => setShowPosList((value) => !value)} className="app-input flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm"><span className="min-w-0"><b className="block truncate text-white">{selectedPos?.denomination || 'Sélectionner un POS'}</b><span className="mt-0.5 block truncate text-[10px] text-gray-400">{selectedPos ? `${selectedPos.agent_number} · ${selectedPos.pool}` : 'Dernier POS renseigné proposé'}</span></span><ChevronDown size={18} className="shrink-0 text-emerald-200"/></button>{showPosList && <div className="mt-2 overflow-hidden rounded-2xl border border-white/10 bg-slate-950/90"><div className="relative border-b border-white/10"><Search size={15} className="absolute left-3 top-3 text-gray-500"/><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Rechercher un POS" className="w-full bg-transparent py-2.5 pl-9 pr-3 text-xs text-white outline-none"/></div><div className="max-h-48 overflow-y-auto p-1.5">{filteredPositions.map((pos) => <button key={pos.id} type="button" onClick={() => { setPosId(pos.id); setShowPosList(false); }} className={`w-full rounded-xl px-3 py-2.5 text-left transition ${pos.id === posId ? 'bg-emerald-400/15 text-emerald-50' : 'hover:bg-white/[0.06] text-gray-200'}`}><b className="block text-xs">{pos.denomination}</b><span className="mt-0.5 block text-[10px] opacity-70">{pos.agent_number} · {pos.pool}</span></button>)}{filteredPositions.length === 0 && <p className="p-3 text-xs text-gray-500">Aucun POS ne correspond au MFS sélectionné.</p>}</div></div>}</div>
         <div><label className="mb-2 block text-[10px] font-black uppercase tracking-wide text-gray-400">Montant demandé ($)</label><div className="relative"><Banknote size={17} className="absolute left-3 top-3.5 text-emerald-200"/><input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" placeholder="Ex. 4,5" className="app-input w-full rounded-2xl py-3 pl-9 pr-3 text-sm"/></div></div>
