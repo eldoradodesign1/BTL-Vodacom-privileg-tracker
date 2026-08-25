@@ -140,6 +140,25 @@ export interface BATransaction {
   point_of_sale?: Pick<PointOfSale, 'agent_number' | 'denomination' | 'pool'>;
 }
 
+export interface MerchantFundRequest {
+  id: string;
+  campaign_run_id: string;
+  ba_id: string;
+  supervisor_id?: string | null;
+  pos_id?: string | null;
+  mfs_name?: string | null;
+  ba_phone?: string | null;
+  amount: number;
+  note?: string | null;
+  status: 'pending' | 'reviewed' | 'approved' | 'rejected' | 'cancelled';
+  requested_at: string;
+  reviewed_at?: string | null;
+  reviewed_by?: string | null;
+  ba?: Pick<User, 'id' | 'name' | 'phone' | 'supervisorId'>;
+  supervisor?: Pick<User, 'id' | 'name' | 'phone'>;
+  point_of_sale?: Pick<PointOfSale, 'id' | 'agent_number' | 'denomination' | 'pool'>;
+}
+
 export interface Shop {
   id: string;
   name: string;

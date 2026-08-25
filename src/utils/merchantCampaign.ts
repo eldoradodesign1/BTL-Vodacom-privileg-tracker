@@ -6,6 +6,7 @@ import type {
   Campaign,
   CampaignPause,
   CampaignRun,
+  MerchantFundRequest,
   PointOfSale,
 } from '../types';
 import { getSupabaseConfig } from './supabase';
@@ -1172,6 +1173,53 @@ export async function getMerchantStandings(runId: string, activityDate = isoDate
 
 export async function getMerchantPodium(runId: string, activityDate = isoDate(new Date())): Promise<MerchantPodiumEntry[]> {
   return (await getMerchantStandings(runId, activityDate)).slice(0, 3);
+}
+
+export type MerchantFundRequestInput = {
+  campaign_run_id: string;
+  ba_id: string;
+  supervisor_id?: string | null;
+  pos_id?: string | null;
+  mfs_name?: string | null;
+  ba_phone?: string | null;
+  amount: number;
+  note?: string | null;
+};
+
+export async function createMerchantFundRequest(input: MerchantFundRequestInput): Promise<MerchantFundRequest> {
+  const client = getMerchantClient();
+  const { data, error } = await client
+    .from('merchant_fund_requests')
+    .insert({ ...input, amount: Number(input.amount), status: 'pending' })
+    .select('*, ba:users!merchant_fund_requests_ba_id_fkey(id,name,phone,supervisor_id), supervisor:users!merchant_fund_requests_supervisor_id_fkey(id,name,phone), point_of_sale:points_of_sale(id,agent_number,denomination,pool)')
+    .single();
+  fail(error, 'Impossible d’envoyer la demande de fonds');
+  invalidateMerchantCache();
+  return data as MerchantFundRequest;
+}
+
+export async function getMerchantFundRequests(options: { runId?: string; supervisorId?: string; baId?: string } = {}): Promise<MerchantFundRequest[]> {
+  const client = getMerchantClient();
+  let query = client
+    .from('merchant_fund_requests')
+    .select('*, ba:users!merchant_fund_requests_ba_id_fkey(id,name,phone,supervisor_id), supervisor:users!merchant_fund_requests_supervisor_id_fkey(id,name,phone), point_of_sale:points_of_sale(id,agent_number,denomination,pool)')
+    .order('requested_at', { ascending: false });
+  if (options.runId) query = query.eq('campaign_run_id', options.runId);
+  if (options.supervisorId) query = query.eq('supervisor_id', options.supervisorId);
+  if (options.baId) query = query.eq('ba_id', options.baId);
+  const { data, error } = await query;
+  fail(error, 'Impossible de charger les demandes de fonds');
+  return (data || []) as MerchantFundRequest[];
+}
+
+export async function updateMerchantFundRequestStatus(id: string, status: MerchantFundRequest['status'], reviewedBy?: string): Promise<void> {
+  const client = getMerchantClient();
+  const { error } = await client
+    .from('merchant_fund_requests')
+    .update({ status, reviewed_at: new Date().toISOString(), reviewed_by: reviewedBy || null, updated_at: new Date().toISOString() })
+    .eq('id', id);
+  fail(error, 'Impossible de mettre à jour la demande de fonds');
+  invalidateMerchantCache();
 }
 
 export async function getMerchantPosControl(run: CampaignRun): Promise<MerchantPosControlItem[]> {
