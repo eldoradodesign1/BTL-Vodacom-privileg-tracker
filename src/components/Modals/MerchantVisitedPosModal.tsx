@@ -58,11 +58,13 @@ export const MerchantVisitedPosModal: React.FC<MerchantVisitedPosModalProps> = (
   return createPortal(
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/80 p-0 backdrop-blur-md sm:items-center sm:p-4" onClick={onClose}>
       <section className="modal-sheet relative w-full max-w-xl" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="merchant-visited-pos-title">
-        <div className="modal-handle" />
-        <button type="button" onClick={onClose} className="absolute right-5 top-5 rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:bg-white/10 hover:text-white" aria-label="Fermer"><X size={18}/></button>
-        <div className="mb-5 flex items-start gap-3 pr-10">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-400/10 text-cyan-100">{selectedVisit ? <Store size={21}/> : <Store size={21}/>}</div>
-          <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200/70">Suivi terrain</p><h2 id="merchant-visited-pos-title" className="mt-1 text-lg font-black text-white">{title}</h2><p className="mt-0.5 text-[11px] font-bold uppercase text-gray-400">{subtitle}</p></div>
+        <div className="modal-sticky-header">
+          <div className="modal-handle" />
+          <button type="button" onClick={onClose} className="absolute right-5 top-5 rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:bg-white/10 hover:text-white" aria-label="Fermer"><X size={18}/></button>
+          <div className="flex items-start gap-3 pr-10">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-400/10 text-cyan-100"><Store size={21}/></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200/70">Suivi terrain</p><h2 id="merchant-visited-pos-title" className="mt-1 text-lg font-black text-white">{title}</h2><p className="mt-0.5 text-[11px] font-bold uppercase text-gray-400">{subtitle}</p></div>
+          </div>
         </div>
 
         {loading ? <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-xs font-black uppercase tracking-widest text-gray-400">Chargement des POS…</div> : error ? <div className="rounded-2xl border border-red-400/25 bg-red-500/10 p-4 text-sm font-bold text-red-100">{error}</div> : selectedVisit ? <div className="space-y-3">

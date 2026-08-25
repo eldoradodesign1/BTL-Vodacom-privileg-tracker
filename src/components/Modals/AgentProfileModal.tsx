@@ -171,29 +171,31 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-pop overflow-y-auto" onClick={onClose}>
       <div className="modal-sheet relative w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-handle" />
-        <button
-          onClick={onClose}
-          className="absolute top-6 right-6 text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <div className="flex flex-col items-center text-center mb-6">
+        <div className="modal-sticky-header text-center">
+          <div className="modal-handle" />
           <button
-            type="button"
-            onClick={() => latestPhoto && setIsPhotoViewerOpen(true)}
-            className={`w-16 h-16 rounded-3xl bg-red-600/20 border-2 border-red-500/40 text-red-500 font-black text-xl flex items-center justify-center mb-3 overflow-hidden transition-transform ${latestPhoto ? 'cursor-zoom-in hover:scale-[1.03]' : 'cursor-default'}`}
-            aria-label={latestPhoto ? `Ouvrir la photo de pointage de ${agent.name}` : `Avatar de ${agent.name}`}
+            onClick={onClose}
+            className="absolute top-6 right-6 text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10"
+            aria-label="Fermer"
           >
-            {latestPhoto ? (
-              <img src={latestPhoto} alt={`Pointage ${agent.name}`} className="w-full h-full object-cover" />
-            ) : (
-              initials
-            )}
+            <X className="w-5 h-5" />
           </button>
-          <h2 className="text-xl font-black uppercase text-white tracking-wider">{agent.name}</h2>
-          <p className="text-xs text-gray-400 font-bold uppercase">{agent.shop} • MSISDN: {agent.phone}</p>
+          <div className="flex flex-col items-center text-center">
+            <button
+              type="button"
+              onClick={() => latestPhoto && setIsPhotoViewerOpen(true)}
+              className={`w-16 h-16 rounded-3xl bg-red-600/20 border-2 border-red-500/40 text-red-500 font-black text-xl flex items-center justify-center mb-3 overflow-hidden transition-transform ${latestPhoto ? 'cursor-zoom-in hover:scale-[1.03]' : 'cursor-default'}`}
+              aria-label={latestPhoto ? `Ouvrir la photo de pointage de ${agent.name}` : `Avatar de ${agent.name}`}
+            >
+              {latestPhoto ? (
+                <img src={latestPhoto} alt={`Pointage ${agent.name}`} className="w-full h-full object-cover" />
+              ) : (
+                initials
+              )}
+            </button>
+            <h2 className="text-xl font-black uppercase text-white tracking-wider">{agent.name}</h2>
+            <p className="text-xs text-gray-400 font-bold uppercase">{agent.shop} • MSISDN: {agent.phone}</p>
+          </div>
         </div>
 
         <div className="flex justify-center mb-4">
