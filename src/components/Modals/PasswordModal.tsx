@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { User } from '../../types';
 import { updateUserPassword } from '../../utils/storage';
 import { Lock, X, AlertCircle, CheckCircle2, Camera, MapPin, Loader2, ShieldCheck, Bell, Clipboard } from 'lucide-react';
@@ -22,20 +22,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUse
   const [msg, setMsg] = useState('');
   const [isError, setIsError] = useState(false);
   const [requesting, setRequesting] = useState<'camera' | 'gps' | 'notifications' | 'clipboard' | null>(null);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('default');
-  const [clipboardPermission, setClipboardPermission] = useState<PermissionState | 'prompt' | 'unsupported'>('prompt');
   const [permissionFeedback, setPermissionFeedback] = useState<PermissionFeedback | null>(null);
-
-  const refreshPermissionStates = async () => {
-    setNotificationPermission('Notification' in window ? Notification.permission : 'unsupported');
-    if (!navigator.clipboard) { setClipboardPermission('unsupported'); return; }
-    try {
-      const result = await navigator.permissions?.query({ name: 'clipboard-read' as PermissionName });
-      setClipboardPermission(result?.state || 'prompt');
-    } catch { setClipboardPermission('prompt'); }
-  };
-
-  useEffect(() => { if (isOpen) void refreshPermissionStates(); }, [isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,20 +103,17 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUse
     setRequesting('notifications');
     try {
       const result = await Notification.requestPermission();
-      setNotificationPermission(result);
-      setPermissionFeedback(result === 'granted' ? { kind: 'success', text: 'Notifications autorisées. Les alertes de demandes de fonds pourront être affichées et signalées.' } : { kind: 'error', text: `Notifications non autorisées. ${permissionHelp}` });
+      setPermissionFeedback(result === 'granted' ? null : { kind: 'error', text: `Notifications non autorisées. ${permissionHelp}` });
     } finally { setRequesting(null); }
   };
 
   const requestClipboardPermission = async () => {
-    if (!navigator.clipboard?.readText) { setClipboardPermission('unsupported'); setPermissionFeedback({ kind: 'error', text: 'Le presse-papier n’est pas disponible dans ce navigateur.' }); return; }
+    if (!navigator.clipboard?.readText) { setPermissionFeedback({ kind: 'error', text: 'Le presse-papier n’est pas disponible dans ce navigateur.' }); return; }
     setRequesting('clipboard');
     try {
       await navigator.clipboard.readText();
-      setClipboardPermission('granted');
-      setPermissionFeedback({ kind: 'success', text: 'Presse-papier autorisé. Les numéros de demandes de fonds pourront être copiés immédiatement.' });
+      setPermissionFeedback(null);
     } catch {
-      await refreshPermissionStates();
       setPermissionFeedback({ kind: 'error', text: `Presse-papier non autorisé. ${permissionHelp}` });
     } finally { setRequesting(null); }
   };
@@ -192,8 +176,8 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUse
               </span>
               <span className="block mt-2 text-[11px] font-black uppercase tracking-wide text-white">Autoriser GPS</span>
             </button>
-            <button type="button" onClick={() => void requestNotificationPermission()} disabled={requesting !== null || notificationPermission === 'granted'} className={`rounded-2xl border p-3 text-left transition-all active:scale-[0.98] disabled:cursor-default ${notificationPermission === 'granted' ? 'border-white/10 bg-white/[0.04] text-gray-500' : 'border-fuchsia-300/30 bg-fuchsia-500/10 hover:bg-fuchsia-500/15 text-fuchsia-100'}`}><span className="flex items-center justify-between gap-2"><Bell className="w-4 h-4"/>{requesting === 'notifications' ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <span className={`relative h-5 w-9 rounded-full transition ${notificationPermission === 'granted' ? 'bg-gray-600' : 'bg-fuchsia-400/50'}`}><i className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition ${notificationPermission === 'granted' ? 'left-4' : 'left-0.5'}`}/></span>}</span><span className="block mt-2 text-[11px] font-black uppercase tracking-wide">Notifications</span><span className="mt-0.5 block text-[9px] font-bold opacity-65">{notificationPermission === 'granted' ? 'Déjà autorisées' : 'Appuyer pour autoriser'}</span></button>
-            <button type="button" onClick={() => void requestClipboardPermission()} disabled={requesting !== null || clipboardPermission === 'granted'} className={`rounded-2xl border p-3 text-left transition-all active:scale-[0.98] disabled:cursor-default ${clipboardPermission === 'granted' ? 'border-white/10 bg-white/[0.04] text-gray-500' : 'border-emerald-300/30 bg-emerald-500/10 hover:bg-emerald-500/15 text-emerald-100'}`}><span className="flex items-center justify-between gap-2"><Clipboard className="w-4 h-4"/>{requesting === 'clipboard' ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <span className={`relative h-5 w-9 rounded-full transition ${clipboardPermission === 'granted' ? 'bg-gray-600' : 'bg-emerald-400/50'}`}><i className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition ${clipboardPermission === 'granted' ? 'left-4' : 'left-0.5'}`}/></span>}</span><span className="block mt-2 text-[11px] font-black uppercase tracking-wide">Presse-papier</span><span className="mt-0.5 block text-[9px] font-bold opacity-65">{clipboardPermission === 'granted' ? 'Déjà autorisé' : 'Appuyer pour autoriser'}</span></button>
+            <button type="button" onClick={() => void requestNotificationPermission()} disabled={requesting !== null} className="rounded-2xl border border-fuchsia-300/30 bg-fuchsia-500/10 p-3 text-left text-fuchsia-100 transition-all hover:bg-fuchsia-500/15 active:scale-[0.98] disabled:opacity-60"><span className="flex items-center justify-between gap-2"><Bell className="w-4 h-4"/>{requesting === 'notifications' && <Loader2 className="w-3.5 h-3.5 animate-spin"/>}</span><span className="block mt-2 text-[11px] font-black uppercase tracking-wide">Autoriser notifications</span></button>
+            <button type="button" onClick={() => void requestClipboardPermission()} disabled={requesting !== null} className="rounded-2xl border border-emerald-300/30 bg-emerald-500/10 p-3 text-left text-emerald-100 transition-all hover:bg-emerald-500/15 active:scale-[0.98] disabled:opacity-60"><span className="flex items-center justify-between gap-2"><Clipboard className="w-4 h-4"/>{requesting === 'clipboard' && <Loader2 className="w-3.5 h-3.5 animate-spin"/>}</span><span className="block mt-2 text-[11px] font-black uppercase tracking-wide">Autoriser presse-papier</span></button>
           </div>
           {permissionFeedback && (
             <div className={`mt-3 rounded-2xl border px-3 py-2.5 text-[11px] font-semibold leading-relaxed ${feedbackStyle}`}>
