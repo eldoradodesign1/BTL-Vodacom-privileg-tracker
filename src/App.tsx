@@ -161,6 +161,9 @@ export default function App() {
   };
 
 const refreshData = useCallback(async (force = false) => {
+  // Une action explicite de l’utilisateur doit toujours repartir des données réseau,
+  // y compris si une autre synchronisation applicative échoue ensuite.
+  if (force) invalidateMerchantCache();
   if (!isSupabaseConfigured()) {
     setUsers(getUsers());
     setShops(getShops());
