@@ -182,6 +182,9 @@ export default function App() {
         if (!current) {
           const fallback = campaigns[0];
           if (!fallback) {
+            const inferredContext = currentUser.userCategory === 'brand_ambassador' ? 'merchant-educational' : 'vodacom-privilege';
+            setActiveCampaign(inferredContext);
+            localStorage.setItem('btl_active_campaign', inferredContext);
             setActiveCampaignPause(null);
             return;
           }
@@ -199,6 +202,9 @@ export default function App() {
       } catch {
         if (!cancelled) {
           setAgentCampaigns([]);
+          const inferredContext = currentUser.userCategory === 'brand_ambassador' ? 'merchant-educational' : 'vodacom-privilege';
+          setActiveCampaign(inferredContext);
+          localStorage.setItem('btl_active_campaign', inferredContext);
           setActiveCampaignPause(null);
         }
       }
@@ -382,12 +388,15 @@ const refreshData = useCallback(async (force = false) => {
     role: effectiveRole
   };
 
-  const isMerchantContext = activeCampaign === 'merchant-educational';
   const agentCampaignOptions = agentCampaigns.map((campaign) => ({
     key: (campaign.campaign_type === 'brand_ambassador' || campaign.code === 'merchant-educational-campaign' ? 'merchant-educational' : 'vodacom-privilege') as 'vodacom-privilege' | 'merchant-educational',
     label: campaign.name,
     note: campaign.campaign_type === 'brand_ambassador' ? 'Brand Ambassador' : 'Hôtesses',
   })).filter((campaign, index, list) => list.findIndex((item) => item.key === campaign.key) === index);
+  const inferredAgentMerchant = effectiveRole === 'agent' && effectiveUser.userCategory === 'brand_ambassador';
+  const isMerchantContext = effectiveRole === 'agent'
+    ? (agentCampaignOptions.length > 0 ? activeCampaign === 'merchant-educational' : inferredAgentMerchant)
+    : activeCampaign === 'merchant-educational';
   const campaignIsPaused = effectiveRole === 'agent' && Boolean(activeCampaignPause);
   const setPermittedCampaignContext = (campaign: 'vodacom-privilege' | 'merchant-educational') => {
     if (effectiveRole !== 'agent' || agentCampaignOptions.some((option) => option.key === campaign)) setCampaignContext(campaign);
