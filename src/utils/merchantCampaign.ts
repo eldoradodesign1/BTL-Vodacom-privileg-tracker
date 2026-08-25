@@ -762,11 +762,20 @@ export async function getMerchantAttendanceTimeline(baId: string, campaignRunId?
 }
 
 export async function getMerchantBAActivityDetail(baId: string, campaignRunId?: string) {
-  const [attendances, transactions] = await Promise.all([
+  const client = getMerchantClient();
+  const visitsQuery = client
+    .from('ba_pos_visits')
+    .select('id,pos_id,activity_date,operational_status,status')
+    .eq('ba_id', baId)
+    .order('activity_date', { ascending: true });
+  if (campaignRunId) visitsQuery.eq('campaign_run_id', campaignRunId);
+  const [attendances, transactions, visitsResponse] = await Promise.all([
     getMerchantAttendanceTimeline(baId, campaignRunId),
     getTransactionsForBA(baId, campaignRunId),
+    visitsQuery,
   ]);
-  return { attendances, transactions };
+  fail(visitsResponse.error, 'Impossible de charger les visites POS BA');
+  return { attendances, transactions, visits: (visitsResponse.data || []) as Array<Pick<BAPosVisit, 'id' | 'pos_id' | 'activity_date' | 'operational_status' | 'status'>> };
 }
 
 export interface MerchantTargetSettings {

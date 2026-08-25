@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Banknote, CalendarDays, CheckCircle2, FileText, ImageIcon, MapPin, ReceiptText, Store, TrendingUp, UserRound, X } from 'lucide-react';
+import { Banknote, CalendarDays, CheckCircle2, FileText, MapPin, ReceiptText, Store, TrendingUp, UserRound, X } from 'lucide-react';
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { CampaignRun } from '../../types';
 import type { MerchantTeamActivity } from '../../utils/merchantCampaign';
@@ -27,6 +27,7 @@ export const MerchantBAOperationsModal: React.FC<MerchantBAOperationsModalProps>
   const [loading, setLoading] = useState(false);
   const [attendances, setAttendances] = useState<Awaited<ReturnType<typeof getMerchantBAActivityDetail>>['attendances']>([]);
   const [transactions, setTransactions] = useState<Awaited<ReturnType<typeof getMerchantBAActivityDetail>>['transactions']>([]);
+  const [visits, setVisits] = useState<Awaited<ReturnType<typeof getMerchantBAActivityDetail>>['visits']>([]);
   const [locationMoment, setLocationMoment] = useState<'checkin' | 'checkout'>('checkin');
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [checkinPhotoUrl, setCheckinPhotoUrl] = useState('');
@@ -39,9 +40,10 @@ export const MerchantBAOperationsModal: React.FC<MerchantBAOperationsModalProps>
     setLoading(true);
     setLocationMoment(activity.attendance?.checkout_latitude != null ? 'checkout' : 'checkin');
     void getMerchantBAActivityDetail(activity.ba.id, run?.id)
-      .then(async ({ attendances: attendanceHistory, transactions: transactionHistory }) => {
+      .then(async ({ attendances: attendanceHistory, transactions: transactionHistory, visits: visitHistory }) => {
         setAttendances(attendanceHistory);
         setTransactions(transactionHistory);
+        setVisits(visitHistory);
         const photoPath = activity.attendance?.checkin_photo_path;
         if (photoPath) {
           try { setCheckinPhotoUrl(await getMerchantEvidencePublicUrl(photoPath)); } catch { setCheckinPhotoUrl(''); }
@@ -79,13 +81,29 @@ export const MerchantBAOperationsModal: React.FC<MerchantBAOperationsModalProps>
   }, [attendances, calendarMonth]);
 
   const profileProgress = useMemo(() => {
-    if (!activity || !run) return [];
-    const transactionTarget = Math.max(0, (Number(run.daily_pos_target || 15) - activity.inactivePosCount) * Number(run.transactions_per_pos_target || 3));
-    return [
-      { label: 'POS', réalisé: activity.visitedPosCount, objectif: Number(run.daily_pos_target || 15) },
-      { label: 'Tx', réalisé: activity.transactionCount, objectif: transactionTarget },
-    ];
-  }, [activity, run]);
+    if (!run) return [];
+    const dailyPosTarget = Number(run.daily_pos_target || 15);
+    const transactionPerPosTarget = Number(run.transactions_per_pos_target || 3);
+    const days = attendances
+      .filter((item) => item.activity_date >= MERCHANT_CAMPAIGN_START && item.activity_date <= merchantTodayIso())
+      .sort((left, right) => left.activity_date.localeCompare(right.activity_date));
+    let cumulativePos = 0;
+    let cumulativeTransactions = 0;
+    return days.map((day, index) => {
+      const dayVisits = visits.filter((visit) => visit.activity_date === day.activity_date);
+      const dayTransactions = transactions.filter((transaction) => transaction.occurred_at.slice(0, 10) === day.activity_date);
+      cumulativePos += dayVisits.length;
+      cumulativeTransactions += dayTransactions.length;
+      const expectedPos = (index + 1) * dailyPosTarget;
+      return {
+        label: new Date(`${day.activity_date}T12:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
+        pos: cumulativePos,
+        transactions: cumulativeTransactions,
+        objectifPos: expectedPos,
+        objectifTransactions: expectedPos * transactionPerPosTarget,
+      };
+    });
+  }, [attendances, run, transactions, visits]);
 
   if (!isOpen || !activity) return null;
 
@@ -104,18 +122,16 @@ export const MerchantBAOperationsModal: React.FC<MerchantBAOperationsModalProps>
       <div className="modal-sheet relative w-full max-w-xl" onClick={(event) => event.stopPropagation()}>
         <div className="modal-handle" />
         <button onClick={onClose} className="absolute right-5 top-5 rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 hover:bg-white/10 hover:text-white" aria-label="Fermer"><X size={18}/></button>
-        <div className="mb-5 flex items-start gap-3 pr-10">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-400/10 text-cyan-100">
-            {mode === 'profile' ? <UserRound size={21}/> : mode === 'report' ? <FileText size={21}/> : mode === 'location' ? <MapPin size={21}/> : <CalendarDays size={21}/>} 
-          </div>
+          <div className="mb-5 flex items-start gap-3 pr-10">
+          {mode === 'profile' && checkinPhotoUrl ? <button type="button" onClick={() => setLightbox({ url: checkinPhotoUrl, alt: `Pointage de ${activity.ba.name}` })} className="group relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-cyan-300/30 bg-cyan-400/10" aria-label="Ouvrir la photo de pointage"><img src={checkinPhotoUrl} alt={`Pointage de ${activity.ba.name}`} className="h-full w-full object-cover transition group-hover:scale-110"/></button> : <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-400/10 text-cyan-100">{mode === 'profile' ? <UserRound size={21}/> : mode === 'report' ? <FileText size={21}/> : mode === 'location' ? <MapPin size={21}/> : <CalendarDays size={21}/>}</div>}
           <div><h2 className="text-lg font-black text-white">{title}</h2><p className="mt-0.5 text-[11px] font-bold uppercase text-gray-400">{subtitle}</p></div>
         </div>
 
         {loading ? <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-center text-xs font-black uppercase tracking-widest text-gray-400">Chargement…</div> : <>
           {mode === 'profile' && <div className="space-y-3">
             <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] p-4"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Statut du {formatDate(attendance?.activity_date)}</p><p className="mt-1 font-black text-white">{attendance ? `Pointage ${formatTime(attendance.checkin_at)}` : 'Aucun pointage enregistré'}</p>{activity.mfsNames.length > 0 && <p className="mt-1 text-[10px] font-bold text-fuchsia-200">MFS · {activity.mfsNames.join(' · ')}</p>}</div><span className={`rounded-xl border px-3 py-1 text-[10px] font-black uppercase ${statusClass}`}>{activity.status === 'closed' ? 'Clôturé' : activity.status === 'present' ? 'En activité' : 'Absent'}</span></div>
-            {(checkinPhotoUrl || mapCoordinates) && <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{checkinPhotoUrl && <button type="button" onClick={() => setLightbox({ url: checkinPhotoUrl, alt: `Pointage de ${activity.ba.name}` })} className="group relative h-40 overflow-hidden rounded-2xl border border-white/10 text-left"><img src={checkinPhotoUrl} alt={`Pointage de ${activity.ba.name}`} className="h-full w-full object-cover transition group-hover:scale-[1.03]"/><span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent px-3 pb-3 pt-8 text-[10px] font-black uppercase text-white"><ImageIcon className="mr-1 inline" size={13}/>Photo de pointage</span></button>}{mapCoordinates && <button type="button" onClick={() => setLocationMoment('checkin')} className="overflow-hidden rounded-2xl border border-white/10 text-left" title="Voir la localisation de pointage"><div className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-[10px] font-black uppercase text-rose-100"><MapPin size={13}/>Localisation du pointage</div><iframe title={`Carte pointage ${activity.ba.name}`} src={`https://www.google.com/maps?q=${mapCoordinates.latitude},${mapCoordinates.longitude}&output=embed`} className="pointer-events-none h-28 w-full border-0" loading="lazy" referrerPolicy="no-referrer"/></button>}</div>}
-            <section className="rounded-2xl border border-emerald-300/15 bg-emerald-500/[0.04] p-3"><div className="flex items-center gap-2"><TrendingUp size={15} className="text-emerald-200"/><div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-200">Progression du jour</p><p className="text-[10px] text-gray-400">Réalisé et objectifs du BA.</p></div></div><div className="mt-2 h-36"><ResponsiveContainer width="100%" height="100%"><LineChart data={profileProgress} margin={{ top: 10, right: 8, left: -22, bottom: 0 }}><CartesianGrid stroke="#ffffff12" vertical={false}/><XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false}/><YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} allowDecimals={false} axisLine={false} tickLine={false}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Legend wrapperStyle={{ fontSize: '10px' }}/><Line type="monotone" dataKey="réalisé" name="Réalisé" stroke="#34d399" strokeWidth={3} dot={{ r: 4 }} isAnimationActive={false}/><Line type="monotone" dataKey="objectif" name="Objectif" stroke="#fbbf24" strokeWidth={2} strokeDasharray="6 5" dot={false} isAnimationActive={false}/></LineChart></ResponsiveContainer></div></section>
+            {mapCoordinates && <button type="button" onClick={() => setLocationMoment('checkin')} className="overflow-hidden rounded-2xl border border-white/10 text-left" title="Voir la localisation de pointage"><div className="flex items-center gap-2 border-b border-white/10 px-3 py-2 text-[10px] font-black uppercase text-rose-100"><MapPin size={13}/>Localisation du pointage</div><iframe title={`Carte pointage ${activity.ba.name}`} src={`https://www.google.com/maps?q=${mapCoordinates.latitude},${mapCoordinates.longitude}&output=embed`} className="pointer-events-none h-28 w-full border-0" loading="lazy" referrerPolicy="no-referrer"/></button>}
+            <section className="rounded-2xl border border-emerald-300/15 bg-emerald-500/[0.04] p-3"><div className="flex items-center gap-2"><TrendingUp size={15} className="text-emerald-200"/><div><p className="text-[9px] font-black uppercase tracking-[0.14em] text-emerald-200">Progression cumulée</p><p className="text-[10px] text-gray-400">Depuis le début de campagne, avec objectifs cumulés.</p></div></div><div className="mt-2 h-36"><ResponsiveContainer width="100%" height="100%"><LineChart data={profileProgress} margin={{ top: 10, right: 8, left: -22, bottom: 0 }}><CartesianGrid stroke="#ffffff12" vertical={false}/><XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false}/><YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} allowDecimals={false} axisLine={false} tickLine={false}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Legend wrapperStyle={{ fontSize: '10px' }}/><Line type="monotone" dataKey="pos" name="POS cumulés" stroke="#38bdf8" strokeWidth={3} dot={{ r: 3 }} isAnimationActive={false}/><Line type="monotone" dataKey="objectifPos" name="Objectif POS" stroke="#fbbf24" strokeWidth={2} strokeDasharray="6 5" dot={false} isAnimationActive={false}/><Line type="monotone" dataKey="transactions" name="Transactions cumulées" stroke="#34d399" strokeWidth={3} dot={{ r: 3 }} isAnimationActive={false}/><Line type="monotone" dataKey="objectifTransactions" name="Objectif transactions" stroke="#c084fc" strokeWidth={2} strokeDasharray="5 4" dot={false} isAnimationActive={false}/></LineChart></ResponsiveContainer></div></section>
             <div className="grid grid-cols-3 gap-2 text-center"><button type="button" onClick={() => setShowVisitedPos(true)} className="rounded-2xl border border-cyan-300/20 bg-cyan-400/[0.06] p-3 transition hover:bg-cyan-400/[0.12]"><Store className="mx-auto mb-1 text-cyan-100" size={14}/><b className="block text-lg text-cyan-100">{activity.visitedPosCount}</b><span className="text-[9px] font-black uppercase text-gray-500">POS</span></button><button type="button" onClick={() => setShowTransactions(true)} className="rounded-2xl border border-amber-300/20 bg-amber-500/[0.06] p-3 transition hover:bg-amber-500/[0.12]"><ReceiptText className="mx-auto mb-1 text-amber-100" size={14}/><b className="block text-lg text-amber-100">{activity.transactionCount}</b><span className="text-[9px] font-black uppercase text-gray-500">Transactions</span></button><button type="button" onClick={() => setShowTransactions(true)} className="rounded-2xl border border-emerald-300/20 bg-emerald-500/[0.06] p-3 transition hover:bg-emerald-500/[0.12]"><Banknote className="mx-auto mb-1 text-emerald-100" size={14}/><b className="block text-lg text-emerald-100">{formatNumber(activity.totalAmount)}</b><span className="text-[9px] font-black uppercase text-gray-500">Montant</span></button></div>
             <div className="rounded-2xl border border-white/10 bg-black/20 p-3"><p className="mb-2 text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Dernières transactions</p>{transactions.slice(0, 4).map((transaction) => <button type="button" key={transaction.id} onClick={() => setShowTransactions(true)} className="flex w-full items-center justify-between border-t border-white/5 py-2 text-left first:border-0 transition hover:bg-white/[0.04]"><div><p className="text-xs font-bold text-white">{transaction.point_of_sale?.denomination || 'POS Merchant'}</p><p className="text-[10px] text-gray-500">{transaction.point_of_sale?.agent_number || '—'} · Client {transaction.client_number || '—'}</p></div><b className="text-xs text-emerald-100">{formatNumber(transaction.amount)}</b></button>)}{transactions.length === 0 && <p className="text-xs text-gray-500">Aucune transaction disponible.</p>}</div>
           </div>}
