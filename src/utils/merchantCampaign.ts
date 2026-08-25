@@ -478,6 +478,22 @@ export async function createMerchantPos(input: MerchantPosCreateInput): Promise<
   return data as PointOfSale;
 }
 
+export async function markMerchantPosVisitInactive(visitId: string, operationalNote: string): Promise<BAPosVisit> {
+  const note = operationalNote.trim();
+  if (!note) throw new Error('Le constat terrain est obligatoire pour déclarer un POS non actif.');
+  const client = getMerchantClient();
+  const { data, error } = await client
+    .from('ba_pos_visits')
+    .update({ operational_status: 'inactive', operational_note: note, status: 'visited', updated_at: new Date().toISOString() })
+    .eq('id', visitId)
+    .select('*')
+    .single();
+  fail(error, 'Impossible de corriger ce POS en non actif.');
+  const visit = data as BAPosVisit;
+  invalidateMerchantCache();
+  return visit;
+}
+
 export async function updateMerchantPosMfs(posId: string, mfsName: string): Promise<PointOfSale> {
   const client = getMerchantClient();
   const { data, error } = await client
