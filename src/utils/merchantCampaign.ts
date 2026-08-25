@@ -1186,30 +1186,40 @@ export type MerchantFundRequestInput = {
   note?: string | null;
 };
 
+function mapMerchantFundRequest(data: Record<string, unknown>): MerchantFundRequest {
+  const ba = data.ba as ({ id: string; full_name?: string; phone?: string; supervisor_id?: string | null } | null | undefined);
+  const supervisor = data.supervisor as ({ id: string; full_name?: string; phone?: string } | null | undefined);
+  return {
+    ...(data as unknown as MerchantFundRequest),
+    ba: ba ? { id: ba.id, name: ba.full_name || 'BA Merchant', phone: ba.phone || '', supervisorId: ba.supervisor_id || null } : undefined,
+    supervisor: supervisor ? { id: supervisor.id, name: supervisor.full_name || 'Superviseur', phone: supervisor.phone || '' } : undefined,
+  };
+}
+
 export async function createMerchantFundRequest(input: MerchantFundRequestInput): Promise<MerchantFundRequest> {
   const client = getMerchantClient();
   const { data, error } = await client
     .from('merchant_fund_requests')
     .insert({ ...input, amount: Number(input.amount), status: 'pending' })
-    .select('*, ba:users!merchant_fund_requests_ba_id_fkey(id,name,phone,supervisor_id), supervisor:users!merchant_fund_requests_supervisor_id_fkey(id,name,phone), point_of_sale:points_of_sale(id,agent_number,denomination,pool)')
+    .select('*')
     .single();
   fail(error, 'Impossible d’envoyer la demande de fonds');
   invalidateMerchantCache();
-  return data as MerchantFundRequest;
+  return mapMerchantFundRequest(data as Record<string, unknown>);
 }
 
 export async function getMerchantFundRequests(options: { runId?: string; supervisorId?: string; baId?: string } = {}): Promise<MerchantFundRequest[]> {
   const client = getMerchantClient();
   let query = client
     .from('merchant_fund_requests')
-    .select('*, ba:users!merchant_fund_requests_ba_id_fkey(id,name,phone,supervisor_id), supervisor:users!merchant_fund_requests_supervisor_id_fkey(id,name,phone), point_of_sale:points_of_sale(id,agent_number,denomination,pool)')
+    .select('*, ba:users!merchant_fund_requests_ba_id_fkey(id,full_name,phone,supervisor_id), supervisor:users!merchant_fund_requests_supervisor_id_fkey(id,full_name,phone), point_of_sale:points_of_sale(id,agent_number,denomination,pool)')
     .order('requested_at', { ascending: false });
   if (options.runId) query = query.eq('campaign_run_id', options.runId);
   if (options.supervisorId) query = query.eq('supervisor_id', options.supervisorId);
   if (options.baId) query = query.eq('ba_id', options.baId);
   const { data, error } = await query;
   fail(error, 'Impossible de charger les demandes de fonds');
-  return (data || []) as MerchantFundRequest[];
+  return (data || []).map((item) => mapMerchantFundRequest(item as Record<string, unknown>));
 }
 
 export async function updateMerchantFundRequestStatus(id: string, status: MerchantFundRequest['status'], reviewedBy?: string): Promise<void> {
