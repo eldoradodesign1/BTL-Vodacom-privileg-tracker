@@ -8,13 +8,13 @@ import { MerchantPosControlDetailModal } from './Modals/MerchantPosControlDetail
 import { MerchantPosCreateModal } from './Modals/MerchantPosCreateModal';
 import { MerchantFundRequestDecisionModal } from './Modals/MerchantFundRequestDecisionModal';
 
-interface MerchantSupervisorViewProps { currentUser: User; }
+interface MerchantSupervisorViewProps { currentUser: User; openFundRequestId?: string | null; onFundRequestOpened?: () => void; }
 type MerchantOperation = 'profile' | 'report' | 'location' | 'calendar';
 type PosFilter = 'all' | 'pending' | 'active' | 'inactive' | 'incomplete' | 'completed';
 const POOLS = ['Tous', 'Funa', 'Lukunga', 'Mont amba', 'Tshangu'] as const;
 const POS_PAGE_SIZE = 60;
 
-export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = ({ currentUser }) => {
+export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = ({ currentUser, openFundRequestId, onFundRequestOpened }) => {
   const [run, setRun] = useState<CampaignRun | null>(null);
   const [team, setTeam] = useState<MerchantTeamActivity[]>([]);
   const [controls, setControls] = useState<MerchantPosControlItem[]>([]);
@@ -55,6 +55,15 @@ export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = ({ 
     finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    if (!openFundRequestId) return;
+    const request = fundRequests.find((item) => item.id === openFundRequestId);
+    if (request) {
+      setManagementTab('ba');
+      setSelectedFundRequest(request);
+      onFundRequestOpened?.();
+    }
+  }, [fundRequests, onFundRequestOpened, openFundRequestId]);
   useEffect(() => { setPosPage(1); }, [query, pool, stateFilter]);
 
   const filtered = useMemo(() => {

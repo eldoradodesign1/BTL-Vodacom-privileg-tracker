@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { User, NotificationItem } from '../types';
-import { Bell, LogOut, Shield, RefreshCw, Palette, Camera, X, BriefcaseBusiness } from 'lucide-react';
+import { Bell, LogOut, Shield, RefreshCw, Palette, Camera, X, BriefcaseBusiness, Banknote } from 'lucide-react';
 import { addCheckin, getShopById, resolveStoredPhotoUrl } from '../utils/storage';
 
 export type ThemeMode = 'anthracite' | 'rubis' | 'silver' | 'diamond' | 'sapphire' | 'ambre';
@@ -25,6 +25,8 @@ interface HeaderProps {
   onSetCampaign?: (campaign: 'vodacom-privilege' | 'merchant-educational') => void;
   campaignOptions?: Array<{ key: 'vodacom-privilege' | 'merchant-educational'; label: string; note: string }>;
   allowCheckin?: boolean;
+  fundRequestAlerts?: Array<{ id: string; baName: string; amount: number; posLabel: string; requestedAt: string }>;
+  onOpenFundRequest?: (id: string) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -45,7 +47,9 @@ export const Header: React.FC<HeaderProps> = ({
   activeCampaign = 'vodacom-privilege',
   onSetCampaign,
   campaignOptions,
-  allowCheckin = true
+  allowCheckin = true,
+  fundRequestAlerts = [],
+  onOpenFundRequest
 }) => {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
@@ -60,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
     return source && !photoError ? resolveStoredPhotoUrl(source) : '';
   }, [localPhotoUrl, profilePhotoUrl, photoError]);
   const safeNotifications = Array.isArray(notifications) ? notifications : [];
-  const unreadCount = safeNotifications.filter(n => !n.is_read).length;
+  const unreadCount = safeNotifications.filter(n => !n.is_read).length + fundRequestAlerts.length;
   const roleLabel = user.role === 'super_admin'
     ? 'Super-admin'
     : (user.role === 'admin' ? 'Admin' : (user.role === 'sub_admin' ? 'Ops' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent')));
@@ -381,14 +385,17 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
 
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                  {safeNotifications.length === 0 ? (
+                  {safeNotifications.length === 0 && fundRequestAlerts.length === 0 ? (
                     <p className="text-center text-xs text-gray-500 italic py-4">Aucune notification.</p>
                   ) : (
-                    safeNotifications.map(n => (
-                      <div key={n.id} className="p-3 bg-red-500/10 border-l-4 border-red-600 rounded-xl text-xs font-semibold">
-                        {n.message}
-                      </div>
-                    ))
+                    <>
+                      {fundRequestAlerts.map((request) => <button key={`fund-${request.id}`} type="button" onClick={() => { onOpenFundRequest?.(request.id); setShowNotifPanel(false); }} className="w-full rounded-xl border border-emerald-300/30 bg-emerald-500/[0.10] p-3 text-left text-xs transition hover:bg-emerald-500/[0.18]"><span className="flex items-start gap-2"><Banknote size={15} className="mt-0.5 shrink-0 text-emerald-200"/><span><b className="block text-emerald-50">Nouvelle demande de fonds</b><span className="mt-1 block text-[10px] text-emerald-100/75">{request.baName} · ${Number(request.amount).toLocaleString('fr-FR')} · {request.posLabel}</span><span className="mt-1 block text-[9px] text-gray-400">Ouvrir le traitement</span></span></span></button>)}
+                      {safeNotifications.map(n => (
+                        <div key={n.id} className="p-3 bg-red-500/10 border-l-4 border-red-600 rounded-xl text-xs font-semibold">
+                          {n.message}
+                        </div>
+                      ))}
+                    </>
                   )}
                 </div>
               </div>

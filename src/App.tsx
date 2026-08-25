@@ -31,7 +31,7 @@ import {
   fetchLeadsFromSupabase,
   isSupabaseConfigured
 } from './utils/supabase';
-import { getActiveCampaignRuns, getCampaignPauses, getCampaignsForUser, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, invalidateMerchantCache } from './utils/merchantCampaign';
+import { getActiveCampaignRuns, getCampaignPauses, getCampaignsForUser, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, getMerchantFundRequests, invalidateMerchantCache } from './utils/merchantCampaign';
 
 import { SimulationBar } from './components/SimulationBar';
 import { Header, ThemeMode } from './components/Header';
@@ -134,6 +134,8 @@ export default function App() {
   const [merchantTransactionRequested, setMerchantTransactionRequested] = useState(false);
   const [agentCampaigns, setAgentCampaigns] = useState<Campaign[]>([]);
   const [activeCampaignPause, setActiveCampaignPause] = useState<CampaignPause | null>(null);
+  const [fundRequestAlerts, setFundRequestAlerts] = useState<Array<{ id: string; baName: string; amount: number; posLabel: string; requestedAt: string }>>([]);
+  const [fundRequestToOpen, setFundRequestToOpen] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -151,6 +153,37 @@ export default function App() {
     document.body.classList.remove('theme-classic', 'theme-dark', 'theme-light', 'theme-anthracite', 'theme-rubis', 'theme-silver', 'theme-sapphire', 'theme-emerald', 'theme-gold', 'theme-glass', 'theme-diamond', 'theme-ambre');
     document.body.classList.add(`theme-${theme}`);
   }, [theme]);
+
+  useEffect(() => {
+    const base = simulatedUserId ? users.find((user) => user.id === simulatedUserId) || currentUser : currentUser;
+    const role = simulatedRole || base?.role;
+    const canReviewFunds = role === 'supervisor' || role === 'admin' || role === 'super_admin' || role === 'sub_admin';
+    if (!base || !canReviewFunds || activeCampaign !== 'merchant-educational') {
+      setFundRequestAlerts([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const campaign = await getMerchantCampaign();
+        if (!campaign) return;
+        const runs = await getActiveCampaignRuns(campaign.id);
+        const activeRun = runs.find((run) => run.status === 'active') || runs[0];
+        if (!activeRun) return;
+        const requests = await getMerchantFundRequests({ runId: activeRun.id, ...(role === 'supervisor' ? { supervisorId: base.id } : {}) });
+        if (!cancelled) setFundRequestAlerts(requests.filter((request) => request.status === 'pending').map((request) => ({
+          id: request.id,
+          baName: request.ba?.name || 'Brand Ambassador',
+          amount: Number(request.amount),
+          posLabel: request.point_of_sale?.denomination || request.point_of_sale?.agent_number || 'POS non renseigné',
+          requestedAt: request.requested_at,
+        })));
+      } catch {
+        if (!cancelled) setFundRequestAlerts([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [activeCampaign, currentUser, dataRevision, simulatedRole, simulatedUserId, users]);
 
   const setThemeMode = (nextTheme: ThemeMode) => {
     setTheme(nextTheme);
@@ -498,7 +531,7 @@ const todayLeads =
         : activeTab === 'tab3'
           ? <MerchantSupervisorArchivesView />
           : activeTab === 'admin'
-            ? <MerchantSupervisorView currentUser={effectiveUser} />
+            ? <MerchantSupervisorView currentUser={effectiveUser} openFundRequestId={fundRequestToOpen} onFundRequestOpened={() => setFundRequestToOpen(null)} />
             : (effectiveRole === 'admin' || effectiveRole === 'super_admin')
               ? <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} />
               : <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} podiumSlot={<MerchantPodiumView />} />;
@@ -616,6 +649,12 @@ const todayLeads =
         onClearNotifications={() => {
           clearNotifications(effectiveUser.id);
           refreshData();
+        }}
+        fundRequestAlerts={fundRequestAlerts}
+        onOpenFundRequest={(requestId) => {
+          setFundRequestToOpen(requestId);
+          setCampaignContext('merchant-educational');
+          setActiveTab('admin');
         }}
         onLogout={handleLogout}
         onOpenPasswordModal={() => setIsPasswordModalOpen(true)}
