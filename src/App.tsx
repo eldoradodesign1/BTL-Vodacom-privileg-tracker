@@ -136,6 +136,7 @@ export default function App() {
   const [activeCampaignPause, setActiveCampaignPause] = useState<CampaignPause | null>(null);
   const [fundRequestAlerts, setFundRequestAlerts] = useState<Array<{ id: string; baName: string; amount: number; posLabel: string; requestedAt: string }>>([]);
   const alertedFundRequestIdsRef = useRef<Set<string>>(new Set());
+  const lastFundAlertSignalAtRef = useRef(0);
   const [fundRequestToOpen, setFundRequestToOpen] = useState<string | null>(null);
   const [openFundRequests, setOpenFundRequests] = useState(false);
 
@@ -166,7 +167,7 @@ export default function App() {
       return;
     }
     let cancelled = false;
-    const emitStrongFundAlert = (requests: Array<{ id: string; baName: string; amount: number; posLabel: string }>) => {
+    const emitStrongFundAlert = (requests: Array<{ id: string; baName: string; amount: number; posLabel: string }>, notifySystem = false) => {
       if (navigator.vibrate) navigator.vibrate([280, 110, 280, 110, 650]);
       if (localStorage.getItem('btl_fund_alert_audio_armed') === '1') {
         try {
@@ -189,7 +190,7 @@ export default function App() {
         } catch { /* Les navigateurs peuvent bloquer l’audio sans interaction utilisateur. */ }
       }
       const first = requests[0];
-      if ('Notification' in window && Notification.permission === 'granted') {
+      if (notifySystem && 'Notification' in window && Notification.permission === 'granted') {
         try { new Notification('Nouvelle demande de fonds', { body: `${first.baName} · $${first.amount.toLocaleString('fr-FR')} · ${first.posLabel}`, tag: `merchant-fund-${first.id}`, icon: '/favicon.png' }); } catch { /* Notification système non disponible. */ }
       }
       const initialTitle = document.title;
@@ -207,7 +208,15 @@ export default function App() {
         const pending = requests.filter((request) => request.status === 'pending').map((request) => ({ id: request.id, baName: request.ba?.name || 'Brand Ambassador', amount: Number(request.amount), posLabel: request.point_of_sale?.denomination || request.point_of_sale?.agent_number || 'POS non renseigné', requestedAt: request.requested_at }));
         if (!cancelled) {
           const unseen = pending.filter((request) => !alertedFundRequestIdsRef.current.has(request.id));
-          if (unseen.length) emitStrongFundAlert(unseen);
+          const now = Date.now();
+          if (unseen.length) {
+            emitStrongFundAlert(unseen, true);
+            lastFundAlertSignalAtRef.current = now;
+          } else if (pending.length > 0 && now - lastFundAlertSignalAtRef.current >= 15000) {
+            emitStrongFundAlert([pending[0]]);
+            lastFundAlertSignalAtRef.current = now;
+          }
+          if (pending.length === 0) lastFundAlertSignalAtRef.current = 0;
           alertedFundRequestIdsRef.current = new Set(pending.map((request) => request.id));
           setFundRequestAlerts(pending);
         }
@@ -216,7 +225,7 @@ export default function App() {
       }
     };
     void refreshFundAlerts();
-    const timer = window.setInterval(() => { void refreshFundAlerts(); }, 60000);
+    const timer = window.setInterval(() => { void refreshFundAlerts(); }, 15000);
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [activeCampaign, currentUser, dataRevision, simulatedRole, simulatedUserId, users]);
 
