@@ -33,12 +33,17 @@ export const MerchantFundRequestDecisionModal: React.FC<MerchantFundRequestDecis
 
   const launchPayment = () => {
     const dialer = 'tel:*1122%23';
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    if (!isAndroid) {
+      window.location.href = dialer;
+      return;
+    }
     const fallback = window.setTimeout(() => {
       if (document.visibilityState === 'visible') window.location.href = dialer;
-    }, 1000);
+    }, 1800);
     const cancelFallback = () => window.clearTimeout(fallback);
     document.addEventListener('visibilitychange', cancelFallback, { once: true });
-    window.location.href = 'mympesa://';
+    window.location.href = 'intent://#Intent;scheme=mpesa;package=com.vodafone.mpesa.drc;end';
   };
 
   const decide = async (status: 'approved' | 'rejected') => {
@@ -70,7 +75,7 @@ export const MerchantFundRequestDecisionModal: React.FC<MerchantFundRequestDecis
         {request.note && <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-3"><span className="text-[9px] font-black uppercase text-gray-500">Note BA</span><p className="mt-1 text-sm leading-relaxed text-gray-200">{request.note}</p></div>}
         {feedback && <p className="rounded-2xl border border-emerald-300/25 bg-emerald-500/[0.08] p-3 text-xs font-semibold text-emerald-50">{feedback}</p>}
         {isPending && <div className="grid grid-cols-2 gap-3"><button type="button" disabled={saving} onClick={() => void decide('rejected')} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-300/35 bg-rose-500/12 px-3 py-3 text-[10px] font-black uppercase text-rose-100 transition hover:bg-rose-500/20 disabled:opacity-45"><XCircle size={16}/>Rejeter</button><button type="button" disabled={saving} onClick={() => void decide('approved')} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-emerald-300/40 bg-emerald-500/15 px-3 py-3 text-[10px] font-black uppercase text-emerald-100 transition hover:bg-emerald-500/25 disabled:opacity-45"><CheckCircle2 size={16}/>{saving ? 'Validation…' : 'Valider'}</button></div>}
-        {request.status === 'approved' && <button type="button" onClick={launchPayment} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300/35 bg-emerald-500/15 px-3 py-3 text-[10px] font-black uppercase text-emerald-100 transition hover:bg-emerald-500/25"><ExternalLink size={16}/>Ouvrir MyM‑Pesa RDC / *1122#</button>}
+        {request.status === 'approved' && <button type="button" onClick={launchPayment} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300/35 bg-emerald-500/15 px-3 py-3 text-[10px] font-black uppercase text-emerald-100 transition hover:bg-emerald-500/25"><ExternalLink size={16}/>Ouvrir M‑Pesa RDC / *1122#</button>}
         <p className="flex items-start gap-2 text-[10px] leading-relaxed text-gray-500"><Phone size={13} className="mt-0.5 shrink-0"/>L’application de paiement ou le composeur s’ouvre, mais l’appel et le paiement restent sous le contrôle du superviseur.</p>
       </div>
     </section>
