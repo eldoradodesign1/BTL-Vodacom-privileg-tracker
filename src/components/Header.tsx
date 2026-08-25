@@ -102,6 +102,17 @@ export const Header: React.FC<HeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showNotifPanel, showThemeMenu, showCampaignMenu]);
 
+  const openNotifications = () => {
+    const opening = !showNotifPanel;
+    setShowNotifPanel(opening);
+    if (opening) {
+      localStorage.setItem('btl_fund_alert_audio_armed', '1');
+      if ('Notification' in window && Notification.permission === 'default') {
+        void Notification.requestPermission();
+      }
+    }
+  };
+
   const handlePointageCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -344,7 +355,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="relative">
             <button
               onClick={() => {
-                setShowNotifPanel(!showNotifPanel);
+                openNotifications();
                 if (!showNotifPanel && unreadCount > 0) {
                   onMarkNotifsRead();
                 }

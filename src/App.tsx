@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { User, Shop, AgentMasterStatus, UserRole, Campaign, CampaignPause } from './types';
 import {
   getUsers,
@@ -135,6 +135,7 @@ export default function App() {
   const [agentCampaigns, setAgentCampaigns] = useState<Campaign[]>([]);
   const [activeCampaignPause, setActiveCampaignPause] = useState<CampaignPause | null>(null);
   const [fundRequestAlerts, setFundRequestAlerts] = useState<Array<{ id: string; baName: string; amount: number; posLabel: string; requestedAt: string }>>([]);
+  const alertedFundRequestIdsRef = useRef<Set<string>>(new Set());
   const [fundRequestToOpen, setFundRequestToOpen] = useState<string | null>(null);
   const [openFundRequests, setOpenFundRequests] = useState(false);
 
@@ -161,10 +162,41 @@ export default function App() {
     const canReviewFunds = role === 'supervisor' || role === 'admin' || role === 'super_admin' || role === 'sub_admin';
     if (!base || !canReviewFunds || activeCampaign !== 'merchant-educational') {
       setFundRequestAlerts([]);
+      alertedFundRequestIdsRef.current = new Set();
       return;
     }
     let cancelled = false;
-    void (async () => {
+    const emitStrongFundAlert = (requests: Array<{ id: string; baName: string; amount: number; posLabel: string }>) => {
+      if (navigator.vibrate) navigator.vibrate([280, 110, 280, 110, 650]);
+      if (localStorage.getItem('btl_fund_alert_audio_armed') === '1') {
+        try {
+          const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+          if (AudioContextCtor) {
+            const audio = new AudioContextCtor();
+            [0, 0.22, 0.44].forEach((offset, index) => {
+              const oscillator = audio.createOscillator();
+              const gain = audio.createGain();
+              oscillator.frequency.value = index === 2 ? 1046.5 : 880;
+              gain.gain.setValueAtTime(0.0001, audio.currentTime + offset);
+              gain.gain.exponentialRampToValueAtTime(0.16, audio.currentTime + offset + 0.02);
+              gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + offset + 0.18);
+              oscillator.connect(gain).connect(audio.destination);
+              oscillator.start(audio.currentTime + offset);
+              oscillator.stop(audio.currentTime + offset + 0.2);
+            });
+            window.setTimeout(() => { void audio.close(); }, 1000);
+          }
+        } catch { /* Les navigateurs peuvent bloquer l’audio sans interaction utilisateur. */ }
+      }
+      const first = requests[0];
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try { new Notification('Nouvelle demande de fonds', { body: `${first.baName} · $${first.amount.toLocaleString('fr-FR')} · ${first.posLabel}`, tag: `merchant-fund-${first.id}`, icon: '/favicon.png' }); } catch { /* Notification système non disponible. */ }
+      }
+      const initialTitle = document.title;
+      document.title = `⚠ ${requests.length} demande${requests.length > 1 ? 's' : ''} de fonds`;
+      window.setTimeout(() => { if (document.title.startsWith('⚠ ')) document.title = initialTitle; }, 8000);
+    };
+    const refreshFundAlerts = async () => {
       try {
         const campaign = await getMerchantCampaign();
         if (!campaign) return;
@@ -172,18 +204,20 @@ export default function App() {
         const activeRun = runs.find((run) => run.status === 'active') || runs[0];
         if (!activeRun) return;
         const requests = await getMerchantFundRequests({ runId: activeRun.id, ...(role === 'supervisor' ? { supervisorId: base.id } : {}) });
-        if (!cancelled) setFundRequestAlerts(requests.filter((request) => request.status === 'pending').map((request) => ({
-          id: request.id,
-          baName: request.ba?.name || 'Brand Ambassador',
-          amount: Number(request.amount),
-          posLabel: request.point_of_sale?.denomination || request.point_of_sale?.agent_number || 'POS non renseigné',
-          requestedAt: request.requested_at,
-        })));
+        const pending = requests.filter((request) => request.status === 'pending').map((request) => ({ id: request.id, baName: request.ba?.name || 'Brand Ambassador', amount: Number(request.amount), posLabel: request.point_of_sale?.denomination || request.point_of_sale?.agent_number || 'POS non renseigné', requestedAt: request.requested_at }));
+        if (!cancelled) {
+          const unseen = pending.filter((request) => !alertedFundRequestIdsRef.current.has(request.id));
+          if (unseen.length) emitStrongFundAlert(unseen);
+          alertedFundRequestIdsRef.current = new Set(pending.map((request) => request.id));
+          setFundRequestAlerts(pending);
+        }
       } catch {
         if (!cancelled) setFundRequestAlerts([]);
       }
-    })();
-    return () => { cancelled = true; };
+    };
+    void refreshFundAlerts();
+    const timer = window.setInterval(() => { void refreshFundAlerts(); }, 60000);
+    return () => { cancelled = true; window.clearInterval(timer); };
   }, [activeCampaign, currentUser, dataRevision, simulatedRole, simulatedUserId, users]);
 
   const setThemeMode = (nextTheme: ThemeMode) => {
