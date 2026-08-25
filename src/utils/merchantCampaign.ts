@@ -4,6 +4,7 @@ import type {
   BAPosVisit,
   BATransaction,
   Campaign,
+  CampaignPause,
   CampaignRun,
   PointOfSale,
 } from '../types';
@@ -155,6 +156,55 @@ export async function getCampaignsForUser(userId: string): Promise<Campaign[]> {
     .map((row: { campaign?: Campaign | Campaign[] | null }) => Array.isArray(row.campaign) ? row.campaign[0] : row.campaign)
     .filter((campaign): campaign is Campaign => Boolean(campaign));
   return campaigns;
+}
+
+export async function getCampaignPauses(campaignId: string, force = false): Promise<CampaignPause[]> {
+  return withMerchantCache(`pauses:${campaignId}`, async () => {
+    const client = getMerchantClient();
+    const { data, error } = await client
+      .from('campaign_pauses')
+      .select('*')
+      .eq('campaign_id', campaignId)
+      .order('starts_on', { ascending: false });
+    fail(error, 'Impossible de charger les pauses de campagne');
+    return (data || []) as CampaignPause[];
+  }, { force });
+}
+
+export function isCampaignPausedOn(pauses: CampaignPause[], activityDate: string): boolean {
+  return pauses.some((pause) => pause.starts_on <= activityDate && (!pause.ends_on || pause.ends_on >= activityDate));
+}
+
+export async function createCampaignPause(input: Pick<CampaignPause, 'campaign_id' | 'starts_on' | 'reason' | 'created_by'>): Promise<CampaignPause> {
+  const client = getMerchantClient();
+  const { data, error } = await client
+    .from('campaign_pauses')
+    .insert({ campaign_id: input.campaign_id, starts_on: input.starts_on, reason: input.reason?.trim() || null, created_by: input.created_by || null })
+    .select('*')
+    .single();
+  fail(error, 'Impossible de mettre la campagne en pause');
+  invalidateMerchantCache(`pauses:${input.campaign_id}`);
+  return data as CampaignPause;
+}
+
+export async function endCampaignPause(pause: CampaignPause, endsOn: string): Promise<CampaignPause> {
+  const client = getMerchantClient();
+  const { data, error } = await client
+    .from('campaign_pauses')
+    .update({ ends_on: endsOn, updated_at: new Date().toISOString() })
+    .eq('id', pause.id)
+    .select('*')
+    .single();
+  fail(error, 'Impossible de reprendre la campagne');
+  invalidateMerchantCache(`pauses:${pause.campaign_id}`);
+  return data as CampaignPause;
+}
+
+export async function deleteCampaignPause(pause: CampaignPause): Promise<void> {
+  const client = getMerchantClient();
+  const { error } = await client.from('campaign_pauses').delete().eq('id', pause.id);
+  fail(error, 'Impossible de supprimer la pause de campagne');
+  invalidateMerchantCache(`pauses:${pause.campaign_id}`);
 }
 
 export async function getActiveCampaignRuns(campaignId: string): Promise<CampaignRun[]> {

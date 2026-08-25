@@ -29,6 +29,17 @@ export interface Campaign {
   transactions_per_pos_target?: number | null;
 }
 
+export interface CampaignPause {
+  id: string;
+  campaign_id: string;
+  starts_on: string;
+  ends_on?: string | null;
+  reason?: string | null;
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface CampaignRun {
   id: string;
   campaign_id: string;

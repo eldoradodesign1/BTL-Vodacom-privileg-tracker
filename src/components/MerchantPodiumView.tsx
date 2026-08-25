@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { CalendarDays, Clock3, FileText, LockKeyhole, MapPin, Medal, RefreshCw, Trophy, UserRound } from 'lucide-react';
+import { CalendarDays, FileText, LockKeyhole, MapPin, Medal, RefreshCw, Trophy, UserRound } from 'lucide-react';
 import type { CampaignRun } from '../types';
 import { getActiveCampaignRuns, getMerchantCampaign, getMerchantPodium, type MerchantPodiumEntry } from '../utils/merchantCampaign';
 import { MerchantBAOperationsModal } from './Modals/MerchantBAOperationsModal';
@@ -49,14 +49,12 @@ export const MerchantPodiumView: React.FC = () => {
     <section className="glass-card relative overflow-hidden p-4 sm:p-5">
       <div className="pointer-events-none absolute -right-12 -top-14 h-48 w-48 rounded-full bg-amber-400/[0.12] blur-3xl"/>
       <div className="pointer-events-none absolute -left-14 bottom-0 h-40 w-40 rounded-full bg-slate-300/[0.08] blur-3xl"/>
-      <div className="relative flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-100/80">Podium de performance</p><h1 className="mt-1 text-xl font-black">Volume Merchant</h1><p className="mt-1 max-w-sm text-xs text-gray-400">Le classement évolue selon le volume : transactions, POS visités, puis montant en cas d’égalité.</p></div><div className="flex gap-2"><button type="button" onClick={() => setIsReportsOpen(true)} title="Rapports superviseur" className="rounded-2xl border border-cyan-300/30 bg-cyan-400/10 p-3 text-cyan-100 transition hover:bg-cyan-400/20"><FileText size={17}/></button><button type="button" onClick={() => void load()} title="Actualiser le podium" className="rounded-2xl border border-white/10 bg-white/5 p-3 text-gray-200 transition hover:bg-white/10"><RefreshCw size={17}/></button></div></div>
-      <div className="relative mt-4 space-y-2"><div className="rounded-2xl border border-amber-300/20 bg-gradient-to-r from-amber-500/[0.10] via-white/[0.04] to-transparent px-3 py-2 text-[10px] font-bold text-amber-50"><Clock3 size={14} className="mr-1 inline-block text-amber-300"/>Premier signal enregistré {leader ? `à ${new Date(leader.firstArrival).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} par ${leader.activity.ba.name}.` : 'dès la première arrivée au POS.'}</div><div className="rounded-2xl border border-amber-300/20 bg-gradient-to-r from-amber-500/[0.10] via-white/[0.04] to-transparent px-3 py-2 text-[10px] font-bold text-amber-50"><LockKeyhole size={14} className="mr-1 inline-block text-amber-300"/>Les trois premiers BA à atteindre {leader ? `${leader.dailyPosTarget} POS et ${leader.dailyTransactionTarget} transactions` : 'leurs objectifs'} verrouillent leur place sur le podium.</div></div>
-    </section>
+      <div className="relative flex items-center justify-between gap-3"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-100/80">Podium de performance</p><div className="flex gap-2"><button type="button" onClick={() => setIsReportsOpen(true)} title="Rapports superviseur" className="rounded-2xl border border-cyan-300/30 bg-cyan-400/10 p-3 text-cyan-100 transition hover:bg-cyan-400/20"><FileText size={17}/></button><button type="button" onClick={() => void load()} title="Actualiser le podium" className="rounded-2xl border border-white/10 bg-white/5 p-3 text-gray-200 transition hover:bg-white/10"><RefreshCw size={17}/></button></div></div>
+      <div className="relative mt-4 space-y-3">
 
     {error && <div className="rounded-2xl border border-rose-400/40 bg-rose-950/45 p-3 text-xs font-bold text-rose-100">{error}</div>}
     {platinum && <section className="glass-card relative overflow-hidden border border-slate-200/40 bg-[radial-gradient(circle_at_85%_0%,rgba(255,255,255,0.35),transparent_38%),linear-gradient(135deg,rgba(192,192,192,0.18),rgba(104,112,122,0.22))] p-4"><img src="/podium-trophies/platinum-trophy.png" alt="" className="pointer-events-none absolute -right-7 -bottom-12 h-44 w-44 rotate-[-16deg] object-contain opacity-25"/><div className="relative flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-100/55 bg-white/15 text-slate-100"><Trophy size={23}/></div><div><p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-100">Coupe platine</p><h2 className="mt-0.5 text-sm font-black text-white">{platinum.activity.ba.name} domine depuis {platinum.platinumStreak} journées</h2><p className="mt-0.5 text-[10px] text-slate-200">Distinction automatique dès cinq premières places consécutives.</p></div></div></section>}
 
-    <section className="space-y-3">
       {podium.map((entry, index) => {
         const medal = medals[index];
         const firstArrival = new Date(entry.firstArrival).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
@@ -66,7 +64,8 @@ export const MerchantPodiumView: React.FC = () => {
           <div className="relative mt-3 flex flex-wrap gap-2">{entry.isLocked && <div className="inline-flex items-center gap-1 rounded-xl border border-amber-200/35 bg-amber-200/[0.12] px-2 py-1 text-[9px] font-black uppercase text-amber-100"><LockKeyhole size={12}/> Place verrouillée{entry.targetReachedAt ? ` · objectif atteint à ${new Date(entry.targetReachedAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : ''}</div>}{!entry.isLocked && <div className="inline-flex items-center gap-1 rounded-xl border border-white/15 bg-black/10 px-2 py-1 text-[9px] font-black uppercase text-gray-300">Volume en cours · premier POS {firstArrival}</div>}{entry.platinumStreak > 0 && <div className="inline-flex items-center gap-1 rounded-xl border border-slate-100/20 bg-slate-100/[0.10] px-2 py-1 text-[9px] font-black uppercase text-slate-100"><Medal size={12}/> Série de tête : {entry.platinumStreak}/5</div>}</div>
         </article>;
       })}
-      {!podium.length && <div className="glass-card p-6 text-center text-sm text-gray-400">Le podium apparaîtra après les premières arrivées POS de la journée.</div>}
+      {!podium.length && <div className="rounded-2xl border border-white/10 bg-black/15 p-6 text-center text-sm text-gray-400">Le podium apparaîtra après les premières arrivées POS de la journée.</div>}
+      </div>
     </section>
     <MerchantBAOperationsModal isOpen={Boolean(operation)} mode={operation?.mode || 'profile'} activity={operation?.entry.activity || null} run={run} onClose={() => setOperation(null)}/>
     <MerchantSupervisorReportsModal isOpen={isReportsOpen} run={run} onClose={() => setIsReportsOpen(false)}/>
