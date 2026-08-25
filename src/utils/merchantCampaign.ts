@@ -276,6 +276,28 @@ export async function getPosVisitsForDay(baId: string, runId: string, activityDa
   });
 }
 
+export async function getPosVisitsForBA(baId: string, runId?: string): Promise<BAPosVisit[]> {
+  return withMerchantCache(`visits-history:${runId || 'all'}:${baId}`, async () => {
+    const client = getMerchantClient();
+    let visitsQuery = client
+      .from('ba_pos_visits')
+      .select('*, point_of_sale:points_of_sale(*)')
+      .eq('ba_id', baId)
+      .order('activity_date', { ascending: false })
+      .order('visited_at', { ascending: false });
+    if (runId) visitsQuery = visitsQuery.eq('campaign_run_id', runId);
+    const [visitsResponse, transactions] = await Promise.all([
+      visitsQuery,
+      getTransactionsForBA(baId, runId),
+    ]);
+    fail(visitsResponse.error, 'Impossible de charger l’historique des POS visités');
+    return ((visitsResponse.data || []) as BAPosVisit[]).map((visit) => ({
+      ...visit,
+      transactions: transactions.filter((transaction) => transaction.pos_visit_id === visit.id || transaction.pos_id === visit.pos_id),
+    }));
+  });
+}
+
 export async function getAttendanceHistoryForBA(baId: string, campaignRunId?: string): Promise<BADailyAttendance[]> {
   const client = getMerchantClient();
   let query = client

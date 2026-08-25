@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { CheckCircle2, Clock3, Hash, Image, MapPin, PlusCircle, RefreshCw, Smartphone, Store, X } from 'lucide-react';
 import type { BAPosVisit, CampaignRun, PointOfSale, User } from '../types';
-import { getActiveCampaignRuns, getCampaignPos, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, getPosVisitsForDay, markMerchantPosVisitInactive } from '../utils/merchantCampaign';
+import { getActiveCampaignRuns, getCampaignPos, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, getPosVisitsForBA, markMerchantPosVisitInactive } from '../utils/merchantCampaign';
+import { DateIconPicker } from './DateIconPicker';
 import { MerchantPosValidationModal } from './Modals/MerchantPosValidationModal';
 import { toISO } from '../utils/storage';
 
@@ -28,6 +29,8 @@ export const MerchantPosVisitsView: React.FC<MerchantPosVisitsViewProps> = ({ cu
   const [inactiveNote, setInactiveNote] = useState('');
   const [markingInactive, setMarkingInactive] = useState(false);
   const [inactiveError, setInactiveError] = useState('');
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [showHistory, setShowHistory] = useState(false);
 
   const refresh = async () => {
     setLoading(true);
@@ -43,7 +46,7 @@ export const MerchantPosVisitsView: React.FC<MerchantPosVisitsViewProps> = ({ cu
         return;
       }
       const [nextVisits, nextPositions, nextAttendance] = await Promise.all([
-        getPosVisitsForDay(currentUser.id, activeRun.id, today),
+        getPosVisitsForBA(currentUser.id, activeRun.id),
         getCampaignPos(campaign.id),
         getDailyAttendance(currentUser.id, activeRun.id, today),
       ]);
@@ -69,6 +72,8 @@ export const MerchantPosVisitsView: React.FC<MerchantPosVisitsViewProps> = ({ cu
     ? `https://www.google.com/maps?q=${selectedVisit.latitude},${selectedVisit.longitude}&z=16&output=embed`
     : '';
   const transactionTarget = Number(run?.transactions_per_pos_target || 3);
+  const visibleVisits = useMemo(() => visits.filter((visit) => showHistory || visit.activity_date === selectedDate), [visits, showHistory, selectedDate]);
+  const isTodayView = !showHistory && selectedDate === today;
   const markSelectedVisitInactive = async () => {
     if (!selectedVisit) return;
     setMarkingInactive(true); setInactiveError('');
@@ -88,15 +93,16 @@ export const MerchantPosVisitsView: React.FC<MerchantPosVisitsViewProps> = ({ cu
         <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
         <div className="relative flex items-start justify-between gap-3">
           <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200/70">Merchant Educational Campaign</p><h1 className="mt-1 text-xl font-black text-white">Mes POS</h1>{mfsName && <p className="mt-1 text-[10px] font-bold text-fuchsia-200">MFS du jour · {mfsName}</p>}</div>
-          <div className="flex shrink-0 items-center gap-2">{campaignPaused ? <span className="rounded-2xl border border-amber-300/30 bg-amber-500/[0.10] px-3 py-2 text-[9px] font-black uppercase text-amber-100">Campagne en pause</span> : <button type="button" onClick={() => setIsValidationOpen(true)} className="inline-flex items-center gap-1.5 rounded-2xl border border-emerald-300/30 bg-emerald-500/[0.10] px-3 py-2 text-[10px] font-black uppercase text-emerald-100 transition hover:bg-emerald-500/[0.18]"><PlusCircle size={15}/>Ajouter POS</button>}<button type="button" onClick={() => void refresh()} aria-label="Actualiser mes POS" className="rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 text-emerald-100 transition-colors hover:bg-white/10"><RefreshCw size={16}/></button></div>
+          <div className="flex shrink-0 items-center gap-2">{campaignPaused ? <span className="rounded-2xl border border-amber-300/30 bg-amber-500/[0.10] px-3 py-2 text-[9px] font-black uppercase text-amber-100">Campagne en pause</span> : isTodayView && <button type="button" onClick={() => setIsValidationOpen(true)} className="inline-flex items-center gap-1.5 rounded-2xl border border-emerald-300/30 bg-emerald-500/[0.10] px-3 py-2 text-[10px] font-black uppercase text-emerald-100 transition hover:bg-emerald-500/[0.18]"><PlusCircle size={15}/>Ajouter POS</button>}<button type="button" onClick={() => void refresh()} aria-label="Actualiser mes POS" className="rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 text-emerald-100 transition-colors hover:bg-white/10"><RefreshCw size={16}/></button></div>
         </div>
-        <div className="relative mt-4 grid grid-cols-2 divide-x divide-white/10 rounded-2xl border border-white/[0.08] bg-black/10 text-center"><div className="p-3"><b className="block text-lg font-black text-emerald-300">{visits.length}</b><span className="text-[9px] font-black uppercase text-gray-400">POS arrivés</span></div><div className="p-3"><b className="block text-lg font-black text-amber-200">{visits.reduce((total, visit) => total + (visit.transactions?.length || 0), 0)}/{visits.filter((visit) => visit.operational_status !== 'inactive').length * transactionTarget}</b><span className="text-[9px] font-black uppercase text-gray-400">Transactions attendues</span></div></div>
+        <div className="relative mt-4 grid grid-cols-2 divide-x divide-white/10 rounded-2xl border border-white/[0.08] bg-black/10 text-center"><div className="p-3"><b className="block text-lg font-black text-emerald-300">{visibleVisits.length}</b><span className="text-[9px] font-black uppercase text-gray-400">POS affichés</span></div><div className="p-3"><b className="block text-lg font-black text-amber-200">{visibleVisits.reduce((total, visit) => total + (visit.transactions?.length || 0), 0)}/{visibleVisits.filter((visit) => visit.operational_status !== 'inactive').length * transactionTarget}</b><span className="text-[9px] font-black uppercase text-gray-400">Transactions attendues</span></div></div>
       </section>
 
+      <section className="glass-card space-y-3 p-3"><div className="flex gap-2"><DateIconPicker value={selectedDate} onChange={(date) => { setSelectedDate(date); setShowHistory(false); }} className="inline-flex" buttonClassName="h-10 w-10 rounded-xl border border-white/10 bg-white/[0.05] text-emerald-100" labelClassName="hidden"/><div className="flex min-w-0 flex-1 items-center rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[10px] font-bold text-gray-400">{showHistory ? 'Tous les POS déjà visités' : 'POS de la date sélectionnée'}</div></div><div className="flex gap-2"><button type="button" onClick={() => { setSelectedDate(today); setShowHistory(false); }} className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase ${isTodayView ? 'border-emerald-300/45 bg-emerald-400/15 text-emerald-100' : 'border-white/10 bg-white/5 text-gray-400'}`}>Aujourd’hui</button><button type="button" onClick={() => setShowHistory((current) => !current)} className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase ${showHistory ? 'border-violet-300/35 bg-violet-400/[0.08] text-violet-100' : 'border-white/10 bg-white/5 text-gray-400'}`}>{showHistory ? 'Historique complet' : 'Voir tout l’historique'}</button></div></section>
       {error && <div className="rounded-2xl border border-red-400/50 bg-red-950/50 p-3 text-xs font-bold text-red-200">{error}</div>}
-      {!error && visits.length === 0 && <div className="glass-card p-8 text-center"><Store className="mx-auto mb-3 text-gray-500" size={28}/><p className="text-sm font-bold text-gray-300">Aucun POS validé pour le moment.</p><p className="mt-2 text-xs leading-relaxed text-gray-500">Utilisez « Ajouter POS » pour sélectionner le point, prendre sa photo et confirmer s’il est actif ou non actif.</p></div>}
+      {!error && visibleVisits.length === 0 && <div className="glass-card p-8 text-center"><Store className="mx-auto mb-3 text-gray-500" size={28}/><p className="text-sm font-bold text-gray-300">Aucun POS pour cette période.</p><p className="mt-2 text-xs leading-relaxed text-gray-500">Choisissez une autre date ou consultez tout l’historique de vos visites.</p></div>}
 
-      {visits.map((visit) => {
+      {visibleVisits.map((visit) => {
         const transactionCount = visit.transactions?.length || 0;
         return <article key={visit.id} role="button" tabIndex={0} onClick={() => setSelectedVisit(visit)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelectedVisit(visit); } }} className="glass-card cursor-pointer overflow-hidden p-0 transition-all hover:border-emerald-300/40 hover:bg-emerald-400/[0.04] active:scale-[0.99]" aria-label={`Ouvrir les détails du POS ${visit.point_of_sale?.denomination || visit.pos_id}`}>
           <div className="flex gap-3 p-4"><div className="h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-black/30">{visit.photoUrl ? <img src={visit.photoUrl} alt={`Photo d’arrivée ${visit.point_of_sale?.denomination || ''}`} className="h-full w-full object-cover"/> : <div className="flex h-full items-center justify-center text-gray-500"><Image size={22}/></div>}</div><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-2"><div className="min-w-0"><h2 className="truncate text-sm font-black">{visit.point_of_sale?.denomination || 'POS Merchant'}</h2><p className="mt-1 truncate text-[11px] font-bold uppercase tracking-wide text-emerald-200">Short-code · {visit.point_of_sale?.agent_number || visit.pos_id}</p></div><div className="shrink-0 text-right"><div className="flex items-center justify-end gap-1 text-xs font-black text-amber-200"><Clock3 size={13}/>{visit.visited_at ? new Date(visit.visited_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '—'}</div><p className="mt-1 text-[10px] text-gray-500">Arrivée</p></div></div><p className="mt-2 truncate text-[11px] text-gray-400">{visit.point_of_sale?.address || 'Adresse non renseignée'} · {visit.point_of_sale?.pool || 'Pool non renseigné'}</p></div></div>
@@ -112,7 +118,7 @@ export const MerchantPosVisitsView: React.FC<MerchantPosVisitsViewProps> = ({ cu
         <section className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/30"><div className="flex items-center gap-2 border-b border-white/10 px-4 py-3 text-xs font-black uppercase tracking-wide text-cyan-100"><MapPin size={15}/> Localisation d’arrivée</div>{mapsUrl ? <iframe title={`Carte ${selectedVisit.point_of_sale?.denomination || 'POS'}`} src={mapsUrl} className="h-64 w-full border-0" loading="lazy" allowFullScreen /> : <div className="p-6 text-center text-sm text-gray-500">Coordonnées GPS indisponibles pour ce POS.</div>}</section>
       </section></div>}
       {photoPreview && <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/95 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-label={photoPreview.label} onClick={() => setPhotoPreview(null)}><button type="button" onClick={() => setPhotoPreview(null)} className="absolute right-5 top-5 rounded-full border border-white/15 bg-black/50 p-3 text-white transition hover:bg-white/15" aria-label="Fermer la photo"><X size={20}/></button><img src={photoPreview.url} alt={photoPreview.label} className="max-h-[88vh] max-w-full rounded-2xl object-contain shadow-2xl" onClick={(event) => event.stopPropagation()}/><p className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-center text-[10px] font-black uppercase tracking-wide text-white/85">{photoPreview.label}</p></div>}
-      <MerchantPosValidationModal isOpen={isValidationOpen && !campaignPaused} currentUser={currentUser} run={run} positions={positions} visits={visits} activityDate={today} mfsName={mfsName} onClose={() => setIsValidationOpen(false)} onValidated={() => { setIsValidationOpen(false); void refresh(); }} />
+      <MerchantPosValidationModal isOpen={isValidationOpen && !campaignPaused && isTodayView} currentUser={currentUser} run={run} positions={positions} visits={visits} activityDate={today} mfsName={mfsName} onClose={() => setIsValidationOpen(false)} onValidated={() => { setIsValidationOpen(false); void refresh(); }} />
     </div>
   );
 };
