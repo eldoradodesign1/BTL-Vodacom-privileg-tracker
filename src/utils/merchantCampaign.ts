@@ -38,8 +38,8 @@ function writeMerchantCache<T>(key: string, value: T): T {
   return value;
 }
 
-async function withMerchantCache<T>(key: string, loader: () => Promise<T>): Promise<T> {
-  const cached = readMerchantCache<T>(key);
+async function withMerchantCache<T>(key: string, loader: () => Promise<T>, options: { force?: boolean } = {}): Promise<T> {
+  const cached = options.force ? null : readMerchantCache<T>(key);
   if (cached !== null) return cached;
   return writeMerchantCache(key, await loader());
 }
@@ -297,8 +297,11 @@ async function getMerchantBAs() {
   });
 }
 
-export async function getMerchantMonitoring(runId: string, activityDate: string): Promise<MerchantTeamActivity[]> {
+export async function getMerchantMonitoring(runId: string, activityDate: string, options: { force?: boolean } = {}): Promise<MerchantTeamActivity[]> {
   const safeActivityDate = clampMerchantActivityDate(activityDate);
+  // Le monitoring du jour reflète des pointages terrain arrivant depuis d’autres appareils :
+  // il ne doit donc jamais rester figé une heure dans le cache local du superviseur.
+  const forceLiveRead = options.force || safeActivityDate === merchantTodayIso();
   return withMerchantCache(`monitoring:${runId}:${safeActivityDate}`, async () => {
     const client = getMerchantClient();
     const { start, end } = activityWindow(safeActivityDate);
@@ -331,7 +334,7 @@ export async function getMerchantMonitoring(runId: string, activityDate: string)
         mfsNames: Array.from(new Set([attendance?.mfs_name?.trim() || '', ...baVisits.map((item) => item.point_of_sale?.mfs_name?.trim() || '')].filter(Boolean))),
       };
     });
-  });
+  }, { force: forceLiveRead });
 }
 
 export async function getMerchantArchives(runId: string, startDate?: string, endDate?: string): Promise<MerchantArchiveSummary[]> {
