@@ -9,6 +9,7 @@ import { formatAgentLocationLine } from '../utils/location';
 import { SupervisorProfileModal, SupervisorHostessSummary } from './Modals/SupervisorProfileModal';
 import { DateIconPicker } from './DateIconPicker';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
+import { CampaignPauseControl } from './CampaignPauseControl';
 
 interface AdminViewProps {
   currentUser: User;
@@ -772,7 +773,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
           )}
 
           {manageSection === 'targets' && (
-            <div className="glass-card border border-white/10 p-5 space-y-4">
+            <div className="space-y-4">
+              <CampaignPauseControl currentUser={currentUser} campaignCode="vodacom-privilege" campaignLabel="Vodacom Privilège" minDate={activityStartIso} accent="amber"/>
+              <div className="glass-card border border-white/10 p-5 space-y-4">
               <div className="space-y-1 text-left">
                 <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Définir les targets</h2>
                 <p className="text-[10px] text-gray-400 font-semibold">Les cibles de privilège, roaming et bundle sont centralisées ici pour les superviseurs.</p>
@@ -852,9 +855,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </div>
               </div>
 
-              <button onClick={handleSaveTarget} className="w-full rounded-xl bg-red-600 px-3 py-2.5 text-[10px] font-black uppercase text-white">
-                Enregistrer les targets
-              </button>
+                <button onClick={handleSaveTarget} className="w-full rounded-xl bg-red-600 px-3 py-2.5 text-[10px] font-black uppercase text-white">
+                  Enregistrer les targets
+                </button>
+              </div>
             </div>
           )}
 
