@@ -18,6 +18,8 @@ interface AgentViewProps {
   onOpenReportModal: () => void;
   onOpenPdfModal: (url: string) => void;
   onRefreshData?: () => void;
+  campaignPaused?: boolean;
+  pauseReason?: string;
 }
 
 export const AgentView: React.FC<AgentViewProps> = ({
@@ -30,7 +32,9 @@ export const AgentView: React.FC<AgentViewProps> = ({
   onOpenLeadModal,
   onOpenReportModal,
   onOpenPdfModal,
-  onRefreshData
+  onRefreshData,
+  campaignPaused = false,
+  pauseReason = ''
 }) => {
   const [gpsInfo, setGpsInfo] = useState('');
   const [geoBadge, setGeoBadge] = useState<{ text: string; status: 'ok' | 'warn' | 'unknown' } | null>(null);
@@ -128,7 +132,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
 
   const handleCameraChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || campaignPaused) return;
 
     const reader = new FileReader();
     reader.onload = (ev) => {
@@ -225,15 +229,15 @@ export const AgentView: React.FC<AgentViewProps> = ({
           <div className="flex items-center space-x-2">
             <button
               onClick={onOpenLeadModal}
-              disabled={reportDone}
+              disabled={reportDone || campaignPaused}
               className={`px-3 py-2 rounded-2xl text-xs font-black uppercase flex items-center space-x-1 shadow-md transition-all ${
-                reportDone
+                reportDone || campaignPaused
                   ? 'bg-zinc-700/70 text-zinc-300 cursor-not-allowed'
                   : 'bg-red-600 hover:bg-red-500 text-white shadow-red-600/30'
               }`}
             >
               <UserPlus className="w-4 h-4" />
-              <span>{reportDone ? 'Session clôturée' : '＋ Nouveau'}</span>
+              <span>{campaignPaused ? 'Campagne en pause' : (reportDone ? 'Session clôturée' : '＋ Nouveau')}</span>
             </button>
           </div>
         </div>
@@ -365,7 +369,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
 
           <button
             onClick={onOpenReportModal}
-            disabled={reportDone}
+            disabled={reportDone || campaignPaused}
             className={`px-3 py-2 bg-amber-500 text-black rounded-2xl text-xs font-black uppercase flex items-center space-x-1 shadow-md ${
               reportDone ? 'opacity-50 cursor-not-allowed' : 'hover:bg-amber-400'
             }`}
@@ -447,6 +451,14 @@ export const AgentView: React.FC<AgentViewProps> = ({
         </div>
       </div>
 
+      {campaignPaused && (
+        <section className="glass-card border border-amber-300/35 bg-amber-500/[0.08] p-4 text-left">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-200">Campagne actuellement en pause</p>
+          <p className="mt-1 text-xs font-semibold text-amber-50">Les pointages, saisies clients et rapports sont suspendus. Vos clients et archives restent consultables.</p>
+          {pauseReason && <p className="mt-2 rounded-xl border border-amber-200/15 bg-black/15 px-3 py-2 text-[10px] font-bold text-amber-100">{pauseReason}</p>}
+        </section>
+      )}
+
       {showPodium && (
         <div className={`rank-card-podium animate-pop ${podiumTier ? `podium-${podiumTier}` : 'podium-neutral'}`} style={podiumTier ? { ['--podium-watermark' as string]: `url('/trophees/Trophee_${podiumTier === 'gold' ? 'Gold' : (podiumTier === 'silver' ? 'Silver' : 'Bronze')}.png')` } : undefined}>
           <div className="flex items-center justify-between">
@@ -468,7 +480,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
         </div>
       )}
 
-      {!(checkinDone || checkinDoneLocal) && (
+      {!(checkinDone || checkinDoneLocal) && !campaignPaused && (
         <div className="glass-card text-center p-6 border border-white/10">
           <h2 className="text-xs font-black uppercase tracking-widest text-red-500 mb-4">Pointage d'Arrivée GPS</h2>
 
@@ -518,9 +530,9 @@ export const AgentView: React.FC<AgentViewProps> = ({
       <div className="grid grid-cols-2 gap-4">
         <button
           onClick={onOpenLeadModal}
-          disabled={reportDone}
+          disabled={reportDone || campaignPaused}
           className={`glass-card p-6 flex flex-col items-center justify-center space-y-2 text-center transition-all group ${
-            reportDone ? 'opacity-60 cursor-not-allowed' : 'hover:border-red-500/50'
+            reportDone || campaignPaused ? 'opacity-60 cursor-not-allowed' : 'hover:border-red-500/50'
           }`}
         >
           <div className="w-12 h-12 rounded-2xl bg-red-600/20 text-red-500 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -532,9 +544,9 @@ export const AgentView: React.FC<AgentViewProps> = ({
 
         <button
           onClick={onOpenReportModal}
-          disabled={reportDone}
+          disabled={reportDone || campaignPaused}
           className={`glass-card p-6 flex flex-col items-center justify-center space-y-2 text-center transition-all group ${
-            reportDone ? 'opacity-60 cursor-not-allowed' : 'hover:border-red-500/50'
+            reportDone || campaignPaused ? 'opacity-60 cursor-not-allowed' : 'hover:border-red-500/50'
           }`}
         >
           <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center group-hover:scale-110 transition-transform">

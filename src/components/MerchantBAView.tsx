@@ -32,6 +32,8 @@ interface MerchantBAViewProps {
   onPointagePhotoRecorded?: (storagePath: string) => void;
   openTransactionRequested?: boolean;
   onTransactionRequestHandled?: () => void;
+  campaignPaused?: boolean;
+  pauseReason?: string;
 }
 
 type Geo = { latitude: number; longitude: number; accuracy: number };
@@ -47,7 +49,7 @@ function locate(): Promise<Geo> {
   });
 }
 
-export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onPointagePhotoRecorded, openTransactionRequested = false, onTransactionRequestHandled }) => {
+export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onPointagePhotoRecorded, openTransactionRequested = false, onTransactionRequestHandled, campaignPaused = false, pauseReason = '' }) => {
   const today = toISO(new Date());
   const [run, setRun] = useState<CampaignRun | null>(null);
   const [positions, setPositions] = useState<PointOfSale[]>([]);
@@ -159,6 +161,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
   };
 
   const handleCheckin = async (photo: File) => {
+    if (campaignPaused) return;
     if (!run) {
       setError('Aucune vague active.');
       return;
@@ -187,6 +190,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
   };
 
   const saveMfs = () => void withAction(async () => {
+    if (campaignPaused) throw new Error('La campagne est actuellement en pause.');
     if (!attendance) throw new Error('Validez d’abord votre pointage du matin.');
     const selectedMfs = (mfsChoice === OTHER_MFS_VALUE ? otherMfsName : mfsChoice).trim();
     if (!selectedMfs) throw new Error('Sélectionnez ou renseignez le MFS qui vous accompagne.');
@@ -195,6 +199,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
   });
 
   const openTransactionFlow = () => {
+    if (campaignPaused) return;
     setError('');
     if (!isCheckedIn) {
       setError('Validez d’abord votre pointage du matin pour enregistrer une transaction.');
@@ -231,6 +236,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
   }, [openTransactionRequested, loading, isCheckedIn, isClosed, hasMfs, onTransactionRequestHandled]);
 
   const openReportFlow = () => {
+    if (campaignPaused) return;
     setError('');
     if (!attendance?.checkin_at) {
       setError('Validez d’abord votre pointage du matin avant d’ouvrir le rapport de clôture.');
@@ -244,6 +250,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
   };
 
   const closeDay = (closingComment: string) => void withAction(async () => {
+    if (campaignPaused) throw new Error('La campagne est actuellement en pause.');
     if (!attendance) throw new Error('Le pointage du matin est requis avant la clôture.');
     const { geo, fallback } = await resolveGeoForPatience();
     await closeDailyAttendance(attendance.id, { checkout_at: new Date().toISOString(), checkout_latitude: geo.latitude, checkout_longitude: geo.longitude, checkout_accuracy_m: geo.accuracy, closing_comment: closingComment.trim() || null, status: 'closed' });
@@ -255,6 +262,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
 
   return (
     <div className="space-y-4 pb-4">
+      {campaignPaused && <section className="glass-card border border-amber-300/35 bg-amber-500/[0.08] p-4"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-200">Campagne actuellement en pause</p><p className="mt-1 text-xs font-semibold text-amber-50">Les pointages, validations MFS, POS, transactions et clôtures sont suspendus. Vos données restent consultables.</p>{pauseReason && <p className="mt-2 rounded-xl border border-amber-200/15 bg-black/15 px-3 py-2 text-[10px] font-bold text-amber-100">{pauseReason}</p>}</section>}
       <section className="glass-card relative overflow-hidden border border-cyan-300/15 p-4">
         <div className="pointer-events-none absolute -right-12 -top-14 h-52 w-52 rounded-full bg-cyan-400/[0.08] blur-3xl" />
         <div className="pointer-events-none absolute -bottom-16 left-1/4 h-36 w-36 rounded-full bg-red-500/[0.08] blur-3xl" />
@@ -280,11 +288,11 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
       {error && <div className="rounded-2xl border border-red-400/50 bg-red-950/50 p-3 text-xs font-bold text-red-200">{error}</div>}
       {success && <div className="rounded-2xl border border-emerald-400/40 bg-emerald-950/40 p-3 text-xs font-bold text-emerald-200">{success}</div>}
 
-      {!isCheckedIn && <section className="glass-card p-6 text-center"><p className="mb-4 text-xs font-black uppercase tracking-widest text-red-400">Démarrer ma journée</p><div className="space-y-3"><label className="btn-neon btn-red flex cursor-pointer items-center justify-center gap-2"><Camera size={16}/><span>Prendre ma photo de pointage</span><input type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => { const photo = event.target.files?.[0]; if (photo) void handleCheckin(photo); event.currentTarget.value = ''; }} /></label></div></section>}
+      {!isCheckedIn && !campaignPaused && <section className="glass-card p-6 text-center"><p className="mb-4 text-xs font-black uppercase tracking-widest text-red-400">Démarrer ma journée</p><div className="space-y-3"><label className="btn-neon btn-red flex cursor-pointer items-center justify-center gap-2"><Camera size={16}/><span>Prendre ma photo de pointage</span><input type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => { const photo = event.target.files?.[0]; if (photo) void handleCheckin(photo); event.currentTarget.value = ''; }} /></label></div></section>}
 
-      {isCheckedIn && !isClosed && <section className="glass-card relative overflow-hidden border border-fuchsia-300/20 p-4"><div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-fuchsia-400/[0.09] blur-3xl"/><div className="relative"><div className="mb-3 flex items-center gap-2"><UsersRound className="text-fuchsia-200" size={18}/><div><h2 className="text-sm font-black">MFS qui vous accompagne</h2><p className="text-[10px] text-gray-400">Validez le MFS avant d’enregistrer des transactions.</p></div></div><MerchantMfsPicker value={mfsChoice} onChange={(value) => { setMfsChoice(value); if (value !== OTHER_MFS_VALUE) setOtherMfsName(''); }} accent="emerald"/>{mfsChoice === OTHER_MFS_VALUE && <input value={otherMfsName} onChange={(event) => setOtherMfsName(event.target.value)} placeholder="Nom du MFS" className="app-input mt-2 w-full rounded-2xl px-3 py-3 text-sm"/>}<button type="button" onClick={saveMfs} disabled={saving || !(mfsChoice === OTHER_MFS_VALUE ? otherMfsName.trim() : mfsChoice.trim())} className="mt-3 w-full rounded-2xl border border-emerald-300/35 bg-emerald-500/15 px-4 py-3 text-[10px] font-black uppercase text-emerald-100 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-45">{hasMfs ? 'Mettre à jour le MFS' : 'Confirmer le MFS'}</button></div></section>}
+      {isCheckedIn && !isClosed && !campaignPaused && <section className="glass-card relative overflow-hidden border border-fuchsia-300/20 p-4"><div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-fuchsia-400/[0.09] blur-3xl"/><div className="relative"><div className="mb-3 flex items-center gap-2"><UsersRound className="text-fuchsia-200" size={18}/><div><h2 className="text-sm font-black">MFS qui vous accompagne</h2><p className="text-[10px] text-gray-400">Validez le MFS avant d’enregistrer des transactions.</p></div></div><MerchantMfsPicker value={mfsChoice} onChange={(value) => { setMfsChoice(value); if (value !== OTHER_MFS_VALUE) setOtherMfsName(''); }} accent="emerald"/>{mfsChoice === OTHER_MFS_VALUE && <input value={otherMfsName} onChange={(event) => setOtherMfsName(event.target.value)} placeholder="Nom du MFS" className="app-input mt-2 w-full rounded-2xl px-3 py-3 text-sm"/>}<button type="button" onClick={saveMfs} disabled={saving || !(mfsChoice === OTHER_MFS_VALUE ? otherMfsName.trim() : mfsChoice.trim())} className="mt-3 w-full rounded-2xl border border-emerald-300/35 bg-emerald-500/15 px-4 py-3 text-[10px] font-black uppercase text-emerald-100 transition hover:bg-emerald-500/25 disabled:cursor-not-allowed disabled:opacity-45">{hasMfs ? 'Mettre à jour le MFS' : 'Confirmer le MFS'}</button></div></section>}
 
-      {isCheckedIn && <section className="grid grid-cols-2 gap-4"><button type="button" onClick={openTransactionFlow} disabled={isClosed || !hasMfs} className={`glass-card group flex min-h-36 flex-col items-center justify-center space-y-2 p-6 text-center transition-all ${isClosed || !hasMfs ? 'cursor-not-allowed opacity-60' : 'hover:border-cyan-300/45 active:scale-[0.98]'}`}><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/15 text-cyan-200 transition-transform group-hover:scale-110"><PlusCircle size={24}/></div><span className="text-xs font-black uppercase text-white">{isClosed ? 'Journée clôturée' : 'Nouvelle transaction'}</span><span className="text-[9px] font-semibold text-gray-400">{hasMfs ? 'POS, montant, client & capture' : 'MFS requis avant transaction'}</span></button><button type="button" onClick={openReportFlow} disabled={isClosed} className={`glass-card group flex min-h-36 flex-col items-center justify-center space-y-2 p-6 text-center transition-all ${isClosed ? 'cursor-not-allowed opacity-60' : 'hover:border-amber-300/45 active:scale-[0.98]'}`}><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-200 transition-transform group-hover:scale-110"><FileCheck2 size={24}/></div><span className="text-xs font-black uppercase text-white">{isClosed ? 'Journée clôturée' : 'Mon rapport'}</span><span className="text-[9px] font-semibold text-gray-400">Clôture, GPS & synthèse</span></button></section>}
+      {isCheckedIn && !campaignPaused && <section className="grid grid-cols-2 gap-4"><button type="button" onClick={openTransactionFlow} disabled={isClosed || !hasMfs} className={`glass-card group flex min-h-36 flex-col items-center justify-center space-y-2 p-6 text-center transition-all ${isClosed || !hasMfs ? 'cursor-not-allowed opacity-60' : 'hover:border-cyan-300/45 active:scale-[0.98]'}`}><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/15 text-cyan-200 transition-transform group-hover:scale-110"><PlusCircle size={24}/></div><span className="text-xs font-black uppercase text-white">{isClosed ? 'Journée clôturée' : 'Nouvelle transaction'}</span><span className="text-[9px] font-semibold text-gray-400">{hasMfs ? 'POS, montant, client & capture' : 'MFS requis avant transaction'}</span></button><button type="button" onClick={openReportFlow} disabled={isClosed} className={`glass-card group flex min-h-36 flex-col items-center justify-center space-y-2 p-6 text-center transition-all ${isClosed ? 'cursor-not-allowed opacity-60' : 'hover:border-amber-300/45 active:scale-[0.98]'}`}><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-200 transition-transform group-hover:scale-110"><FileCheck2 size={24}/></div><span className="text-xs font-black uppercase text-white">{isClosed ? 'Journée clôturée' : 'Mon rapport'}</span><span className="text-[9px] font-semibold text-gray-400">Clôture, GPS & synthèse</span></button></section>}
 
       {isClosed && <section className="glass-card border border-emerald-500/25 p-4 text-center"><CheckCircle2 className="mx-auto text-emerald-400"/><b className="mt-2 block">Journée clôturée</b><p className="mt-1 text-xs text-gray-400">{transactions.length} transactions enregistrées pour {visitedCount} POS visités. Retrouvez le rapport dans vos archives.</p></section>}
       <MerchantClosingReportModal isOpen={isClosingReportOpen} isSaving={saving} posCount={visitedCount} transactionCount={transactions.length} posTarget={posTarget} transactionsPerPosTarget={transactionsPerPosTarget} inactivePosCount={inactivePosCount} onClose={() => setIsClosingReportOpen(false)} onSubmit={closeDay} />

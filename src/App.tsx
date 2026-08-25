@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useCallback, useEffect, useState } from 'react';
-import { User, Shop, AgentMasterStatus, UserRole } from './types';
+import { User, Shop, AgentMasterStatus, UserRole, Campaign, CampaignPause } from './types';
 import {
   getUsers,
   getShops,
@@ -31,7 +31,7 @@ import {
   fetchLeadsFromSupabase,
   isSupabaseConfigured
 } from './utils/supabase';
-import { getActiveCampaignRuns, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, invalidateMerchantCache } from './utils/merchantCampaign';
+import { getActiveCampaignRuns, getCampaignPauses, getCampaignsForUser, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, invalidateMerchantCache } from './utils/merchantCampaign';
 
 import { SimulationBar } from './components/SimulationBar';
 import { Header, ThemeMode } from './components/Header';
@@ -132,6 +132,8 @@ export default function App() {
   const [toast, setToast] = useState<{ message: string; level: 'success' | 'error' } | null>(null);
   const [merchantProfilePhotoUrl, setMerchantProfilePhotoUrl] = useState('');
   const [merchantTransactionRequested, setMerchantTransactionRequested] = useState(false);
+  const [agentCampaigns, setAgentCampaigns] = useState<Campaign[]>([]);
+  const [activeCampaignPause, setActiveCampaignPause] = useState<CampaignPause | null>(null);
 
   useEffect(() => {
     if (currentUser) {
@@ -159,6 +161,50 @@ export default function App() {
     localStorage.setItem('btl_active_campaign', campaign);
     setActiveTab('home');
   };
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== 'agent') {
+      setAgentCampaigns([]);
+      setActiveCampaignPause(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const campaigns = await getCampaignsForUser(currentUser.id);
+        if (cancelled) return;
+        setAgentCampaigns(campaigns);
+        const current = campaigns.find((campaign) => (
+          activeCampaign === 'merchant-educational'
+            ? campaign.campaign_type === 'brand_ambassador' || campaign.code === 'merchant-educational-campaign'
+            : campaign.campaign_type !== 'brand_ambassador' && campaign.code !== 'merchant-educational-campaign'
+        ));
+        if (!current) {
+          const fallback = campaigns[0];
+          if (!fallback) {
+            setActiveCampaignPause(null);
+            return;
+          }
+          const nextContext = fallback.campaign_type === 'brand_ambassador' || fallback.code === 'merchant-educational-campaign'
+            ? 'merchant-educational'
+            : 'vodacom-privilege';
+          setActiveCampaign(nextContext);
+          localStorage.setItem('btl_active_campaign', nextContext);
+          const pauses = await getCampaignPauses(fallback.id);
+          if (!cancelled) setActiveCampaignPause(pauses.find((pause) => pause.starts_on <= toISO(new Date()) && (!pause.ends_on || pause.ends_on >= toISO(new Date()))) || null);
+          return;
+        }
+        const pauses = await getCampaignPauses(current.id);
+        if (!cancelled) setActiveCampaignPause(pauses.find((pause) => pause.starts_on <= toISO(new Date()) && (!pause.ends_on || pause.ends_on >= toISO(new Date()))) || null);
+      } catch {
+        if (!cancelled) {
+          setAgentCampaigns([]);
+          setActiveCampaignPause(null);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser?.id, currentUser?.role, activeCampaign, dataRevision]);
 
 const refreshData = useCallback(async (force = false) => {
   // Une action explicite de l’utilisateur doit toujours repartir des données réseau,
@@ -242,7 +288,7 @@ const refreshData = useCallback(async (force = false) => {
 
   useEffect(() => {
     const refreshStatus = () => {
-      runScheduledDailyReminders(new Date());
+      if (!activeCampaignPause) runScheduledDailyReminders(new Date());
       setOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
       setChatUnreadCount(currentUser ? getUnreadChatCount(currentUser.id) : 0);
       setSyncPendingCount(getSyncPendingCount());
@@ -258,7 +304,7 @@ const refreshData = useCallback(async (force = false) => {
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
     };
-  }, [currentUser?.id, activeTab, users.length]);
+  }, [currentUser?.id, activeTab, users.length, activeCampaignPause]);
 
   useEffect(() => {
     if (activeTab === 'chat' && currentUser) {
@@ -336,7 +382,16 @@ const refreshData = useCallback(async (force = false) => {
     role: effectiveRole
   };
 
-  const isMerchantContext = effectiveUser.userCategory === 'brand_ambassador' || activeCampaign === 'merchant-educational';
+  const isMerchantContext = activeCampaign === 'merchant-educational';
+  const agentCampaignOptions = agentCampaigns.map((campaign) => ({
+    key: (campaign.campaign_type === 'brand_ambassador' || campaign.code === 'merchant-educational-campaign' ? 'merchant-educational' : 'vodacom-privilege') as 'vodacom-privilege' | 'merchant-educational',
+    label: campaign.name,
+    note: campaign.campaign_type === 'brand_ambassador' ? 'Brand Ambassador' : 'Hôtesses',
+  })).filter((campaign, index, list) => list.findIndex((item) => item.key === campaign.key) === index);
+  const campaignIsPaused = effectiveRole === 'agent' && Boolean(activeCampaignPause);
+  const setPermittedCampaignContext = (campaign: 'vodacom-privilege' | 'merchant-educational') => {
+    if (effectiveRole !== 'agent' || agentCampaignOptions.some((option) => option.key === campaign)) setCampaignContext(campaign);
+  };
 
   const todayStr = toISO(new Date());
 
@@ -420,14 +475,14 @@ const todayLeads =
 
     if (activeTab === 'chat') {
       content = <ChatView currentUser={effectiveUser} onDataChanged={refreshData} />;
-    } else if (effectiveUser.userCategory === 'brand_ambassador') {
+    } else if (isMerchantContext && effectiveRole === 'agent') {
       content = activeTab === 'tab2'
-        ? <MerchantTransactionsView currentUser={effectiveUser} onRecordTransaction={() => { setMerchantTransactionRequested(true); setActiveTab('home'); }} />
+        ? <MerchantTransactionsView currentUser={effectiveUser} campaignPaused={campaignIsPaused} onRecordTransaction={() => { if (!campaignIsPaused) { setMerchantTransactionRequested(true); setActiveTab('home'); } }} />
         : activeTab === 'pos'
-          ? <MerchantPosVisitsView currentUser={effectiveUser} />
+          ? <MerchantPosVisitsView currentUser={effectiveUser} campaignPaused={campaignIsPaused} />
           : activeTab === 'tab3'
             ? <MerchantArchivesView currentUser={effectiveUser} />
-            : <MerchantBAView currentUser={effectiveUser} openTransactionRequested={merchantTransactionRequested} onTransactionRequestHandled={() => setMerchantTransactionRequested(false)} onPointagePhotoRecorded={(path) => { void getMerchantEvidencePublicUrl(path).then(setMerchantProfilePhotoUrl).catch(() => setMerchantProfilePhotoUrl('')); }} />;
+            : <MerchantBAView currentUser={effectiveUser} campaignPaused={campaignIsPaused} pauseReason={activeCampaignPause?.reason || ''} openTransactionRequested={merchantTransactionRequested} onTransactionRequestHandled={() => setMerchantTransactionRequested(false)} onPointagePhotoRecorded={(path) => { void getMerchantEvidencePublicUrl(path).then(setMerchantProfilePhotoUrl).catch(() => setMerchantProfilePhotoUrl('')); }} />;
     } else if (isMerchantContext && (effectiveRole === 'admin' || effectiveRole === 'super_admin' || effectiveRole === 'supervisor' || effectiveRole === 'sub_admin')) {
       content = activeTab === 'tab2'
         ? <MerchantMonitoringView />
@@ -473,7 +528,9 @@ const todayLeads =
     } else {
       content = (
         <AgentView
-          currentUser={effectiveUser}
+                currentUser={effectiveUser}
+                campaignPaused={campaignIsPaused}
+                pauseReason={activeCampaignPause?.reason || ''}
           activeShopId={activeShopId}
           activeTab={activeTab}
           todayLeads={todayLeads}
@@ -533,11 +590,15 @@ const todayLeads =
         online={online}
         syncPendingCount={syncPendingCount}
         profilePhotoUrl={(effectiveUser.userCategory === 'brand_ambassador' ? merchantProfilePhotoUrl : todayCheckinPhoto) || undefined}
-        onPointageRecorded={refreshData}
+        onPointageRecorded={campaignIsPaused ? undefined : refreshData}
+        allowCheckin={!campaignIsPaused}
         theme={theme}
         onSetTheme={setThemeMode}
         activeCampaign={isMerchantContext ? 'merchant-educational' : 'vodacom-privilege'}
-        onSetCampaign={realMasterUser.role === 'admin' || realMasterUser.role === 'super_admin' || realMasterUser.role === 'supervisor' || realMasterUser.role === 'sub_admin' ? setCampaignContext : undefined}
+        campaignOptions={effectiveRole === 'agent' ? agentCampaignOptions : undefined}
+        onSetCampaign={effectiveRole === 'agent'
+          ? (agentCampaignOptions.length > 1 ? setPermittedCampaignContext : undefined)
+          : (realMasterUser.role === 'admin' || realMasterUser.role === 'super_admin' || realMasterUser.role === 'supervisor' || realMasterUser.role === 'sub_admin' ? setCampaignContext : undefined)}
         onMarkNotifsRead={() => {
           markNotifsAsRead(effectiveUser.id);
           markChatAsRead(effectiveUser.id);

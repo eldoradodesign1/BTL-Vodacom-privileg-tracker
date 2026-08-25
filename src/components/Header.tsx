@@ -23,6 +23,8 @@ interface HeaderProps {
   onSetTheme?: (theme: ThemeMode) => void;
   activeCampaign?: 'vodacom-privilege' | 'merchant-educational';
   onSetCampaign?: (campaign: 'vodacom-privilege' | 'merchant-educational') => void;
+  campaignOptions?: Array<{ key: 'vodacom-privilege' | 'merchant-educational'; label: string; note: string }>;
+  allowCheckin?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -41,7 +43,9 @@ export const Header: React.FC<HeaderProps> = ({
   theme = 'anthracite',
   onSetTheme,
   activeCampaign = 'vodacom-privilege',
-  onSetCampaign
+  onSetCampaign,
+  campaignOptions,
+  allowCheckin = true
 }) => {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
@@ -65,6 +69,10 @@ export const Header: React.FC<HeaderProps> = ({
     : 'linear-gradient(100deg, rgba(5,7,12,0.68), rgba(10,14,22,0.34), rgba(8,10,17,0.56))';
   const topbarStyle = { backgroundImage: `${topbarOverlay}, url(/topbar-backgrounds/${theme}-gem.jpg)`, backgroundSize: 'cover', backgroundPosition: 'center' };
   const isDarkTheme = theme === 'anthracite' || theme === 'rubis' || theme === 'silver' || theme === 'diamond' || theme === 'sapphire' || theme === 'ambre';
+  const visibleCampaigns = campaignOptions || [
+    { key: 'vodacom-privilege' as const, label: 'Vodacom Privilège', note: 'Hôtesses' },
+    { key: 'merchant-educational' as const, label: 'Merchant Education', note: 'Brand Ambassadors' },
+  ];
   const syncState: 'ok' | 'progress' | 'late' = (() => {
     if (online && syncPendingCount === 0) return 'ok';
     if (online && syncPendingCount > 0) return 'progress';
@@ -93,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
   const handlePointageCapture = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
-    if (!file || isPointagePending) return;
+    if (!file || isPointagePending || !allowCheckin) return;
 
     setIsPointagePending(true);
     const shopObj = getShopById(user.permanentShopId);
@@ -177,9 +185,9 @@ export const Header: React.FC<HeaderProps> = ({
               pointageInputRef.current?.click();
             }
           }}
-          disabled={isPointagePending}
+          disabled={isPointagePending || !allowCheckin}
           className={`relative w-11 h-11 bg-red-600 rounded-2xl flex items-center justify-center font-black text-white text-base shadow-lg shadow-red-600/30 overflow-hidden shrink-0 border border-white/20 transition-transform ${photoSrc ? 'cursor-zoom-in hover:scale-[1.03]' : user.role === 'agent' ? 'cursor-pointer hover:scale-[1.03]' : 'cursor-default'} ${isPointagePending ? 'opacity-75' : ''}`}
-          aria-label={photoSrc ? 'Ouvrir la photo de pointage en plein écran' : 'Check-in en attente'}
+          aria-label={photoSrc ? 'Ouvrir la photo de pointage en plein écran' : (allowCheckin ? 'Check-in en attente' : 'Pointage indisponible pendant la pause de campagne')}
         >
           {photoSrc ? (
             <img
@@ -225,7 +233,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0" data-header-actions>
-          {onSetCampaign && (
+          {onSetCampaign && visibleCampaigns.length > 1 && (
             <div className="relative">
               <button
                 onClick={() => setShowCampaignMenu((prev) => !prev)}
@@ -240,10 +248,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <div className={`app-popover absolute right-0 top-11 w-56 border rounded-2xl p-1.5 shadow-2xl z-50 ${
                   isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
                 }`}>
-                  {[
-                    { key: 'vodacom-privilege', label: 'Vodacom Privilège', note: 'Hôtesses' },
-                    { key: 'merchant-educational', label: 'Merchant Education', note: 'Brand Ambassadors' }
-                  ].map((campaign) => (
+                  {visibleCampaigns.map((campaign) => (
                     <button
                       key={campaign.key}
                       onClick={() => { onSetCampaign(campaign.key as 'vodacom-privilege' | 'merchant-educational'); setShowCampaignMenu(false); }}

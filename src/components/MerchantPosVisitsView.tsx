@@ -7,13 +7,14 @@ import { toISO } from '../utils/storage';
 
 interface MerchantPosVisitsViewProps {
   currentUser: User;
+  campaignPaused?: boolean;
 }
 
 type VisitWithProof = BAPosVisit & { photoUrl?: string };
 
 const transactionSlots = (visit: BAPosVisit, target = 3) => Array.from({ length: target }, (_, index) => visit.transactions?.[index] || null);
 
-export const MerchantPosVisitsView: React.FC<MerchantPosVisitsViewProps> = ({ currentUser }) => {
+export const MerchantPosVisitsView: React.FC<MerchantPosVisitsViewProps> = ({ currentUser, campaignPaused = false }) => {
   const today = toISO(new Date());
   const [run, setRun] = useState<CampaignRun | null>(null);
   const [visits, setVisits] = useState<VisitWithProof[]>([]);
@@ -72,7 +73,7 @@ export const MerchantPosVisitsView: React.FC<MerchantPosVisitsViewProps> = ({ cu
         <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
         <div className="relative flex items-start justify-between gap-3">
           <div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200/70">Merchant Educational Campaign</p><h1 className="mt-1 text-xl font-black text-white">Mes POS</h1>{mfsName && <p className="mt-1 text-[10px] font-bold text-fuchsia-200">MFS du jour · {mfsName}</p>}</div>
-          <div className="flex shrink-0 items-center gap-2"><button type="button" onClick={() => setIsValidationOpen(true)} className="inline-flex items-center gap-1.5 rounded-2xl border border-emerald-300/30 bg-emerald-500/[0.10] px-3 py-2 text-[10px] font-black uppercase text-emerald-100 transition hover:bg-emerald-500/[0.18]"><PlusCircle size={15}/>Ajouter POS</button><button type="button" onClick={() => void refresh()} aria-label="Actualiser mes POS" className="rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 text-emerald-100 transition-colors hover:bg-white/10"><RefreshCw size={16}/></button></div>
+          <div className="flex shrink-0 items-center gap-2">{campaignPaused ? <span className="rounded-2xl border border-amber-300/30 bg-amber-500/[0.10] px-3 py-2 text-[9px] font-black uppercase text-amber-100">Campagne en pause</span> : <button type="button" onClick={() => setIsValidationOpen(true)} className="inline-flex items-center gap-1.5 rounded-2xl border border-emerald-300/30 bg-emerald-500/[0.10] px-3 py-2 text-[10px] font-black uppercase text-emerald-100 transition hover:bg-emerald-500/[0.18]"><PlusCircle size={15}/>Ajouter POS</button>}<button type="button" onClick={() => void refresh()} aria-label="Actualiser mes POS" className="rounded-2xl border border-white/10 bg-white/[0.05] p-2.5 text-emerald-100 transition-colors hover:bg-white/10"><RefreshCw size={16}/></button></div>
         </div>
         <div className="relative mt-4 grid grid-cols-2 divide-x divide-white/10 rounded-2xl border border-white/[0.08] bg-black/10 text-center"><div className="p-3"><b className="block text-lg font-black text-emerald-300">{visits.length}</b><span className="text-[9px] font-black uppercase text-gray-400">POS arrivés</span></div><div className="p-3"><b className="block text-lg font-black text-amber-200">{visits.reduce((total, visit) => total + (visit.transactions?.length || 0), 0)}/{visits.filter((visit) => visit.operational_status !== 'inactive').length * transactionTarget}</b><span className="text-[9px] font-black uppercase text-gray-400">Transactions attendues</span></div></div>
       </section>
@@ -95,7 +96,7 @@ export const MerchantPosVisitsView: React.FC<MerchantPosVisitsViewProps> = ({ cu
         <section className="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-black/30"><div className="flex items-center gap-2 border-b border-white/10 px-4 py-3 text-xs font-black uppercase tracking-wide text-cyan-100"><MapPin size={15}/> Localisation d’arrivée</div>{mapsUrl ? <iframe title={`Carte ${selectedVisit.point_of_sale?.denomination || 'POS'}`} src={mapsUrl} className="h-64 w-full border-0" loading="lazy" allowFullScreen /> : <div className="p-6 text-center text-sm text-gray-500">Coordonnées GPS indisponibles pour ce POS.</div>}</section>
       </section></div>}
       {photoPreview && <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/95 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-label={photoPreview.label} onClick={() => setPhotoPreview(null)}><button type="button" onClick={() => setPhotoPreview(null)} className="absolute right-5 top-5 rounded-full border border-white/15 bg-black/50 p-3 text-white transition hover:bg-white/15" aria-label="Fermer la photo"><X size={20}/></button><img src={photoPreview.url} alt={photoPreview.label} className="max-h-[88vh] max-w-full rounded-2xl object-contain shadow-2xl" onClick={(event) => event.stopPropagation()}/><p className="pointer-events-none absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/60 px-4 py-2 text-center text-[10px] font-black uppercase tracking-wide text-white/85">{photoPreview.label}</p></div>}
-      <MerchantPosValidationModal isOpen={isValidationOpen} currentUser={currentUser} run={run} positions={positions} visits={visits} activityDate={today} mfsName={mfsName} onClose={() => setIsValidationOpen(false)} onValidated={() => { setIsValidationOpen(false); void refresh(); }} />
+      <MerchantPosValidationModal isOpen={isValidationOpen && !campaignPaused} currentUser={currentUser} run={run} positions={positions} visits={visits} activityDate={today} mfsName={mfsName} onClose={() => setIsValidationOpen(false)} onValidated={() => { setIsValidationOpen(false); void refresh(); }} />
     </div>
   );
 };
