@@ -437,7 +437,7 @@ const todayLeads =
             ? <MerchantSupervisorView currentUser={effectiveUser} />
             : (effectiveRole === 'admin' || effectiveRole === 'super_admin')
               ? <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} />
-              : <><MerchantPodiumView /><MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} /></>;
+              : <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} podiumSlot={<MerchantPodiumView />} />;
     } else if (effectiveRole === 'admin' || effectiveRole === 'super_admin') {
       content = (
         <AdminView

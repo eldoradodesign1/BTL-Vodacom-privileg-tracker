@@ -6,11 +6,12 @@ import { getActiveCampaignRuns, getMerchantCampaign, getMerchantDashboardSummary
 
 interface MerchantAdminDashboardProps {
   onOpenManagement: () => void;
+  podiumSlot?: React.ReactNode;
 }
 
 const percentageColor = (value: number) => value >= 85 ? 'text-emerald-200' : value >= 50 ? 'text-amber-200' : 'text-rose-200';
 
-export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ onOpenManagement }) => {
+export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ onOpenManagement, podiumSlot }) => {
   const [run, setRun] = useState<CampaignRun | null>(null);
   const [summary, setSummary] = useState<MerchantDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,6 +73,8 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
         </div>
       </div>
     </section>
+
+    {podiumSlot}
 
     {error && <div className="rounded-2xl border border-rose-400/40 bg-rose-950/45 p-3 text-xs font-bold text-rose-100">{error}</div>}
 

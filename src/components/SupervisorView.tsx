@@ -13,6 +13,7 @@ import { TabType } from './BottomNav';
 import { Trophy, FileCheck, Eye, Search, Store, UserCheck, User as UserIcon, MapPin, Archive, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight, X, Check, Circle, FileX2 } from 'lucide-react';
 import { DateIconPicker } from './DateIconPicker';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
+import { CampaignPauseControl } from './CampaignPauseControl';
 
 interface SupervisorViewProps {
   currentUser: User;
@@ -942,6 +943,8 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
             Gestion des affectations des hôtesses aux points de vente Vodacom
           </p>
         </div>
+
+        <CampaignPauseControl currentUser={currentUser} campaignCode="vodacom-privilege" campaignLabel="Vodacom Privilège" minDate={activityStartIso} accent="amber"/>
 
         <div className="glass-card border border-white/10 p-5 space-y-4">
           <button
