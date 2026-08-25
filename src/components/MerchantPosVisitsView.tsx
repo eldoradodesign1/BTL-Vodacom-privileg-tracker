@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CheckCircle2, Clock3, Hash, Image, MapPin, PlusCircle, RefreshCw, Smartphone, Store, X } from 'lucide-react';
 import type { BAPosVisit, CampaignRun, PointOfSale, User } from '../types';
-import { getActiveCampaignRuns, getCampaignPos, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, getPosVisitsForBA, markMerchantPosVisitInactive } from '../utils/merchantCampaign';
+import { getActiveCampaignRuns, getCampaignPos, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, getPosVisitsForBA, getPosVisitsForDay, markMerchantPosVisitInactive } from '../utils/merchantCampaign';
 import { DateIconPicker } from './DateIconPicker';
 import { MerchantPosValidationModal } from './Modals/MerchantPosValidationModal';
 import { toISO } from '../utils/storage';
@@ -32,7 +32,7 @@ export const MerchantPosVisitsView: React.FC<MerchantPosVisitsViewProps> = ({ cu
   const [selectedDate, setSelectedDate] = useState(today);
   const [showHistory, setShowHistory] = useState(false);
 
-  const refresh = async () => {
+  const refresh = async (scope: 'day' | 'history' = showHistory ? 'history' : 'day', activityDate = selectedDate) => {
     setLoading(true);
     setError('');
     try {
@@ -41,24 +41,20 @@ export const MerchantPosVisitsView: React.FC<MerchantPosVisitsViewProps> = ({ cu
       const runs = await getActiveCampaignRuns(campaign.id);
       const activeRun = runs.find((item) => item.status === 'active') || runs[0] || null;
       setRun(activeRun);
-      if (!activeRun) {
-        setVisits([]);
-        return;
-      }
+      if (!activeRun) { setVisits([]); return; }
       const [nextVisits, nextPositions, nextAttendance] = await Promise.all([
-        getPosVisitsForBA(currentUser.id, activeRun.id),
+        scope === 'history' ? getPosVisitsForBA(currentUser.id, activeRun.id) : getPosVisitsForDay(currentUser.id, activeRun.id, activityDate),
         getCampaignPos(campaign.id),
         getDailyAttendance(currentUser.id, activeRun.id, today),
       ]);
-      const enrichedVisits = await Promise.all(nextVisits.map(async (visit) => ({
-        ...visit,
-        photoUrl: visit.arrival_photo_path ? await getMerchantEvidencePublicUrl(visit.arrival_photo_path) : '',
-      })));
+      const enrichedVisits = scope === 'history'
+        ? nextVisits.map((visit) => ({ ...visit, photoUrl: '' }))
+        : await Promise.all(nextVisits.map(async (visit) => ({ ...visit, photoUrl: visit.arrival_photo_path ? await getMerchantEvidencePublicUrl(visit.arrival_photo_path) : '' })));
       setPositions(nextPositions);
       setMfsName(nextAttendance?.mfs_name?.trim() || '');
       setVisits(enrichedVisits);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Impossible de charger vos POS du jour.');
+      setError(cause instanceof Error ? cause.message : 'Impossible de charger vos POS.');
     } finally {
       setLoading(false);
     }
@@ -72,7 +68,7 @@ export const MerchantPosVisitsView: React.FC<MerchantPosVisitsViewProps> = ({ cu
     ? `https://www.google.com/maps?q=${selectedVisit.latitude},${selectedVisit.longitude}&z=16&output=embed`
     : '';
   const transactionTarget = Number(run?.transactions_per_pos_target || 3);
-  const visibleVisits = useMemo(() => visits.filter((visit) => showHistory || visit.activity_date === selectedDate), [visits, showHistory, selectedDate]);
+  const visibleVisits = visits;
   const isTodayView = !showHistory && selectedDate === today;
   const markSelectedVisitInactive = async () => {
     if (!selectedVisit) return;
@@ -98,7 +94,7 @@ export const MerchantPosVisitsView: React.FC<MerchantPosVisitsViewProps> = ({ cu
         <div className="relative mt-4 grid grid-cols-2 divide-x divide-white/10 rounded-2xl border border-white/[0.08] bg-black/10 text-center"><div className="p-3"><b className="block text-lg font-black text-emerald-300">{visibleVisits.length}</b><span className="text-[9px] font-black uppercase text-gray-400">POS affichés</span></div><div className="p-3"><b className="block text-lg font-black text-amber-200">{visibleVisits.reduce((total, visit) => total + (visit.transactions?.length || 0), 0)}/{visibleVisits.filter((visit) => visit.operational_status !== 'inactive').length * transactionTarget}</b><span className="text-[9px] font-black uppercase text-gray-400">Transactions attendues</span></div></div>
       </section>
 
-      <section className="glass-card space-y-3 p-3"><div className="flex gap-2"><DateIconPicker value={selectedDate} onChange={(date) => { setSelectedDate(date); setShowHistory(false); }} className="inline-flex" buttonClassName="h-10 w-10 rounded-xl border border-white/10 bg-white/[0.05] text-emerald-100" labelClassName="hidden"/><div className="flex min-w-0 flex-1 items-center rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[10px] font-bold text-gray-400">{showHistory ? 'Tous les POS déjà visités' : 'POS de la date sélectionnée'}</div></div><div className="flex gap-2"><button type="button" onClick={() => { setSelectedDate(today); setShowHistory(false); }} className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase ${isTodayView ? 'border-emerald-300/45 bg-emerald-400/15 text-emerald-100' : 'border-white/10 bg-white/5 text-gray-400'}`}>Aujourd’hui</button><button type="button" onClick={() => setShowHistory((current) => !current)} className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase ${showHistory ? 'border-violet-300/35 bg-violet-400/[0.08] text-violet-100' : 'border-white/10 bg-white/5 text-gray-400'}`}>{showHistory ? 'Historique complet' : 'Voir tout l’historique'}</button></div></section>
+      <section className="glass-card space-y-3 p-3"><div className="flex gap-2"><DateIconPicker value={selectedDate} onChange={(date) => { setSelectedDate(date); setShowHistory(false); void refresh('day', date); }} className="inline-flex" buttonClassName="h-10 w-10 rounded-xl border border-white/10 bg-white/[0.05] text-emerald-100" labelClassName="hidden"/><div className="flex min-w-0 flex-1 items-center rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[10px] font-bold text-gray-400">{showHistory ? 'Tous les POS déjà visités' : 'POS de la date sélectionnée'}</div></div><div className="flex gap-2"><button type="button" onClick={() => { setSelectedDate(today); setShowHistory(false); void refresh('day', today); }} className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase ${isTodayView ? 'border-emerald-300/45 bg-emerald-400/15 text-emerald-100' : 'border-white/10 bg-white/5 text-gray-400'}`}>Aujourd’hui</button><button type="button" onClick={() => { const next = !showHistory; setShowHistory(next); void refresh(next ? 'history' : 'day', selectedDate); }} className={`rounded-xl border px-3 py-2 text-[10px] font-black uppercase ${showHistory ? 'border-violet-300/35 bg-violet-400/[0.08] text-violet-100' : 'border-white/10 bg-white/5 text-gray-400'}`}>{showHistory ? 'Historique complet' : 'Voir tout l’historique'}</button></div></section>
       {error && <div className="rounded-2xl border border-red-400/50 bg-red-950/50 p-3 text-xs font-bold text-red-200">{error}</div>}
       {!error && visibleVisits.length === 0 && <div className="glass-card p-8 text-center"><Store className="mx-auto mb-3 text-gray-500" size={28}/><p className="text-sm font-bold text-gray-300">Aucun POS pour cette période.</p><p className="mt-2 text-xs leading-relaxed text-gray-500">Choisissez une autre date ou consultez tout l’historique de vos visites.</p></div>}
 
