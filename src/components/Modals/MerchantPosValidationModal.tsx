@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, CheckCircle2, CircleOff, Command, MapPin, Save, Store, X, Zap } from 'lucide-react';
 import type { BAPosVisit, CampaignRun, PointOfSale, User } from '../../types';
-import { MERCHANT_CAMPAIGN_CODE, recordPosArrival, uploadMerchantEvidence } from '../../utils/merchantCampaign';
+import { canUseMerchantGpsFallback, getLastKnownMerchantLocation, MERCHANT_CAMPAIGN_CODE, recordPosArrival, uploadMerchantEvidence } from '../../utils/merchantCampaign';
 import { sameMerchantMfs } from '../../data/merchantMfs';
 import { MerchantPosCommandPalette } from './MerchantPosCommandPalette';
 import { ImageLightboxModal, type LightboxImage } from './ImageLightboxModal';
@@ -50,6 +50,17 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
   const existingVisit = useMemo(() => selectedPos ? visits.find((visit) => visit.pos_id === selectedPos.id) || null : null, [selectedPos, visits]);
   const filteredPositions = useMemo(() => mfsName ? positions.filter((pos) => sameMerchantMfs(pos.mfs_name, mfsName)) : positions, [mfsName, positions]);
 
+  const resolveGeoForPatience = async (): Promise<Geo> => {
+    try {
+      return await locate();
+    } catch (gpsError) {
+      if (!run || !canUseMerchantGpsFallback(currentUser.id)) throw gpsError;
+      const lastKnown = await getLastKnownMerchantLocation(currentUser.id, run.id);
+      if (!lastKnown) throw new Error('Aucune dernière localisation connue n’est disponible pour cette validation.');
+      return lastKnown;
+    }
+  };
+
   const choosePos = (pos: PointOfSale) => {
     setSelectedPos(pos);
     setError('');
@@ -89,7 +100,7 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
     if (operationalStatus === 'inactive' && !note.trim()) return setError('Expliquez pourquoi ce POS est déclaré non actif.');
     setSaving(true);
     try {
-      const geo = await locate();
+      const geo = await resolveGeoForPatience();
       const path = await uploadMerchantEvidence(
         MERCHANT_CAMPAIGN_CODE,
         `${currentUser.id}/${activityDate}/pos-validation-${selectedPos.id}-${Date.now()}.jpg`,

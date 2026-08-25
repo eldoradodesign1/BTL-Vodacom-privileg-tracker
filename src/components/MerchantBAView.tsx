@@ -8,6 +8,8 @@ import {
   getMerchantCampaign,
   getMerchantEvidencePublicUrl,
   getMerchantStandings,
+  canUseMerchantGpsFallback,
+  getLastKnownMerchantLocation,
   finalizePriorMerchantDays,
   getPosVisitsForDay,
   getTransactionsForDay,
@@ -145,6 +147,17 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
     }
   };
 
+  const resolveGeoForPatience = async (): Promise<{ geo: Geo; fallback: boolean }> => {
+    try {
+      return { geo: await locate(), fallback: false };
+    } catch (gpsError) {
+      if (!run || !canUseMerchantGpsFallback(currentUser.id)) throw gpsError;
+      const lastKnown = await getLastKnownMerchantLocation(currentUser.id, run.id);
+      if (!lastKnown) throw new Error('Aucune dernière localisation connue n’est encore disponible pour valider ce pointage.');
+      return { geo: lastKnown, fallback: true };
+    }
+  };
+
   const handleCheckin = async (photo: File) => {
     if (!run) {
       setError('Aucune vague active.');
@@ -158,11 +171,11 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
     setSuccess('Photo confirmée. Enregistrement du pointage GPS…');
     setCheckinDoneLocal(true);
     try {
-      const geo = await locate();
+      const { geo, fallback } = await resolveGeoForPatience();
       const path = await uploadMerchantEvidence(MERCHANT_CAMPAIGN_CODE, `${currentUser.id}/${today}/checkin-${Date.now()}.jpg`, photo);
       await recordCheckin({ campaign_run_id: run.id, ba_id: currentUser.id, activity_date: today, status: 'open', checkin_at: new Date().toISOString(), checkin_latitude: geo.latitude, checkin_longitude: geo.longitude, checkin_accuracy_m: geo.accuracy, checkin_photo_path: path });
       onPointagePhotoRecorded?.(path);
-      setSuccess('Pointage du matin enregistré avec photo et position GPS.');
+      setSuccess(fallback ? 'Pointage enregistré avec la dernière position GPS connue.' : 'Pointage du matin enregistré avec photo et position GPS.');
       await refresh();
     } catch (caught) {
       setCheckinDoneLocal(false);
@@ -232,10 +245,10 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
 
   const closeDay = (closingComment: string) => void withAction(async () => {
     if (!attendance) throw new Error('Le pointage du matin est requis avant la clôture.');
-    const geo = await locate();
+    const { geo, fallback } = await resolveGeoForPatience();
     await closeDailyAttendance(attendance.id, { checkout_at: new Date().toISOString(), checkout_latitude: geo.latitude, checkout_longitude: geo.longitude, checkout_accuracy_m: geo.accuracy, closing_comment: closingComment.trim() || null, status: 'closed' });
     setIsClosingReportOpen(false);
-    setSuccess('Journée clôturée avec succès.');
+    setSuccess(fallback ? 'Journée clôturée avec la dernière position GPS connue.' : 'Journée clôturée avec succès.');
   });
 
   if (loading) return <div className="glass-card p-6 text-center text-xs font-black uppercase tracking-widest text-gray-400">Chargement de votre journée…</div>;

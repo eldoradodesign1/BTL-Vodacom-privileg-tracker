@@ -477,6 +477,45 @@ const merchantDayBounds = (activityDate: string) => {
   return { start, end: `${nextDay.toISOString().slice(0, 10)}T00:00:00+00:00` };
 };
 
+// Exception terrain expressément autorisée pour le téléphone de Patience Tamfuri.
+// Toute autre identité reste soumise à la localisation GPS en direct.
+const MERCHANT_GPS_FALLBACK_BA_ID = 'ba-patience-tamfuri';
+export const canUseMerchantGpsFallback = (baId: string): boolean => baId === MERCHANT_GPS_FALLBACK_BA_ID;
+
+export interface MerchantKnownLocation {
+  latitude: number;
+  longitude: number;
+  accuracy: number;
+  recordedAt: string;
+}
+
+export async function getLastKnownMerchantLocation(baId: string, campaignRunId?: string): Promise<MerchantKnownLocation | null> {
+  if (!canUseMerchantGpsFallback(baId)) return null;
+  const client = getMerchantClient();
+  let attendanceQuery = client.from('ba_daily_attendance').select('checkin_at,checkin_latitude,checkin_longitude,checkin_accuracy_m,checkout_at,checkout_latitude,checkout_longitude,checkout_accuracy_m').eq('ba_id', baId).order('activity_date', { ascending: false }).limit(20);
+  let transactionQuery = client.from('ba_transactions').select('occurred_at,latitude,longitude,accuracy_m').eq('ba_id', baId).not('latitude', 'is', null).not('longitude', 'is', null).order('occurred_at', { ascending: false }).limit(20);
+  let visitQuery = client.from('ba_pos_visits').select('visited_at,latitude,longitude,accuracy_m').eq('ba_id', baId).not('latitude', 'is', null).not('longitude', 'is', null).order('visited_at', { ascending: false }).limit(20);
+  if (campaignRunId) {
+    attendanceQuery = attendanceQuery.eq('campaign_run_id', campaignRunId);
+    transactionQuery = transactionQuery.eq('campaign_run_id', campaignRunId);
+    visitQuery = visitQuery.eq('campaign_run_id', campaignRunId);
+  }
+  const [attendanceResponse, transactionResponse, visitResponse] = await Promise.all([attendanceQuery, transactionQuery, visitQuery]);
+  fail(attendanceResponse.error, 'Impossible de charger la dernière position de secours');
+  fail(transactionResponse.error, 'Impossible de charger la dernière position transactionnelle');
+  fail(visitResponse.error, 'Impossible de charger la dernière position POS');
+  const candidates: MerchantKnownLocation[] = [];
+  (attendanceResponse.data || []).forEach((item) => {
+    if (item.checkout_at && item.checkout_latitude != null && item.checkout_longitude != null) candidates.push({ latitude: Number(item.checkout_latitude), longitude: Number(item.checkout_longitude), accuracy: Number(item.checkout_accuracy_m || 0), recordedAt: item.checkout_at });
+    if (item.checkin_at && item.checkin_latitude != null && item.checkin_longitude != null) candidates.push({ latitude: Number(item.checkin_latitude), longitude: Number(item.checkin_longitude), accuracy: Number(item.checkin_accuracy_m || 0), recordedAt: item.checkin_at });
+  });
+  (transactionResponse.data || []).forEach((item) => candidates.push({ latitude: Number(item.latitude), longitude: Number(item.longitude), accuracy: Number(item.accuracy_m || 0), recordedAt: item.occurred_at }));
+  (visitResponse.data || []).forEach((item) => {
+    if (item.visited_at) candidates.push({ latitude: Number(item.latitude), longitude: Number(item.longitude), accuracy: Number(item.accuracy_m || 0), recordedAt: item.visited_at });
+  });
+  return candidates.sort((left, right) => right.recordedAt.localeCompare(left.recordedAt))[0] || null;
+}
+
 async function getMerchantTransactionTarget(runId: string): Promise<number> {
   const client = getMerchantClient();
   const { data, error } = await client

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, CheckCircle2, Command, ImageIcon, MapPin, Save, Sparkles, Store, X } from 'lucide-react';
 import type { BAPosVisit, CampaignRun, PointOfSale, User } from '../../types';
-import { createTransaction, MERCHANT_CAMPAIGN_CODE, recordPosArrival, uploadMerchantEvidence } from '../../utils/merchantCampaign';
+import { canUseMerchantGpsFallback, createTransaction, getLastKnownMerchantLocation, MERCHANT_CAMPAIGN_CODE, recordPosArrival, uploadMerchantEvidence } from '../../utils/merchantCampaign';
 import { sameMerchantMfs } from '../../data/merchantMfs';
 import { MerchantPosCommandPalette } from './MerchantPosCommandPalette';
 import { cleanPhoneNumber, formatMsisdn, isValidMsisdn } from '../../utils/phoneValidator';
@@ -82,6 +82,17 @@ export const MerchantTransactionModal: React.FC<MerchantTransactionModalProps> =
   useEffect(() => { clientNumberLatestRef.current = clientNumber; }, [clientNumber]);
   useEffect(() => () => { releasePreview(arrivalPreview); releasePreview(transactionPreview); }, [arrivalPreview, transactionPreview]);
 
+  const resolveGeoForPatience = async (): Promise<{ geo: Geo; fallback: boolean }> => {
+    try {
+      return { geo: await locate(), fallback: false };
+    } catch (gpsError) {
+      if (!run || !canUseMerchantGpsFallback(currentUser.id)) throw gpsError;
+      const lastKnown = await getLastKnownMerchantLocation(currentUser.id, run.id);
+      if (!lastKnown) throw new Error('Aucune dernière localisation connue n’est disponible pour cette validation.');
+      return { geo: lastKnown, fallback: true };
+    }
+  };
+
   const choosePos = (pos: PointOfSale) => {
     setSelectedPos(pos); setCreatedVisit(null); releasePreview(arrivalPreview); setArrivalPhoto(null); setArrivalPreview(''); setError('');
   };
@@ -145,7 +156,7 @@ export const MerchantTransactionModal: React.FC<MerchantTransactionModalProps> =
     if (!arrivalPhoto) return setError('Ajoutez la photo d’arrivée du POS.');
     setSaving(true);
     try {
-      const geo = await locate();
+      const { geo } = await resolveGeoForPatience();
       const path = await uploadMerchantEvidence(MERCHANT_CAMPAIGN_CODE, `${currentUser.id}/${activityDate}/pos-arrival-${selectedPos.id}-${Date.now()}.jpg`, arrivalPhoto);
       const visit = await recordPosArrival({ daily_assignment_id: null, campaign_run_id: run.id, ba_id: currentUser.id, pos_id: selectedPos.id, activity_date: activityDate, visited_at: new Date().toISOString(), latitude: geo.latitude, longitude: geo.longitude, accuracy_m: geo.accuracy, arrival_photo_path: path, status: 'visited', comment: null });
       setCreatedVisit(visit); onPosArrivalRecorded(visit);
@@ -163,7 +174,7 @@ export const MerchantTransactionModal: React.FC<MerchantTransactionModalProps> =
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) return setError('Saisissez un montant valide.');
     setSaving(true);
     try {
-      const geo = await locate();
+      const { geo } = await resolveGeoForPatience();
       const path = await uploadMerchantEvidence(MERCHANT_CAMPAIGN_CODE, `${currentUser.id}/${activityDate}/transaction-${Date.now()}.jpg`, transactionPhoto);
       await createTransaction({ campaign_run_id: run.id, ba_id: currentUser.id, pos_id: selectedPos.id, pos_visit_id: posVisit.id, transaction_reference: hasUnreadableReference ? null : reference.trim() || null, client_number: formatMsisdn(cleanPhoneNumber(clientNumber)), amount: numericAmount, evidence_path: path, occurred_at: new Date().toISOString(), latitude: geo.latitude, longitude: geo.longitude, accuracy_m: geo.accuracy, comment: comment.trim() || null, status: 'recorded' }, Number(run.transactions_per_pos_target || 3));
       setIsComplete(true); onRecorded();
