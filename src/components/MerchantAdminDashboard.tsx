@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, BarChart3, CheckCircle2, RefreshCw, Target, TrendingUp, UsersRound } from 'lucide-react';
+import { Activity, BarChart3, Banknote, CheckCircle2, RefreshCw, Target, TrendingUp, UsersRound } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { CampaignRun } from '../types';
 import { getActiveCampaignRuns, getMerchantCampaign, getMerchantDashboardSummary, type MerchantDashboardSummary } from '../utils/merchantCampaign';
@@ -7,11 +7,13 @@ import { getActiveCampaignRuns, getMerchantCampaign, getMerchantDashboardSummary
 interface MerchantAdminDashboardProps {
   onOpenManagement: () => void;
   podiumSlot?: React.ReactNode;
+  pendingFundRequestCount?: number;
+  onOpenFundRequests?: () => void;
 }
 
 const percentageColor = (value: number) => value >= 85 ? 'text-emerald-200' : value >= 50 ? 'text-amber-200' : 'text-rose-200';
 
-export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ onOpenManagement, podiumSlot }) => {
+export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ onOpenManagement, podiumSlot, pendingFundRequestCount = 0, onOpenFundRequests }) => {
   const [run, setRun] = useState<CampaignRun | null>(null);
   const [summary, setSummary] = useState<MerchantDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,6 +74,7 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
           <span className="text-[9px] font-bold text-gray-400">{summary.visitedToday} POS visités</span>
         </div>
       </div>
+      {onOpenFundRequests && <button type="button" onClick={onOpenFundRequests} className="relative mt-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/25 bg-emerald-500/[0.07] px-3.5 py-3 text-left transition hover:bg-emerald-500/[0.12]"><span className="flex items-center gap-2"><Banknote className="text-emerald-200" size={17}/><span><b className="block text-[10px] font-black uppercase tracking-wide text-emerald-100">Demandes de fonds</b><span className="mt-0.5 block text-[9px] font-semibold text-gray-400">Ouvrir le registre et traiter les demandes BA.</span></span></span><span className={`relative rounded-xl border px-3 py-1.5 text-[10px] font-black ${pendingFundRequestCount ? 'border-amber-300/40 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-white/[0.04] text-gray-400'}`}>{pendingFundRequestCount || '0'}{pendingFundRequestCount > 0 && <i className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-[#10131b] bg-amber-400 animate-pulse"/>}</span></button>}
     </section>
 
     {podiumSlot}

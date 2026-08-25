@@ -136,6 +136,7 @@ export default function App() {
   const [activeCampaignPause, setActiveCampaignPause] = useState<CampaignPause | null>(null);
   const [fundRequestAlerts, setFundRequestAlerts] = useState<Array<{ id: string; baName: string; amount: number; posLabel: string; requestedAt: string }>>([]);
   const [fundRequestToOpen, setFundRequestToOpen] = useState<string | null>(null);
+  const [openFundRequests, setOpenFundRequests] = useState(false);
 
   useEffect(() => {
     if (currentUser) {
@@ -531,10 +532,10 @@ const todayLeads =
         : activeTab === 'tab3'
           ? <MerchantSupervisorArchivesView />
           : activeTab === 'admin'
-            ? <MerchantSupervisorView currentUser={effectiveUser} openFundRequestId={fundRequestToOpen} onFundRequestOpened={() => setFundRequestToOpen(null)} />
+            ? <MerchantSupervisorView currentUser={effectiveUser} openFundRequestId={fundRequestToOpen} onFundRequestOpened={() => setFundRequestToOpen(null)} openFundRequests={openFundRequests} onFundRequestsOpened={() => setOpenFundRequests(false)} />
             : (effectiveRole === 'admin' || effectiveRole === 'super_admin')
-              ? <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} />
-              : <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} podiumSlot={<MerchantPodiumView />} />;
+              ? <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} pendingFundRequestCount={fundRequestAlerts.length} onOpenFundRequests={() => { setOpenFundRequests(true); setActiveTab('admin'); }} />
+              : <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} podiumSlot={<MerchantPodiumView />} pendingFundRequestCount={fundRequestAlerts.length} onOpenFundRequests={() => { setOpenFundRequests(true); setActiveTab('admin'); }} />;
     } else if (effectiveRole === 'admin' || effectiveRole === 'super_admin') {
       content = (
         <AdminView
@@ -653,6 +654,7 @@ const todayLeads =
         fundRequestAlerts={fundRequestAlerts}
         onOpenFundRequest={(requestId) => {
           setFundRequestToOpen(requestId);
+          setOpenFundRequests(false);
           setCampaignContext('merchant-educational');
           setActiveTab('admin');
         }}
