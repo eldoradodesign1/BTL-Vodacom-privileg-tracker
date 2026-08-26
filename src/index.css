@@ -1103,3 +1103,63 @@ body.theme-diamond .app-header .text-gray-400 {
 @media (prefers-reduced-motion: reduce) {
   .merchant-management-panel { animation: none; }
 }
+
+/* Toasts d’opérations : même profondeur, transparence et finesse que les surfaces premium. */
+.app-toast {
+  position: relative;
+  color: rgba(248, 250, 252, 0.98);
+  background:
+    linear-gradient(135deg, rgba(24, 31, 45, 0.92), rgba(8, 12, 21, 0.84)),
+    rgba(8, 12, 21, 0.86);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 22px 58px rgba(0, 0, 0, 0.34), 0 1px 0 rgba(255, 255, 255, 0.12) inset;
+  -webkit-backdrop-filter: blur(28px) saturate(1.25);
+  backdrop-filter: blur(28px) saturate(1.25);
+}
+
+.app-toast__eyebrow {
+  color: rgba(226, 232, 240, 0.66);
+}
+
+.app-toast__icon {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.075);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.11) inset;
+}
+
+.app-toast__glow {
+  opacity: 0.8;
+}
+
+.app-toast--success .app-toast__icon {
+  color: #9bf5cf;
+  border-color: rgba(110, 231, 183, 0.38);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.29), rgba(45, 212, 191, 0.10));
+}
+
+.app-toast--success .app-toast__glow {
+  background: linear-gradient(90deg, transparent, rgba(110, 231, 183, 0.75), transparent);
+}
+
+.app-toast--error .app-toast__icon {
+  color: #ffb4ac;
+  border-color: rgba(251, 113, 133, 0.38);
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.26), rgba(190, 24, 93, 0.11));
+}
+
+.app-toast--error .app-toast__glow {
+  background: linear-gradient(90deg, transparent, rgba(251, 113, 133, 0.72), transparent);
+}
+
+@keyframes toast-in {
+  0% { opacity: 0; transform: translateY(-12px) scale(0.97); filter: blur(2px); }
+  100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+.animate-toast-in {
+  animation: toast-in 300ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-toast-in { animation: none; }
+}

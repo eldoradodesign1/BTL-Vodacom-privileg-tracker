@@ -33,6 +33,7 @@ import {
 } from './utils/supabase';
 import { getActiveCampaignRuns, getCampaignPauses, getCampaigns, getCampaignsForUser, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, getMerchantFundRequests, invalidateMerchantCache, isCampaignPausedOn } from './utils/merchantCampaign';
 import { armFundRequestAlertAudio, emitFundRequestAlertSound, showFundRequestSystemNotification } from './utils/fundRequestAlert';
+import { CheckCircle2, CircleAlert } from 'lucide-react';
 
 import { SimulationBar } from './components/SimulationBar';
 import { Header, ThemeMode } from './components/Header';
@@ -741,15 +742,17 @@ const todayLeads =
         }}
       />
 
-      {toast && (
-        <div className="fixed left-1/2 top-4 z-[90] -translate-x-1/2 px-3">
-          <div className={`rounded-2xl border px-4 py-2 text-xs font-black uppercase shadow-xl backdrop-blur ${toast.level === 'error'
-            ? 'border-red-400/60 bg-red-600/90 text-white'
-            : 'border-emerald-400/50 bg-emerald-600/90 text-white'}`}>
-            {toast.message}
+      {toast && (() => {
+        const isError = toast.level === 'error';
+        const ToastIcon = isError ? CircleAlert : CheckCircle2;
+        return <div className="pointer-events-none fixed inset-x-0 top-[max(0.75rem,env(safe-area-inset-top))] z-[160] flex justify-center px-3 sm:px-5" aria-live="polite" aria-atomic="true">
+          <div className={`app-toast app-toast--${isError ? 'error' : 'success'} animate-toast-in flex w-full max-w-md items-center gap-3 overflow-hidden rounded-[1.35rem] border p-2.5 pr-3 shadow-2xl backdrop-blur-2xl`}>
+            <span className="app-toast__icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"><ToastIcon size={18} strokeWidth={2.4}/></span>
+            <div className="min-w-0 flex-1"><p className="app-toast__eyebrow text-[8px] font-black uppercase tracking-[0.18em]">{isError ? 'À vérifier' : 'Synchronisation'}</p><p className="mt-0.5 text-[11px] font-bold leading-snug">{toast.message}</p></div>
+            <span className="app-toast__glow pointer-events-none absolute inset-x-5 bottom-0 h-px" />
           </div>
-        </div>
-      )}
+        </div>;
+      })()}
 
       {isLeadModalOpen && (
         <Suspense fallback={null}>
