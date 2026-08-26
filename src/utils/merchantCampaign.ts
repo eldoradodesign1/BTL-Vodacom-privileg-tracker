@@ -1364,6 +1364,14 @@ export async function getMerchantFundRequests(options: { runId?: string; supervi
   return (data || []).map((item) => mapMerchantFundRequest(item as Record<string, unknown>));
 }
 
+export async function archiveRejectedMerchantFundRequests(superAdminId: string): Promise<number> {
+  const client = getMerchantClient();
+  const { data, error } = await client.rpc('archive_rejected_merchant_fund_requests', { p_archived_by: superAdminId });
+  fail(error, 'Impossible d’archiver les demandes rejetées.');
+  invalidateMerchantCache();
+  return Number(data || 0);
+}
+
 export async function updateMerchantFundRequestStatus(id: string, status: MerchantFundRequest['status'], reviewedBy?: string): Promise<void> {
   const client = getMerchantClient();
   const { error } = await client
