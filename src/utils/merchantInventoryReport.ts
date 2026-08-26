@@ -251,40 +251,69 @@ function styleWorkbook(workbook: ExcelJS.Workbook, sheet: ExcelJS.Worksheet) {
 export async function exportMerchantInventoryExcel(data: MerchantInventoryReportData): Promise<void> {
   const { default: ExcelJSRuntime } = await import('exceljs');
   const workbook = new ExcelJSRuntime.Workbook();
+  workbook.calcProperties.fullCalcOnLoad = true;
+
   const summary = workbook.addWorksheet('Synthèse', { properties: { tabColor: { argb: 'FF059669' } } });
   styleWorkbook(workbook, summary);
-  summary.mergeCells('A2:H2'); summary.getCell('A2').value = `Généré le ${data.generatedAt}`; summary.getCell('A2').font = { italic: true, color: { argb: 'FF475569' } };
+  summary.mergeCells('A2:H2'); summary.getCell('A2').value = `Généré le ${data.generatedAt} · Les indicateurs sont calculés depuis les registres source.`; summary.getCell('A2').font = { italic: true, color: { argb: 'FF475569' } };
   summary.addRows([
     ['Indicateur', 'Valeur', 'Lecture'],
-    ['POS référencés', data.totalPos, 'Inventaire campagne'],
-    ['POS couverts', data.coveredCount, `${data.coverageRate}% complétés ou non actifs`],
-    ['Transactions', data.totalTransactions, money(data.totalAmount)],
-    ['MFS recensés', data.totalMfs, 'Regroupement de l’inventaire'],
-    ['Objectif transactions / POS', Number(data.run.transactions_per_pos_target || 3), 'Référence de complétion'],
+    ['POS référencés', null, 'Inventaire campagne'],
+    ['POS couverts', null, 'Taux de couverture'],
+    ['Transactions', null, 'Montant total des transactions'],
+    ['MFS recensés', null, 'Regroupement de l’inventaire'],
+    ['Objectif transactions / POS', null, 'Référence de complétion'],
   ]);
   summary.getRow(3).font = { bold: true, color: { argb: 'FFFFFFFF' } }; summary.getRow(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF064E3B' } }; summary.getColumn('A').width = 30; summary.getColumn('B').width = 18; summary.getColumn('C').width = 38;
-  summary.addImage(workbook.addImage({ base64: statusChart(data), extension: 'png' }), { tl: { col: 4, row: 3 }, ext: { width: 350, height: 175 } });
-  summary.addImage(workbook.addImage({ base64: mfsChart(data), extension: 'png' }), { tl: { col: 0, row: 13 }, ext: { width: 500, height: 205 } });
+
+  const parameters = workbook.addWorksheet('Paramètres', { properties: { tabColor: { argb: 'FF64748B' } } });
+  parameters.columns = [{ header: 'Paramètre', key: 'label', width: 34 }, { header: 'Valeur', key: 'value', width: 18 }];
+  parameters.addRow({ label: 'Transactions / POS (objectif)', value: Math.max(1, Number(data.run.transactions_per_pos_target || 3)) });
+  parameters.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; parameters.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF475569' } }; parameters.state = 'hidden';
+
+  const transactions = workbook.addWorksheet('Transactions source', { properties: { tabColor: { argb: 'FF0EA5E9' } } });
+  transactions.columns = [{ header: 'Date', key: 'date', width: 18 }, { header: 'Short code', key: 'shortCode', width: 17 }, { header: 'POS', key: 'pos', width: 31 }, { header: 'MFS', key: 'mfs', width: 27 }, { header: 'BA', key: 'ba', width: 25 }, { header: 'Montant', key: 'amount', width: 18 }];
+  data.controls.flatMap((item) => item.transactions.map((transaction) => ({ date: dateOnly(transaction.occurred_at), shortCode: item.pos.agent_number, pos: item.pos.denomination, mfs: item.pos.mfs_name || '', ba: item.ba?.name || '', amount: Number(transaction.amount || 0) }))).sort((a, b) => a.date.localeCompare(b.date)).forEach((transaction) => transactions.addRow(transaction));
+  transactions.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; transactions.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF064E3B' } }; transactions.getColumn('F').numFmt = '$#,##0.00'; transactions.views = [{ state: 'frozen', ySplit: 1 }]; transactions.autoFilter = { from: 'A1', to: 'F1' };
+  const lastTransactionRow = Math.max(2, transactions.rowCount);
+  const transactionDateRange = `'Transactions source'!$A$2:$A$${lastTransactionRow}`;
+  const transactionShortCodeRange = `'Transactions source'!$B$2:$B$${lastTransactionRow}`;
+  const transactionAmountRange = `'Transactions source'!$F$2:$F$${lastTransactionRow}`;
 
   const pos = workbook.addWorksheet('POS', { properties: { tabColor: { argb: 'FF0284C7' } } });
   pos.columns = [
     { header: 'POS', key: 'name', width: 31 }, { header: 'Short code', key: 'shortCode', width: 17 }, { header: 'Adresse', key: 'address', width: 38 }, { header: 'Pool', key: 'pool', width: 16 }, { header: 'MFS', key: 'mfs', width: 27 }, { header: 'Statut', key: 'status', width: 17 }, { header: 'BA', key: 'ba', width: 25 }, { header: 'Téléphone BA', key: 'phone', width: 18 }, { header: 'Dernière visite', key: 'visited', width: 23 }, { header: 'Constat opérationnel', key: 'note', width: 42 }, { header: 'Transactions', key: 'transactions', width: 15 }, { header: 'Objectif Tx', key: 'target', width: 14 }, { header: 'Taux Tx', key: 'rate', width: 14 }, { header: 'Dernière transaction', key: 'lastTx', width: 23 },
   ];
-  const target = Math.max(1, Number(data.run.transactions_per_pos_target || 3));
-  data.controls.forEach((item) => { const lastTx = item.transactions[0]; pos.addRow({ name: item.pos.denomination, shortCode: item.pos.agent_number, address: item.pos.address, pool: item.pos.pool, mfs: item.pos.mfs_name || '', status: statusLabel(item.status), ba: item.ba?.name || '', phone: item.ba?.phone || '', visited: dateTime(item.visit?.visited_at), note: item.visit?.operational_note || item.visit?.comment || '', transactions: item.transactionCount, target, rate: item.transactionCount / target, lastTx: dateTime(lastTx?.occurred_at) }); });
+  data.controls.forEach((item) => { const lastTx = item.transactions[0]; const row = pos.addRow({ name: item.pos.denomination, shortCode: item.pos.agent_number, address: item.pos.address, pool: item.pos.pool, mfs: item.pos.mfs_name || '', status: statusLabel(item.status), ba: item.ba?.name || '', phone: item.ba?.phone || '', visited: dateTime(item.visit?.visited_at), note: item.visit?.operational_note || item.visit?.comment || '', lastTx: dateTime(lastTx?.occurred_at) }); row.getCell(11).value = { formula: `COUNTIF(${transactionShortCodeRange},B${row.number})` }; row.getCell(12).value = { formula: "'Paramètres'!$B$2" }; row.getCell(13).value = { formula: `IFERROR(K${row.number}/L${row.number},0)` }; });
   pos.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; pos.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF064E3B' } }; pos.getColumn('M').numFmt = '0%'; pos.views = [{ state: 'frozen', ySplit: 1 }]; pos.autoFilter = { from: 'A1', to: 'N1' };
   pos.eachRow((row, index) => { if (index > 1) { row.alignment = { vertical: 'top', wrapText: true }; if (index % 2 === 0) row.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } }; }); const status = data.controls[index - 2]?.status; if (status) { row.getCell(6).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${statusMeta[status].excelColor}` } }; row.getCell(6).font = { bold: true, color: { argb: 'FFFFFFFF' } }; } row.getCell(11).font = { bold: true, color: { argb: 'FF065F46' } }; } });
+  const lastPosRow = Math.max(2, pos.rowCount);
+  const posMfsRange = `'POS'!$E$2:$E$${lastPosRow}`;
+  const posStatusRange = `'POS'!$F$2:$F$${lastPosRow}`;
+  const posTransactionRange = `'POS'!$K$2:$K$${lastPosRow}`;
 
   const mfs = workbook.addWorksheet('MFS', { properties: { tabColor: { argb: 'FF7C3AED' } } });
   mfs.columns = [{ header: 'MFS', key: 'mfs', width: 30 }, { header: 'POS', key: 'pos', width: 12 }, { header: 'Complétés', key: 'completed', width: 15 }, { header: 'Non actifs', key: 'inactive', width: 15 }, { header: 'Actifs', key: 'active', width: 12 }, { header: 'Inachevés', key: 'incomplete', width: 15 }, { header: 'À faire', key: 'pending', width: 12 }, { header: 'Transactions', key: 'transactions', width: 16 }, { header: 'Couverture', key: 'coverage', width: 15 }, { header: 'BA associés', key: 'bas', width: 44 }];
-  data.mfsRows.forEach((row) => mfs.addRow({ mfs: row.mfs, pos: row.posCount, completed: row.completed, inactive: row.inactive, active: row.active, incomplete: row.incomplete, pending: row.pending, transactions: row.transactions, coverage: row.coverageRate / 100, bas: row.baNames }));
+  data.mfsRows.forEach((source) => { const row = mfs.addRow({ mfs: source.mfs }); row.getCell(2).value = { formula: `COUNTIF(${posMfsRange},A${row.number})` }; row.getCell(3).value = { formula: `COUNTIFS(${posMfsRange},A${row.number},${posStatusRange},"Complété")` }; row.getCell(4).value = { formula: `COUNTIFS(${posMfsRange},A${row.number},${posStatusRange},"Non actif")` }; row.getCell(5).value = { formula: `COUNTIFS(${posMfsRange},A${row.number},${posStatusRange},"Actif")` }; row.getCell(6).value = { formula: `COUNTIFS(${posMfsRange},A${row.number},${posStatusRange},"Inachevé")` }; row.getCell(7).value = { formula: `COUNTIFS(${posMfsRange},A${row.number},${posStatusRange},"À faire")` }; row.getCell(8).value = { formula: `SUMIF(${posMfsRange},A${row.number},${posTransactionRange})` }; row.getCell(9).value = { formula: `IFERROR((C${row.number}+D${row.number})/B${row.number},0)` }; row.getCell(10).value = { formula: `TEXTJOIN(" · ",TRUE,UNIQUE(FILTER('POS'!$G$2:$G$${lastPosRow},'POS'!$E$2:$E$${lastPosRow}=A${row.number},"")))` }; });
   mfs.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; mfs.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF064E3B' } }; mfs.getColumn('I').numFmt = '0%'; mfs.views = [{ state: 'frozen', ySplit: 1 }]; mfs.autoFilter = { from: 'A1', to: 'J1' };
   mfs.eachRow((row, index) => { if (index > 1) { row.alignment = { vertical: 'top', wrapText: true }; if (index % 2 === 0) row.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5F3FF' } }; }); row.getCell(9).font = { bold: true, color: { argb: 'FF065F46' } }; } });
+  const lastMfsRow = Math.max(2, mfs.rowCount);
 
   const evolution = workbook.addWorksheet('Évolution transactions', { properties: { tabColor: { argb: 'FF0EA5E9' } } });
   evolution.columns = [{ header: 'Date', key: 'date', width: 18 }, { header: 'Transactions', key: 'transactions', width: 18 }, { header: 'Montant', key: 'amount', width: 20 }];
-  data.dailyRows.forEach((row) => evolution.addRow({ date: new Date(`${row.date}T12:00:00`).toLocaleDateString('fr-FR'), transactions: row.transactions, amount: row.amount }));
+  data.dailyRows.forEach((source) => { const row = evolution.addRow({ date: source.date }); row.getCell(2).value = { formula: `COUNTIF(${transactionDateRange},A${row.number})` }; row.getCell(3).value = { formula: `SUMIF(${transactionDateRange},A${row.number},${transactionAmountRange})` }; });
   evolution.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; evolution.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF064E3B' } }; evolution.getColumn('C').numFmt = '$#,##0.00'; evolution.views = [{ state: 'frozen', ySplit: 1 }]; evolution.autoFilter = { from: 'A1', to: 'C1' };
+
+  summary.getCell('B4').value = { formula: `COUNTA('POS'!$A$2:$A$${lastPosRow})` };
+  summary.getCell('B5').value = { formula: `COUNTIF(${posStatusRange},"Complété")+COUNTIF(${posStatusRange},"Non actif")` };
+  summary.getCell('C5').value = { formula: 'IFERROR(B5/B4,0)' };
+  summary.getCell('B6').value = { formula: `SUM(${posTransactionRange})` };
+  summary.getCell('C6').value = { formula: `SUM(${transactionAmountRange})` };
+  summary.getCell('B7').value = { formula: `COUNTA('MFS'!$A$2:$A$${lastMfsRow})` };
+  summary.getCell('B8').value = { formula: "'Paramètres'!$B$2" };
+  summary.getCell('B4').numFmt = '0'; summary.getCell('B5').numFmt = '0'; summary.getCell('C5').numFmt = '0%'; summary.getCell('B6').numFmt = '0'; summary.getCell('C6').numFmt = '$#,##0.00'; summary.getCell('B7').numFmt = '0'; summary.getCell('B8').numFmt = '0';
+  summary.addImage(workbook.addImage({ base64: statusChart(data), extension: 'png' }), { tl: { col: 4, row: 3 }, ext: { width: 350, height: 175 } });
+  summary.addImage(workbook.addImage({ base64: mfsChart(data), extension: 'png' }), { tl: { col: 0, row: 13 }, ext: { width: 500, height: 205 } });
 
   const buffer = await workbook.xlsx.writeBuffer();
   triggerDownload(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `evolution-pos-mfs-merchant-${new Date().toISOString().slice(0, 10)}.xlsx`);

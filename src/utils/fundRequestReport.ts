@@ -244,35 +244,7 @@ function styleWorkbook(workbook: ExcelJS.Workbook, summary: ExcelJS.Worksheet) {
 export async function exportFundRequestsExcel(data: FundRequestReportData): Promise<void> {
   const { default: ExcelJSRuntime } = await import('exceljs');
   const workbook = new ExcelJSRuntime.Workbook();
-  const summary = workbook.addWorksheet('Synthèse', { properties: { tabColor: { argb: 'FF059669' } } });
-  styleWorkbook(workbook, summary);
-  summary.mergeCells('A2:H2'); summary.getCell('A2').value = `Généré le ${data.generatedAt}`; summary.getCell('A2').font = { italic: true, color: { argb: 'FF64748B' } };
-  const metricRows = [
-    ['Indicateur', 'Valeur', 'Lecture'],
-    ['Demandes enregistrées', data.totalRequests, `${money(data.averageAmount)} en moyenne`],
-    ['Montant sollicité', data.totalAmount, 'Total des demandes disponibles'],
-    ['En attente', data.pendingCount, money(data.pendingAmount)],
-    ['Approuvées', data.approvedCount, money(data.approvedAmount)],
-    ['Rejetées', data.rejectedCount, money(data.rejectedAmount)],
-    ['Taux de traitement', data.processedRate / 100, 'Hors demandes en attente'],
-    ['Taux d’approbation', data.approvalRate / 100, 'Parmi les décisions approuvée/rejetée'],
-  ];
-  summary.addRows(metricRows);
-  summary.getRow(3).font = { bold: true, color: { argb: 'FFFFFFFF' } }; summary.getRow(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
-  summary.getCell('B4').numFmt = '0'; summary.getCell('B5').numFmt = '$#,##0.00';
-  ['B6', 'B7', 'B8'].forEach((cell) => { summary.getCell(cell).numFmt = '0'; });
-  ['C6', 'C7', 'C8'].forEach((cell) => { summary.getCell(cell).numFmt = '$#,##0.00'; });
-  summary.getCell('B9').numFmt = '0%'; summary.getCell('B10').numFmt = '0%';
-  summary.getColumn('A').width = 28; summary.getColumn('B').width = 17; summary.getColumn('C').width = 35;
-  summary.addImage(workbook.addImage({ base64: statusChartPng(data), extension: 'png' }), { tl: { col: 4, row: 3 }, ext: { width: 350, height: 175 } });
-  summary.addImage(workbook.addImage({ base64: barChartPng('Montants par BA', data.byBa, '#0F766E'), extension: 'png' }), { tl: { col: 0, row: 13 }, ext: { width: 500, height: 202 } });
-  summary.addImage(workbook.addImage({ base64: barChartPng('Montants par MFS', data.byMfs, '#7C3AED'), extension: 'png' }), { tl: { col: 0, row: 26 }, ext: { width: 500, height: 202 } });
-
-  const statuses = workbook.addWorksheet('Par statut', { properties: { tabColor: { argb: 'FFF59E0B' } } });
-  statuses.columns = [{ header: 'Statut', key: 'label', width: 20 }, { header: 'Demandes', key: 'count', width: 16 }, { header: 'Montant', key: 'amount', width: 20 }];
-  data.statusBreakdown.forEach((row) => statuses.addRow({ label: row.label, count: row.count, amount: row.amount }));
-  statuses.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; statuses.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF064E3B' } }; statuses.getColumn('C').numFmt = '$#,##0.00'; statuses.views = [{ state: 'frozen', ySplit: 1 }];
-  statuses.eachRow((row, index) => { if (index > 1) { const current = data.statusBreakdown[index - 2]; row.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${statusMeta[current.status].excelColor}` } }; row.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; row.getCell(2).font = { bold: true, color: { argb: 'FF0F172A' } }; row.getCell(3).font = { bold: true, color: { argb: 'FF065F46' } }; } });
+  workbook.calcProperties.fullCalcOnLoad = true;
 
   const details = workbook.addWorksheet('Registre détaillé', { properties: { tabColor: { argb: 'FF0284C7' } } });
   details.columns = [
@@ -281,6 +253,50 @@ export async function exportFundRequestsExcel(data: FundRequestReportData): Prom
   data.requests.forEach((request) => details.addRow({ requestedAt: dateTime(request.requested_at), ba: safeLabel(request.ba?.name, request.ba_id), phone: request.ba_phone || request.ba?.phone || '', supervisor: request.supervisor?.name || 'Non affecté', mfs: request.mfs_name || '', pos: request.point_of_sale?.denomination || '', shortCode: request.point_of_sale?.agent_number || '', amount: Number(request.amount || 0), status: statusMeta[request.status].label, reviewedAt: dateTime(request.reviewed_at), reviewedBy: request.reviewed_by || '', note: request.note || '' }));
   details.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; details.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF064E3B' } }; details.getColumn('H').numFmt = '$#,##0.00'; details.views = [{ state: 'frozen', ySplit: 1 }]; details.autoFilter = { from: 'A1', to: 'L1' };
   details.eachRow((row, index) => { if (index > 1) { row.alignment = { vertical: 'top', wrapText: true }; if (index % 2 === 0) row.eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } }; }); const status = data.requests[index - 2]?.status; row.getCell(8).font = { bold: true, color: { argb: 'FF065F46' } }; if (status) { row.getCell(9).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${statusMeta[status].excelColor}` } }; row.getCell(9).font = { bold: true, color: { argb: 'FFFFFFFF' } }; } } });
+  const lastDetailRow = Math.max(2, details.rowCount);
+  const detailStatusRange = `'Registre détaillé'!$I$2:$I$${lastDetailRow}`;
+  const detailAmountRange = `'Registre détaillé'!$H$2:$H$${lastDetailRow}`;
+  const detailDateRange = `'Registre détaillé'!$A$2:$A$${lastDetailRow}`;
+
+  const statuses = workbook.addWorksheet('Par statut', { properties: { tabColor: { argb: 'FFF59E0B' } } });
+  statuses.columns = [{ header: 'Statut', key: 'label', width: 20 }, { header: 'Demandes', key: 'count', width: 16 }, { header: 'Montant', key: 'amount', width: 20 }];
+  statusOrder.forEach((status) => {
+    const row = statuses.addRow({ label: statusMeta[status].label });
+    row.getCell(2).value = { formula: `COUNTIF(${detailStatusRange},A${row.number})` };
+    row.getCell(3).value = { formula: `SUMIF(${detailStatusRange},A${row.number},${detailAmountRange})` };
+  });
+  statuses.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; statuses.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF064E3B' } }; statuses.getColumn('C').numFmt = '$#,##0.00'; statuses.views = [{ state: 'frozen', ySplit: 1 }]; statuses.autoFilter = { from: 'A1', to: 'C1' };
+  statuses.eachRow((row, index) => { if (index > 1) { const status = statusOrder[index - 2]; row.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: `FF${statusMeta[status].excelColor}` } }; row.getCell(1).font = { bold: true, color: { argb: 'FFFFFFFF' } }; row.getCell(2).font = { bold: true, color: { argb: 'FF0F172A' } }; row.getCell(3).font = { bold: true, color: { argb: 'FF065F46' } }; } });
+
+  const summary = workbook.addWorksheet('Synthèse', { properties: { tabColor: { argb: 'FF059669' } } });
+  styleWorkbook(workbook, summary);
+  summary.mergeCells('A2:H2'); summary.getCell('A2').value = `Généré le ${data.generatedAt} · Tous les indicateurs sont calculés depuis le registre détaillé.`; summary.getCell('A2').font = { italic: true, color: { argb: 'FF64748B' } };
+  summary.addRows([
+    ['Indicateur', 'Valeur', 'Lecture'],
+    ['Demandes enregistrées', null, 'Montant moyen par demande'],
+    ['Montant sollicité', null, 'Somme du registre détaillé'],
+    ['En attente', null, 'Montant en attente'],
+    ['Approuvées', null, 'Montant approuvé'],
+    ['Rejetées', null, 'Montant rejeté'],
+    ['Taux de traitement', null, 'Hors demandes en attente'],
+    ['Taux d’approbation', null, 'Parmi les décisions approuvée/rejetée'],
+  ]);
+  summary.getCell('B4').value = { formula: `COUNTA(${detailDateRange})` };
+  summary.getCell('C4').value = { formula: 'IFERROR(B5/B4,0)' };
+  summary.getCell('B5').value = { formula: `SUM(${detailAmountRange})` };
+  summary.getCell('B6').value = { formula: `COUNTIF(${detailStatusRange},"En attente")` };
+  summary.getCell('C6').value = { formula: `SUMIF(${detailStatusRange},"En attente",${detailAmountRange})` };
+  summary.getCell('B7').value = { formula: `COUNTIF(${detailStatusRange},"Approuvée")` };
+  summary.getCell('C7').value = { formula: `SUMIF(${detailStatusRange},"Approuvée",${detailAmountRange})` };
+  summary.getCell('B8').value = { formula: `COUNTIF(${detailStatusRange},"Rejetée")` };
+  summary.getCell('C8').value = { formula: `SUMIF(${detailStatusRange},"Rejetée",${detailAmountRange})` };
+  summary.getCell('B9').value = { formula: 'IFERROR((B4-B6)/B4,0)' };
+  summary.getCell('B10').value = { formula: 'IFERROR(B7/(B7+B8),0)' };
+  summary.getRow(3).font = { bold: true, color: { argb: 'FFFFFFFF' } }; summary.getRow(3).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F766E' } };
+  summary.getCell('B4').numFmt = '0'; summary.getCell('B5').numFmt = '$#,##0.00'; ['B6', 'B7', 'B8'].forEach((cell) => { summary.getCell(cell).numFmt = '0'; }); ['C4', 'C6', 'C7', 'C8'].forEach((cell) => { summary.getCell(cell).numFmt = '$#,##0.00'; }); summary.getCell('B9').numFmt = '0%'; summary.getCell('B10').numFmt = '0%'; summary.getColumn('A').width = 28; summary.getColumn('B').width = 17; summary.getColumn('C').width = 35;
+  summary.addImage(workbook.addImage({ base64: statusChartPng(data), extension: 'png' }), { tl: { col: 4, row: 3 }, ext: { width: 350, height: 175 } });
+  summary.addImage(workbook.addImage({ base64: barChartPng('Montants par BA', data.byBa, '#0F766E'), extension: 'png' }), { tl: { col: 0, row: 13 }, ext: { width: 500, height: 202 } });
+  summary.addImage(workbook.addImage({ base64: barChartPng('Montants par MFS', data.byMfs, '#7C3AED'), extension: 'png' }), { tl: { col: 0, row: 26 }, ext: { width: 500, height: 202 } });
 
   const buffer = await workbook.xlsx.writeBuffer();
   triggerDownload(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `rapport-demandes-fonds-merchant-${new Date().toISOString().slice(0, 10)}.xlsx`);
