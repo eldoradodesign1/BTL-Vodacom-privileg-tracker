@@ -9,6 +9,7 @@ import { MerchantPosCreateModal } from './Modals/MerchantPosCreateModal';
 import { MerchantFundRequestDecisionModal } from './Modals/MerchantFundRequestDecisionModal';
 import { MerchantFundRequestsModal } from './Modals/MerchantFundRequestsModal';
 const MerchantFundRequestsReportModal = React.lazy(() => import('./Modals/MerchantFundRequestsReportModal').then((module) => ({ default: module.MerchantFundRequestsReportModal })));
+const MerchantInventoryExportModal = React.lazy(() => import('./Modals/MerchantInventoryExportModal').then((module) => ({ default: module.MerchantInventoryExportModal })));
 
 interface MerchantSupervisorViewProps { currentUser: User; openFundRequestId?: string | null; onFundRequestOpened?: () => void; openFundRequests?: boolean; onFundRequestsOpened?: () => void; }
 type MerchantOperation = 'profile' | 'report' | 'location' | 'calendar';
@@ -43,6 +44,7 @@ export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = ({ 
   const [isFundRequestsOpen, setIsFundRequestsOpen] = useState(false);
   const [isFundRequestReportOpen, setIsFundRequestReportOpen] = useState(false);
   const [fundRequestReportRequests, setFundRequestReportRequests] = useState<MerchantFundRequest[]>([]);
+  const [isInventoryExportOpen, setIsInventoryExportOpen] = useState(false);
 
   const load = async () => {
     setLoading(true); setError('');
@@ -172,6 +174,7 @@ export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = ({ 
   return <div className="space-y-4 pb-4">
     {error && <div className="rounded-2xl border border-red-400/40 bg-red-950/45 p-3 text-xs font-bold text-red-100">{error}</div>}
     <button type="button" onClick={() => setIsFundRequestsOpen(true)} className="glass-card relative flex w-full items-center justify-between gap-3 border border-emerald-300/25 bg-emerald-500/[0.06] px-4 py-3 text-left transition hover:bg-emerald-500/[0.10]"><span className="flex min-w-0 items-center gap-2"><Banknote className="shrink-0 text-emerald-200" size={18}/><span><b className="block text-xs font-black uppercase tracking-wide text-emerald-100">Demandes de fonds</b><span className="mt-0.5 block text-[10px] font-semibold text-gray-400">Consulter, exporter et traiter les demandes Merchant.</span></span></span><span className={`relative shrink-0 rounded-xl border px-3 py-1.5 text-[10px] font-black ${pendingFundRequests.length ? 'border-amber-300/40 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-white/[0.04] text-gray-400'}`}>{pendingFundRequests.length || '0'}{pendingFundRequests.length > 0 && <i className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-[#10131b] bg-amber-400 animate-pulse"/>}</span></button>
+    <button type="button" onClick={() => setIsInventoryExportOpen(true)} className="glass-card flex w-full items-center justify-between gap-3 border border-cyan-300/25 bg-cyan-500/[0.06] px-4 py-3 text-left transition hover:bg-cyan-500/[0.10]"><span className="flex min-w-0 items-center gap-2"><FileText className="shrink-0 text-cyan-200" size={18}/><span><b className="block text-xs font-black uppercase tracking-wide text-cyan-100">Exports POS & MFS</b><span className="mt-0.5 block text-[10px] font-semibold text-gray-400">Synthèse de couverture, évolution, inventaire et registres détaillés.</span></span></span><span className="shrink-0 rounded-xl border border-cyan-300/25 bg-black/[0.15] px-3 py-1.5 text-[9px] font-black uppercase text-cyan-100">PDF · Excel</span></button>
     <nav aria-label="Sections Gestion Merchant" className="flex rounded-2xl border border-white/10 bg-white/5 p-1">{([{ id: 'ba', label: 'BA', Icon: UsersRound }, { id: 'pos', label: 'POS', Icon: Filter }, { id: 'mfs', label: 'MFS', Icon: Target }, { id: 'targets', label: 'Targets', Icon: Save }] as const).map(({ id, label, Icon }) => <button key={id} type="button" onClick={() => setManagementTab(id)} className={`flex-1 rounded-xl py-2 text-[10px] font-black uppercase transition-all ${managementTab === id ? 'bg-violet-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'}`}><span className="inline-flex items-center justify-center gap-1"><Icon size={14}/><span>{label}</span></span></button>)}</nav>
     <div key={managementTab} className="merchant-management-panel space-y-4">
 
@@ -185,6 +188,7 @@ export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = ({ 
     </div>
     <MerchantFundRequestsModal isOpen={isFundRequestsOpen} requests={fundRequests} onClose={() => setIsFundRequestsOpen(false)} onOpenReport={(requests) => { setFundRequestReportRequests(requests); setIsFundRequestReportOpen(true); }} onSelect={(request) => { setIsFundRequestsOpen(false); setSelectedFundRequest(request); }} />
     {isFundRequestReportOpen && <React.Suspense fallback={null}><MerchantFundRequestsReportModal isOpen requests={fundRequestReportRequests} onClose={() => setIsFundRequestReportOpen(false)} /></React.Suspense>}
+    {isInventoryExportOpen && run && <React.Suspense fallback={null}><MerchantInventoryExportModal isOpen run={run} controls={controls} onClose={() => setIsInventoryExportOpen(false)} /></React.Suspense>}
     <MerchantFundRequestDecisionModal request={selectedFundRequest} currentUser={currentUser} onClose={() => setSelectedFundRequest(null)} onUpdated={() => void load()} />
     <MerchantBAOperationsModal isOpen={Boolean(operation)} mode={operation?.mode || 'profile'} activity={operation?.activity || null} run={run} onClose={() => setOperation(null)}/>
     <MerchantPosControlDetailModal item={selectedPos} transactionsPerPosTarget={targets.transactions_per_pos_target} onClose={() => setSelectedPos(null)} onUpdated={() => void load()}/>
