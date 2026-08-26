@@ -27,6 +27,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   const [comment, setComment] = useState('');
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [commentError, setCommentError] = useState('');
 
   if (!isOpen) return null;
 
@@ -76,6 +77,11 @@ export const ReportModal: React.FC<ReportModalProps> = ({
   };
 
   const handleSendReport = async () => {
+    if (!comment.trim()) {
+      setCommentError('Le commentaire de clôture est obligatoire.');
+      return;
+    }
+    setCommentError('');
     setLoading(true);
 
     const nowIso = new Date().toISOString();
@@ -232,18 +238,20 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           </div>
 
           <div>
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Observations / Remarques</label>
+            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Commentaire de clôture <span className="text-red-300">*</span></label>
             <textarea
               value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Saisissez ici les observations de la journée..."
+              onChange={(e) => { setComment(e.target.value); if (commentError) setCommentError(''); }}
+              required
+              placeholder="Résumé obligatoire de la journée, alerte ou information terrain…"
               className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-xs h-24 focus:outline-none focus:border-red-500"
             />
+            {commentError && <p className="mt-2 text-[10px] font-bold text-red-300">{commentError}</p>}
           </div>
 
           <button
             onClick={handleSendReport}
-            disabled={loading}
+            disabled={loading || !comment.trim()}
             className="btn-neon btn-red w-full mt-4 flex items-center justify-center space-x-2"
           >
             <FileText className="w-4 h-4" />

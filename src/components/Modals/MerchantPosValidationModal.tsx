@@ -48,7 +48,11 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   const existingVisit = useMemo(() => selectedPos ? visits.find((visit) => visit.pos_id === selectedPos.id) || null : null, [selectedPos, visits]);
-  const filteredPositions = useMemo(() => mfsName ? positions.filter((pos) => sameMerchantMfs(pos.mfs_name, mfsName)) : positions, [mfsName, positions]);
+  const inactivePosIds = useMemo(() => new Set(visits.filter((visit) => visit.operational_status === 'inactive').map((visit) => visit.pos_id)), [visits]);
+  const filteredPositions = useMemo(() => {
+    const mfsFiltered = mfsName ? positions.filter((pos) => sameMerchantMfs(pos.mfs_name, mfsName)) : positions;
+    return mfsFiltered.filter((pos) => !inactivePosIds.has(pos.id));
+  }, [inactivePosIds, mfsName, positions]);
 
   const resolveGeoForPatience = async (): Promise<Geo> => {
     try {
@@ -62,6 +66,10 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
   };
 
   const choosePos = (pos: PointOfSale) => {
+    if (inactivePosIds.has(pos.id)) {
+      setError('Ce POS est déclaré non actif. Réactivez-le depuis Mes POS avant de le valider à nouveau.');
+      return;
+    }
     setSelectedPos(pos);
     setError('');
   };

@@ -500,6 +500,8 @@ export async function createMerchantPos(input: MerchantPosCreateInput): Promise<
   return data as PointOfSale;
 }
 
+export const MERCHANT_FUND_REQUEST_POS_QUOTA = 4.5;
+
 export async function markMerchantPosVisitInactive(visitId: string, operationalNote: string): Promise<BAPosVisit> {
   const note = operationalNote.trim();
   if (!note) throw new Error('Le constat terrain est obligatoire pour déclarer un POS non actif.');
@@ -531,8 +533,38 @@ export async function markMerchantPosVisitInactive(visitId: string, operationalN
     .single();
   fail(error, 'Impossible de corriger ce POS en non actif.');
   const visit = data as BAPosVisit;
+  const { error: posError } = await client
+    .from('points_of_sale')
+    .update({ is_active: false })
+    .eq('id', visit.pos_id);
+  fail(posError, 'Impossible de retirer ce POS des sélecteurs actifs.');
   invalidateMerchantCache();
   return visit;
+}
+
+export async function markMerchantPosVisitActive(visitId: string): Promise<BAPosVisit> {
+  const client = getMerchantClient();
+  const { data: visitData, error: visitError } = await client
+    .from('ba_pos_visits')
+    .select('id,pos_id,status,operational_status')
+    .eq('id', visitId)
+    .single();
+  fail(visitError, 'Impossible de vérifier ce POS avant réactivation');
+  const visitToRestore = visitData as Pick<BAPosVisit, 'id' | 'pos_id' | 'status' | 'operational_status'>;
+  const { data, error } = await client
+    .from('ba_pos_visits')
+    .update({ operational_status: 'active', operational_note: null, status: visitToRestore.status === 'incomplete' ? 'incomplete' : 'visited', updated_at: new Date().toISOString() })
+    .eq('id', visitId)
+    .select('*')
+    .single();
+  fail(error, 'Impossible de réactiver ce POS.');
+  const { error: posError } = await client
+    .from('points_of_sale')
+    .update({ is_active: true })
+    .eq('id', visitToRestore.pos_id);
+  fail(posError, 'Impossible de rendre ce POS disponible à nouveau.');
+  invalidateMerchantCache();
+  return data as BAPosVisit;
 }
 
 export async function updateMerchantPosMfs(posId: string, mfsName: string): Promise<PointOfSale> {
@@ -745,6 +777,7 @@ export async function finalizePriorMerchantDays(runId: string, baId: string, cur
 }
 
 export async function closeDailyAttendance(id: string, input: Pick<BADailyAttendance, 'checkout_at' | 'checkout_latitude' | 'checkout_longitude' | 'checkout_accuracy_m' | 'closing_comment' | 'status'>): Promise<BADailyAttendance> {
+  if (!input.closing_comment?.trim()) throw new Error('Le commentaire de clôture est obligatoire.');
   const client = getMerchantClient();
   const { data: attendance, error: attendanceError } = await client
     .from('ba_daily_attendance')
@@ -784,6 +817,13 @@ export async function updateMerchantAttendanceMfs(attendanceId: string, mfsName:
 
 export async function recordPosArrival(input: Omit<BAPosVisit, 'id' | 'created_at' | 'updated_at' | 'point_of_sale' | 'transactions'>): Promise<BAPosVisit> {
   const client = getMerchantClient();
+  const { data: pointOfSale, error: posLookupError } = await client
+    .from('points_of_sale')
+    .select('is_active')
+    .eq('id', input.pos_id)
+    .single();
+  fail(posLookupError, 'Impossible de vérifier le statut du POS.');
+  if (pointOfSale?.is_active === false) throw new Error('Ce POS est déclaré non actif. Réactivez-le depuis Mes POS avant de le valider ou d’y enregistrer une transaction.');
   const activityDate = clampMerchantActivityDate(input.activity_date);
   await markIncompleteMerchantPosVisits({
     runId: input.campaign_run_id,
@@ -820,6 +860,14 @@ export async function recordPosArrival(input: Omit<BAPosVisit, 'id' | 'created_a
 
 export async function createTransaction(input: Omit<BATransaction, 'id' | 'created_at' | 'updated_at'>, target?: number): Promise<BATransaction> {
   const client = getMerchantClient();
+  if (!input.pos_visit_id) throw new Error('Validez d’abord l’arrivée au POS avant d’enregistrer une transaction.');
+  const { data: visit, error: visitError } = await client
+    .from('ba_pos_visits')
+    .select('operational_status')
+    .eq('id', input.pos_visit_id)
+    .single();
+  fail(visitError, 'Impossible de vérifier le statut opérationnel du POS.');
+  if (visit?.operational_status === 'inactive') throw new Error('Ce POS est déclaré non actif. Aucune transaction ne peut y être saisie tant qu’il n’est pas réactivé.');
   const { data, error } = await client.from('ba_transactions').insert(input).select().single();
   fail(error, 'Impossible d’enregistrer la transaction');
 
@@ -1255,9 +1303,25 @@ function mapMerchantFundRequest(data: Record<string, unknown>): MerchantFundRequ
 
 export async function createMerchantFundRequest(input: MerchantFundRequestInput): Promise<MerchantFundRequest> {
   const client = getMerchantClient();
+  const requestedAmount = Number(input.amount);
+  if (!Number.isFinite(requestedAmount) || requestedAmount <= 0) throw new Error('Le montant de la demande de fonds est invalide.');
+  if (input.pos_id) {
+    const { data: existingRequests, error: quotaError } = await client
+      .from('merchant_fund_requests')
+      .select('amount')
+      .eq('campaign_run_id', input.campaign_run_id)
+      .eq('ba_id', input.ba_id)
+      .eq('pos_id', input.pos_id)
+      .neq('status', 'rejected');
+    fail(quotaError, 'Impossible de vérifier le quota de fonds de ce POS');
+    const alreadyRequested = (existingRequests || []).reduce((total, request) => total + Number(request.amount || 0), 0);
+    if (alreadyRequested + requestedAmount > MERCHANT_FUND_REQUEST_POS_QUOTA + 0.0001) {
+      throw new Error(`Ce POS a déjà ${alreadyRequested.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $ de demandes non rejetées. Le quota par POS est limité à ${MERCHANT_FUND_REQUEST_POS_QUOTA.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $.`);
+    }
+  }
   const { data, error } = await client
     .from('merchant_fund_requests')
-    .insert({ ...input, amount: Number(input.amount), status: 'pending' })
+    .insert({ ...input, amount: requestedAmount, status: 'pending' })
     .select('*')
     .single();
   fail(error, 'Impossible d’envoyer la demande de fonds');

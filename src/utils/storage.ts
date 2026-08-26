@@ -1023,6 +1023,7 @@ export function getReports(): DailyReport[] {
 }
 
 export async function addReport(reportData: Omit<DailyReport, 'id'>): Promise<DailyReport> {
+  if (!reportData.comment?.trim()) throw new Error('Le commentaire de clôture est obligatoire.');
   const reports = getReports();
   const newId = 'rep-' + Math.random().toString(36).substring(2, 9);
 
