@@ -207,6 +207,16 @@ export const DateRangeKnobSlider: React.FC<DateRangeKnobSliderProps> = ({
 
   const startLabel = new Date(`${startDate}T00:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
   const endLabel = new Date(`${endDate}T00:00:00`).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+  const rawTodayIso = toIsoDate(Date.now());
+  const todayInBounds = toTs(rawTodayIso) >= minTs && toTs(rawTodayIso) <= maxTs;
+  const applyToday = () => {
+    if (!todayInBounds) return;
+    const todayPct = indexToPct(pctToIndex(((toTs(rawTodayIso) - minTs) / Math.max(1, maxTs - minTs)) * 100));
+    setStartVisualPct(todayPct);
+    setEndVisualPct(todayPct);
+    setCalendarTarget(null);
+    onChange({ startDate: rawTodayIso, endDate: rawTodayIso });
+  };
   const glideClass = dragging
     ? ''
     : 'transition-[left,width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]';
@@ -216,7 +226,7 @@ export const DateRangeKnobSlider: React.FC<DateRangeKnobSliderProps> = ({
 
   return (
     <div ref={rootRef} className="relative rounded-2xl border border-white/10 bg-black/50 p-3">
-      <div className="mb-3 flex items-center justify-between text-[10px] font-black uppercase">
+      <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 text-[10px] font-black uppercase">
         <button
           type="button"
           onClick={() => {
@@ -224,11 +234,18 @@ export const DateRangeKnobSlider: React.FC<DateRangeKnobSliderProps> = ({
             setCalendarMonth(new Date(seed.getFullYear(), seed.getMonth(), 1));
             setCalendarTarget(calendarTarget === 'start' ? null : 'start');
           }}
-          className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 bg-red-600/15 px-2 py-1 text-red-300"
+          className="inline-flex min-w-0 items-center gap-1 rounded-lg border border-red-500/30 bg-red-600/15 px-2 py-1 text-red-300"
         >
-          <CalendarDays className="h-3 w-3" />
-          <span>Debut: {startLabel}</span>
+          <CalendarDays className="h-3 w-3 shrink-0" />
+          <span className="truncate">Début · {startLabel}</span>
         </button>
+        <button
+          type="button"
+          disabled={!todayInBounds}
+          onClick={applyToday}
+          className="rounded-lg border border-amber-300/30 bg-amber-400/10 px-2 py-1 text-[9px] font-black uppercase text-amber-100 transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-35"
+          title={todayInBounds ? 'Afficher uniquement la journée en cours' : 'Aujourd’hui est hors de la période consultable'}
+        >Aujourd’hui</button>
         <button
           type="button"
           onClick={() => {
@@ -236,10 +253,10 @@ export const DateRangeKnobSlider: React.FC<DateRangeKnobSliderProps> = ({
             setCalendarMonth(new Date(seed.getFullYear(), seed.getMonth(), 1));
             setCalendarTarget(calendarTarget === 'end' ? null : 'end');
           }}
-          className="inline-flex items-center gap-1 rounded-lg border border-blue-500/30 bg-blue-600/15 px-2 py-1 text-blue-300"
+          className="inline-flex min-w-0 items-center justify-end gap-1 rounded-lg border border-blue-500/30 bg-blue-600/15 px-2 py-1 text-blue-300"
         >
-          <CalendarDays className="h-3 w-3" />
-          <span>Fin: {endLabel}</span>
+          <span className="truncate">Fin · {endLabel}</span>
+          <CalendarDays className="h-3 w-3 shrink-0" />
         </button>
       </div>
 
