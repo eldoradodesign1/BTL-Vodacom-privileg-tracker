@@ -1022,6 +1022,21 @@ export function getReports(): DailyReport[] {
   );
 }
 
+export function attachReportPdf(reportId: string, pdfUrl: string): void {
+  const reports = getReports();
+  const updated = reports.find((report) => report.id === reportId);
+  if (!updated) return;
+  updated.pdf_url = pdfUrl;
+  pdfCache.set(reportId, pdfUrl);
+  const sanitizedReports = reports.map((report) => {
+    const copy = { ...report };
+    delete copy.pdf_url;
+    return copy;
+  });
+  saveItem(STORAGE_KEYS.REPORTS, sanitizedReports);
+  persistOrQueue({ reports: [updated] });
+}
+
 export async function addReport(reportData: Omit<DailyReport, 'id'>): Promise<DailyReport> {
   if (!reportData.comment?.trim()) throw new Error('Le commentaire de clôture est obligatoire.');
   const reports = getReports();

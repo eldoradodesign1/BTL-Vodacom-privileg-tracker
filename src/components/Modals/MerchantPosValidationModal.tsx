@@ -5,6 +5,7 @@ import { canUseMerchantGpsFallback, getLastKnownMerchantLocation, MERCHANT_CAMPA
 import { sameMerchantMfs } from '../../data/merchantMfs';
 import { MerchantPosCommandPalette } from './MerchantPosCommandPalette';
 import { ImageLightboxModal, type LightboxImage } from './ImageLightboxModal';
+import { runInBackground } from '../../utils/backgroundOperations';
 
 interface MerchantPosValidationModalProps {
   isOpen: boolean;
@@ -100,26 +101,31 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
     setError('');
   };
 
-  const validate = async () => {
+  const validate = () => {
     setError('');
     if (!run || !selectedPos) return setError('Sélectionnez le POS à valider.');
     if (existingVisit) return setError('Ce POS a déjà été validé dans votre journée.');
     if (!photo) return setError('Prenez une photo du POS avec son numéro marchand visible.');
     if (operationalStatus === 'inactive' && !note.trim()) return setError('Expliquez pourquoi ce POS est déclaré non actif.');
-    setSaving(true);
-    try {
+    const activeRun = run;
+    const pos = selectedPos;
+    const proof = photo;
+    const status = operationalStatus;
+    const operationalNote = note.trim() || null;
+    setIsComplete(true);
+    runInBackground('Validation du POS', async () => {
       const geo = await resolveGeoForPatience();
       const path = await uploadMerchantEvidence(
         MERCHANT_CAMPAIGN_CODE,
-        `${currentUser.id}/${activityDate}/pos-validation-${selectedPos.id}-${Date.now()}.jpg`,
-        photo,
+        `${currentUser.id}/${activityDate}/pos-validation-${pos.id}-${Date.now()}.jpg`,
+        proof,
       );
       const now = new Date().toISOString();
-      const visit = await recordPosArrival({
+      return recordPosArrival({
         daily_assignment_id: null,
-        campaign_run_id: run.id,
+        campaign_run_id: activeRun.id,
         ba_id: currentUser.id,
-        pos_id: selectedPos.id,
+        pos_id: pos.id,
         activity_date: activityDate,
         visited_at: now,
         latitude: geo.latitude,
@@ -127,18 +133,17 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
         accuracy_m: geo.accuracy,
         arrival_photo_path: path,
         status: 'visited',
-        operational_status: operationalStatus,
+        operational_status: status,
         operational_confirmed_at: now,
-        operational_note: note.trim() || null,
+        operational_note: operationalNote,
         comment: null,
       });
-      onValidated(visit);
-      setIsComplete(true);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Validation du POS impossible.');
-    } finally {
-      setSaving(false);
-    }
+    }, {
+      queued: 'Validation POS lancée en arrière-plan.',
+      success: 'POS synchronisé.',
+      onSuccess: (visit) => onValidated(visit),
+      onError: (caught) => { setIsComplete(false); setError(caught.message); },
+    });
   };
 
   if (!isOpen) return null;
@@ -147,7 +152,7 @@ export const MerchantPosValidationModal: React.FC<MerchantPosValidationModalProp
   return <div className="fixed inset-0 z-[135] flex items-end justify-center bg-black/75 p-0 backdrop-blur-md sm:items-center sm:p-6" role="dialog" aria-modal="true" aria-labelledby="merchant-pos-validation-title">
     <section className="modal-sheet max-h-[92vh] w-full max-w-xl overflow-y-auto p-5 sm:rounded-3xl">
       <div className="modal-sticky-header"><div className="flex items-start justify-between gap-4"><div className="flex items-center gap-3"><div className="rounded-2xl bg-emerald-500/15 p-3 text-emerald-200"><Store size={21}/></div><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200/70">Merchant · Mes POS</p><h2 id="merchant-pos-validation-title" className="mt-1 text-lg font-black">Ajouter un POS</h2></div></div><button type="button" onClick={onClose} disabled={saving} className="rounded-xl border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:bg-white/10 disabled:opacity-40" aria-label="Fermer"><X size={18}/></button></div></div>
-      {isComplete ? <div className="py-10 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300"><CheckCircle2 size={30}/></div><h3 className="mt-4 text-lg font-black">POS validé</h3><p className="mx-auto mt-2 max-w-sm text-sm text-gray-400">{operationalStatus === 'inactive' ? 'POS signalé non actif : il compte comme POS couvert et aucune activation n’est attendue.' : 'POS actif : vous pouvez maintenant y enregistrer jusqu’à trois transactions.'}</p><div className="mt-6 grid grid-cols-2 gap-3"><button type="button" onClick={reset} className="rounded-2xl border border-emerald-300/30 bg-emerald-400/[0.07] px-4 py-3 text-xs font-black uppercase text-emerald-100">Ajouter un POS</button><button type="button" onClick={onClose} className="btn-neon btn-red px-4 py-3 text-xs">Terminé</button></div></div> : <div className="mt-5 space-y-3">
+      {isComplete ? <div className="py-10 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300"><CheckCircle2 size={30}/></div><h3 className="mt-4 text-lg font-black">POS enregistré sur l’appareil</h3><p className="mx-auto mt-2 max-w-sm text-sm text-gray-400">{operationalStatus === 'inactive' ? 'Le constat de POS non actif est en cours de synchronisation.' : 'La photo et la validation POS se synchronisent en arrière-plan.'}</p><div className="mt-6 grid grid-cols-2 gap-3"><button type="button" onClick={reset} className="rounded-2xl border border-emerald-300/30 bg-emerald-400/[0.07] px-4 py-3 text-xs font-black uppercase text-emerald-100">Ajouter un POS</button><button type="button" onClick={onClose} className="btn-neon btn-red px-4 py-3 text-xs">Terminé</button></div></div> : <div className="mt-5 space-y-3">
         {error && <div className="rounded-2xl border border-red-400/50 bg-red-950/50 p-3 text-xs font-bold text-red-200">{error}</div>}
         <div className="rounded-2xl border border-fuchsia-300/20 bg-fuchsia-500/[0.06] px-3 py-2 text-[10px] font-black uppercase text-fuchsia-100">MFS du jour · <span className="text-white">{mfsName || 'Non renseigné'}</span></div>
         <button type="button" onClick={() => setIsPaletteOpen(true)} disabled={saving} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/30 bg-emerald-400/[0.07] p-3 text-left disabled:opacity-40"><div className="flex min-w-0 items-center gap-3"><Command className="shrink-0 text-emerald-200" size={19}/><div className="min-w-0"><span className="block text-[10px] font-black uppercase text-emerald-100/70">POS à valider</span><b className="block truncate text-sm">{selectedPos ? `${selectedPos.agent_number} · ${selectedPos.denomination}` : 'Rechercher un POS'}</b><span className="block truncate text-[11px] text-gray-400">{selectedPos ? `${selectedPos.address} · ${selectedPos.pool}${selectedPos.mfs_name ? ` · ${selectedPos.mfs_name}` : ''}` : mfsName ? `${filteredPositions.length} POS disponibles pour ce MFS` : 'Short-code, marchand, adresse ou pool'}</span></div></div><span className="shrink-0 rounded-xl border border-emerald-200/30 px-2 py-1 text-[10px] font-black text-emerald-100">RECHERCHER</span></button>

@@ -907,10 +907,31 @@ export async function updateMerchantTransactionReference(transactionId: string, 
   return data as BATransaction;
 }
 
+async function compressMerchantEvidence(file: Blob): Promise<Blob> {
+  if (typeof document === 'undefined' || !file.type.startsWith('image/') || file.size <= 700_000) return file;
+  try {
+    const source = await createImageBitmap(file);
+    const maxDimension = 1600;
+    const ratio = Math.min(1, maxDimension / Math.max(source.width, source.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(source.width * ratio));
+    canvas.height = Math.max(1, Math.round(source.height * ratio));
+    const context = canvas.getContext('2d', { alpha: false });
+    if (!context) return file;
+    context.drawImage(source, 0, 0, canvas.width, canvas.height);
+    source.close();
+    const compressed = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.76));
+    return compressed && compressed.size < file.size ? compressed : file;
+  } catch {
+    return file;
+  }
+}
+
 export async function uploadMerchantEvidence(campaignId: string, relativePath: string, file: Blob): Promise<string> {
   const client = getMerchantClient();
   const path = `${campaignId}/${relativePath}`;
-  const { error } = await client.storage.from('ba-evidence').upload(path, file, { upsert: false, contentType: file.type || 'image/jpeg' });
+  const evidence = await compressMerchantEvidence(file);
+  const { error } = await client.storage.from('ba-evidence').upload(path, evidence, { upsert: false, contentType: evidence.type || 'image/jpeg' });
   fail(error, 'Impossible de téléverser la preuve');
   return path;
 }

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { User, Lead } from '../../types';
-import { getTargetsByShop, getShopById, addReport, addCheckin, getCheckins, toISO, resolveStoredPhotoUrl, getLeads, isMatchAgent } from '../../utils/storage';
+import { getTargetsByShop, getShopById, addReport, addCheckin, attachReportPdf, getCheckins, toISO, resolveStoredPhotoUrl, getLeads, isMatchAgent } from '../../utils/storage';
 import { generateAgentPDF } from '../../utils/pdfGenerator';
 import { FileText, Plus, X, Image as ImageIcon } from 'lucide-react';
 import { DateIconPicker } from '../DateIconPicker';
+import { runInBackground } from '../../utils/backgroundOperations';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -124,7 +125,29 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       ? `https://www.google.com/maps/search/?api=1&query=${outCheckin.lat},${outCheckin.long}`
       : 'donnees gps non disponible';
 
-    const pdfDataUrl = await generateAgentPDF({
+    const savedReport = await addReport({
+      date: reportDate,
+      agent_id: currentUser.id,
+      agent_name: currentUser.name,
+      shop_id: shopIdToUse,
+      shop_name: shopName,
+      priv: privCount,
+      roam: roamCount,
+      bund: bundCount,
+      amount: 0,
+      comment,
+      photos,
+      pointage_photo: pointagePhoto,
+      arrival_time: inCheck ? new Date(inCheck.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '00:00',
+      departure_time: nowTimeStr,
+      maps_in: mapsIn,
+      maps_out: mapsOut
+    });
+
+    setLoading(false);
+    onReportGenerated(`report-id:${savedReport.id}`);
+    onClose();
+    runInBackground('PDF du rapport journalier', () => generateAgentPDF({
       agentName: currentUser.name,
       shopName,
       date: reportDate,
@@ -141,32 +164,12 @@ export const ReportModal: React.FC<ReportModalProps> = ({
       photos,
       comment,
       evolutionTargetData: evolutionSeries.evolutionTargetData,
-      evolutionActivationData: evolutionSeries.evolutionActivationData
+      evolutionActivationData: evolutionSeries.evolutionActivationData,
+    }), {
+      queued: 'Rapport enregistré. Le PDF est généré en arrière-plan.',
+      success: 'PDF du rapport prêt dans vos archives.',
+      onSuccess: (pdfUrl) => attachReportPdf(savedReport.id, pdfUrl),
     });
-
-    const savedReport = await addReport({
-      date: reportDate,
-      agent_id: currentUser.id,
-      agent_name: currentUser.name,
-      shop_id: shopIdToUse,
-      shop_name: shopName,
-      priv: privCount,
-      roam: roamCount,
-      bund: bundCount,
-      amount: 0,
-      comment,
-      pdf_url: pdfDataUrl,
-      photos,
-      pointage_photo: pointagePhoto,
-      arrival_time: inCheck ? new Date(inCheck.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '00:00',
-      departure_time: nowTimeStr,
-      maps_in: mapsIn,
-      maps_out: mapsOut
-    });
-
-    setLoading(false);
-    onReportGenerated(`report-id:${savedReport.id}`);
-    onClose();
   };
 
   return (

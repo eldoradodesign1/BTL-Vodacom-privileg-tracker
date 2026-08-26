@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Banknote, ChevronDown, Search, Send, Store, X } from 'lucide-react';
 import type { BAPosVisit, CampaignRun, PointOfSale, User } from '../../types';
 import { createMerchantFundRequest, MERCHANT_FUND_REQUEST_POS_QUOTA } from '../../utils/merchantCampaign';
+import { runInBackground } from '../../utils/backgroundOperations';
 
 interface MerchantFundRequestModalProps {
   isOpen: boolean;
@@ -48,32 +49,30 @@ export const MerchantFundRequestModal: React.FC<MerchantFundRequestModalProps> =
 
   if (!isOpen) return null;
 
-  const submit = async () => {
+  const submit = () => {
     if (!run) { setError('Aucune vague Merchant active.'); return; }
     if (!posId) { setError('Sélectionnez le POS concerné.'); return; }
     const numericAmount = Number(amount.replace(',', '.'));
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) { setError('Indiquez un montant valide.'); return; }
     if (numericAmount > MERCHANT_FUND_REQUEST_POS_QUOTA) { setError(`Le quota maximal est de ${MERCHANT_FUND_REQUEST_POS_QUOTA.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} $ par POS.`); return; }
-    setSaving(true);
+    const input = {
+      campaign_run_id: run.id,
+      ba_id: currentUser.id,
+      supervisor_id: currentUser.supervisorId || null,
+      pos_id: posId,
+      mfs_name: mfsName || null,
+      ba_phone: baPhone.trim() || null,
+      amount: numericAmount,
+      note: [baPhone.trim() && baPhone.trim() !== (currentUser.phone || '').trim() ? `N° BA renseigné : ${baPhone.trim()}` : '', note.trim()].filter(Boolean).join(' · ') || null,
+    };
     setError('');
-    try {
-      await createMerchantFundRequest({
-        campaign_run_id: run.id,
-        ba_id: currentUser.id,
-        supervisor_id: currentUser.supervisorId || null,
-        pos_id: posId,
-        mfs_name: mfsName || null,
-        ba_phone: baPhone.trim() || null,
-        amount: numericAmount,
-        note: [baPhone.trim() && baPhone.trim() !== (currentUser.phone || '').trim() ? `N° BA renseigné : ${baPhone.trim()}` : '', note.trim()].filter(Boolean).join(' · ') || null,
-      });
-      onSubmitted();
-      onClose();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Impossible d’envoyer la demande de fonds.');
-    } finally {
-      setSaving(false);
-    }
+    onSubmitted();
+    onClose();
+    runInBackground('Demande de fonds', () => createMerchantFundRequest(input), {
+      queued: 'Demande de fonds envoyée depuis l’appareil.',
+      success: 'Demande de fonds synchronisée avec le superviseur.',
+      onError: (caught) => setError(caught.message),
+    });
   };
 
   return <div className="fixed inset-0 z-[135] flex items-end justify-center bg-black/80 p-0 backdrop-blur-md sm:items-center sm:p-6" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="fund-request-title">
@@ -89,7 +88,7 @@ export const MerchantFundRequestModal: React.FC<MerchantFundRequestModalProps> =
         <div><label className="mb-2 block text-[10px] font-black uppercase tracking-wide text-gray-400">Montant demandé ($) <span className="normal-case text-emerald-200">· quota POS : {MERCHANT_FUND_REQUEST_POS_QUOTA.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} $</span></label><div className="relative"><Banknote size={17} className="absolute left-3 top-3.5 text-emerald-200"/><input value={amount} onChange={(event) => setAmount(event.target.value)} inputMode="decimal" placeholder="Ex. 4,5" className="app-input w-full rounded-2xl py-3 pl-9 pr-3 text-sm"/></div></div>
         <div><label className="mb-2 block text-[10px] font-black uppercase tracking-wide text-gray-400">Note <span className="normal-case text-gray-500">(facultatif)</span></label><textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} placeholder="Précision utile pour le superviseur" className="app-input w-full resize-none rounded-2xl px-3 py-3 text-sm"/></div>
         {error && <p className="rounded-2xl border border-red-400/40 bg-red-950/40 p-3 text-xs font-bold text-red-200">{error}</p>}
-        <button type="button" onClick={() => void submit()} disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300/45 bg-emerald-400/15 px-4 py-3.5 text-xs font-black uppercase tracking-wide text-emerald-50 transition hover:bg-emerald-400/25 disabled:cursor-not-allowed disabled:opacity-45"><Send size={16}/>{saving ? 'Envoi…' : 'Envoyer la demande'}</button>
+        <button type="button" onClick={submit} disabled={saving} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-300/45 bg-emerald-400/15 px-4 py-3.5 text-xs font-black uppercase tracking-wide text-emerald-50 transition hover:bg-emerald-400/25 disabled:cursor-not-allowed disabled:opacity-45"><Send size={16}/>{saving ? 'Envoi…' : 'Envoyer la demande'}</button>
       </div>
     </section>
   </div>;
