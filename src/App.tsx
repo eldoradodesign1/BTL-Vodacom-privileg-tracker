@@ -31,7 +31,8 @@ import {
   fetchLeadsFromSupabase,
   isSupabaseConfigured
 } from './utils/supabase';
-import { getActiveCampaignRuns, getCampaignPauses, getCampaignsForUser, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, getMerchantFundRequests, invalidateMerchantCache } from './utils/merchantCampaign';
+import { getActiveCampaignRuns, getCampaignPauses, getCampaigns, getCampaignsForUser, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, getMerchantFundRequests, invalidateMerchantCache, isCampaignPausedOn } from './utils/merchantCampaign';
+import { armFundRequestAlertAudio, emitFundRequestAlertSound, showFundRequestSystemNotification } from './utils/fundRequestAlert';
 
 import { SimulationBar } from './components/SimulationBar';
 import { Header, ThemeMode } from './components/Header';
@@ -134,6 +135,7 @@ export default function App() {
   const [merchantTransactionRequested, setMerchantTransactionRequested] = useState(false);
   const [agentCampaigns, setAgentCampaigns] = useState<Campaign[]>([]);
   const [activeCampaignPause, setActiveCampaignPause] = useState<CampaignPause | null>(null);
+  const [privilegeRemindersPaused, setPrivilegeRemindersPaused] = useState(true);
   const [fundRequestAlerts, setFundRequestAlerts] = useState<Array<{ id: string; baName: string; amount: number; posLabel: string; requestedAt: string }>>([]);
   const alertedFundRequestIdsRef = useRef<Set<string>>(new Set());
   const lastFundAlertSignalAtRef = useRef(0);
@@ -158,6 +160,38 @@ export default function App() {
   }, [theme]);
 
   useEffect(() => {
+    const arm = () => { void armFundRequestAlertAudio(); };
+    window.addEventListener('pointerdown', arm, { capture: true, passive: true });
+    window.addEventListener('keydown', arm, { capture: true });
+    return () => {
+      window.removeEventListener('pointerdown', arm, { capture: true });
+      window.removeEventListener('keydown', arm, { capture: true });
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refreshPrivilegePause = async () => {
+      try {
+        const campaigns = await getCampaigns();
+        const privilegeCampaign = campaigns.find((campaign) => campaign.campaign_type !== 'brand_ambassador' && campaign.code !== 'merchant-educational-campaign');
+        if (!privilegeCampaign) {
+          if (!cancelled) setPrivilegeRemindersPaused(true);
+          return;
+        }
+        const pauses = await getCampaignPauses(privilegeCampaign.id, true);
+        if (!cancelled) setPrivilegeRemindersPaused(isCampaignPausedOn(pauses, toISO(new Date())));
+      } catch {
+        // En cas d’incertitude réseau, les rappels restent suspendus plutôt que d’enfreindre une pause.
+        if (!cancelled) setPrivilegeRemindersPaused(true);
+      }
+    };
+    void refreshPrivilegePause();
+    const timer = window.setInterval(() => { void refreshPrivilegePause(); }, 30000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [dataRevision]);
+
+  useEffect(() => {
     const base = simulatedUserId ? users.find((user) => user.id === simulatedUserId) || currentUser : currentUser;
     const role = simulatedRole || base?.role;
     const canReviewFunds = role === 'supervisor' || role === 'admin' || role === 'super_admin' || role === 'sub_admin';
@@ -168,31 +202,9 @@ export default function App() {
     }
     let cancelled = false;
     const emitStrongFundAlert = (requests: Array<{ id: string; baName: string; amount: number; posLabel: string }>, notifySystem = false) => {
-      if (navigator.vibrate) navigator.vibrate([280, 110, 280, 110, 650]);
-      if (localStorage.getItem('btl_fund_alert_audio_armed') === '1') {
-        try {
-          const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-          if (AudioContextCtor) {
-            const audio = new AudioContextCtor();
-            [0, 0.22, 0.44].forEach((offset, index) => {
-              const oscillator = audio.createOscillator();
-              const gain = audio.createGain();
-              oscillator.frequency.value = index === 2 ? 1046.5 : 880;
-              gain.gain.setValueAtTime(0.0001, audio.currentTime + offset);
-              gain.gain.exponentialRampToValueAtTime(0.16, audio.currentTime + offset + 0.02);
-              gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + offset + 0.18);
-              oscillator.connect(gain).connect(audio.destination);
-              oscillator.start(audio.currentTime + offset);
-              oscillator.stop(audio.currentTime + offset + 0.2);
-            });
-            window.setTimeout(() => { void audio.close(); }, 1000);
-          }
-        } catch { /* Les navigateurs peuvent bloquer l’audio sans interaction utilisateur. */ }
-      }
+      emitFundRequestAlertSound();
       const first = requests[0];
-      if (notifySystem && 'Notification' in window && Notification.permission === 'granted') {
-        try { new Notification('Nouvelle demande de fonds', { body: `${first.baName} · $${first.amount.toLocaleString('fr-FR')} · ${first.posLabel}`, tag: `merchant-fund-${first.id}`, icon: '/favicon.png' }); } catch { /* Notification système non disponible. */ }
-      }
+      if (notifySystem && first) void showFundRequestSystemNotification(first);
       const initialTitle = document.title;
       document.title = `⚠ ${requests.length} demande${requests.length > 1 ? 's' : ''} de fonds`;
       window.setTimeout(() => { if (document.title.startsWith('⚠ ')) document.title = initialTitle; }, 8000);
@@ -371,7 +383,7 @@ const refreshData = useCallback(async (force = false) => {
 
   useEffect(() => {
     const refreshStatus = () => {
-      if (!activeCampaignPause) runScheduledDailyReminders(new Date());
+      runScheduledDailyReminders(new Date(), privilegeRemindersPaused);
       setOnline(typeof navigator !== 'undefined' ? navigator.onLine : true);
       setChatUnreadCount(currentUser ? getUnreadChatCount(currentUser.id) : 0);
       setSyncPendingCount(getSyncPendingCount());
@@ -387,7 +399,7 @@ const refreshData = useCallback(async (force = false) => {
       window.removeEventListener('online', onOnline);
       window.removeEventListener('offline', onOffline);
     };
-  }, [currentUser?.id, activeTab, users.length, activeCampaignPause]);
+  }, [currentUser?.id, activeTab, users.length, privilegeRemindersPaused]);
 
   useEffect(() => {
     if (activeTab === 'chat' && currentUser) {

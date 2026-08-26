@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { User, NotificationItem } from '../types';
 import { Bell, LogOut, Shield, RefreshCw, Palette, Camera, X, BriefcaseBusiness, Banknote } from 'lucide-react';
 import { addCheckin, getShopById, resolveStoredPhotoUrl } from '../utils/storage';
+import { armFundRequestAlertAudio } from '../utils/fundRequestAlert';
 
 export type ThemeMode = 'anthracite' | 'rubis' | 'silver' | 'diamond' | 'sapphire' | 'ambre';
 
@@ -106,7 +107,7 @@ export const Header: React.FC<HeaderProps> = ({
     const opening = !showNotifPanel;
     setShowNotifPanel(opening);
     if (opening) {
-      localStorage.setItem('btl_fund_alert_audio_armed', '1');
+      void armFundRequestAlertAudio();
       if ('Notification' in window && Notification.permission === 'default') {
         void Notification.requestPermission();
       }

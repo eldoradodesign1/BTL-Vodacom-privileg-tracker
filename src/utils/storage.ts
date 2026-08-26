@@ -303,12 +303,13 @@ export function getSyncPendingCount(): number {
   return pendingLeads + pendingCheckins;
 }
 
-export function runScheduledDailyReminders(now: Date = new Date()): void {
+export function runScheduledDailyReminders(now: Date = new Date(), privilegePaused = false): void {
+  if (privilegePaused) return;
   const key = `vodacom_last_reminders_${toISO(now)}`;
   const sent = loadItem<Record<string, boolean>>(key, {});
   const hh = now.getHours();
   const mm = now.getMinutes();
-  const users = getUsers().filter(u => u.role === 'agent');
+  const users = getUsers().filter((user) => user.role === 'agent' && user.userCategory !== 'brand_ambassador');
 
   const maybeSend = (id: string, shouldSend: boolean, message: string, type: string) => {
     if (!shouldSend || sent[id]) return;
