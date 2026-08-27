@@ -101,16 +101,16 @@ export async function exportMerchantCompiledExcel(report: MerchantCompiledReport
   download(await workbook.xlsx.writeBuffer(), `rapport-compile-merchant-${report.startDate}-${report.endDate}.xlsx`, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
 }
 
-export async function exportMerchantCompiledPdf(report: MerchantCompiledReport): Promise<void> {
+export async function exportMerchantCompiledPdf(report: MerchantCompiledReport, includeAmounts = true): Promise<void> {
   const [{ jsPDF }] = await Promise.all([import('jspdf')]);
   const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
   let y = 18;
   pdf.setFillColor(8, 51, 68); pdf.rect(0, 0, 210, 34, 'F'); pdf.setTextColor(255, 255, 255); pdf.setFontSize(15); pdf.text('RAPPORT COMPILÉ · MERCHANT', 14, 16); pdf.setFontSize(9); pdf.text(`Période : ${report.startDate} au ${report.endDate}`, 14, 24);
-  pdf.setTextColor(15, 23, 42); y = 45; pdf.setFontSize(11); pdf.text('Indicateurs clés', 14, y); y += 8;
-  const cards = [['Rapports', String(report.totals.reports)], ['BA', String(report.byBa.length)], ['POS', String(report.totals.pos)], ['Transactions', String(report.totals.transactions)], ['Montant', money(report.totals.amount)]];
+  pdf.setTextColor(15, 23, 42); y = 45; pdf.setFontSize(11); pdf.text(includeAmounts ? 'Indicateurs clés' : 'Indicateurs clés · hors montants', 14, y); y += 8;
+  const cards = [['Rapports', String(report.totals.reports)], ['BA', String(report.byBa.length)], ['POS', String(report.totals.pos)], ['Transactions', String(report.totals.transactions)], ...(includeAmounts ? [['Montant', money(report.totals.amount)]] : [])];
   cards.forEach(([label, value], index) => { const x = 14 + (index % 2) * 94; const row = Math.floor(index / 2); const cardY = y + row * 16; pdf.setDrawColor(203, 213, 225); pdf.roundedRect(x, cardY, 86, 12, 2, 2, 'S'); pdf.setFontSize(7); pdf.setTextColor(71, 85, 105); pdf.text(label, x + 4, cardY + 4); pdf.setFontSize(10); pdf.setTextColor(15, 23, 42); pdf.text(value, x + 4, cardY + 9); });
   y += 52; pdf.setFillColor(240, 253, 250); pdf.roundedRect(14, y, 182, 28, 2, 2, 'F'); pdf.setFontSize(9); pdf.setTextColor(15, 118, 110); pdf.text('COMMENTAIRE SUPERVISEUR', 18, y + 6); pdf.setFontSize(9); pdf.setTextColor(15, 23, 42); const commentLines = pdf.splitTextToSize(report.comment || 'Aucun commentaire renseigné.', 172); pdf.text(commentLines, 18, y + 13); y += 38;
-  pdf.setFontSize(11); pdf.text('Performance BA', 14, y); y += 7; pdf.setFillColor(8, 51, 68); pdf.rect(14, y, 182, 7, 'F'); pdf.setTextColor(255, 255, 255); pdf.setFontSize(8); ['BA', 'Rapports', 'POS', 'Transactions', 'Montant'].forEach((label, index) => pdf.text(label, [16, 92, 116, 136, 166][index], y + 4.8)); y += 11;
-  pdf.setTextColor(15, 23, 42); report.byBa.forEach((item) => { if (y > 278) { pdf.addPage(); y = 18; } pdf.setFontSize(8); pdf.text(item.name.slice(0, 34), 16, y); pdf.text(String(item.reports), 96, y); pdf.text(String(item.pos), 120, y); pdf.text(String(item.transactions), 143, y); pdf.text(money(item.amount), 166, y); pdf.setDrawColor(226, 232, 240); pdf.line(14, y + 3, 196, y + 3); y += 7; });
-  pdf.save(`rapport-compile-merchant-${report.startDate}-${report.endDate}.pdf`);
+  pdf.setFontSize(11); pdf.text('Performance BA', 14, y); y += 7; pdf.setFillColor(8, 51, 68); pdf.rect(14, y, 182, 7, 'F'); pdf.setTextColor(255, 255, 255); pdf.setFontSize(8); (includeAmounts ? ['BA', 'Rapports', 'POS', 'Transactions', 'Montant'] : ['BA', 'Rapports', 'POS', 'Transactions']).forEach((label, index) => pdf.text(label, (includeAmounts ? [16, 92, 116, 136, 166] : [16, 104, 132, 160])[index], y + 4.8)); y += 11;
+  pdf.setTextColor(15, 23, 42); report.byBa.forEach((item) => { if (y > 278) { pdf.addPage(); y = 18; } pdf.setFontSize(8); pdf.text(item.name.slice(0, 34), 16, y); pdf.text(String(item.reports), includeAmounts ? 96 : 108, y); pdf.text(String(item.pos), includeAmounts ? 120 : 136, y); pdf.text(String(item.transactions), includeAmounts ? 143 : 165, y); if (includeAmounts) pdf.text(money(item.amount), 166, y); pdf.setDrawColor(226, 232, 240); pdf.line(14, y + 3, 196, y + 3); y += 7; });
+  pdf.save(`rapport-compile-merchant-${report.startDate}-${report.endDate}${includeAmounts ? '' : '-sans-montants'}.pdf`);
 }

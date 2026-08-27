@@ -16,6 +16,11 @@ export function cleanSupervisorComment(value: string | null | undefined): string
     .trim();
 }
 
+export function needsFrenchRewrite(value: string | null | undefined): boolean {
+  const normalized = cleanSupervisorComment(value).toLowerCase();
+  return /\b(not contacted|beforehand|unaware|merchant numbers|pricing mismatch|pricing|mismatch|articles?\s*>|merchants?\s+not)\b/.test(normalized);
+}
+
 export async function getMerchantSupervisorComment(startDate: string, endDate: string): Promise<SupervisorReportComment | null> {
   const client = getSupabaseClient();
   if (!client) return null;
