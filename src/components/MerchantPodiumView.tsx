@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { CalendarDays, FileText, LockKeyhole, MapPin, Medal, RefreshCw, Trophy, UserRound } from 'lucide-react';
 import type { CampaignRun } from '../types';
-import { getActiveCampaignRuns, getMerchantCampaign, getMerchantPodium, type MerchantPodiumEntry } from '../utils/merchantCampaign';
+import { getActiveCampaignRuns, getMerchantCampaign, getMerchantPodium, merchantTodayIso, type MerchantPodiumEntry } from '../utils/merchantCampaign';
 import { MerchantBAOperationsModal } from './Modals/MerchantBAOperationsModal';
-import { MerchantSupervisorReportsModal } from './Modals/MerchantSupervisorReportsModal';
+const MerchantCompiledReportModal = lazy(() => import('./Modals/MerchantCompiledReportModal').then((module) => ({ default: module.MerchantCompiledReportModal })));
 
 type MerchantOperation = 'profile' | 'report' | 'location' | 'calendar';
 const medals = [
@@ -18,7 +18,7 @@ export const MerchantPodiumView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [operation, setOperation] = useState<{ mode: MerchantOperation; entry: MerchantPodiumEntry } | null>(null);
-  const [isReportsOpen, setIsReportsOpen] = useState(false);
+  const [isCompiledReportOpen, setIsCompiledReportOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -49,7 +49,7 @@ export const MerchantPodiumView: React.FC = () => {
     <section className="glass-card relative overflow-hidden p-4 sm:p-5">
       <div className="pointer-events-none absolute -right-12 -top-14 h-48 w-48 rounded-full bg-amber-400/[0.12] blur-3xl"/>
       <div className="pointer-events-none absolute -left-14 bottom-0 h-40 w-40 rounded-full bg-slate-300/[0.08] blur-3xl"/>
-      <div className="relative flex items-center justify-between gap-3"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-100/80">Podium de performance</p><div className="flex gap-2"><button type="button" onClick={() => setIsReportsOpen(true)} title="Rapports superviseur" className="rounded-2xl border border-cyan-300/30 bg-cyan-400/10 p-3 text-cyan-100 transition hover:bg-cyan-400/20"><FileText size={17}/></button><button type="button" onClick={() => void load()} title="Actualiser le podium" className="rounded-2xl border border-white/10 bg-white/5 p-3 text-gray-200 transition hover:bg-white/10"><RefreshCw size={17}/></button></div></div>
+      <div className="relative flex items-center justify-between gap-3"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-100/80">Podium de performance</p><div className="flex gap-2"><button type="button" onClick={() => setIsCompiledReportOpen(true)} title="Ouvrir le rapport compilé du jour" className="rounded-2xl border border-cyan-300/30 bg-cyan-400/10 p-3 text-cyan-100 transition hover:bg-cyan-400/20"><FileText size={17}/></button><button type="button" onClick={() => void load()} title="Actualiser le podium" className="rounded-2xl border border-white/10 bg-white/5 p-3 text-gray-200 transition hover:bg-white/10"><RefreshCw size={17}/></button></div></div>
       <div className="relative mt-4 space-y-3">
 
     {error && <div className="rounded-2xl border border-rose-400/40 bg-rose-950/45 p-3 text-xs font-bold text-rose-100">{error}</div>}
@@ -68,6 +68,6 @@ export const MerchantPodiumView: React.FC = () => {
       </div>
     </section>
     <MerchantBAOperationsModal isOpen={Boolean(operation)} mode={operation?.mode || 'profile'} activity={operation?.entry.activity || null} run={run} onClose={() => setOperation(null)}/>
-    <MerchantSupervisorReportsModal isOpen={isReportsOpen} run={run} onClose={() => setIsReportsOpen(false)}/>
+    {isCompiledReportOpen && <Suspense fallback={null}><MerchantCompiledReportModal isOpen runId={run?.id || null} archives={[]} startDate={merchantTodayIso()} endDate={merchantTodayIso()} onClose={() => setIsCompiledReportOpen(false)}/></Suspense>}
   </div>;
 };
