@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Banknote, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleDot, Download, FileText, Filter, MapPin, PauseCircle, PlayCircle, Plus, ReceiptText, Save, Search, Target, UserRound, UsersRound } from 'lucide-react';
 import type { CampaignPause, CampaignRun, MerchantFundRequest, User } from '../types';
 import { archiveRejectedMerchantFundRequests, createCampaignPause, deleteCampaignPause, endCampaignPause, getActiveCampaignRuns, getCampaignPauses, getMerchantCampaign, getMerchantFundRequests, getMerchantMonitoring, getMerchantPosControl, getMerchantTransactionsForRun, isCampaignPausedOn, MERCHANT_CAMPAIGN_START, merchantTodayIso, updateMerchantTargetSettings, type MerchantPosControlItem, type MerchantTeamActivity, type MerchantTransactionWithBa } from '../utils/merchantCampaign';
@@ -57,6 +57,7 @@ export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = ({ 
   const [txPage, setTxPage] = useState(1);
   const [selectedTransaction, setSelectedTransaction] = useState<MerchantTransactionWithBa | null>(null);
   const [isTransactionsReportOpen, setIsTransactionsReportOpen] = useState(false);
+  const txRequestRef = useRef(0);
 
   const load = async () => {
     setLoading(true); setError('');
@@ -95,15 +96,24 @@ export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = ({ 
   useEffect(() => { setTxPage(1); }, [txPeriod, txQuery, txStatus]);
   useEffect(() => {
     if (managementTab !== 'tx' || !run || txLoadedRunId === run.id) return;
-    let active = true;
-    setTxLoading(true);
-    void getMerchantTransactionsForRun(run.id).then((items) => {
-      if (!active) return;
-      setAllTransactions(items); setTxLoadedRunId(run.id);
-    }).catch((caught) => {
-      if (active) setError(caught instanceof Error ? caught.message : 'Chargement des transactions impossible.');
-    }).finally(() => { if (active) setTxLoading(false); });
-    return () => { active = false; };
+    const requestId = ++txRequestRef.current;
+    let timeoutId: number | undefined;
+    setTxLoading(true); setError('');
+    void (async () => {
+      try {
+        const items = await Promise.race([
+          getMerchantTransactionsForRun(run.id),
+          new Promise<never>((_, reject) => { timeoutId = window.setTimeout(() => reject(new Error('Le registre Tx met trop de temps à répondre. Réessayez dans un instant.')), 18000); }),
+        ]);
+        if (txRequestRef.current !== requestId) return;
+        setAllTransactions(items); setTxLoadedRunId(run.id);
+      } catch (caught) {
+        if (txRequestRef.current === requestId) setError(caught instanceof Error ? caught.message : 'Chargement des transactions impossible.');
+      } finally {
+        if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+        if (txRequestRef.current === requestId) setTxLoading(false);
+      }
+    })();
   }, [managementTab, run, txLoadedRunId]);
 
   const filtered = useMemo(() => {
