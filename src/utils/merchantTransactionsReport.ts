@@ -70,18 +70,24 @@ export const exportMerchantTransactionsXlsx = async (input: MerchantTransactions
   summary.addRows([['Période', `${input.startsOn} au ${input.endsOn}`], ['Généré le', new Date().toLocaleString('fr-FR')], [], ['Indicateur', 'Valeur', 'Source'], ['Transactions', { formula: `COUNTA(Transactions!$A$2:$A$${sourceLast})` }, 'Registre Transactions'], ['Montant total', { formula: `SUM(Transactions!$K$2:$K$${sourceLast})` }, 'Registre Transactions'], ['Montant moyen', { formula: `IFERROR(SUM(Transactions!$K$2:$K$${sourceLast})/COUNTA(Transactions!$A$2:$A$${sourceLast}),0)` }, 'Registre Transactions'], ['Transactions vérifiées', { formula: `COUNTIF(Transactions!$L$2:$L$${sourceLast},"verified")` }, 'Registre Transactions'], ['Transactions rejetées', { formula: `COUNTIF(Transactions!$L$2:$L$${sourceLast},"rejected")` }, 'Registre Transactions'], ['BA concernés', { formula: `COUNTA(Agents!$A$2:$A$${Math.max(2, unique(records.map((record) => record.ba?.name || '')).length + 1)})` }, 'Performance BA'], ['POS concernés', { formula: `COUNTA(POS!$A$2:$A$${Math.max(2, unique(records.map((record) => record.pos_id)).length + 1)})` }, 'Performance POS'], ['MFS concernés', { formula: `COUNTA(MFS!$A$2:$A$${Math.max(2, unique(records.map((record) => record.point_of_sale?.mfs_name || '')).length + 1)})` }, 'Performance MFS']]);
   summary.getRow(5).eachCell((cell) => { cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: '0F766E' } }; cell.font = { bold: true, color: { argb: 'FFFFFFFF' } }; });
   summary.getColumn(1).width = 28; summary.getColumn(2).width = 24; summary.getColumn(3).width = 28;
-  summary.getColumn(2).eachCell((cell, row) => { if (row >= 6) cell.numFmt = row === 6 || row === 7 ? '#,##0.00 [$-fr-FR]" $"' : '0'; });
+  const currencyFormat = '#,##0.00 " $"';
+  const integerFormat = '#,##0';
+  summary.getCell('B6').numFmt = integerFormat;
+  summary.getCell('B7').numFmt = currencyFormat;
+  summary.getCell('B8').numFmt = currencyFormat;
+  ['B9', 'B10', 'B11', 'B12', 'B13'].forEach((address) => { summary.getCell(address).numFmt = integerFormat; });
   const transactions = workbook.addWorksheet('Transactions');
   transactions.addRow(['Date', 'Heure', 'BA', 'Téléphone BA', 'Pool', 'MFS', 'Short-code POS', 'POS', 'Client', 'Référence', 'Montant', 'Statut', 'Commentaire', 'Latitude', 'Longitude']);
   records.forEach((record) => transactions.addRow([record.occurred_at.slice(0, 10), compactTime(record.occurred_at), record.ba?.name || '', record.ba?.phone || '', record.point_of_sale?.pool || '', record.point_of_sale?.mfs_name || '', record.point_of_sale?.agent_number || '', record.point_of_sale?.denomination || '', record.client_number || '', record.transaction_reference || '', Number(record.amount || 0), record.status, record.comment || '', record.latitude ?? '', record.longitude ?? '']));
-  styleSheet(transactions, [13, 10, 25, 18, 14, 22, 16, 30, 17, 20, 16, 14, 42, 14, 14]); transactions.getColumn(11).numFmt = '#,##0.00 [$-fr-FR]" $"';
+  styleSheet(transactions, [13, 10, 25, 18, 14, 22, 16, 30, 17, 20, 16, 14, 42, 14, 14]);   transactions.getColumn(11).numFmt = currencyFormat;
   const addPerformance = (name: string, dimension: string, sourceColumn: string, labels: string[]) => {
     const sheet = workbook.addWorksheet(name); sheet.addRow(labels);
     unique(records.map((record) => dimension === 'ba' ? record.ba?.name || '' : dimension === 'pos' ? record.point_of_sale?.agent_number || '' : dimension === 'mfs' ? record.point_of_sale?.mfs_name || '' : record.occurred_at.slice(0, 10))).forEach((key, index) => {
       const row = index + 2; const criteriaColumn = sourceColumn;
       sheet.addRow([key, { formula: `COUNTIF(Transactions!$${criteriaColumn}$2:$${criteriaColumn}$${sourceLast},A${row})` }, { formula: `SUMIF(Transactions!$${criteriaColumn}$2:$${criteriaColumn}$${sourceLast},A${row},Transactions!$K$2:$K$${sourceLast})` }, { formula: `COUNTIFS(Transactions!$${criteriaColumn}$2:$${criteriaColumn}$${sourceLast},A${row},Transactions!$L$2:$L$${sourceLast},"verified")` }, { formula: `IFERROR(C${row}/B${row},0)` }]);
     });
-    styleSheet(sheet, [dimension === 'pos' ? 18 : 28, 18, 20, 18, 20]); sheet.getColumn(3).numFmt = '#,##0.00 [$-fr-FR]" $"'; sheet.getColumn(5).numFmt = '#,##0.00 [$-fr-FR]" $"';
+    styleSheet(sheet, [dimension === 'pos' ? 18 : 28, 18, 20, 18, 20]);     sheet.getColumn(3).numFmt = currencyFormat;
+    sheet.getColumn(5).numFmt = currencyFormat;
   };
   addPerformance('POS', 'pos', 'G', ['Short-code POS', 'Transactions', 'Montant', 'Vérifiées', 'Moyenne / Tx']);
   addPerformance('Agents', 'ba', 'C', ['Brand Ambassador', 'Transactions', 'Montant', 'Vérifiées', 'Moyenne / Tx']);
@@ -89,7 +95,7 @@ export const exportMerchantTransactionsXlsx = async (input: MerchantTransactions
   const daily = workbook.addWorksheet('BDD');
   daily.addRow(['Date', 'Transactions', 'Montant', 'BA actifs', 'POS concernés']);
   unique(records.map((record) => record.occurred_at.slice(0, 10))).forEach((date, index) => { const row = index + 2; daily.addRow([date, { formula: `COUNTIF(Transactions!$A$2:$A$${sourceLast},A${row})` }, { formula: `SUMIF(Transactions!$A$2:$A$${sourceLast},A${row},Transactions!$K$2:$K$${sourceLast})` }, { formula: `SUMPRODUCT((Transactions!$A$2:$A$${sourceLast}=A${row})/COUNTIFS(Transactions!$A$2:$A$${sourceLast},A${row},Transactions!$C$2:$C$${sourceLast},Transactions!$C$2:$C$${sourceLast}))` }, { formula: `SUMPRODUCT((Transactions!$A$2:$A$${sourceLast}=A${row})/COUNTIFS(Transactions!$A$2:$A$${sourceLast},A${row},Transactions!$G$2:$G$${sourceLast},Transactions!$G$2:$G$${sourceLast}))` }]); });
-  styleSheet(daily, [15, 18, 20, 16, 18]); daily.getColumn(3).numFmt = '#,##0.00 [$-fr-FR]" $"';
+  styleSheet(daily, [15, 18, 20, 16, 18]);   daily.getColumn(3).numFmt = currencyFormat;
   const content = await workbook.xlsx.writeBuffer();
   const url = URL.createObjectURL(new Blob([content], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
   const anchor = document.createElement('a'); anchor.href = url; anchor.download = `analyse-transactions-merchant-${input.startsOn}-${input.endsOn}.xlsx`; document.body.appendChild(anchor); anchor.click(); anchor.remove(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
