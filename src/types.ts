@@ -137,7 +137,7 @@ export interface BATransaction {
   accuracy_m?: number | null;
   comment?: string | null;
   status: 'recorded' | 'verified' | 'rejected';
-  point_of_sale?: Pick<PointOfSale, 'agent_number' | 'denomination' | 'pool'>;
+  point_of_sale?: Pick<PointOfSale, 'agent_number' | 'denomination' | 'pool' | 'mfs_name'>;
 }
 
 export interface MerchantFundRequest {

@@ -8,6 +8,7 @@ import type {
   CampaignRun,
   MerchantFundRequest,
   PointOfSale,
+  User,
 } from '../types';
 import { getSupabaseConfig } from './supabase';
 
@@ -310,6 +311,31 @@ export async function getAttendanceHistoryForBA(baId: string, campaignRunId?: st
   const { data, error } = await query;
   fail(error, 'Impossible de charger les archives BA');
   return (data || []) as BADailyAttendance[];
+}
+
+export interface MerchantTransactionWithBa extends BATransaction {
+  ba?: Pick<User, 'id' | 'name' | 'phone'>;
+}
+
+export async function getMerchantTransactionsForRun(runId: string): Promise<MerchantTransactionWithBa[]> {
+  return withMerchantCache(`transactions:run:${runId}`, async () => {
+    const client = getMerchantClient();
+    const [transactionsResponse, bas] = await Promise.all([
+      client
+        .from('ba_transactions')
+        .select('*, point_of_sale:points_of_sale(agent_number,denomination,pool,mfs_name)')
+        .eq('campaign_run_id', runId)
+        .gte('occurred_at', `${MERCHANT_CAMPAIGN_START}T00:00:00+01:00`)
+        .order('occurred_at', { ascending: false }),
+      getMerchantBAs(),
+    ]);
+    fail(transactionsResponse.error, 'Impossible de charger les transactions Merchant');
+    const baById = new Map(bas.map((ba) => [ba.id, ba]));
+    return ((transactionsResponse.data || []) as BATransaction[]).map((transaction) => ({
+      ...transaction,
+      ba: baById.get(transaction.ba_id),
+    }));
+  });
 }
 
 export async function getTransactionsForBA(baId: string, campaignRunId?: string): Promise<BATransaction[]> {
