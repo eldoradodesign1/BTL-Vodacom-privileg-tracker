@@ -44,7 +44,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           className={`app-tab flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${activeTab === 'home' ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'}`}
         >
           <Home className={`w-6 h-6 transition-transform ${activeTab === 'home' ? '-translate-y-1 scale-110' : ''}`} />
-          <span className="text-[9px] font-black uppercase tracking-wider">Préparation</span>
+            <span className="text-[9px] font-black uppercase tracking-wider">Accueil</span>
           {activeTab === 'home' && <div className="w-1.5 h-1.5 bg-red-500 rounded-full" style={{ boxShadow: '0 0 8px var(--theme-accent)' }} />}
         </button>
         <button

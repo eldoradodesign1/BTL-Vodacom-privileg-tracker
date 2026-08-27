@@ -20,6 +20,7 @@ import {
   saveLeads,
   refreshCheckinsFromSupabase,
   refreshReportsFromSupabase,
+  refreshUsersFromSupabase,
   refreshLeadsFromSupabase,
   flushOfflineOutbox,
 } from './utils/storage';
@@ -340,9 +341,10 @@ const refreshData = useCallback(async (force = false) => {
     ]);
     saveUsers(usersData);
     saveShops(shopsData);
+    const mergedUsers = getUsers();
     localStorage.setItem(APP_DATA_SYNC_KEY, String(Date.now()));
     invalidateMerchantCache();
-    setUsers(usersData);
+    setUsers(mergedUsers);
     setShops(shopsData);
     setDataRevision((prev) => prev + 1);
   } catch (error) {
@@ -391,6 +393,15 @@ const refreshData = useCallback(async (force = false) => {
       window.removeEventListener('online', onOnline);
     };
   }, [refreshData]);
+
+  useEffect(() => {
+    if (currentUser?.role !== 'super_admin') return;
+    let cancelled = false;
+    void refreshUsersFromSupabase()
+      .then(() => { if (!cancelled) setUsers(getUsers()); })
+      .catch(() => { if (!cancelled) setUsers(getUsers()); });
+    return () => { cancelled = true; };
+  }, [currentUser?.id, currentUser?.role]);
 
   useEffect(() => {
     const refreshStatus = () => {
@@ -496,7 +507,7 @@ const refreshData = useCallback(async (force = false) => {
         : 'vodacom-privilege') as CampaignContext,
     label: campaign.name,
     note: campaign.code === 'youth-f2f'
-      ? 'Campagne en préparation'
+      ? 'Sensibilisation universitaire'
       : campaign.campaign_type === 'brand_ambassador'
         ? 'Brand Ambassador'
         : 'Hôtesses',
@@ -509,7 +520,7 @@ const refreshData = useCallback(async (force = false) => {
   const isMerchantContext = !isYouthContext && (effectiveRole === 'agent'
     ? (agentCampaignOptions.length > 0 ? activeCampaign === 'merchant-educational' : inferredAgentMerchant)
     : activeCampaign === 'merchant-educational');
-  const campaignIsPaused = effectiveRole === 'agent' && (isYouthContext || Boolean(activeCampaignPause));
+  const campaignIsPaused = effectiveRole === 'agent' && Boolean(activeCampaignPause);
   const setPermittedCampaignContext = (campaign: CampaignContext) => {
     if (effectiveRole !== 'agent' || agentCampaignOptions.some((option) => option.key === campaign)) setCampaignContext(campaign);
   };
@@ -563,7 +574,7 @@ const todayLeads =
     resetSimulationContext();
     if (realMasterUser.role === 'super_admin') {
       const target = role === 'agent'
-        ? users.find((user) => user.name.trim().toLowerCase() === 'jesly bamwangi')
+        ? users.find((user) => user.name.trim().toLowerCase() === 'agent test')
         : role === 'supervisor'
           ? users.find((user) => user.name.trim().toLowerCase() === 'hervé ntalu' || user.name.trim().toLowerCase() === 'herve ntalu')
           : role === 'admin'
@@ -713,8 +724,9 @@ const todayLeads =
         online={online}
         syncPendingCount={syncPendingCount}
         profilePhotoUrl={(isMerchantContext && effectiveUser.userCategory === 'brand_ambassador' ? merchantProfilePhotoUrl : isYouthContext ? '' : todayCheckinPhoto) || undefined}
-        onPointageRecorded={campaignIsPaused ? undefined : refreshData}
-        allowCheckin={!campaignIsPaused}
+        onPointageRecorded={campaignIsPaused || isYouthContext ? undefined : refreshData}
+        allowCheckin={!campaignIsPaused && !isYouthContext}
+        checkinUnavailableLabel={isYouthContext ? 'Utilisez le pointage Youth F2F ci-dessous' : 'Pointage indisponible pendant la pause de campagne'}
         theme={theme}
         onSetTheme={setThemeMode}
         activeCampaign={activeCampaign}

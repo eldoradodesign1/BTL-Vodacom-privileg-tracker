@@ -28,6 +28,11 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
   if (masterUser.role !== 'super_admin') return null;
 
   const activeRole = simulatedRole || effectiveUser.role;
+  const simulationUsers = [...users].sort((left, right) => {
+    const leftPriority = left.name.trim().toLowerCase() === 'agent test' ? 0 : left.userCategory === 'brand_ambassador_youth' ? 1 : 2;
+    const rightPriority = right.name.trim().toLowerCase() === 'agent test' ? 0 : right.userCategory === 'brand_ambassador_youth' ? 1 : 2;
+    return leftPriority - rightPriority || left.name.localeCompare(right.name, 'fr');
+  });
   const isDiamondTheme = theme === 'diamond';
   const simulationBackground = theme === 'diamond' ? 'diamond-light.jpg' : `${theme}.jpg`;
   const shellClasses = theme === 'rubis'
@@ -109,7 +114,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             onChange={(e) => onSimulateUserChange(e.target.value)}
             className={`w-36 rounded-xl border px-2.5 py-1.5 text-[11px] font-bold shadow-inner outline-none focus:border-red-300 ${selectClasses}`}
           >
-            {users.map(u => (
+            {simulationUsers.map(u => (
               <option key={u.id} value={u.id}>
                 👤 {u.name} ({u.role.toUpperCase()})
               </option>

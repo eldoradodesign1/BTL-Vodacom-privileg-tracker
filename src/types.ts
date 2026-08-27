@@ -11,7 +11,7 @@ export interface User {
   role: UserRole;
   password?: string;
   supervisorId?: string;
-  permanentShopId: string;
+  permanentShopId: string | null;
   userCategory?: UserCategory;
   authUserId?: string;
   created_at?: string;
@@ -28,6 +28,52 @@ export interface Campaign {
   ends_on?: string | null;
   daily_pos_target?: number | null;
   transactions_per_pos_target?: number | null;
+}
+
+export interface YouthUniversity {
+  id: string;
+  campaign_id: string;
+  code: string;
+  name: string;
+  commune?: string | null;
+  address?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  location_validation_status: 'pending' | 'validated';
+  source_url?: string | null;
+  notes?: string | null;
+  is_active: boolean;
+}
+
+export interface YouthDailyAssignment {
+  id: string;
+  campaign_id: string;
+  ba_id: string;
+  university_id: string;
+  activity_date: string;
+  status: 'planned' | 'in_progress' | 'completed' | 'cancelled';
+  notes?: string | null;
+  assigned_by?: string | null;
+  university?: YouthUniversity;
+}
+
+export interface YouthDailyAttendance {
+  id: string;
+  campaign_id: string;
+  daily_assignment_id?: string | null;
+  ba_id: string;
+  activity_date: string;
+  status: 'open' | 'closed' | 'alerted';
+  checkin_at?: string | null;
+  checkin_latitude?: number | null;
+  checkin_longitude?: number | null;
+  checkin_accuracy_m?: number | null;
+  checkin_photo_path?: string | null;
+  checkout_at?: string | null;
+  checkout_latitude?: number | null;
+  checkout_longitude?: number | null;
+  checkout_accuracy_m?: number | null;
+  closing_comment?: string | null;
 }
 
 export interface CampaignPause {

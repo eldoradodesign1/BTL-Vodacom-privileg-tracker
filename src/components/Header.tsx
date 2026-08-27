@@ -26,6 +26,7 @@ interface HeaderProps {
   onSetCampaign?: (campaign: CampaignContext) => void;
   campaignOptions?: Array<{ key: CampaignContext; label: string; note: string }>;
   allowCheckin?: boolean;
+  checkinUnavailableLabel?: string;
   fundRequestAlerts?: Array<{ id: string; baName: string; amount: number; posLabel: string; requestedAt: string }>;
   onOpenFundRequest?: (id: string) => void;
 }
@@ -49,6 +50,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSetCampaign,
   campaignOptions,
   allowCheckin = true,
+  checkinUnavailableLabel = 'Pointage indisponible pendant la pause de campagne',
   fundRequestAlerts = [],
   onOpenFundRequest
 }) => {
@@ -77,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({
   const visibleCampaigns = campaignOptions || [
     { key: 'vodacom-privilege' as const, label: 'Vodacom Privilège', note: 'Hôtesses' },
     { key: 'merchant-educational' as const, label: 'Merchant Education', note: 'Brand Ambassadors' },
-    { key: 'youth-f2f' as const, label: 'Youth F2F', note: 'Campagne en préparation' },
+    { key: 'youth-f2f' as const, label: 'Youth F2F', note: 'Sensibilisation universitaire' },
   ];
   const syncState: 'ok' | 'progress' | 'late' = (() => {
     if (online && syncPendingCount === 0) return 'ok';
@@ -204,7 +206,7 @@ export const Header: React.FC<HeaderProps> = ({
           }}
           disabled={isPointagePending || !allowCheckin}
           className={`relative w-11 h-11 bg-red-600 rounded-2xl flex items-center justify-center font-black text-white text-base shadow-lg shadow-red-600/30 overflow-hidden shrink-0 border border-white/20 transition-transform ${photoSrc ? 'cursor-zoom-in hover:scale-[1.03]' : user.role === 'agent' ? 'cursor-pointer hover:scale-[1.03]' : 'cursor-default'} ${isPointagePending ? 'opacity-75' : ''}`}
-          aria-label={photoSrc ? 'Ouvrir la photo de pointage en plein écran' : (allowCheckin ? 'Check-in en attente' : 'Pointage indisponible pendant la pause de campagne')}
+          aria-label={photoSrc ? 'Ouvrir la photo de pointage en plein écran' : (allowCheckin ? 'Check-in en attente' : checkinUnavailableLabel)}
         >
           {photoSrc ? (
             <img
