@@ -1144,7 +1144,7 @@ export async function getReportPdf(report: DailyReport): Promise<string> {
   return generatedUrl;
 }
 
-function buildReportPreviewData(report: DailyReport): PDFReportData {
+export function buildReportPreviewData(report: DailyReport): PDFReportData {
   const shopObj = getShopById(report.shop_id);
   const targets = getTargetsByShop(report.shop_id);
   const allLeads = getLeads();

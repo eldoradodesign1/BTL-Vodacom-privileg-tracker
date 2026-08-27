@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Download, ExternalLink, Printer, FileText } from 'lucide-react';
-import { getReportPdf, getReportPreviewHtml, getReports } from '../../utils/storage';
+import { buildReportPreviewData, getReportPdf, getReportPreviewHtml, getReports } from '../../utils/storage';
+import { exportAdminBatchReportExcel, exportAgentReportExcel, exportSupervisorReportExcel } from '../../utils/reportExcelExport';
 import { DailyReport } from '../../types';
 import { buildAdminBatchReportHtml, buildSupervisorReportHtml, generateAdminBatchPDF, generateSupervisorPDF, PDFAdminBatchData, PDFSupervisorData } from '../../utils/pdfGenerator';
 
@@ -171,6 +172,20 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
     document.body.removeChild(link);
   };
 
+  const handleExcelDownload = () => {
+    if (activeReport) {
+      void exportAgentReportExcel(buildReportPreviewData(activeReport));
+      return;
+    }
+    if (activeSupervisorPreview) {
+      void exportSupervisorReportExcel(activeSupervisorPreview);
+      return;
+    }
+    if (activeAdminPreview) {
+      void exportAdminBatchReportExcel(activeAdminPreview);
+    }
+  };
+
   const handlePrint = () => {
     if (activeSupervisorPreview) {
       generateSupervisorPDF(activeSupervisorPreview).then((url) => {
@@ -233,6 +248,16 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
             >
               <Download className="w-3.5 h-3.5" />
               <span>Télécharger PDF</span>
+            </button>
+
+            <button
+              onClick={handleExcelDownload}
+              disabled={!activeReport && !activeSupervisorPreview && !activeAdminPreview}
+              className="px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-100 rounded-xl text-[10px] font-black uppercase flex items-center space-x-1.5 transition-all disabled:opacity-40"
+              title="Télécharger Excel"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span>Excel</span>
             </button>
 
             <button
