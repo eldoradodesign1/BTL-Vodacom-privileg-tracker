@@ -42,7 +42,6 @@ export interface PDFSupervisorData {
     departureTime?: string;
   }>;
   reports?: PDFReportData[];
-  comment?: string;
 }
 
 export interface PDFAdminBatchData {
@@ -52,7 +51,6 @@ export interface PDFAdminBatchData {
   totals?: { privilege: number; roaming: number; bundles: number };
   reports?: PDFReportData[];
   groups?: Array<{ supervisor: string; agentCount: number; totalLeads: number; totalPrivilege: number; totalRoaming: number; totalBundles: number }>;
-  comment?: string;
 }
 
 function escapeHtml(value: string | number | undefined): string {
@@ -451,8 +449,7 @@ function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
   const followingPageCardCount = 10;
   const firstCards = d.team.slice(0, firstPageCardCount);
   const remainingCards = d.team.slice(firstPageCardCount);
-  const supervisorComment = d.comment?.trim() ? `<div style="background:#f0fdfa; border:1px solid #99f6e4; border-radius:14px; padding:14px; margin-bottom:12px;"><div style="font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:1px; color:#0f766e;">Commentaire du superviseur</div><div style="font-size:11px; line-height:1.55; color:#134e4a; margin-top:6px; white-space:pre-wrap;">${escapeHtml(d.comment.trim())}</div></div>` : '';
-  const cardPages: string[] = [cover + summary + supervisorComment + buildCardsGrid(firstCards)];
+  const cardPages: string[] = [cover + summary + buildCardsGrid(firstCards)];
 
   for (let i = 0; i < remainingCards.length; i += followingPageCardCount) {
     cardPages.push(buildCardsGrid(remainingCards.slice(i, i + followingPageCardCount)));
@@ -639,8 +636,7 @@ function buildAdminBatchReportPages(d: PDFAdminBatchData): string[] {
     </table>
   ` : '<div style="font-size:11px; color:#64748b;">Aucune ligne disponible pour cette période.</div>';
 
-  const supervisorComment = d.comment?.trim() ? `<div style="background:#f0fdfa; border:1px solid #99f6e4; border-radius:14px; padding:14px; margin-bottom:12px;"><div style="font-size:9px; font-weight:900; text-transform:uppercase; letter-spacing:1px; color:#0f766e;">Commentaire du superviseur</div><div style="font-size:11px; line-height:1.55; color:#134e4a; margin-top:6px; white-space:pre-wrap;">${escapeHtml(d.comment.trim())}</div></div>` : '';
-  const pages: string[] = [cover + summaryCards + supervisorComment, tablePage];
+  const pages: string[] = [cover + summaryCards, tablePage];
 
   if (d.reports && d.reports.length) {
     pages.push(...d.reports.map((report) => buildAgentReportHtml(report)));

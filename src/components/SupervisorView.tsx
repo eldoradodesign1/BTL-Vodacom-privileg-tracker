@@ -14,7 +14,6 @@ import { Trophy, FileCheck, Eye, Search, Store, UserCheck, User as UserIcon, Map
 import { DateIconPicker } from './DateIconPicker';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 import { CampaignPauseControl } from './CampaignPauseControl';
-import { getSupervisorReportComment, saveSupervisorReportComment, suggestSupervisorReportComment } from '../utils/supervisorReportComments';
 
 interface SupervisorViewProps {
   currentUser: User;
@@ -59,10 +58,6 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const [selectedLocationAgent, setSelectedLocationAgent] = useState<{ id: string; name: string; shop: string; status?: 'Présent' | 'Clôturé' | 'Absent'; arrivalTime?: string; departureTime?: string; mapsIn?: string; mapsOut?: string; lat?: number; long?: number } | null>(null);
   const [showHomeCalendar, setShowHomeCalendar] = useState(false);
   const [showReportPeriodModal, setShowReportPeriodModal] = useState(false);
-  const [supervisorReportComment, setSupervisorReportComment] = useState('');
-  const [supervisorCommentIsAi, setSupervisorCommentIsAi] = useState(false);
-  const [supervisorCommentBusy, setSupervisorCommentBusy] = useState(false);
-  const [supervisorReportError, setSupervisorReportError] = useState('');
   const [presenceCalendarAgentId, setPresenceCalendarAgentId] = useState<string | null>(null);
   const [presenceCalendarPosition, setPresenceCalendarPosition] = useState<{ top: number; left: number } | null>(null);
   const [presenceCalendarMonth, setPresenceCalendarMonth] = useState(() => {
@@ -276,37 +271,8 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     }
   }
 
-  const supervisorReportKind = reportsStartDate === reportsEndDate ? 'daily' : ((Math.round((new Date(`${reportsEndDate}T12:00:00`).getTime() - new Date(`${reportsStartDate}T12:00:00`).getTime()) / 86400000) + 1) <= 7 ? 'weekly' : 'compiled') as 'daily' | 'weekly' | 'compiled';
-
-  const loadSupervisorReportComment = async () => {
-    if ((!showReportPeriodModal && activeTab !== 'tab3') || reportsStartDate > reportsEndDate) return;
-    setSupervisorCommentBusy(true);
-    setSupervisorReportError('');
-    try {
-      const currentReports = allReports.filter((item) => teamAgentIds.includes(item.agent_id) && item.date >= reportsStartDate && item.date <= reportsEndDate);
-      const currentLeads = getLeads().filter((item) => teamAgentIds.includes(item.agent_id) && toISO(item.timestamp) >= reportsStartDate && toISO(item.timestamp) <= reportsEndDate);
-      const existing = await getSupervisorReportComment('privilege', supervisorReportKind, reportsStartDate, reportsEndDate);
-      if (existing) { setSupervisorReportComment(existing.comment); setSupervisorCommentIsAi(existing.aiGenerated); return; }
-      const privilege = currentLeads.filter((item) => String(item.action_type).includes('Privil')).length;
-      const roaming = currentLeads.filter((item) => String(item.action_type).includes('Roam')).length;
-      const bundle = currentLeads.filter((item) => String(item.action_type).includes('Bund') || String(item.action_type).includes('Pack')).length;
-      const total = privilege + roaming + bundle;
-      const suggestion = await suggestSupervisorReportComment({
-        campaign: 'privilege', kind: supervisorReportKind, startsOn: reportsStartDate, endsOn: reportsEndDate, userId: currentUser.id,
-        metrics: { total, privilege, roaming, bundle, activePeople: new Set(currentLeads.map((item) => item.agent_id)).size, shops: new Set(currentReports.map((item) => item.shop_id)).size, average: Math.round((total / Math.max(1, Math.round((new Date(`${reportsEndDate}T12:00:00`).getTime() - new Date(`${reportsStartDate}T12:00:00`).getTime()) / 86400000) + 1)) * 100) / 100, peak: total, activityLevel: total > 0 ? 'En activité' : 'Sans activité' },
-        agentComments: currentReports.map((item) => item.comment).filter(Boolean),
-      });
-      setSupervisorReportComment(suggestion || '');
-      setSupervisorCommentIsAi(Boolean(suggestion));
-    } catch (caught) { setSupervisorReportError(caught instanceof Error ? caught.message : 'Suggestion de commentaire indisponible.'); }
-    finally { setSupervisorCommentBusy(false); }
-  };
-
-  useEffect(() => { void loadSupervisorReportComment(); }, [showReportPeriodModal, reportsStartDate, reportsEndDate, supervisorReportKind, currentUser.id]);
-
   const handleGenerateSupervisorReport = async () => {
   if (reportsStartDate > reportsEndDate) return;
-  if (!supervisorReportComment.trim()) { setSupervisorReportError('Le commentaire du superviseur est requis avant l’export.'); return; }
 
   setLoading(true);
 
@@ -402,11 +368,6 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const totalRoaming = periodTeam.reduce((s, a) => s + a.stats.roam, 0);
   const totalBundles = periodTeam.reduce((s, a) => s + a.stats.bund, 0);
 
-  const reportMetrics = { total: totalPrivilege + totalRoaming + totalBundles, privilege: totalPrivilege, roaming: totalRoaming, bundle: totalBundles, activePeople: new Set(periodLeads.map((item) => item.agent_id)).size, shops: new Set(periodReports.map((item) => item.shop_id)).size, average: Math.round(((totalPrivilege + totalRoaming + totalBundles) / Math.max(1, Math.round((new Date(`${reportsEndDate}T12:00:00`).getTime() - new Date(`${reportsStartDate}T12:00:00`).getTime()) / 86400000) + 1)) * 100) / 100, peak: totalPrivilege + totalRoaming + totalBundles, activityLevel: (totalPrivilege + totalRoaming + totalBundles) > 0 ? 'En activité' : 'Sans activité' };
-  try {
-    await saveSupervisorReportComment({ campaign: 'privilege', kind: supervisorReportKind, startsOn: reportsStartDate, endsOn: reportsEndDate, comment: supervisorReportComment, aiGenerated: supervisorCommentIsAi, userId: currentUser.id, sourceComments: periodReports.map((item) => item.comment).filter(Boolean), metrics: reportMetrics });
-  } catch (caught) { setLoading(false); setSupervisorReportError(caught instanceof Error ? caught.message : 'Enregistrement du commentaire impossible.'); return; }
-
   const payload = {
     supName: currentUser.name,
     date: `${reportsStartDate} au ${reportsEndDate}`,
@@ -418,8 +379,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
       deployedCount: periodTeam.length
     },
     team: periodTeam,
-    reports,
-    comment: supervisorReportComment.trim(),
+    reports
   };
 
   setLoading(false);
@@ -439,7 +399,6 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   };
 
   const handleGenerateBatchPDF = async () => {
-    if (!supervisorReportComment.trim()) { setSupervisorReportError('Le commentaire du superviseur est requis avant l’export.'); return; }
     setLoading(true);
     const selectedReports = filteredReportsForPeriod;
     const allLeads = getLeads();
@@ -487,18 +446,12 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
       };
     });
 
-    const batchMetrics = { total: totals.privilege + totals.roaming + totals.bundles, privilege: totals.privilege, roaming: totals.roaming, bundle: totals.bundles, activePeople: new Set(selectedReports.map((item) => item.agent_id)).size, shops: new Set(selectedReports.map((item) => item.shop_id)).size, average: Math.round(((totals.privilege + totals.roaming + totals.bundles) / Math.max(1, selectedReports.length)) * 100) / 100, peak: Math.max(0, ...rows.map((item) => item.priv + item.roam + item.bund)), activityLevel: (totals.privilege + totals.roaming + totals.bundles) > 0 ? 'En activité' : 'Sans activité' };
-    try {
-      await saveSupervisorReportComment({ campaign: 'privilege', kind: supervisorReportKind, startsOn: consolidationStartDate, endsOn: consolidationEndDate, comment: supervisorReportComment, aiGenerated: supervisorCommentIsAi, userId: currentUser.id, sourceComments: selectedReports.map((item) => item.comment).filter(Boolean), metrics: batchMetrics });
-    } catch (caught) { setLoading(false); setSupervisorReportError(caught instanceof Error ? caught.message : 'Enregistrement du commentaire impossible.'); return; }
-
     const payload = {
       period: `${consolidationStartDate} au ${consolidationEndDate}`,
       title: `Compilation Superviseur ${currentUser.name}`,
       rows,
       totals,
       reports,
-      comment: supervisorReportComment.trim(),
       groups: [
         {
           supervisor: currentUser.name,
@@ -910,8 +863,6 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
               setReportsEndDate(nextEnd);
             }}
           />
-          <label className="block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400">Commentaire du superviseur <span className="normal-case text-cyan-200">requis avant export</span><textarea value={supervisorReportComment} onChange={(event) => { setSupervisorReportComment(event.target.value); setSupervisorCommentIsAi(false); }} placeholder={supervisorCommentBusy ? 'Génération de la synthèse IA…' : 'Synthèse de la période et priorités de suivi…'} className="app-input mt-2 min-h-28 w-full rounded-2xl p-3 text-sm"/>{supervisorCommentBusy && <span className="mt-2 block normal-case text-[10px] text-cyan-200">Suggestion IA en cours…</span>}{supervisorCommentIsAi && !supervisorCommentBusy && <span className="mt-2 block normal-case text-[10px] text-violet-200">Suggestion IA préremplie — modifiable.</span>}</label>
-          {supervisorReportError && <p className="rounded-xl border border-amber-400/35 bg-amber-950/40 p-2 text-[11px] font-bold text-amber-100">{supervisorReportError}</p>}
           <div className="relative">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
             <input
@@ -926,7 +877,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
         <button
           onClick={handleGenerateBatchPDF}
-          disabled={loading || supervisorCommentBusy}
+          disabled={loading}
           className="btn-neon btn-red w-full flex items-center justify-center space-x-2"
         >
           <FileCheck className="w-4 h-4" />
@@ -1373,11 +1324,9 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                 />
               </div>
 
-              <label className="block text-[10px] font-black uppercase tracking-[0.14em] text-gray-400">Commentaire du superviseur <span className="normal-case text-cyan-200">requis avant export</span><textarea value={supervisorReportComment} onChange={(event) => { setSupervisorReportComment(event.target.value); setSupervisorCommentIsAi(false); }} placeholder={supervisorCommentBusy ? 'Génération de la synthèse IA…' : 'Synthèse de la période et priorités de suivi…'} className="app-input mt-2 min-h-28 w-full rounded-2xl p-3 text-sm"/>{supervisorCommentBusy && <span className="mt-2 block normal-case text-[10px] text-cyan-200">Suggestion IA en cours…</span>}{supervisorCommentIsAi && !supervisorCommentBusy && <span className="mt-2 block normal-case text-[10px] text-violet-200">Suggestion IA préremplie — modifiable.</span>}</label>
-              {supervisorReportError && <p className="rounded-xl border border-amber-400/35 bg-amber-950/40 p-2 text-[11px] font-bold text-amber-100">{supervisorReportError}</p>}
               <button
                 type="button"
-                disabled={reportsStartDate > reportsEndDate || loading || supervisorCommentBusy}
+                disabled={reportsStartDate > reportsEndDate || loading}
                 onClick={handleGenerateSupervisorReport}
                 className="w-full rounded-xl bg-red-600 py-3 text-sm font-black uppercase text-white disabled:opacity-40"
               >

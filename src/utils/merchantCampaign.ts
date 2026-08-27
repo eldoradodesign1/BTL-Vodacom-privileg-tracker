@@ -1448,7 +1448,6 @@ export interface MerchantSupervisorReport {
   totals: { pos: number; transactions: number; amount: number; activeBas: number; executionRate: number };
   byBa: Array<{ id: string; name: string; phone: string; pos: number; transactions: number; amount: number; firstArrival?: string | null }>;
   daily: Array<{ date: string; pos: number; transactions: number; activeBas: number }>;
-  agentReports: Array<{ date: string; baId: string; name: string; phone: string; mfsName: string; checkinAt: string | null; checkoutAt: string | null; pos: number; transactions: number; amount: number; comment: string }>;
 }
 
 const addCalendarDays = (iso: string, offset: number): string => {
@@ -1457,20 +1456,15 @@ const addCalendarDays = (iso: string, offset: number): string => {
   return isoDate(date);
 };
 
-export async function getMerchantSupervisorReport(run: CampaignRun, kind: MerchantSupervisorReportKind, activityDate = merchantTodayIso(), period?: { startDate?: string; endDate?: string }): Promise<MerchantSupervisorReport> {
+export async function getMerchantSupervisorReport(run: CampaignRun, kind: MerchantSupervisorReportKind, activityDate = merchantTodayIso()): Promise<MerchantSupervisorReport> {
   const today = merchantTodayIso();
   const selectedDay = clampMerchantActivityDate(activityDate);
-  const requestedStart = period?.startDate ? clampMerchantActivityDate(period.startDate) : null;
-  const requestedEnd = period?.endDate ? clampMerchantActivityDate(period.endDate) : null;
-  const defaultWeeklyStart = addCalendarDays(selectedDay, -6) < MERCHANT_CAMPAIGN_START ? MERCHANT_CAMPAIGN_START : addCalendarDays(selectedDay, -6);
   const startsOn = kind === 'daily'
     ? selectedDay
     : kind === 'weekly'
-      ? (requestedStart || defaultWeeklyStart)
-      : (requestedStart || MERCHANT_CAMPAIGN_START);
-  const endsOn = kind === 'daily'
-    ? selectedDay
-    : (requestedEnd || selectedDay || today);
+      ? (addCalendarDays(today, -6) < MERCHANT_CAMPAIGN_START ? MERCHANT_CAMPAIGN_START : addCalendarDays(today, -6))
+      : MERCHANT_CAMPAIGN_START;
+  const endsOn = today;
   const [bas, activity, campaignPos] = await Promise.all([getMerchantBAs(), getRunActivityData(run.id), getCampaignPos(run.campaign_id)]);
   const inRange = (value: string) => value >= startsOn && value <= endsOn;
   const visits = activity.visits.filter((item) => inRange(item.activity_date));
@@ -1496,28 +1490,6 @@ export async function getMerchantSupervisorReport(run: CampaignRun, kind: Mercha
     };
   }).filter((item) => item.pos > 0 || item.transactions > 0).sort((a, b) => b.pos - a.pos || b.transactions - a.transactions || a.name.localeCompare(b.name));
   const dates = Array.from({ length: periodDays }, (_, index) => addCalendarDays(startsOn, index));
-  const baById = new Map(bas.map((ba) => [ba.id, ba]));
-  const agentReports = attendance
-    .filter((item) => item.status === 'closed')
-    .map((item) => {
-      const ba = baById.get(item.ba_id);
-      const baVisits = visits.filter((visit) => visit.ba_id === item.ba_id && visit.activity_date === item.activity_date);
-      const baTransactions = transactions.filter((transaction) => transaction.ba_id === item.ba_id && transaction.occurred_at.slice(0, 10) === item.activity_date);
-      return {
-        date: item.activity_date,
-        baId: item.ba_id,
-        name: ba?.name || 'Brand Ambassador',
-        phone: ba?.phone || '',
-        mfsName: item.mfs_name || '',
-        checkinAt: item.checkin_at || null,
-        checkoutAt: item.checkout_at || null,
-        pos: baVisits.length,
-        transactions: baTransactions.length,
-        amount: baTransactions.reduce((total, transaction) => total + Number(transaction.amount || 0), 0),
-        comment: item.closing_comment?.trim() || '',
-      };
-    })
-    .sort((left, right) => right.date.localeCompare(left.date) || left.name.localeCompare(right.name));
   return {
     kind,
     startsOn,
@@ -1531,7 +1503,6 @@ export async function getMerchantSupervisorReport(run: CampaignRun, kind: Mercha
       executionRate: Math.min(100, Math.round((visits.length / targetVisits) * 100)),
     },
     byBa,
-    agentReports,
     daily: dates.map((date) => ({
       date,
       pos: visits.filter((item) => item.activity_date === date).length,
