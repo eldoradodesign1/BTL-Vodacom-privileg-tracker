@@ -5,6 +5,7 @@ import { getLeads, getCheckins, resolveStoredPhotoUrl, toISO, updateUserShopAssi
 import { buildAgentCompilationPayload } from '../../utils/agentCompilation';
 import { Phone, FileSpreadsheet, X, Eye, Camera, CheckCircle2, Clock3, UserCheck } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
+import { DetailPdfExportButton } from './DetailPdfExportButton';
 
 interface AgentProfileModalProps {
   isOpen: boolean;
@@ -168,18 +169,30 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
       ? 'bg-blue-500/20 text-blue-400 border-blue-500/40'
       : 'bg-red-500/20 text-red-400 border-red-500/40';
 
+  const detailDocument = {
+    title: 'Fiche agent',
+    subtitle: `${agent.name} · ${agent.shop || 'Boutique non renseignée'}`,
+    filename: `fiche-agent-${agent.name}`,
+    sections: [
+      { title: 'Identification', rows: [{ label: 'Agent', value: agent.name }, { label: 'Téléphone', value: agent.phone }, { label: 'Boutique', value: agent.shop }, { label: 'Statut', value: agent.status }] },
+      { title: 'Activité sélectionnée', rows: [{ label: 'Date', value: selectedClientsDate }, { label: 'Clients enregistrés', value: detailLeads.length }, { label: 'Photo de pointage', value: latestPhoto ? 'Disponible dans l’application' : 'Non disponible' }] },
+      ...(detailLeads.length ? [{ title: 'Clients', rows: detailLeads.map((lead, index) => ({ label: `#${index + 1} · ${lead.client_name || 'Client'}`, value: `${lead.msisdn || 'MSISDN non renseigné'} · ${lead.action_type || 'Action non renseignée'}` })) }] : []),
+      ...(agentReports.length ? [{ title: 'Rapports récents', rows: agentReports.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 12).map((report) => ({ label: report.date, value: `${report.priv + report.roam + report.bund} client(s) · ${report.comment || 'Sans commentaire'}` })) }] : []),
+    ],
+  };
+
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[70] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-pop overflow-y-auto" onClick={onClose}>
       <div className="modal-sheet relative w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-sticky-header text-center">
           <div className="modal-handle" />
-          <button
+          <div className="absolute top-5 right-5 flex items-center gap-2"><DetailPdfExportButton document={detailDocument}/><button
             onClick={onClose}
-            className="absolute top-6 right-6 text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10"
+            className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10"
             aria-label="Fermer"
           >
             <X className="w-5 h-5" />
-          </button>
+          </button></div>
           <div className="flex flex-col items-center text-center">
             <button
               type="button"

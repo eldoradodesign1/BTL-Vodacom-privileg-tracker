@@ -8,6 +8,7 @@ import { getMerchantBAActivityDetail, getMerchantEvidencePublicUrl, MERCHANT_CAM
 import { ImageLightboxModal, type LightboxImage } from './ImageLightboxModal';
 import { MerchantVisitedPosModal } from './MerchantVisitedPosModal';
 import { MerchantTransactionsDetailModal } from './MerchantTransactionsDetailModal';
+import { DetailPdfExportButton } from './DetailPdfExportButton';
 
 type MerchantOperation = 'profile' | 'report' | 'location' | 'calendar';
 
@@ -113,13 +114,26 @@ export const MerchantBAOperationsModal: React.FC<MerchantBAOperationsModalProps>
       ? 'border-cyan-400/35 bg-cyan-500/15 text-cyan-100'
       : 'border-red-400/35 bg-red-500/10 text-red-100';
 
+  const detailDocument = {
+    title,
+    subtitle,
+    filename: `ba-${activity.ba.name}-${mode}`,
+    sections: [
+      { title: 'Brand Ambassador', rows: [{ label: 'Nom', value: activity.ba.name }, { label: 'Téléphone', value: activity.ba.phone }, { label: 'Statut', value: activity.status === 'closed' ? 'Clôturé' : activity.status === 'present' ? 'En activité' : 'Absent' }, { label: 'MFS', value: activity.mfsNames.join(' · ') || 'Non renseigné' }] },
+      ...(mode === 'report' ? [{ title: 'Rapport du jour', rows: [{ label: 'Date', value: formatDate(attendance?.activity_date) }, { label: 'Arrivée', value: formatTime(attendance?.checkin_at) }, { label: 'Clôture', value: formatTime(attendance?.checkout_at) }, { label: 'POS visités', value: activity.visitedPosCount }, { label: 'Transactions', value: selectedDayTransactions.length }, { label: 'Montant', value: formatNumber(selectedDayTransactions.reduce((sum, item) => sum + Number(item.amount || 0), 0)) }] }, { title: 'Commentaire de clôture', text: attendance?.closing_comment || 'Aucun commentaire renseigné.' }] : []),
+      ...(mode === 'profile' ? [{ title: 'Activité du jour', rows: [{ label: 'Pointage', value: attendance ? formatTime(attendance.checkin_at) : 'Aucun pointage' }, { label: 'POS visités', value: activity.visitedPosCount }, { label: 'Transactions', value: activity.transactionCount }, { label: 'Montant', value: formatNumber(activity.totalAmount) }] }, ...(transactions.length ? [{ title: 'Dernières transactions', rows: transactions.slice(0, 8).map((transaction) => ({ label: transaction.point_of_sale?.denomination || 'POS Merchant', value: `${transaction.client_number || 'Client non renseigné'} · ${formatNumber(transaction.amount)}` })) }] : [])] : []),
+      ...(mode === 'location' ? [{ title: 'Localisation', rows: [{ label: 'Moment', value: locationMoment === 'checkin' ? 'Arrivée' : 'Clôture' }, { label: 'Coordonnées', value: mapCoordinates ? `${mapCoordinates.latitude}, ${mapCoordinates.longitude}` : 'Non disponible' }] }] : []),
+      ...(mode === 'calendar' ? [{ title: 'Présences', rows: attendances.slice().sort((a, b) => b.activity_date.localeCompare(a.activity_date)).map((entry) => ({ label: formatDate(entry.activity_date), value: entry.status === 'closed' ? 'Clôturé' : entry.status === 'open' ? 'Présent' : entry.status === 'alerted' ? 'Alerté' : entry.status })) }] : []),
+    ],
+  };
+
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/80 p-0 backdrop-blur-md sm:items-center sm:p-4" onClick={onClose}>
       <div className="modal-sheet relative w-full max-w-xl" onClick={(event) => event.stopPropagation()}>
         <div className="modal-sticky-header">
           <div className="modal-handle" />
-          <button onClick={onClose} className="absolute right-5 top-5 rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 hover:bg-white/10 hover:text-white" aria-label="Fermer"><X size={18}/></button>
-          <div className="flex items-start gap-3 pr-10">
+          <div className="absolute right-5 top-5 flex items-center gap-2"><DetailPdfExportButton document={detailDocument}/><button onClick={onClose} className="rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 hover:bg-white/10 hover:text-white" aria-label="Fermer"><X size={18}/></button></div>
+          <div className="flex items-start gap-3 pr-24">
             {mode === 'profile' && checkinPhotoUrl ? <button type="button" onClick={() => setLightbox({ url: checkinPhotoUrl, alt: `Pointage de ${activity.ba.name}` })} className="group relative h-12 w-12 shrink-0 overflow-hidden rounded-2xl border border-cyan-300/30 bg-cyan-400/10" aria-label="Ouvrir la photo de pointage"><img src={checkinPhotoUrl} alt={`Pointage de ${activity.ba.name}`} className="h-full w-full object-cover transition group-hover:scale-110"/></button> : <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-400/10 text-cyan-100">{mode === 'profile' ? <UserRound size={21}/> : mode === 'report' ? <FileText size={21}/> : mode === 'location' ? <MapPin size={21}/> : <CalendarDays size={21}/>}</div>}
             <div><h2 className="text-lg font-black text-white">{title}</h2><p className="mt-0.5 text-[11px] font-bold uppercase text-gray-400">{subtitle}</p></div>
           </div>

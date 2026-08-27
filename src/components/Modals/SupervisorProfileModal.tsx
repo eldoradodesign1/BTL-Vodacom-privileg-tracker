@@ -1,6 +1,7 @@
 import React from 'react';
 import { User } from '../../types';
 import { Users, Phone, X, User as UserIcon, FileSpreadsheet } from 'lucide-react';
+import { DetailPdfExportButton } from './DetailPdfExportButton';
 
 export interface SupervisorHostessSummary {
   id: string;
@@ -39,6 +40,7 @@ export const SupervisorProfileModal: React.FC<SupervisorProfileModalProps> = ({
     { priv: 0, roam: 0, bund: 0 }
   );
 
+  const detailDocument = { title: 'Fiche superviseur', subtitle: supervisor.name, filename: `superviseur-${supervisor.name}`, sections: [{ title: 'Superviseur', rows: [{ label: 'Nom', value: supervisor.name }, { label: 'Téléphone', value: supervisor.phone }, { label: 'Hôtesses affectées', value: hostesses.length }] }, { title: 'Totaux équipe', rows: [{ label: 'Privilège', value: totals.priv }, { label: 'Roaming', value: totals.roam }, { label: 'Bundle', value: totals.bund }] }, { title: 'Hôtesses', rows: hostesses.map((hostess) => ({ label: hostess.name, value: `${hostess.shop} · Privilège ${hostess.totalPriv} · Roaming ${hostess.totalRoam} · Bundle ${hostess.totalBund}` })) }] };
   return (
     <div
       className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-pop overflow-y-auto"
@@ -47,12 +49,13 @@ export const SupervisorProfileModal: React.FC<SupervisorProfileModalProps> = ({
       <div className="modal-sheet relative w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-handle" />
 
-        <button
+        <div className="absolute top-5 right-5 flex items-center gap-2"><DetailPdfExportButton document={detailDocument}/><button
           onClick={onClose}
-          className="absolute top-6 right-6 text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10"
+          className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10"
+          aria-label="Fermer"
         >
           <X className="w-5 h-5" />
-        </button>
+        </button></div>
 
         <div className="flex flex-col items-center text-center mb-6">
           <div className="w-16 h-16 rounded-3xl bg-red-600/20 border-2 border-red-500/40 text-red-500 font-black text-xl flex items-center justify-center mb-3 overflow-hidden">

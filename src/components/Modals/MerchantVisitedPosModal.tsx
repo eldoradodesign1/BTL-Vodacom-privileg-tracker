@@ -5,6 +5,7 @@ import type { BAPosVisit, CampaignRun } from '../../types';
 import type { MerchantTeamActivity } from '../../utils/merchantCampaign';
 import { getMerchantEvidencePublicUrl, getPosVisitsForDay } from '../../utils/merchantCampaign';
 import { ImageLightboxModal, type LightboxImage } from './ImageLightboxModal';
+import { DetailPdfExportButton } from './DetailPdfExportButton';
 
 type VisitWithPhoto = BAPosVisit & { photoUrl?: string };
 
@@ -55,13 +56,23 @@ export const MerchantVisitedPosModal: React.FC<MerchantVisitedPosModalProps> = (
     ? `${selectedVisit.point_of_sale?.denomination || 'POS Merchant'} · ${selectedVisit.point_of_sale?.agent_number || selectedVisit.pos_id}`
     : `${activity.ba.name} · ${activityDate || 'Date non renseignée'}`;
 
+  const detailDocument = {
+    title,
+    subtitle,
+    filename: selectedVisit ? `pos-visite-${selectedVisit.point_of_sale?.agent_number || selectedVisit.id}` : `pos-visites-${activity.ba.name}-${activityDate}`,
+    sections: selectedVisit ? [
+      { title: 'POS', rows: [{ label: 'Dénomination', value: selectedVisit.point_of_sale?.denomination }, { label: 'Short-code', value: selectedVisit.point_of_sale?.agent_number }, { label: 'Adresse', value: selectedVisit.point_of_sale?.address }, { label: 'Arrivée', value: visitMoment(selectedVisit.visited_at) }, { label: 'Statut', value: isInactive ? 'Non actif · couvert' : 'Actif' }, { label: 'Coordonnées', value: selectedVisit.latitude != null && selectedVisit.longitude != null ? `${selectedVisit.latitude}, ${selectedVisit.longitude}` : null }] },
+      ...(isInactive ? [{ title: 'Constat terrain', text: selectedVisit.operational_note?.trim() || 'Commentaire non renseigné lors de la validation.' }] : [{ title: 'Transactions', rows: (selectedVisit.transactions || []).map((transaction, index) => ({ label: `Transaction ${index + 1}`, value: `${transaction.client_number || 'Client non renseigné'} · ${transaction.transaction_reference || 'Référence à compléter'} · ${Number(transaction.amount || 0).toLocaleString('fr-FR')}` })) }]),
+    ] : [{ title: 'POS visités', rows: visits.map((visit, index) => ({ label: `#${index + 1} · ${visit.point_of_sale?.denomination || 'POS Merchant'}`, value: `${visit.point_of_sale?.agent_number || visit.pos_id} · ${visit.operational_status === 'inactive' ? 'Non actif · couvert' : `${visit.transactions?.length || 0}/3 transactions`} · ${visitTime(visit.visited_at)}` })) }],
+  };
+
   return createPortal(
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/80 p-0 backdrop-blur-md sm:items-center sm:p-4" onClick={onClose}>
       <section className="modal-sheet relative w-full max-w-xl" onClick={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="merchant-visited-pos-title">
         <div className="modal-sticky-header">
           <div className="modal-handle" />
-          <button type="button" onClick={onClose} className="absolute right-5 top-5 rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:bg-white/10 hover:text-white" aria-label="Fermer"><X size={18}/></button>
-          <div className="flex items-start gap-3 pr-10">
+          <div className="absolute right-5 top-5 flex items-center gap-2"><DetailPdfExportButton document={detailDocument}/><button type="button" onClick={onClose} className="rounded-full border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:bg-white/10 hover:text-white" aria-label="Fermer"><X size={18}/></button></div>
+          <div className="flex items-start gap-3 pr-24">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/25 bg-cyan-400/10 text-cyan-100"><Store size={21}/></div>
             <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200/70">Suivi terrain</p><h2 id="merchant-visited-pos-title" className="mt-1 text-lg font-black text-white">{title}</h2><p className="mt-0.5 text-[11px] font-bold uppercase text-gray-400">{subtitle}</p></div>
           </div>

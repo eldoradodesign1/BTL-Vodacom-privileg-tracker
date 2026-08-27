@@ -1,6 +1,7 @@
 import React from 'react';
 import { Lead } from '../../types';
 import { X, Users } from 'lucide-react';
+import { DetailPdfExportButton } from './DetailPdfExportButton';
 
 interface TodayClientsModalProps {
   isOpen: boolean;
@@ -17,16 +18,18 @@ export const TodayClientsModal: React.FC<TodayClientsModalProps> = ({
 }) => {
   if (!isOpen || !agent) return null;
 
+  const detailDocument = { title: 'Clients du jour', subtitle: `${agent.name} · ${agent.shop}`, filename: `clients-${agent.name}`, sections: [{ title: 'Clients affichés', rows: dayLeads.map((lead, index) => ({ label: `#${index + 1} · ${lead.client_name || 'Client'}`, value: `${lead.msisdn || 'MSISDN non renseigné'} · ${lead.action_type || 'Action non renseignée'}` })) }] };
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-pop" onClick={onClose}>
       <div className="modal-sheet relative w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-handle" />
-        <button
+        <div className="absolute top-5 right-5 flex items-center gap-2"><DetailPdfExportButton document={detailDocument}/><button
           onClick={onClose}
-          className="absolute top-6 right-6 text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10"
+          className="text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10"
+          aria-label="Fermer"
         >
           <X className="w-5 h-5" />
-        </button>
+        </button></div>
 
         <div className="flex items-center gap-3 mb-5">
           <div className="w-12 h-12 rounded-2xl bg-blue-500/20 border border-blue-500/30 text-blue-400 flex items-center justify-center">

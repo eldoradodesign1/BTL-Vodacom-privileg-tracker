@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Banknote, CheckCircle2, Clipboard, ExternalLink, Phone, Store, X, XCircle } from 'lucide-react';
 import type { MerchantFundRequest, User } from '../../types';
 import { updateMerchantFundRequestStatus } from '../../utils/merchantCampaign';
+import { DetailPdfExportButton } from './DetailPdfExportButton';
 
 interface MerchantFundRequestDecisionModalProps {
   request: MerchantFundRequest | null;
@@ -20,6 +21,17 @@ export const MerchantFundRequestDecisionModal: React.FC<MerchantFundRequestDecis
   if (!request) return null;
   const phone = request.ba_phone || request.ba?.phone || '';
   const isPending = request.status === 'pending';
+  const detailDocument = {
+    title: 'Détail demande de fonds',
+    subtitle: `${request.ba?.name || 'Brand Ambassador'} · ${new Date(request.requested_at).toLocaleString('fr-FR')}`,
+    filename: `demande-fonds-${request.id}`,
+    sections: [
+      { title: 'Demande', rows: [{ label: 'Statut', value: STATUS_LABEL[request.status] }, { label: 'Date', value: new Date(request.requested_at).toLocaleString('fr-FR') }, { label: 'Montant demandé', value: `$${Number(request.amount).toLocaleString('fr-FR')}` }] },
+      { title: 'Brand Ambassador', rows: [{ label: 'Nom', value: request.ba?.name }, { label: 'Téléphone', value: phone }, { label: 'Superviseur', value: request.supervisor?.name }] },
+      { title: 'POS et MFS', rows: [{ label: 'POS', value: request.point_of_sale?.denomination }, { label: 'Short-code', value: request.point_of_sale?.agent_number }, { label: 'Pool', value: request.point_of_sale?.pool }, { label: 'MFS', value: request.mfs_name }] },
+      ...(request.note ? [{ title: 'Note BA', text: request.note }] : []),
+    ],
+  };
 
   const copyPhone = async () => {
     if (!phone) { setFeedback('Aucun numéro BA n’est renseigné.'); return; }
@@ -67,7 +79,7 @@ export const MerchantFundRequestDecisionModal: React.FC<MerchantFundRequestDecis
 
   return <div className="fixed inset-0 z-[145] flex items-end justify-center bg-black/80 p-0 backdrop-blur-md sm:items-center sm:p-6" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="fund-decision-title">
     <section className="glass-card max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[2rem] border border-emerald-300/25 shadow-2xl sm:rounded-[2rem]" onClick={(event) => event.stopPropagation()}>
-      <header className="modal-sticky-header flex items-start justify-between gap-4 p-4 sm:p-5"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200/70">Demande de fonds Merchant</p><h2 id="fund-decision-title" className="mt-1 text-lg font-black text-white">{request.ba?.name || 'Brand Ambassador'}</h2><p className="mt-1 text-xs text-gray-300">{new Date(request.requested_at).toLocaleString('fr-FR')}</p></div><button type="button" onClick={onClose} className="rounded-xl border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:bg-white/10" aria-label="Fermer"><X size={18}/></button></header>
+      <header className="modal-sticky-header flex items-start justify-between gap-4 p-4 sm:p-5"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200/70">Demande de fonds Merchant</p><h2 id="fund-decision-title" className="mt-1 text-lg font-black text-white">{request.ba?.name || 'Brand Ambassador'}</h2><p className="mt-1 text-xs text-gray-300">{new Date(request.requested_at).toLocaleString('fr-FR')}</p></div><div className="flex shrink-0 items-center gap-2"><DetailPdfExportButton document={detailDocument}/><button type="button" onClick={onClose} className="rounded-xl border border-white/10 bg-white/5 p-2 text-gray-300 transition hover:bg-white/10" aria-label="Fermer"><X size={18}/></button></div></header>
       <div className="space-y-4 p-4 pt-0 sm:p-5 sm:pt-0">
         <div className="grid grid-cols-2 gap-3"><div className="rounded-2xl border border-emerald-300/20 bg-emerald-500/[0.08] p-3"><span className="text-[9px] font-black uppercase text-emerald-100/70">Montant demandé</span><b className="mt-1 block text-xl font-black text-emerald-100">${Number(request.amount).toLocaleString('fr-FR')}</b></div><div className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-3"><span className="text-[9px] font-black uppercase text-gray-500">Statut</span><b className={`mt-1 block text-xs font-black ${request.status === 'approved' ? 'text-emerald-200' : request.status === 'rejected' ? 'text-rose-200' : 'text-amber-100'}`}>{STATUS_LABEL[request.status]}</b></div></div>
         <div className="rounded-2xl border border-white/[0.08] bg-black/15 p-3"><span className="text-[9px] font-black uppercase text-gray-500">POS et MFS</span><b className="mt-1 block text-sm text-white">{request.point_of_sale?.denomination || 'POS non renseigné'}</b><p className="mt-1 text-[10px] text-gray-400">{request.point_of_sale?.agent_number || '—'} · {request.point_of_sale?.pool || '—'} · MFS : {request.mfs_name || 'Non renseigné'}</p></div>
