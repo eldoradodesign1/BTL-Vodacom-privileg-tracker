@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { User, Shop, AgentMasterStatus, UserRole, Campaign, CampaignPause } from './types';
+import { User, Shop, AgentMasterStatus, UserRole, Campaign, CampaignContext, CampaignPause } from './types';
 import {
   getUsers,
   getShops,
@@ -62,6 +62,7 @@ const MerchantMonitoringView = lazy(() => import('./components/MerchantMonitorin
 const MerchantSupervisorArchivesView = lazy(() => import('./components/MerchantSupervisorArchivesView').then(({ MerchantSupervisorArchivesView: component }) => ({ default: component })));
 const MerchantAdminDashboard = lazy(() => import('./components/MerchantAdminDashboard').then(({ MerchantAdminDashboard: component }) => ({ default: component })));
 const MerchantPodiumView = lazy(() => import('./components/MerchantPodiumView').then(({ MerchantPodiumView: component }) => ({ default: component })));
+const YouthF2FView = lazy(() => import('./components/YouthF2FView').then(({ YouthF2FView: component }) => ({ default: component })));
 
 const APP_DATA_SYNC_KEY = 'btl_last_full_data_sync_at';
 const APP_DATA_SYNC_INTERVAL_MS = 60 * 60 * 1000;
@@ -104,10 +105,11 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState<TabType>('home');
-  const [activeCampaign, setActiveCampaign] = useState<'vodacom-privilege' | 'merchant-educational'>(() => {
+  const [activeCampaign, setActiveCampaign] = useState<CampaignContext>(() => {
     try {
       const saved = localStorage.getItem('btl_active_campaign');
-      return saved === 'merchant-educational' ? 'merchant-educational' : 'vodacom-privilege';
+      if (saved === 'merchant-educational' || saved === 'youth-f2f') return saved;
+      return 'vodacom-privilege';
     } catch {
       return 'vodacom-privilege';
     }
@@ -246,7 +248,7 @@ export default function App() {
     setTheme(nextTheme);
   };
 
-  const setCampaignContext = (campaign: 'vodacom-privilege' | 'merchant-educational') => {
+  const setCampaignContext = (campaign: CampaignContext) => {
     setActiveCampaign(campaign);
     localStorage.setItem('btl_active_campaign', campaign);
     setActiveTab('home');
@@ -265,22 +267,30 @@ export default function App() {
         if (cancelled) return;
         setAgentCampaigns(campaigns);
         const current = campaigns.find((campaign) => (
-          activeCampaign === 'merchant-educational'
-            ? campaign.campaign_type === 'brand_ambassador' || campaign.code === 'merchant-educational-campaign'
-            : campaign.campaign_type !== 'brand_ambassador' && campaign.code !== 'merchant-educational-campaign'
+          activeCampaign === 'youth-f2f'
+            ? campaign.code === 'youth-f2f'
+            : activeCampaign === 'merchant-educational'
+              ? campaign.code === 'merchant-educational-campaign'
+              : campaign.code === 'vodacom-privilege'
         ));
         if (!current) {
           const fallback = campaigns[0];
           if (!fallback) {
-            const inferredContext = currentUser.userCategory === 'brand_ambassador' ? 'merchant-educational' : 'vodacom-privilege';
+            const inferredContext: CampaignContext = currentUser.userCategory === 'brand_ambassador_youth'
+              ? 'youth-f2f'
+              : currentUser.userCategory === 'brand_ambassador'
+                ? 'merchant-educational'
+                : 'vodacom-privilege';
             setActiveCampaign(inferredContext);
             localStorage.setItem('btl_active_campaign', inferredContext);
             setActiveCampaignPause(null);
             return;
           }
-          const nextContext = fallback.campaign_type === 'brand_ambassador' || fallback.code === 'merchant-educational-campaign'
-            ? 'merchant-educational'
-            : 'vodacom-privilege';
+          const nextContext: CampaignContext = fallback.code === 'youth-f2f'
+            ? 'youth-f2f'
+            : fallback.code === 'merchant-educational-campaign'
+              ? 'merchant-educational'
+              : 'vodacom-privilege';
           setActiveCampaign(nextContext);
           localStorage.setItem('btl_active_campaign', nextContext);
           const pauses = await getCampaignPauses(fallback.id);
@@ -479,16 +489,28 @@ const refreshData = useCallback(async (force = false) => {
   };
 
   const agentCampaignOptions = agentCampaigns.map((campaign) => ({
-    key: (campaign.campaign_type === 'brand_ambassador' || campaign.code === 'merchant-educational-campaign' ? 'merchant-educational' : 'vodacom-privilege') as 'vodacom-privilege' | 'merchant-educational',
+    key: (campaign.code === 'youth-f2f'
+      ? 'youth-f2f'
+      : campaign.code === 'merchant-educational-campaign'
+        ? 'merchant-educational'
+        : 'vodacom-privilege') as CampaignContext,
     label: campaign.name,
-    note: campaign.campaign_type === 'brand_ambassador' ? 'Brand Ambassador' : 'Hôtesses',
+    note: campaign.code === 'youth-f2f'
+      ? 'Campagne en préparation'
+      : campaign.campaign_type === 'brand_ambassador'
+        ? 'Brand Ambassador'
+        : 'Hôtesses',
   })).filter((campaign, index, list) => list.findIndex((item) => item.key === campaign.key) === index);
   const inferredAgentMerchant = effectiveRole === 'agent' && effectiveUser.userCategory === 'brand_ambassador';
-  const isMerchantContext = effectiveRole === 'agent'
+  const inferredAgentYouth = effectiveRole === 'agent' && effectiveUser.userCategory === 'brand_ambassador_youth';
+  const isYouthContext = effectiveRole === 'agent'
+    ? (agentCampaignOptions.length > 0 ? activeCampaign === 'youth-f2f' : inferredAgentYouth)
+    : activeCampaign === 'youth-f2f';
+  const isMerchantContext = !isYouthContext && (effectiveRole === 'agent'
     ? (agentCampaignOptions.length > 0 ? activeCampaign === 'merchant-educational' : inferredAgentMerchant)
-    : activeCampaign === 'merchant-educational';
-  const campaignIsPaused = effectiveRole === 'agent' && Boolean(activeCampaignPause);
-  const setPermittedCampaignContext = (campaign: 'vodacom-privilege' | 'merchant-educational') => {
+    : activeCampaign === 'merchant-educational');
+  const campaignIsPaused = effectiveRole === 'agent' && (isYouthContext || Boolean(activeCampaignPause));
+  const setPermittedCampaignContext = (campaign: CampaignContext) => {
     if (effectiveRole !== 'agent' || agentCampaignOptions.some((option) => option.key === campaign)) setCampaignContext(campaign);
   };
 
@@ -572,7 +594,9 @@ const todayLeads =
   const renderContent = () => {
     let content: React.ReactNode;
 
-    if (activeTab === 'chat') {
+    if (isYouthContext && activeTab !== 'chat') {
+      content = <YouthF2FView currentUser={effectiveUser} />;
+    } else if (activeTab === 'chat') {
       content = <ChatView currentUser={effectiveUser} onDataChanged={refreshData} />;
     } else if (isMerchantContext && effectiveRole === 'agent') {
       content = activeTab === 'tab2'
@@ -688,12 +712,12 @@ const todayLeads =
         unreadChatCount={chatUnreadCount}
         online={online}
         syncPendingCount={syncPendingCount}
-        profilePhotoUrl={(effectiveUser.userCategory === 'brand_ambassador' ? merchantProfilePhotoUrl : todayCheckinPhoto) || undefined}
+        profilePhotoUrl={(isMerchantContext && effectiveUser.userCategory === 'brand_ambassador' ? merchantProfilePhotoUrl : isYouthContext ? '' : todayCheckinPhoto) || undefined}
         onPointageRecorded={campaignIsPaused ? undefined : refreshData}
         allowCheckin={!campaignIsPaused}
         theme={theme}
         onSetTheme={setThemeMode}
-        activeCampaign={isMerchantContext ? 'merchant-educational' : 'vodacom-privilege'}
+        activeCampaign={activeCampaign}
         campaignOptions={effectiveRole === 'agent' ? agentCampaignOptions : undefined}
         onSetCampaign={effectiveRole === 'agent'
           ? (agentCampaignOptions.length > 1 ? setPermittedCampaignContext : undefined)
@@ -734,6 +758,7 @@ const todayLeads =
         activeTab={activeTab}
         unreadChatCount={chatUnreadCount}
         merchantContext={isMerchantContext}
+        youthContext={isYouthContext}
         onTabChange={(tab) => {
           if (tab === 'home') {
             setHomeTabPressCount((prev) => prev + 1);

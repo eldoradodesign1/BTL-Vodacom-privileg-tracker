@@ -1,7 +1,8 @@
 export type UserRole = 'agent' | 'supervisor' | 'sub_admin' | 'admin' | 'super_admin';
 
-export type UserCategory = 'hostess' | 'brand_ambassador' | 'operations';
+export type UserCategory = 'hostess' | 'brand_ambassador' | 'brand_ambassador_youth' | 'operations';
 export type CampaignType = 'hostess' | 'brand_ambassador';
+export type CampaignContext = 'vodacom-privilege' | 'merchant-educational' | 'youth-f2f';
 
 export interface User {
   id: string;

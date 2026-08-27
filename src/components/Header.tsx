@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { User, NotificationItem } from '../types';
+import { User, NotificationItem, CampaignContext } from '../types';
 import { Bell, LogOut, Shield, RefreshCw, Palette, Camera, X, BriefcaseBusiness, Banknote } from 'lucide-react';
 import { addCheckin, getShopById, resolveStoredPhotoUrl } from '../utils/storage';
 import { armFundRequestAlertAudio } from '../utils/fundRequestAlert';
@@ -22,9 +22,9 @@ interface HeaderProps {
   onPointageRecorded?: () => void;
   theme?: ThemeMode;
   onSetTheme?: (theme: ThemeMode) => void;
-  activeCampaign?: 'vodacom-privilege' | 'merchant-educational';
-  onSetCampaign?: (campaign: 'vodacom-privilege' | 'merchant-educational') => void;
-  campaignOptions?: Array<{ key: 'vodacom-privilege' | 'merchant-educational'; label: string; note: string }>;
+  activeCampaign?: CampaignContext;
+  onSetCampaign?: (campaign: CampaignContext) => void;
+  campaignOptions?: Array<{ key: CampaignContext; label: string; note: string }>;
   allowCheckin?: boolean;
   fundRequestAlerts?: Array<{ id: string; baName: string; amount: number; posLabel: string; requestedAt: string }>;
   onOpenFundRequest?: (id: string) => void;
@@ -77,6 +77,7 @@ export const Header: React.FC<HeaderProps> = ({
   const visibleCampaigns = campaignOptions || [
     { key: 'vodacom-privilege' as const, label: 'Vodacom Privilège', note: 'Hôtesses' },
     { key: 'merchant-educational' as const, label: 'Merchant Education', note: 'Brand Ambassadors' },
+    { key: 'youth-f2f' as const, label: 'Youth F2F', note: 'Campagne en préparation' },
   ];
   const syncState: 'ok' | 'progress' | 'late' = (() => {
     if (online && syncPendingCount === 0) return 'ok';

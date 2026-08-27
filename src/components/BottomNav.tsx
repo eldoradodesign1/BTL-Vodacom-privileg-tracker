@@ -10,6 +10,7 @@ interface BottomNavProps {
   unreadChatCount?: number;
   onTabChange: (tab: TabType) => void;
   merchantContext?: boolean;
+  youthContext?: boolean;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
@@ -17,7 +18,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   activeTab,
   unreadChatCount = 0,
   onTabChange,
-  merchantContext = false
+  merchantContext = false,
+  youthContext = false
 }) => {
   const getTab2Label = () => {
     if (userRole === 'admin' || userRole === 'super_admin' || userRole === 'supervisor' || userRole === 'sub_admin') return 'Monitoring';
@@ -32,6 +34,34 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     if (userRole === 'supervisor' || userRole === 'sub_admin') return 'Gestion';
     return 'Gestion';
   };
+
+  if (youthContext) {
+    return (
+      <nav className="app-bottom-nav fixed bottom-4 left-4 right-4 h-20 backdrop-blur-xl border rounded-3xl z-40 flex items-center justify-around px-2">
+        <button
+          onClick={() => onTabChange('home')}
+          data-active={activeTab === 'home'}
+          className={`app-tab flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${activeTab === 'home' ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'}`}
+        >
+          <Home className={`w-6 h-6 transition-transform ${activeTab === 'home' ? '-translate-y-1 scale-110' : ''}`} />
+          <span className="text-[9px] font-black uppercase tracking-wider">Préparation</span>
+          {activeTab === 'home' && <div className="w-1.5 h-1.5 bg-red-500 rounded-full" style={{ boxShadow: '0 0 8px var(--theme-accent)' }} />}
+        </button>
+        <button
+          onClick={() => onTabChange('chat')}
+          data-active={activeTab === 'chat'}
+          className={`app-tab flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${activeTab === 'chat' ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'}`}
+        >
+          <div className="relative">
+            <MessageSquare className={`w-6 h-6 transition-transform ${activeTab === 'chat' ? '-translate-y-1 scale-110' : ''}`} />
+            {unreadChatCount > 0 && activeTab !== 'chat' && <span className="absolute -top-1.5 -right-2 min-w-4 h-4 px-1 bg-red-600 text-white rounded-full text-[9px] font-black flex items-center justify-center border border-black">{unreadChatCount > 99 ? '99+' : unreadChatCount}</span>}
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-wider">Chat</span>
+          {activeTab === 'chat' && <div className="w-1.5 h-1.5 bg-red-500 rounded-full" style={{ boxShadow: '0 0 8px var(--theme-accent)' }} />}
+        </button>
+      </nav>
+    );
+  }
 
   return (
     <nav className="app-bottom-nav fixed bottom-4 left-4 right-4 h-20 backdrop-blur-xl border rounded-3xl z-40 flex items-center justify-around px-2">

@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import { ChevronRight, Lock, Phone, Trash2 } from 'lucide-react';
-import { User, Campaign } from '../types';
+import { User, Campaign, CampaignContext } from '../types';
 import { authenticate, purgeAndResetEverything, refreshUsersFromSupabase } from '../utils/storage';
 import { getCampaignsForUser } from '../utils/merchantCampaign';
-
-type CampaignContext = 'vodacom-privilege' | 'merchant-educational';
 
 interface LoginScreenProps {
   onLoginSuccess: (user: User, campaign?: CampaignContext) => void;
 }
 
-const toCampaignContext = (campaign?: Campaign | null): CampaignContext =>
-  campaign?.campaign_type === 'brand_ambassador' || campaign?.code === 'merchant-educational-campaign'
+const toCampaignContext = (campaign?: Campaign | null): CampaignContext => {
+  if (campaign?.code === 'youth-f2f') return 'youth-f2f';
+  return campaign?.campaign_type === 'brand_ambassador' || campaign?.code === 'merchant-educational-campaign'
     ? 'merchant-educational'
     : 'vodacom-privilege';
+};
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [phone, setPhone] = useState('');
@@ -45,9 +45,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       finishLogin(user, campaigns[0]);
     } catch {
       // The legacy Vodacom connection remains available when the campaign lookup is offline.
-      finishLogin(user, user.userCategory === 'brand_ambassador'
-        ? { campaign_type: 'brand_ambassador', code: 'merchant-educational-campaign' } as Campaign
-        : null);
+      finishLogin(user, user.userCategory === 'brand_ambassador_youth'
+        ? { campaign_type: 'brand_ambassador', code: 'youth-f2f' } as Campaign
+        : user.userCategory === 'brand_ambassador'
+          ? { campaign_type: 'brand_ambassador', code: 'merchant-educational-campaign' } as Campaign
+          : null);
     }
   };
 
