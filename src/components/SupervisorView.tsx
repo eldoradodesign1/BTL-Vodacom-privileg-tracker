@@ -286,8 +286,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
       const currentReports = allReports.filter((item) => teamAgentIds.includes(item.agent_id) && item.date >= reportsStartDate && item.date <= reportsEndDate);
       const currentLeads = getLeads().filter((item) => teamAgentIds.includes(item.agent_id) && toISO(item.timestamp) >= reportsStartDate && toISO(item.timestamp) <= reportsEndDate);
       const existing = await getSupervisorReportComment('privilege', supervisorReportKind, reportsStartDate, reportsEndDate);
-      const legacyAiFormatting = Boolean(existing?.aiGenerated && /^\s*(?:process(?:us|ing)?|summary|synth[eè]se|comment(?:aire)?|analysis|analyse)\s*:/i.test(existing.comment));
-      if (existing && !legacyAiFormatting) { setSupervisorReportComment(existing.comment.trim()); setSupervisorCommentIsAi(existing.aiGenerated); return; }
+      if (existing) { setSupervisorReportComment(existing.comment); setSupervisorCommentIsAi(existing.aiGenerated); return; }
       const privilege = currentLeads.filter((item) => String(item.action_type).includes('Privil')).length;
       const roaming = currentLeads.filter((item) => String(item.action_type).includes('Roam')).length;
       const bundle = currentLeads.filter((item) => String(item.action_type).includes('Bund') || String(item.action_type).includes('Pack')).length;

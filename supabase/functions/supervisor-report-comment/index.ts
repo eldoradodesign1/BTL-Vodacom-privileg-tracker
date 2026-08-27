@@ -19,18 +19,8 @@ type Body = {
   agentComments?: string[];
 };
 
-function cleanOutput(value: string): string {
-  return value
-    .replace(/^\s*(?:process(?:us|ing)?|summary|synth[eè]se|comment(?:aire)?|analysis|analyse)\s*:\s*(?:\*+\s*)?/i, "")
-    .replace(/^\s*#{1,6}\s+/gm, "")
-    .replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
 function safeComments(values: unknown): string[] {
-  return Array.isArray(values) ? values.filter((value): value is string => typeof value === "string" && value.trim().length > 0).map((value) => cleanOutput(value.trim()).slice(0, 1800)).slice(0, 120) : [];
+  return Array.isArray(values) ? values.filter((value): value is string => typeof value === "string" && value.trim().length > 0).map((value) => value.trim().slice(0, 1800)).slice(0, 120) : [];
 }
 
 Deno.serve(async (request) => {
@@ -56,14 +46,13 @@ Deno.serve(async (request) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: `Rédige uniquement en français professionnel un commentaire de superviseur pour un rapport ${body.kind} de la campagne ${body.campaign === "merchant" ? "Merchant Educational Campaign" : "Vodacom Privilège"}, couvrant ${body.startsOn} à ${body.endsOn}. Même si les commentaires agents sont dans une autre langue, traduis et synthétise leur sens en français. Utilise strictement les informations fournies, sans inventer de causes, de chiffres ou de résultats. Fais une synthèse concise de 2 ou 3 paragraphes : bilan chiffré, points opérationnels issus des commentaires agents, puis priorité de suivi. Si aucun commentaire agent n’est donné, indique sobrement que la synthèse se fonde sur les indicateurs terrain. Commence directement par une phrase complète : ne produis ni titre, ni libellé tel que « Process », « Synthèse », « Summary » ou « Commentaire », ni liste, ni markdown, ni astérisque.\n\nINDICATEURS\n${metrics || "Aucun indicateur"}\n\nCOMMENTAIRES AGENTS\n${comments.length ? comments.map((comment, index) => `${index + 1}. ${comment}`).join("\n") : "Aucun commentaire agent disponible."}` }] }],
+        contents: [{ parts: [{ text: `Rédige en français professionnel un commentaire de superviseur pour un rapport ${body.kind} de la campagne ${body.campaign === "merchant" ? "Merchant Educational Campaign" : "Vodacom Privilège"}, couvrant ${body.startsOn} à ${body.endsOn}. Utilise strictement les informations fournies, sans inventer de causes, de chiffres ou de résultats. Fais une synthèse concise de 2 ou 3 paragraphes : bilan chiffré, points opérationnels issus des commentaires agents, puis priorité de suivi. Si aucun commentaire agent n’est donné, indique sobrement que la synthèse se fonde sur les indicateurs terrain. Ne fais pas de titre, de liste, ni de markdown.\n\nINDICATEURS\n${metrics || "Aucun indicateur"}\n\nCOMMENTAIRES AGENTS\n${comments.length ? comments.map((comment, index) => `${index + 1}. ${comment}`).join("\n") : "Aucun commentaire agent disponible."}` }] }],
         generationConfig: { temperature: 0.25, maxOutputTokens: 520 },
       }),
     });
     if (!response.ok) return json({ comment: null, status: "unavailable", providerStatus: response.status });
     const payload = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-    const generated = payload.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join(" ").trim() || "";
-    const comment = generated ? cleanOutput(generated) : null;
+    const comment = payload.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join(" ").trim() || null;
     return json({ comment, status: comment ? "generated" : "unavailable" });
   } catch {
     return json({ comment: null, status: "unavailable" });
