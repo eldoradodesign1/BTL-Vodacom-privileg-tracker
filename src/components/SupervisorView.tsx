@@ -64,6 +64,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [, setCheckinRevision] = useState(0);
   const todayIso = new Date().toISOString().split('T')[0];
   // const [reportsStartDate, setReportsStartDate] = useState(todayIso);
   // const [reportsEndDate, setReportsEndDate] = useState(todayIso);
@@ -89,6 +90,30 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     if (!onRefreshData) return;
     void onRefreshData();
   }, [selectedDate, onRefreshData]);
+
+  useEffect(() => {
+    if (activeTab !== 'home') return;
+    let cancelled = false;
+    const refreshLiveCheckins = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+      try {
+        await refreshCheckinsFromSupabase();
+        if (!cancelled) setCheckinRevision((revision) => revision + 1);
+      } catch (error) {
+        // Le cache existant reste affiché si le réseau est temporairement indisponible.
+        console.warn('Supervisor check-in refresh failed', error);
+      }
+    };
+    void refreshLiveCheckins();
+    const interval = window.setInterval(() => { void refreshLiveCheckins(); }, 90_000);
+    const onFocus = () => { void refreshLiveCheckins(); };
+    window.addEventListener('focus', onFocus);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, [activeTab]);
 
   useEffect(() => {
     if (!showHomeCalendar) return;

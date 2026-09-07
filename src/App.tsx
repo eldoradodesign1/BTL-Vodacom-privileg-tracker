@@ -323,6 +323,14 @@ const refreshData = useCallback(async (force = false) => {
     return;
   }
 
+  // La file terrain est toujours rejouée avant de respecter le cache horaire :
+  // un pointage pris hors ligne doit partir dès que la connexion revient.
+  try {
+    await flushOfflineOutbox();
+  } catch (error) {
+    console.warn('Offline outbox flush failed:', error);
+  }
+
   const lastSyncAt = Number(localStorage.getItem(APP_DATA_SYNC_KEY) || 0);
   const cacheIsFresh = !force && Date.now() - lastSyncAt < APP_DATA_SYNC_INTERVAL_MS;
   if (cacheIsFresh) {
@@ -332,7 +340,6 @@ const refreshData = useCallback(async (force = false) => {
   }
 
   try {
-    await flushOfflineOutbox();
     const [usersData, shopsData] = await Promise.all([fetchUsersFromSupabase(), fetchShopsFromSupabase()]);
     await Promise.all([
       refreshLeadsFromSupabase(),
@@ -352,8 +359,13 @@ const refreshData = useCallback(async (force = false) => {
     setUsers(getUsers());
     setShops(getShops());
   }
-}, []);
+  }, []);
 
+  // Le suivi superviseur est opérationnellement sensible : ses pointages du jour
+  // doivent quitter le cache horaire dès l’ouverture de la vue ou d’un changement de date.
+  const refreshSupervisorMonitoring = useCallback(() => {
+    void refreshData(true);
+  }, [refreshData]);
 
   const enforceUserConformityAfterSync = () => {
     const freshUsers = getUsers();
@@ -656,7 +668,7 @@ const todayLeads =
           onOpenAgentProfile={(agent) => setSelectedAgentForProfile(agent)}
           onOpenTodayClientsModal={(agent) => setSelectedAgentForTodayClients(agent)}
           onOpenLocationModal={(agent) => setSelectedLocationAgent(agent)}
-          onRefreshData={refreshData}
+          onRefreshData={refreshSupervisorMonitoring}
         />
       );
     } else {

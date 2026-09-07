@@ -294,7 +294,9 @@ export async function fetchLeadsFromSupabase(): Promise<Lead[]> {
 
 export async function fetchCheckinsFromSupabase(): Promise<Checkin[]> {
   const client = getSupabaseClient();
-  if (!client) return [];
+  if (!client) {
+    throw new Error('Supabase is not configured.');
+  }
 
   const { data, error } = await client
     .from('checkins')
@@ -302,8 +304,7 @@ export async function fetchCheckinsFromSupabase(): Promise<Checkin[]> {
     .order('timestamp', { ascending: false });
 
   if (error) {
-    console.error(error);
-    return [];
+    throw error;
   }
 
   return (data || []).map((item) => ({

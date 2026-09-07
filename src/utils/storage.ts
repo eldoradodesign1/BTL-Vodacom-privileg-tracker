@@ -844,23 +844,28 @@ export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
 
   console.log('ADDCHECKIN', newCheckin);
 
-  void (async () => {
-    try {
-      if (isSupabaseConfigured()) {
-        let nextCheckin: Checkin = { ...newCheckin };
-        if (newCheckin.type === 'IN' && typeof newCheckin.photo === 'string' && newCheckin.photo.startsWith('data:image')) {
-          const photoUrl = await uploadPhotoToSupabase(newCheckin.photo, 'photos', 'checkins');
-          nextCheckin = { ...nextCheckin, photo_drive_url: photoUrl, photo: null as unknown as string };
-        }
+  // La présence doit être synchronisée avant la preuve photo : un upload lent ou indisponible
+  // ne doit jamais empêcher le superviseur de voir un pointage déjà confirmé sur le terrain.
+  const checkinForSync: Checkin = {
+    ...newCheckin,
+    photo: undefined,
+    photo_drive_url: newCheckin.photo_drive_url,
+  };
+  persistOrQueue({ checkins: [checkinForSync] });
 
-        await syncLocalDataToSupabase({
-          checkins: [nextCheckin]
-        });
+  if (newCheckin.type === 'IN' && typeof newCheckin.photo === 'string' && newCheckin.photo.startsWith('data:image')) {
+    void (async () => {
+      try {
+        const photoUrl = await uploadPhotoToSupabase(newCheckin.photo, 'photos', 'checkins');
+        const nextCheckin: Checkin = { ...newCheckin, photo_drive_url: photoUrl, photo: null as unknown as string };
+        saveItem(STORAGE_KEYS.CHECKINS, getCheckins().map((item) => item.id === newCheckin.id ? nextCheckin : item));
+        persistOrQueue({ checkins: [nextCheckin] });
+      } catch (error) {
+        // La présence reste synchronisée ; la photo locale est conservée pour ne pas perdre la preuve.
+        console.warn('Supabase checkin photo sync failed', error);
       }
-    } catch (error) {
-      console.warn('Supabase checkin sync failed', error);
-    }
-  })();
+    })();
+  }
 
   return newCheckin;
 }
@@ -1373,9 +1378,9 @@ export function getSupervisorLiveView(supervisorId: string, dateISO?: string) {
   const myAgents = users.filter(u => u.role === 'agent' && u.supervisorId === supervisorId);
 
   return myAgents.map(a => {
-    const hasIn = checkins.find(c => c.agent_id === a.id && toISO(c.timestamp) === targetDate && c.type === 'IN');
-    const hasRep = reports.find(r => r.agent_id === a.id && toISO(r.date) === targetDate);
-    const aLeads = leads.filter(l => l.agent_id === a.id && toISO(l.timestamp) === targetDate);
+    const hasIn = checkins.find(c => isMatchAgent(c.agent_id, a) && toISO(c.timestamp) === targetDate && c.type === 'IN');
+    const hasRep = reports.find(r => isMatchAgent(r.agent_id, a) && toISO(r.date) === targetDate);
+    const aLeads = leads.filter(l => isMatchAgent(l.agent_id, a) && toISO(l.timestamp) === targetDate);
 
     const shopObj = shops.find(s => s.id === a.permanentShopId);
     const shopName = shopObj ? shopObj.name : 'Non affecté';
