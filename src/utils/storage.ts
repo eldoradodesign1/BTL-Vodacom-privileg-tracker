@@ -161,17 +161,9 @@ function emitAppToast(message: string, level: 'success' | 'error' = 'success'): 
 }
 
 function syncUserUpdateToSupabase(user: User): void {
-  void (async () => {
-    try {
-      if (!isSupabaseConfigured()) return;
-
-      await syncLocalDataToSupabase({
-        users: [user]
-      });
-    } catch (error) {
-      console.warn('Supabase user sync failed', error);
-    }
-  })();
+  // Une affectation doit survivre au réseau faible exactement comme un pointage.
+  // L'opération est immédiatement visible, puis persistée ou conservée dans la file.
+  persistOrQueue({ users: [user] });
 }
 
 function pushNotification(userId: string, message: string, type: string): NotificationItem {

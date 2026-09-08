@@ -399,10 +399,15 @@ const refreshData = useCallback(async (force = false) => {
     void refreshData();
     const hourlySync = window.setInterval(() => { void refreshData(); }, APP_DATA_SYNC_INTERVAL_MS);
     const onOnline = () => { void refreshData(); };
+    // Sur une nouvelle installation PWA, la configuration partagée arrive après le
+    // premier rendu. Cette notification vide immédiatement la file hors-ligne.
+    const onRuntimeConfigUpdated = () => { void refreshData(true); };
     window.addEventListener('online', onOnline);
+    window.addEventListener('btl-runtime-config-updated', onRuntimeConfigUpdated);
     return () => {
       window.clearInterval(hourlySync);
       window.removeEventListener('online', onOnline);
+      window.removeEventListener('btl-runtime-config-updated', onRuntimeConfigUpdated);
     };
   }, [refreshData]);
 

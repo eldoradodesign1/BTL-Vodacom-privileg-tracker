@@ -66,10 +66,10 @@ function sanitizeRecord<T extends Record<string, unknown>>(record: T): T {
   return copy as T;
 }
 
-async function upsertRows<T extends Record<string, unknown>>(client: SupabaseClient, table: string, rows: T[]): Promise<void> {
+async function upsertRows<T extends Record<string, unknown>>(client: SupabaseClient, table: string, rows: T[], onConflict = 'id'): Promise<void> {
   if (!rows.length) return;
   const sanitized = rows.map((row) => sanitizeRecord(row)) as Record<string, unknown>[];
-  const { error } = await client.from(table).upsert(sanitized, { onConflict: 'id' });
+  const { error } = await client.from(table).upsert(sanitized, { onConflict });
   if (error) {
     throw new Error(`Supabase upsert failed for ${table}: ${error.message}`);
   }
@@ -89,13 +89,18 @@ export async function syncLocalDataToSupabase(payload: {
     throw new Error('Supabase is not configured. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY first.');
   }
   
-  console.log(payload.reports);
   await upsertRows(client, 'users', (payload.users || []).map((item) => ({
-    ...item,
+    id: item.id,
+    phone: item.phone,
+    full_name: item.name,
+    role: item.role,
+    password_hash: item.password,
     supervisor_id: item.supervisorId,
     permanent_shop_id: item.permanentShopId,
     user_category: item.userCategory,
-    auth_user_id: item.authUserId
+    auth_user_id: item.authUserId,
+    created_at: item.created_at,
+    last_login: item.last_login,
   })));
 
   await upsertRows(client, 'shops', (payload.shops || []).map((item) => ({
@@ -105,13 +110,21 @@ export async function syncLocalDataToSupabase(payload: {
   })));
 
   await upsertRows(client, 'checkins', (payload.checkins || []).map((item) => ({
-    ...item,
+    id: item.id,
+    assignment_id: item.assignment_id ?? null,
+    agent_id: item.agent_id,
+    type: item.type,
+    timestamp: item.timestamp,
+    lat: item.lat,
+    long: item.long,
+    accuracy: item.accuracy,
     photo: item.photo || null,
     photo_drive_url: item.photo_drive_url || null,
     distance_m: item.distance_m ?? null,
     geo_status: item.geo_status || null,
-    device: item.device || null
-  })));
+    device: item.device || null,
+    status: item.status || 'pending',
+  })), 'id,accuracy');
 
   await upsertRows(client, 'leads', (payload.leads || []).map((item) => ({
     ...item,
