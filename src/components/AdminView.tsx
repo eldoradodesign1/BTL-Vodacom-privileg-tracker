@@ -132,6 +132,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const masterList = getAdminMasterList();
   const monitoringMasterList = getAdminMasterList(monitoringDate);
   const allCheckins = getCheckins();
+  const totalActivations = allLeads.length;
   const dashboardData = getDashboardData({ start: startDate, end: endDate, agentId: selectedAgentId });
   const allReports = getReports();
   const allUsers = getUsers();
@@ -1224,7 +1225,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-rose-500/20 blur-2xl" />
               <div className="pointer-events-none absolute left-3 top-3 h-7 w-7 rounded-full border border-white/20" />
               <span className="text-[9px] font-black uppercase tracking-wider text-gray-300 block group-hover:text-red-400">Total Activations</span>
-              <p className="text-3xl font-black text-red-400 drop-shadow-[0_0_14px_rgba(0,0,0,0.4)]">{dashboardData.kpi.totalLeads}</p>
+              <p className="text-3xl font-black text-red-400 drop-shadow-[0_0_14px_rgba(0,0,0,0.4)]">{totalActivations}</p>
               <span className="text-[8px] font-bold text-gray-300 uppercase mt-1 block group-hover:underline">→ Voir la liste</span>
             </div>
             <div
