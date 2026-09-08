@@ -278,7 +278,9 @@ function mergeUsersWithSeedData(storedUsers: User[]): User[] {
       role: seedUser?.role ?? (candidate.role || existing.role),
       password: candidate.password ?? existing.password,
       supervisorId: candidate.supervisorId ?? existing.supervisorId,
-      permanentShopId: candidate.permanentShopId ?? existing.permanentShopId,
+      permanentShopId: Object.prototype.hasOwnProperty.call(candidate, 'permanentShopId')
+        ? candidate.permanentShopId
+        : existing.permanentShopId,
       userCategory: candidate.userCategory ?? existing.userCategory,
       authUserId: candidate.authUserId ?? existing.authUserId,
       created_at: candidate.created_at || existing.created_at,
@@ -316,7 +318,8 @@ export function runScheduledDailyReminders(now: Date = new Date(), privilegePaus
   const sent = loadItem<Record<string, boolean>>(key, {});
   const hh = now.getHours();
   const mm = now.getMinutes();
-  const users = getUsers().filter((user) => user.role === 'agent' && user.userCategory !== 'brand_ambassador');
+  const shops = getShops();
+  const users = getUsers().filter((user) => isActivePrivilegeHostess(user, shops));
 
   const maybeSend = (id: string, shouldSend: boolean, message: string, type: string) => {
     if (!shouldSend || sent[id]) return;
@@ -572,31 +575,35 @@ export async function refreshShopsFromSupabase(): Promise<void> {
   saveShops(shops);
 }
 
-export function updateUserShopAssignment(userId: string, shopId: string): boolean {
+export function updateUserShopAssignment(userId: string, shopId: string | null): boolean {
   const users = getUsers();
   const index = users.findIndex(u => u.id === userId);
   if (index !== -1) {
     const before = users[index];
-    users[index].permanentShopId = shopId;
+    const nextShopId = shopId || null;
+    users[index].permanentShopId = nextShopId;
     saveItem(STORAGE_KEYS.USERS, users);
 
-    const shop = getShopById(shopId);
+    const shop = nextShopId ? getShopById(nextShopId) : undefined;
+    const assignmentLabel = shop?.name || (nextShopId || 'Aucun shop');
     if (before.role === 'agent') {
       pushNotification(
         before.id,
-        `Nouvelle affectation shop: ${shop?.name || shopId}.`,
+        nextShopId ? `Nouvelle affectation shop: ${assignmentLabel}.` : 'Vous n’êtes plus affectée à un shop.',
         'assignment-shop'
       );
       if (before.supervisorId) {
         pushNotification(
           before.supervisorId,
-          `Affectation mise a jour pour ${before.name}: ${shop?.name || shopId}.`,
+          `${nextShopId ? 'Affectation mise à jour' : 'Désaffectation'} pour ${before.name}: ${assignmentLabel}.`,
           'assignment-agent'
         );
       }
     }
 
-    emitAppToast(`Affectation mise à jour: ${before.name} → ${shop?.name || shopId}.`);
+    emitAppToast(nextShopId
+      ? `Affectation mise à jour: ${before.name} → ${assignmentLabel}.`
+      : `${before.name} a été désaffectée de son shop.`);
     syncUserUpdateToSupabase(users[index]);
 
     return true;
@@ -1349,6 +1356,14 @@ function buildAgentEvolutionSeries(agentId: string, agentName: string, reportDat
 }
 
 // --- AGENT MASTER LIST & SUPERVISOR LIVE VIEW ---
+function isActivePrivilegeHostess(user: User, shops: Shop[]): boolean {
+  return user.role === 'agent'
+    && user.userCategory !== 'brand_ambassador'
+    && user.userCategory !== 'brand_ambassador_youth'
+    && !!user.permanentShopId
+    && shops.some((shop) => shop.id === user.permanentShopId);
+}
+
 export function getAdminMasterList(dateISO?: string): AgentMasterStatus[] {
   const users = getUsers();
   const checkins = getCheckins();
@@ -1357,7 +1372,7 @@ export function getAdminMasterList(dateISO?: string): AgentMasterStatus[] {
   const shops = getShops();
   const targetDate = dateISO || toISO(new Date());
 
-  const agents = users.filter(u => u.role === 'agent' && u.userCategory !== 'brand_ambassador' && u.userCategory !== 'brand_ambassador_youth');
+  const agents = users.filter((user) => isActivePrivilegeHostess(user, shops));
 
   return agents.map(agent => {
     const hasIn = checkins.some(c => (c.agent_id === agent.id || c.agent_id === agent.name || isMatchAgent(c.agent_id, agent)) && toISO(c.timestamp) === targetDate && c.type === 'IN');
@@ -1401,7 +1416,7 @@ export function getSupervisorLiveView(supervisorId: string, dateISO?: string) {
   const leads = getLeads();
   const shops = getShops();
 
-  const myAgents = users.filter(u => u.role === 'agent' && u.supervisorId === supervisorId && u.userCategory !== 'brand_ambassador' && u.userCategory !== 'brand_ambassador_youth');
+  const myAgents = users.filter((user) => user.supervisorId === supervisorId && isActivePrivilegeHostess(user, shops));
 
   return myAgents.map(a => {
     const hasIn = checkins.find(c => isMatchAgent(c.agent_id, a) && toISO(c.timestamp) === targetDate && c.type === 'IN');
@@ -1434,16 +1449,21 @@ export function getSupervisorLiveView(supervisorId: string, dateISO?: string) {
 export function getDashboardData(filters: { start?: string; end?: string; agentId?: string }) {
   const leads = getLeads();
   const users = getUsers();
+  const activeHostesses = users.filter((user) => isActivePrivilegeHostess(user, getShops()));
   const start = filters.start || '1900-01-01';
   const end = filters.end || '2100-01-01';
   const agentId = filters.agentId || '';
+  const selectedAgent = activeHostesses.find((user) => user.id === agentId);
 
   let priv = 0, roam = 0, bund = 0, total = 0;
   const daily: Record<string, number> = {};
 
   leads.forEach(l => {
     const d = toISO(l.timestamp);
-    if (d >= start && d <= end && (agentId === '' || l.agent_id === agentId)) {
+    const belongsToPrivilegeHostess = selectedAgent
+      ? isMatchAgent(l.agent_id, selectedAgent)
+      : activeHostesses.some((hostess) => isMatchAgent(l.agent_id, hostess));
+    if (d >= start && d <= end && belongsToPrivilegeHostess) {
       total++;
       if (l.action_type.includes('Privilège')) priv++;
       else if (l.action_type.includes('Roaming')) roam++;
@@ -1467,7 +1487,7 @@ export function getDashboardData(filters: { start?: string; end?: string; agentI
   return {
     kpi: {
       totalLeads: total,
-      presence: users.filter(u => u.role === 'agent').length
+      presence: activeHostesses.length
     },
     pieData,
     lineData
@@ -1493,7 +1513,7 @@ export function buildPayrollPresenceSummary(dateISO: string) {
   }> = [];
 
   users
-    .filter(u => u.role === 'agent')
+    .filter((user) => isActivePrivilegeHostess(user, shops))
     .forEach(agent => {
       const sup = supervisors.find(s => s.id === agent.supervisorId);
       const shop = shops.find(s => s.id === agent.permanentShopId);

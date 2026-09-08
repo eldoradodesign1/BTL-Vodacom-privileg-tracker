@@ -136,10 +136,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const allReports = getReports();
   const allUsers = getUsers();
   const supervisors = allUsers.filter(u => u.role === 'supervisor');
-  const agents = allUsers.filter(u => u.role === 'agent' && u.userCategory !== 'brand_ambassador');
-  const hostessIds = new Set(agents.map((agent) => agent.id));
+  const assignableHostesses = allUsers.filter((user) => user.role === 'agent'
+    && user.userCategory !== 'brand_ambassador'
+    && user.userCategory !== 'brand_ambassador_youth');
+  const activeHostessIds = new Set(assignableHostesses
+    .filter((hostess) => !!hostess.permanentShopId)
+    .map((hostess) => hostess.id));
   const hostessList = masterList
-    .filter((agent) => hostessIds.has(agent.id))
+    .filter((agent) => activeHostessIds.has(agent.id))
     .sort((a, b) => a.name.localeCompare(b.name));
   const supervisorsById = supervisors.reduce<Record<string, string>>((acc, sup) => {
     acc[sup.id] = sup.name;
@@ -207,7 +211,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       .sort((a, b) => a.name.localeCompare(b.name))
     : [];
   const filteredMasterList = monitoringMasterList.filter(agent => {
-    if (!hostessIds.has(agent.id)) return false;
+    if (!activeHostessIds.has(agent.id)) return false;
     const srcUser = allUsers.find(u => u.id === agent.id);
     const supId = srcUser?.supervisorId || '';
     const matchesSearch = !searchTerm
@@ -381,7 +385,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
     if (fromShopId === targetShopId) return;
 
-    const agent = agents.find((u) => u.id === agentId);
+    const agent = assignableHostesses.find((u) => u.id === agentId);
     const fromShop = shops.find((s) => s.id === fromShopId);
     const toShop = shops.find((s) => s.id === targetShopId);
     if (!agent || !toShop) return;
@@ -635,7 +639,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
                     >
                       <option value="">-- Choisir une hôtesse --</option>
-                      {agents.map(u => (
+                      {assignableHostesses.map(u => (
                         <option key={u.id} value={u.id}>
                           {u.name}
                         </option>
@@ -692,7 +696,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 </h2>
 
                 {shops.map(shop => {
-                  const assignedAgents = agents.filter(a => a.permanentShopId === shop.id);
+                  const assignedAgents = assignableHostesses.filter(a => a.permanentShopId === shop.id);
                   return (
                     <div
                       key={shop.id}
@@ -1235,7 +1239,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <div className="pointer-events-none absolute -left-10 -bottom-10 h-28 w-28 rounded-full bg-amber-400/18 blur-2xl" />
               <div className="pointer-events-none absolute right-3 top-3 h-7 w-7 rounded-full border border-white/20" />
               <span className="text-[9px] font-black uppercase tracking-wider text-gray-300 block group-hover:text-white">Effectif Hôtesses</span>
-              <p className="text-3xl font-black text-white drop-shadow-[0_0_12px_rgba(0,0,0,0.4)]">{agents.length}</p>
+              <p className="text-3xl font-black text-white drop-shadow-[0_0_12px_rgba(0,0,0,0.4)]">{hostessList.length}</p>
               <span className="text-[8px] font-bold text-gray-300 uppercase mt-1 block group-hover:underline">→ Aller au Monitoring</span>
             </div>
           </div>

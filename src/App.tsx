@@ -697,7 +697,7 @@ const todayLeads =
 
     return (
       <Suspense fallback={<SectionLoader />}>
-        <React.Fragment key={`${effectiveRole}-${effectiveUser.id}-${dataRevision}`}>
+        <React.Fragment key={`${effectiveRole}-${effectiveUser.id}`}>
           {content}
         </React.Fragment>
       </Suspense>

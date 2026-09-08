@@ -142,10 +142,15 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const allCheckins = getCheckins();
   const allReports = getReports();
   const allUsers = getUsers();
+  const isPrivilegeHostess = (user: User) => user.role === 'agent'
+    && user.userCategory !== 'brand_ambassador'
+    && user.userCategory !== 'brand_ambassador_youth';
+  // Les Hôtesses désaffectées restent disponibles pour une nouvelle affectation,
+  // mais n’entrent jamais dans la population du monitoring et des statistiques.
   const supervisedAgents = globalScope
-    ? allUsers.filter(u => u.role === 'agent' && u.userCategory !== 'brand_ambassador')
-    : allUsers.filter(u => u.role === 'agent' && u.supervisorId === currentUser.id);
-  const teamAgentIds = supervisedAgents.map((a) => a.id);
+    ? allUsers.filter(isPrivilegeHostess)
+    : allUsers.filter((user) => isPrivilegeHostess(user) && user.supervisorId === currentUser.id);
+  const teamAgentIds = teamData.map((agent) => agent.id);
   const teamReports = allReports.filter((report) => teamAgentIds.includes(report.agent_id));
   const reportDateList = [...new Set(teamReports.map((r) => r.date))].sort();
   const consolidationMinDate = reportDateList[0] || todayIso;
@@ -418,7 +423,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   
 
   const handleAssignShopSubmit = (userId: string, shopId: string) => {
-    updateUserShopAssignment(userId, shopId);
+    updateUserShopAssignment(userId, shopId || null);
     setAssigningUserId(null);
     if (onRefreshData) onRefreshData();
   };
@@ -1188,18 +1193,17 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   onChange={(e) => setAssigningShopId(e.target.value)}
                   className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
                 >
-                  <option value="">-- Choisir un shop Vodacom --</option>
+                  <option value="">Aucun shop — désaffecter l’hôtesse</option>
                   {shops.map(s => (
                     <option key={s.id} value={s.id}>{s.name} ({s.city})</option>
                   ))}
                 </select>
 
                 <button
-                  disabled={!assigningShopId}
                   onClick={() => handleAssignShopSubmit(assigningUserId, assigningShopId)}
                   className="w-full mt-3 py-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-xs font-black uppercase shadow-lg transition-all"
                 >
-                  Valider l'affectation
+                  Valider l’affectation
                 </button>
               </div>
             )}

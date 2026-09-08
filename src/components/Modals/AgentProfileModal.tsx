@@ -123,8 +123,8 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
     : `Aucun client enregistré le ${new Date(`${selectedClientsDate}T00:00:00`).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}.`;
 
   const handleAssignmentSave = () => {
-    if (!selectedShopId || !agent) return;
-    updateUserShopAssignment(agent.id, selectedShopId);
+    if (!agent) return;
+    updateUserShopAssignment(agent.id, selectedShopId || null);
     onAssignmentChanged?.();
   };
 
