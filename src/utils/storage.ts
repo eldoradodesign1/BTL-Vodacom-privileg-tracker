@@ -808,15 +808,34 @@ export function getCheckins(): Checkin[] {
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
+function checkinIdentity(record: Pick<Checkin, 'id' | 'accuracy'>): string {
+  return `${record.id}::${Number(record.accuracy)}`;
+}
+
 export async function refreshCheckinsFromSupabase(): Promise<void> {
   if (!isSupabaseConfigured()) return;
 
-  const rows = await fetchCheckinsFromSupabase();
+  const remoteRows = await fetchCheckinsFromSupabase();
+  const localRows = getCheckins();
+  const remoteKeys = new Set(remoteRows.map(checkinIdentity));
 
-  saveItem(
-    STORAGE_KEYS.CHECKINS,
-    rows.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  // Une présence créée hors ligne (ou avant le correctif de clé primaire) ne doit
+  // jamais disparaître au premier rafraîchissement réseau. Les données du serveur
+  // restent prioritaires pour une même clé, les présences absentes sont conservées
+  // puis renvoyées en arrière-plan.
+  const localOnlyRows = localRows.filter((record) => !remoteKeys.has(checkinIdentity(record)));
+  const merged = [...remoteRows, ...localOnlyRows].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
   );
+  saveItem(STORAGE_KEYS.CHECKINS, merged);
+
+  if (localOnlyRows.length) {
+    persistOrQueue({ checkins: localOnlyRows.map((record) => ({
+      ...record,
+      // Une photo en base64 ne doit pas bloquer la récupération du pointage.
+      photo: undefined,
+    })) });
+  }
 }
 
 export function addCheckin(checkinData: Omit<Checkin, 'id'>): Checkin {
