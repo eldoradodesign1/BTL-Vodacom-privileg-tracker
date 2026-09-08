@@ -14,6 +14,10 @@ interface SimulationBarProps {
   onResetSimulation: () => void;
 }
 
+export function sortUsersForSimulation(users: User[]): User[] {
+  return [...users].sort((left, right) => left.name.localeCompare(right.name, 'fr') || left.id.localeCompare(right.id));
+}
+
 export const SimulationBar: React.FC<SimulationBarProps> = ({
   masterUser,
   effectiveUser,
@@ -28,11 +32,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
   if (masterUser.role !== 'super_admin') return null;
 
   const activeRole = simulatedRole || effectiveUser.role;
-  const simulationUsers = [...users].sort((left, right) => {
-    const leftPriority = left.name.trim().toLowerCase() === 'agent test' ? 0 : left.userCategory === 'brand_ambassador_youth' ? 1 : 2;
-    const rightPriority = right.name.trim().toLowerCase() === 'agent test' ? 0 : right.userCategory === 'brand_ambassador_youth' ? 1 : 2;
-    return leftPriority - rightPriority || left.name.localeCompare(right.name, 'fr');
-  });
+  const simulationUsers = sortUsersForSimulation(users);
   const isDiamondTheme = theme === 'diamond';
   const simulationBackground = theme === 'diamond' ? 'diamond-light.jpg' : `${theme}.jpg`;
   const shellClasses = theme === 'rubis'

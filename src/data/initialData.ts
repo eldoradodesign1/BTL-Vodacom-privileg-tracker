@@ -13,7 +13,7 @@ export const INITIAL_SHOPS: Shop[] = [
 ];
 
 export const INITIAL_USERS: User[] = [
-  { id: '0a6a2520-96bb-474d-87b6-b0eb8fc46cd6', phone: '0896332431', name: 'Eldo Bitulu', role: 'admin', permanentShopId: 'S001' },
+  { id: '0a6a2520-96bb-474d-87b6-b0eb8fc46cd6', phone: '0896332431', name: 'Eldo Bitulu', role: 'super_admin', permanentShopId: 'S001' },
   { id: 'adm-0001-4a11-a881-100000000001', phone: '0816701000', name: 'Bradley Izamaboko', role: 'admin', permanentShopId: 'S001' },
   { id: 'usr-8d3144f8', phone: '0810933351', name: 'Ruth Mafuta', role: 'admin', permanentShopId: 'S001' },
   { id: 'sup-0001-4a11-a881-100000000001', phone: '0812923941', name: 'Hervé Ntalu', role: 'supervisor', permanentShopId: 'S001' },

@@ -238,6 +238,8 @@ function mergeUsersWithSeedData(storedUsers: User[]): User[] {
   const merged: User[] = [...INITIAL_USERS];
   const indexById = new Map<string, number>();
   const indexByPhone = new Map<string, number>();
+  const seedById = new Map(INITIAL_USERS.map((seed) => [seed.id, seed]));
+  const seedByPhone = new Map(INITIAL_USERS.map((seed) => [normalizePhoneMSISDN(seed.phone).toLowerCase(), seed]));
 
   const indexUser = (user: User, index: number) => {
     if (user.id) indexById.set(user.id, index);
@@ -262,13 +264,18 @@ function mergeUsersWithSeedData(storedUsers: User[]): User[] {
 
     const existing = merged[existingIndex];
     const existingPhoneKey = normalizePhoneMSISDN(existing.phone).toLowerCase();
+    const seedUser = (candidate.id ? seedById.get(candidate.id) : undefined)
+      ?? (candidatePhoneKey ? seedByPhone.get(candidatePhoneKey) : undefined)
+      ?? (existing.id ? seedById.get(existing.id) : undefined)
+      ?? (existingPhoneKey ? seedByPhone.get(existingPhoneKey) : undefined);
+
     const nextUser: User = {
       ...existing,
       ...candidate,
       id: candidate.id || existing.id,
       phone: candidate.phone || existing.phone,
       name: candidate.name || existing.name,
-      role: candidate.role || existing.role,
+      role: seedUser?.role ?? (candidate.role || existing.role),
       password: candidate.password ?? existing.password,
       supervisorId: candidate.supervisorId ?? existing.supervisorId,
       permanentShopId: candidate.permanentShopId ?? existing.permanentShopId,
@@ -1350,7 +1357,7 @@ export function getAdminMasterList(dateISO?: string): AgentMasterStatus[] {
   const shops = getShops();
   const targetDate = dateISO || toISO(new Date());
 
-  const agents = users.filter(u => u.role === 'agent');
+  const agents = users.filter(u => u.role === 'agent' && u.userCategory !== 'brand_ambassador' && u.userCategory !== 'brand_ambassador_youth');
 
   return agents.map(agent => {
     const hasIn = checkins.some(c => (c.agent_id === agent.id || c.agent_id === agent.name || isMatchAgent(c.agent_id, agent)) && toISO(c.timestamp) === targetDate && c.type === 'IN');
@@ -1394,7 +1401,7 @@ export function getSupervisorLiveView(supervisorId: string, dateISO?: string) {
   const leads = getLeads();
   const shops = getShops();
 
-  const myAgents = users.filter(u => u.role === 'agent' && u.supervisorId === supervisorId);
+  const myAgents = users.filter(u => u.role === 'agent' && u.supervisorId === supervisorId && u.userCategory !== 'brand_ambassador' && u.userCategory !== 'brand_ambassador_youth');
 
   return myAgents.map(a => {
     const hasIn = checkins.find(c => isMatchAgent(c.agent_id, a) && toISO(c.timestamp) === targetDate && c.type === 'IN');
