@@ -1390,7 +1390,7 @@ export function getAdminMasterList(dateISO?: string): AgentMasterStatus[] {
       reportObj: todayReport,
       stats: { priv, roam, bund }
     };
-  });
+  }).sort((left, right) => left.name.localeCompare(right.name, 'fr') || left.id.localeCompare(right.id));
 }
 
 export function getSupervisorLiveView(supervisorId: string, dateISO?: string) {
@@ -1428,7 +1428,7 @@ export function getSupervisorLiveView(supervisorId: string, dateISO?: string) {
         bund: aLeads.filter(l => l.action_type.includes('Bundle')).length
       }
     };
-  });
+  }).sort((left, right) => left.name.localeCompare(right.name, 'fr') || left.id.localeCompare(right.id));
 }
 
 export function getDashboardData(filters: { start?: string; end?: string; agentId?: string }) {
