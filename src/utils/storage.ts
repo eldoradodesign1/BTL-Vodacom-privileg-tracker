@@ -244,29 +244,33 @@ function loadStoredArray<T>(key: string, legacyKeys: string[], fallback: T): T {
 
 function mergeUsersWithSeedData(storedUsers: User[]): User[] {
   const merged: User[] = [...INITIAL_USERS];
+  const indexById = new Map<string, number>();
   const indexByPhone = new Map<string, number>();
 
-  merged.forEach((user, index) => {
-    const key = normalizePhoneMSISDN(user.phone).toLowerCase();
-    if (key) indexByPhone.set(key, index);
-  });
+  const indexUser = (user: User, index: number) => {
+    if (user.id) indexById.set(user.id, index);
+    const phoneKey = normalizePhoneMSISDN(user.phone).toLowerCase();
+    if (phoneKey) indexByPhone.set(phoneKey, index);
+  };
+
+  merged.forEach(indexUser);
 
   (Array.isArray(storedUsers) ? storedUsers : []).forEach((candidate) => {
-    const key = normalizePhoneMSISDN(candidate.phone).toLowerCase();
-    if (!key) {
-      merged.push(candidate);
-      return;
-    }
+    const candidatePhoneKey = normalizePhoneMSISDN(candidate.phone).toLowerCase();
+    // Les entrées initiales conservent parfois un MSISDN de démonstration. L'UUID
+    // Supabase est l'identité de référence et doit donc primer sur le téléphone.
+    const existingIndex = (candidate.id ? indexById.get(candidate.id) : undefined)
+      ?? (candidatePhoneKey ? indexByPhone.get(candidatePhoneKey) : undefined);
 
-    const existingIndex = indexByPhone.get(key);
     if (existingIndex === undefined) {
       merged.push(candidate);
-      indexByPhone.set(key, merged.length - 1);
+      indexUser(candidate, merged.length - 1);
       return;
     }
 
     const existing = merged[existingIndex];
-    merged[existingIndex] = {
+    const existingPhoneKey = normalizePhoneMSISDN(existing.phone).toLowerCase();
+    const nextUser: User = {
       ...existing,
       ...candidate,
       id: candidate.id || existing.id,
@@ -281,6 +285,10 @@ function mergeUsersWithSeedData(storedUsers: User[]): User[] {
       created_at: candidate.created_at || existing.created_at,
       last_login: candidate.last_login || existing.last_login
     };
+
+    merged[existingIndex] = nextUser;
+    if (existingPhoneKey && indexByPhone.get(existingPhoneKey) === existingIndex) indexByPhone.delete(existingPhoneKey);
+    indexUser(nextUser, existingIndex);
   });
 
   return merged;
