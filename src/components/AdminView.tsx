@@ -129,23 +129,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [assignShop, setAssignShop] = useState('');
   const [assignSupervisor, setAssignSupervisor] = useState('');
 
-  const masterList = getAdminMasterList();
-  const monitoringMasterList = getAdminMasterList(monitoringDate);
+  const masterList = getAdminMasterList(undefined, false);
+  const monitoringMasterList = getAdminMasterList(monitoringDate, true);
   const allCheckins = getCheckins();
-  const totalActivations = allLeads.length;
   const dashboardData = getDashboardData({ start: startDate, end: endDate, agentId: selectedAgentId });
+  const totalActivations = dashboardData.kpi.totalLeads;
   const allReports = getReports();
   const allUsers = getUsers();
   const supervisors = allUsers.filter(u => u.role === 'supervisor');
   const assignableHostesses = allUsers.filter((user) => user.role === 'agent'
     && user.userCategory !== 'brand_ambassador'
     && user.userCategory !== 'brand_ambassador_youth');
-  const activeHostessIds = new Set(assignableHostesses
-    .filter((hostess) => !!hostess.permanentShopId)
-    .map((hostess) => hostess.id));
-  const hostessList = masterList
-    .filter((agent) => activeHostessIds.has(agent.id))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const hostessList = masterList.sort((a, b) => a.name.localeCompare(b.name));
   const supervisorsById = supervisors.reduce<Record<string, string>>((acc, sup) => {
     acc[sup.id] = sup.name;
     return acc;
@@ -212,7 +207,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
       .sort((a, b) => a.name.localeCompare(b.name))
     : [];
   const filteredMasterList = monitoringMasterList.filter(agent => {
-    if (!activeHostessIds.has(agent.id)) return false;
     const srcUser = allUsers.find(u => u.id === agent.id);
     const supId = srcUser?.supervisorId || '';
     const matchesSearch = !searchTerm

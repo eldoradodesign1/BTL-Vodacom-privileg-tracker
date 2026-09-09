@@ -137,7 +137,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   
 
   const teamData = globalScope
-    ? getAdminMasterList(selectedDate)
+    ? getAdminMasterList(selectedDate, true)
     : getSupervisorLiveView(currentUser.id, selectedDate);
   const allCheckins = getCheckins();
   const allReports = getReports();
