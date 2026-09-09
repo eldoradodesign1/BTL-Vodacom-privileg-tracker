@@ -479,10 +479,25 @@ function saveItem<T>(key: string, data: T): void {
 }
 
 export function toISO(dateVal?: Date | string): string {
-  if (!dateVal) return new Date().toISOString().split('T')[0];
+  if (!dateVal) {
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Kinshasa',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+    } catch {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+  }
   if (typeof dateVal === 'string') {
     const trimmed = dateVal.trim();
-    if (trimmed.includes('T')) return trimmed.split('T')[0];
+    if (trimmed.includes('T')) {
+      const datePart = trimmed.split('T')[0];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart;
+    }
     const firstPart = trimmed.split(' ')[0];
     if (firstPart.includes('-')) {
       const parts = firstPart.split('-');
@@ -506,15 +521,32 @@ export function toISO(dateVal?: Date | string): string {
     try {
       const d = new Date(trimmed);
       if (!isNaN(d.getTime())) {
-        return d.toISOString().split('T')[0];
+        try {
+          return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Africa/Kinshasa',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          }).format(d);
+        } catch {
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
       }
     } catch {}
   } else if (dateVal instanceof Date) {
     try {
-      return dateVal.toISOString().split('T')[0];
-    } catch {}
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Kinshasa',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(dateVal);
+    } catch {
+      return `${dateVal.getFullYear()}-${String(dateVal.getMonth() + 1).padStart(2, '0')}-${String(dateVal.getDate()).padStart(2, '0')}`;
+    }
   }
-  return new Date().toISOString().split('T')[0];
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 // --- USERS ---

@@ -47,18 +47,13 @@ export const AdminView: React.FC<AdminViewProps> = ({
   );
   const [manageSection, setManageSection] = useState<'hostess' | 'supervisors' | 'shops' | 'targets'>('hostess');
   const [startDate, setStartDate] = useState('2026-07-01');
-  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const allLeads = getLeads();
   const todayIso = toISO(new Date());
+  const [endDate, setEndDate] = useState(todayIso);
+  const allLeads = getLeads();
   const allLeadDates = [...new Set(allLeads.map(l => toISO(l.timestamp)))].sort();
-  const firstLeadDate = allLeadDates[0] || todayIso;
-  const dayMs = 86400000;
-  const minTs = new Date(`${firstLeadDate}T00:00:00`).getTime();
-  const maxTs = new Date(`${todayIso}T00:00:00`).getTime();
-  const maxOffset = Math.max(0, Math.floor((maxTs - minTs) / dayMs));
-  const offsetToDate = (offset: number) => toISO(new Date(minTs + (Math.max(0, Math.min(maxOffset, offset)) * dayMs)));
-  const [leadStartOffset, setLeadStartOffset] = useState(0);
-  const [leadEndOffset, setLeadEndOffset] = useState(maxOffset);
+  const firstLeadDate = allLeadDates[0] || '2026-07-01';
+  const [leadStartDate, setLeadStartDate] = useState(firstLeadDate);
+  const [leadEndDate, setLeadEndDate] = useState(todayIso);
   const [monitoringDate, setMonitoringDate] = useState(todayIso);
   const [selectedAgentId, setSelectedAgentId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -146,8 +141,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
     return acc;
   }, {});
   const reportDateList = [...new Set(allReports.map((r) => toISO(r.date)))].sort();
-  const consolidationMinDate = reportDateList[0] || todayIso;
-  const consolidationMaxDate = reportDateList[reportDateList.length - 1] || todayIso;
+  const consolidationMinDate = reportDateList[0] || '2026-07-01';
+  const consolidationMaxDate = (reportDateList.length > 0 && reportDateList[reportDateList.length - 1] > todayIso)
+    ? reportDateList[reportDateList.length - 1]
+    : todayIso;
   const consolidationStartDate = startDate < consolidationMinDate
     ? consolidationMinDate
     : (startDate > consolidationMaxDate ? consolidationMaxDate : startDate);
@@ -219,13 +216,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const matchesSup = supFilter === 'ALL' || supId === supFilter;
     return matchesSearch && matchesStatus && matchesSup;
   });
-  const rangeStart = Math.min(leadStartOffset, leadEndOffset);
-  const rangeEnd = Math.max(leadStartOffset, leadEndOffset);
-  const leadRangeStartDate = offsetToDate(rangeStart);
-  const leadRangeEndDate = offsetToDate(rangeEnd);
   const filteredLeads = allLeads.filter(ld => {
     const d = toISO(ld.timestamp);
-    return d >= leadRangeStartDate && d <= leadRangeEndDate;
+    return d >= leadStartDate && d <= leadEndDate;
   });
   // Sync internal subTab when activeTab changes
   React.useEffect(() => {
@@ -1342,13 +1335,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <DateRangeKnobSlider
                 minDate={firstLeadDate}
                 maxDate={todayIso}
-                startDate={leadRangeStartDate}
-                endDate={leadRangeEndDate}
+                startDate={leadStartDate}
+                endDate={leadEndDate}
                 onChange={({ startDate: nextStart, endDate: nextEnd }) => {
-                  const nextStartOffset = Math.max(0, Math.min(maxOffset, Math.floor((new Date(`${nextStart}T00:00:00`).getTime() - minTs) / dayMs)));
-                  const nextEndOffset = Math.max(0, Math.min(maxOffset, Math.floor((new Date(`${nextEnd}T00:00:00`).getTime() - minTs) / dayMs)));
-                  setLeadStartOffset(nextStartOffset);
-                  setLeadEndOffset(nextEndOffset);
+                  setLeadStartDate(nextStart);
+                  setLeadEndDate(nextEnd);
                 }}
               />
             </div>
