@@ -145,6 +145,20 @@ export async function getMerchantCampaign(): Promise<Campaign | null> {
   });
 }
 
+export async function setUserCampaignAssignment(input: { userId: string; campaignId: string; isActive: boolean; assignedBy?: string | null }): Promise<void> {
+  const client = getMerchantClient();
+  const payload = {
+    user_id: input.userId,
+    campaign_id: input.campaignId,
+    is_active: input.isActive,
+    ...(input.assignedBy ? { assigned_by: input.assignedBy } : {}),
+  };
+  const { error } = await client
+    .from('user_campaign_assignments')
+    .upsert(payload, { onConflict: 'user_id,campaign_id' });
+  fail(error, input.isActive ? 'Impossible d’affecter l’agent à la campagne' : 'Impossible de désaffecter l’agent de la campagne');
+}
+
 export async function getCampaignsForUser(userId: string): Promise<Campaign[]> {
   const client = getMerchantClient();
   const { data, error } = await client

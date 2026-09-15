@@ -137,8 +137,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const allUsers = getUsers();
   const supervisors = allUsers.filter(u => u.role === 'supervisor');
   const assignableHostesses = allUsers.filter((user) => user.role === 'agent'
-    && user.userCategory !== 'brand_ambassador'
-    && user.userCategory !== 'brand_ambassador_youth');
+    && user.userCategory === 'hostess');
   const activeHostessIds = new Set(assignableHostesses
     .filter((hostess) => !!hostess.permanentShopId)
     .map((hostess) => hostess.id));

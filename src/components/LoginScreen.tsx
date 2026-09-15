@@ -45,11 +45,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       finishLogin(user, campaigns[0]);
     } catch {
       // The legacy Vodacom connection remains available when the campaign lookup is offline.
-      finishLogin(user, user.userCategory === 'brand_ambassador_youth'
-        ? { campaign_type: 'brand_ambassador', code: 'youth-f2f' } as Campaign
-        : user.userCategory === 'brand_ambassador'
-          ? { campaign_type: 'brand_ambassador', code: 'merchant-educational-campaign' } as Campaign
-          : null);
+      finishLogin(user, user.userCategory === 'brand_ambassador'
+        ? { campaign_type: 'brand_ambassador', code: 'merchant-educational-campaign' } as Campaign
+        : null);
     }
   };
 

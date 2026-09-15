@@ -277,11 +277,9 @@ export default function App() {
         if (!current) {
           const fallback = campaigns[0];
           if (!fallback) {
-            const inferredContext: CampaignContext = currentUser.userCategory === 'brand_ambassador_youth'
-              ? 'youth-f2f'
-              : currentUser.userCategory === 'brand_ambassador'
-                ? 'merchant-educational'
-                : 'vodacom-privilege';
+            const inferredContext: CampaignContext = currentUser.userCategory === 'brand_ambassador'
+              ? 'merchant-educational'
+              : 'vodacom-privilege';
             setActiveCampaign(inferredContext);
             localStorage.setItem('btl_active_campaign', inferredContext);
             setActiveCampaignPause(null);
@@ -530,9 +528,8 @@ const refreshData = useCallback(async (force = false) => {
         : 'Hôtesses',
   })).filter((campaign, index, list) => list.findIndex((item) => item.key === campaign.key) === index);
   const inferredAgentMerchant = effectiveRole === 'agent' && effectiveUser.userCategory === 'brand_ambassador';
-  const inferredAgentYouth = effectiveRole === 'agent' && effectiveUser.userCategory === 'brand_ambassador_youth';
   const isYouthContext = effectiveRole === 'agent'
-    ? (agentCampaignOptions.length > 0 ? activeCampaign === 'youth-f2f' : inferredAgentYouth)
+    ? (agentCampaignOptions.length > 0 && activeCampaign === 'youth-f2f')
     : activeCampaign === 'youth-f2f';
   const isMerchantContext = !isYouthContext && (effectiveRole === 'agent'
     ? (agentCampaignOptions.length > 0 ? activeCampaign === 'merchant-educational' : inferredAgentMerchant)

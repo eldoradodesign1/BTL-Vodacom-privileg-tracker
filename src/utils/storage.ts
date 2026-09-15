@@ -1358,8 +1358,7 @@ function buildAgentEvolutionSeries(agentId: string, agentName: string, reportDat
 // --- AGENT MASTER LIST & SUPERVISOR LIVE VIEW ---
 function isActivePrivilegeHostess(user: User, shops: Shop[]): boolean {
   return user.role === 'agent'
-    && user.userCategory !== 'brand_ambassador'
-    && user.userCategory !== 'brand_ambassador_youth'
+    && user.userCategory === 'hostess'
     && !!user.permanentShopId
     && shops.some((shop) => shop.id === user.permanentShopId);
 }

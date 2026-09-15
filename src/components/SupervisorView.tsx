@@ -143,8 +143,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const allReports = getReports();
   const allUsers = getUsers();
   const isPrivilegeHostess = (user: User) => user.role === 'agent'
-    && user.userCategory !== 'brand_ambassador'
-    && user.userCategory !== 'brand_ambassador_youth';
+    && user.userCategory === 'hostess';
   // Les Hôtesses désaffectées restent disponibles pour une nouvelle affectation,
   // mais n’entrent jamais dans la population du monitoring et des statistiques.
   const supervisedAgents = globalScope

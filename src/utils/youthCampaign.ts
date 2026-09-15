@@ -178,11 +178,15 @@ export async function getYouthAttendanceHistory(baId: string, campaignId: string
 
 export async function getYouthAgents(supervisorId?: string): Promise<User[]> {
   const client = getYouthClient();
+  const campaign = await getYouthCampaign();
+  if (!campaign) return [];
   let request = client
     .from('users')
-    .select('id,phone,full_name,role,password_hash,supervisor_id,permanent_shop_id,user_category,created_at,last_login')
-    .eq('user_category', 'brand_ambassador_youth')
+    .select('id,phone,full_name,role,password_hash,supervisor_id,permanent_shop_id,user_category,created_at,last_login,user_campaign_assignments!inner(campaign_id,is_active)')
+    .eq('user_category', 'brand_ambassador')
     .eq('role', 'agent')
+    .eq('user_campaign_assignments.campaign_id', campaign.id)
+    .eq('user_campaign_assignments.is_active', true)
     .order('full_name');
   if (supervisorId) request = request.eq('supervisor_id', supervisorId);
   const { data, error } = await request;
