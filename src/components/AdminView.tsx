@@ -26,8 +26,20 @@ export const AdminView: React.FC<AdminViewProps> = (props) => {
 
   useEffect(() => {
     let disposed = false;
+    let mountedHost: HTMLElement | null = null;
     let mount: HTMLDivElement | null = null;
     let hiddenNodes: HTMLElement[] = [];
+
+    const restore = () => {
+      hiddenNodes.forEach((node) => {
+        node.style.display = node.dataset.campaignPreviousDisplay || '';
+        delete node.dataset.campaignPreviousDisplay;
+      });
+      hiddenNodes = [];
+      mount?.remove();
+      mount = null;
+      mountedHost = null;
+    };
 
     const locate = () => {
       if (disposed) return;
@@ -35,27 +47,27 @@ export const AdminView: React.FC<AdminViewProps> = (props) => {
       const intro = sections.find((node) => node.textContent?.includes('Affectations de campagnes'));
       const legacyList = sections.find((node) => node.textContent?.includes('Agents et campagnes actives'));
       const host = intro && legacyList && intro.parentElement === legacyList.parentElement ? intro.parentElement : null;
+
       if (!host) {
-        if (campaignHost) setCampaignHost(null);
+        if (mountedHost) {
+          restore();
+          setCampaignHost(null);
+        }
         return;
       }
+      if (host === mountedHost && mount) return;
 
-      if (!mount || mount.parentElement !== host) {
-        hiddenNodes.forEach((node) => {
-          node.style.display = node.dataset.campaignPreviousDisplay || '';
-          delete node.dataset.campaignPreviousDisplay;
-        });
-        hiddenNodes = Array.from(host.children).filter((node) => node !== mount) as HTMLElement[];
-        hiddenNodes.forEach((node) => {
-          node.dataset.campaignPreviousDisplay = node.style.display;
-          node.style.display = 'none';
-        });
-        mount = document.createElement('div');
-        mount.dataset.campaignPanelHost = 'true';
-        host.appendChild(mount);
-      }
-
-      if (campaignHost !== mount) setCampaignHost(mount);
+      restore();
+      mountedHost = host;
+      hiddenNodes = Array.from(host.children) as HTMLElement[];
+      hiddenNodes.forEach((node) => {
+        node.dataset.campaignPreviousDisplay = node.style.display;
+        node.style.display = 'none';
+      });
+      mount = document.createElement('div');
+      mount.dataset.campaignPanelHost = 'true';
+      host.appendChild(mount);
+      setCampaignHost(mount);
     };
 
     const observer = new MutationObserver(locate);
@@ -66,14 +78,10 @@ export const AdminView: React.FC<AdminViewProps> = (props) => {
       disposed = true;
       window.clearTimeout(timer);
       observer.disconnect();
-      hiddenNodes.forEach((node) => {
-        node.style.display = node.dataset.campaignPreviousDisplay || '';
-        delete node.dataset.campaignPreviousDisplay;
-      });
-      mount?.remove();
+      restore();
       setCampaignHost(null);
     };
-  }, [campaignHost]);
+  }, []);
 
   return (
     <>
