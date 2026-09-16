@@ -1,0 +1,66 @@
+name: Integrate campaign panel
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/components/CampaignAssignmentsPanel.tsx'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Replace admin campaign section
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/components/AdminView.tsx')
+          text = path.read_text(encoding='utf-8')
+
+          old_import = "import { getCampaignAssignmentsOverview, type CampaignAssignmentOverview } from '../utils/merchantCampaign';\n"
+          text = text.replace(old_import, '')
+
+          old_component_import_anchor = "import { CampaignPauseControl } from './CampaignPauseControl';\n"
+          new_component_import = old_component_import_anchor + "import CampaignAssignmentsPanel from './CampaignAssignmentsPanel';\n"
+          if "import CampaignAssignmentsPanel from './CampaignAssignmentsPanel';" not in text:
+              text = text.replace(old_component_import_anchor, new_component_import)
+
+          old_state = "  const [campaignAssignments, setCampaignAssignments] = useState<CampaignAssignmentOverview[]>([]);\n  const [campaignAssignmentsLoading, setCampaignAssignmentsLoading] = useState(false);\n  const [campaignAssignmentsError, setCampaignAssignmentsError] = useState('');\n"
+          text = text.replace(old_state, '')
+
+          start_effect = "  useEffect(() => {\n    if (subTab !== 'manage' || manageSection !== 'campaigns') return;"
+          effect_start = text.find(start_effect)
+          if effect_start != -1:
+              effect_end_marker = "\n\n  // Sync internal subTab when activeTab changes"
+              effect_end = text.find(effect_end_marker, effect_start)
+              if effect_end == -1:
+                  raise SystemExit('Campaign effect end marker not found')
+              text = text[:effect_start] + text[effect_end + 2:]
+
+          start_marker = "          {manageSection === 'campaigns' && ("
+          end_marker = "          {manageSection === 'targets' && ("
+          start = text.find(start_marker)
+          end = text.find(end_marker, start)
+          if start == -1 or end == -1:
+              raise SystemExit('Campaign JSX markers not found')
+
+          replacement = "          {manageSection === 'campaigns' && (\n            <CampaignAssignmentsPanel currentUser={currentUser} />\n          )}\n"
+          text = text[:start] + replacement + text[end:]
+
+          path.write_text(text, encoding='utf-8')
+
+      - name: Commit integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/AdminView.tsx
+          git diff --cached --quiet || git commit -m "Refondre la gestion des affectations par campagne"
+          git push
