@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Campaign, Shop, UserCategory, UserRole } from '../../types';
 import { saveUser, getUsers } from '../../utils/storage';
 import { syncLocalDataToSupabase } from '../../utils/supabase';
-import { assignUserToCampaigns, getCampaigns } from '../../utils/merchantCampaign';
+import { assignUserToCampaigns, getCampaigns, getCampaignsForUser, setUserCampaignAssignment } from '../../utils/merchantCampaign';
 import { UserPlus, X } from 'lucide-react';
 import { cleanPhoneNumber, formatMsisdn, isValidMsisdn } from '../../utils/phoneValidator';
 
@@ -23,10 +23,18 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, shops, onClose, on
   const [password, setPassword] = useState('vodacom123');
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<string[]>([]);
+  const [mode, setMode] = useState<'create' | 'assign'>('create');
+  const [existingAgentId, setExistingAgentId] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const supervisors = useMemo(() => getUsers().filter((user) => user.role === 'supervisor' || user.role === 'admin'), []);
+  const existingAgents = useMemo(() => getUsers()
+    .filter((user) => user.role === 'agent' && (user.userCategory === 'hostess' || user.userCategory === 'brand_ambassador'))
+    .sort((a, b) => a.name.localeCompare(b.name)), [isOpen]);
+  const eligibleCampaigns = useMemo(() => campaigns.filter((campaign) => category === 'hostess'
+    ? campaign.campaign_type === 'hostess'
+    : campaign.campaign_type === 'brand_ambassador'), [campaigns, category]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -41,6 +49,19 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, shops, onClose, on
       .catch(() => setCampaigns([]));
     return () => { mounted = false; };
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || mode !== 'assign' || !existingAgentId) return;
+    let mounted = true;
+    void getCampaignsForUser(existingAgentId)
+      .then((activeCampaigns) => {
+        if (mounted) setSelectedCampaignIds(activeCampaigns.map((campaign) => campaign.id));
+      })
+      .catch(() => {
+        if (mounted) setSelectedCampaignIds([]);
+      });
+    return () => { mounted = false; };
+  }, [existingAgentId, isOpen, mode]);
 
   if (!isOpen) return null;
 
@@ -58,18 +79,37 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, shops, onClose, on
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!name || !phone) return;
-    if (!isValidMsisdn(phone)) {
-      setError('Format téléphone invalide : utilisez 081… (10 chiffres) ou +24381… (13 caractères).');
-      return;
-    }
-    if (role === 'agent' && category === 'hostess' && !shopId) {
-      setError('Sélectionnez la boutique permanente de cette hôtesse.');
-      return;
-    }
-    if (role === 'agent' && selectedCampaignIds.length === 0) {
-      setError('Affectez au moins une campagne à cet agent.');
-      return;
+    if (mode === 'assign') {
+      const existingAgent = existingAgents.find((user) => user.id === existingAgentId);
+      if (!existingAgent) {
+        setError('Sélectionnez un agent existant.');
+        return;
+      }
+      const allowed = campaigns.filter((campaign) => existingAgent.userCategory === 'hostess'
+        ? campaign.campaign_type === 'hostess'
+        : campaign.campaign_type === 'brand_ambassador');
+      if (selectedCampaignIds.some((campaignId) => !allowed.some((campaign) => campaign.id === campaignId))) {
+        setError('Cette catégorie ne peut pas être affectée à cette campagne.');
+        return;
+      }
+    } else {
+      if (!name || !phone) return;
+      if (!isValidMsisdn(phone)) {
+        setError('Format téléphone invalide : utilisez 081… (10 chiffres) ou +24381… (13 caractères).');
+        return;
+      }
+      if (role === 'agent' && category === 'hostess' && !shopId) {
+        setError('Sélectionnez la boutique permanente de cette hôtesse.');
+        return;
+      }
+      if (role === 'agent' && selectedCampaignIds.length === 0) {
+        setError('Affectez au moins une campagne à cet agent.');
+        return;
+      }
+      if (role === 'agent' && selectedCampaignIds.some((campaignId) => !eligibleCampaigns.some((campaign) => campaign.id === campaignId))) {
+        setError('Cette catégorie ne peut pas être affectée à cette campagne.');
+        return;
+      }
     }
 
     setSaving(true);
@@ -78,6 +118,25 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, shops, onClose, on
     const userCategory: UserCategory = role === 'agent' ? category : 'operations';
 
     try {
+      if (mode === 'assign') {
+        const existingAgent = existingAgents.find((user) => user.id === existingAgentId);
+        if (!existingAgent) throw new Error('Agent introuvable.');
+        const allowed = campaigns.filter((campaign) => existingAgent.userCategory === 'hostess'
+          ? campaign.campaign_type === 'hostess'
+          : campaign.campaign_type === 'brand_ambassador');
+        await Promise.all(allowed.map((campaign) => setUserCampaignAssignment({
+          userId: existingAgent.id,
+          campaignId: campaign.id,
+          isActive: selectedCampaignIds.includes(campaign.id),
+        })));
+        setExistingAgentId('');
+        setSelectedCampaignIds([]);
+        setMode('create');
+        onSuccess();
+        onClose();
+        return;
+      }
+
       const normalizedPhone = formatMsisdn(cleanPhoneNumber(phone));
       const createdUser = saveUser({
         name,
@@ -98,6 +157,8 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, shops, onClose, on
       setSupervisorId('');
       setShopId('');
       setPassword('vodacom123');
+      setExistingAgentId('');
+      setMode('create');
       setSelectedCampaignIds(campaigns.filter((campaign) => campaign.code === 'vodacom-privilege').map((campaign) => campaign.id));
       onSuccess();
       onClose();
@@ -120,6 +181,45 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, shops, onClose, on
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.03] p-1">
+            <button type="button" onClick={() => { setMode('create'); setError(''); }} className={`rounded-xl px-3 py-2 text-[10px] font-black uppercase transition-all ${mode === 'create' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}>Créer un agent</button>
+            <button type="button" onClick={() => { setMode('assign'); setError(''); setName(''); setPhone(''); }} className={`rounded-xl px-3 py-2 text-[10px] font-black uppercase transition-all ${mode === 'assign' ? 'bg-red-600 text-white' : 'text-gray-400 hover:text-white'}`}>Affecter un agent</button>
+          </div>
+
+          {mode === 'assign' ? (
+            <>
+              <div>
+                <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Agent existant</label>
+                <select value={existingAgentId} onChange={(event) => {
+                  const nextId = event.target.value;
+                  setExistingAgentId(nextId);
+                  setSelectedCampaignIds([]);
+                }} className="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-3 text-white text-xs focus:outline-none focus:border-red-500">
+                  <option value="">-- Choisir un agent --</option>
+                  {existingAgents.map((agent) => <option key={agent.id} value={agent.id}>{agent.name} · {agent.phone} · {agent.userCategory === 'hostess' ? 'Hôtesse' : 'BA'}</option>)}
+                </select>
+              </div>
+
+              <fieldset>
+                <legend className="text-[10px] font-black uppercase text-gray-400 block mb-2">Campagnes actives de l’agent</legend>
+                <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+                  {campaigns
+                    .filter((campaign) => {
+                      const selected = existingAgents.find((user) => user.id === existingAgentId);
+                      return selected?.userCategory === 'hostess' ? campaign.campaign_type === 'hostess' : campaign.campaign_type === 'brand_ambassador';
+                    })
+                    .map((campaign) => (
+                      <label key={campaign.id} className="flex items-center gap-3 text-sm text-gray-200 cursor-pointer">
+                        <input type="checkbox" checked={selectedCampaignIds.includes(campaign.id)} onChange={() => toggleCampaign(campaign.id)} className="accent-red-500 h-4 w-4" />
+                        <span>{campaign.name}</span>
+                      </label>
+                    ))}
+                </div>
+                <p className="mt-2 text-[10px] text-gray-500">Désélectionner une campagne la désactive sans supprimer l’historique.</p>
+              </fieldset>
+            </>
+          ) : (
+            <>
           <div>
             <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Nom Complet</label>
             <input type="text" value={name} onChange={(event) => setName(event.target.value)} placeholder="Ex: Sarah Kabedi" required className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500" />
@@ -177,7 +277,7 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, shops, onClose, on
             <fieldset>
               <legend className="text-[10px] font-black uppercase text-gray-400 block mb-2">Campagne(s) affectée(s)</legend>
               <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-                {campaigns.map((campaign) => (
+                {eligibleCampaigns.map((campaign) => (
                   <label key={campaign.id} className="flex items-center gap-3 text-sm text-gray-200 cursor-pointer">
                     <input type="checkbox" checked={selectedCampaignIds.includes(campaign.id)} onChange={() => toggleCampaign(campaign.id)} className="accent-red-500 h-4 w-4" />
                     <span>{campaign.name}</span>
@@ -189,15 +289,19 @@ export const UserModal: React.FC<UserModalProps> = ({ isOpen, shops, onClose, on
           ) : (
             <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/5 px-3 py-2 text-[10px] text-emerald-200">Les administrateurs, sous-admins et superviseurs accèdent à toutes les campagnes depuis le header.</div>
           )}
+            </>
+          )}
 
-          <div>
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Mot de passe</label>
-            <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500" />
-          </div>
+          {mode === 'create' && (
+            <div>
+              <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Mot de passe</label>
+              <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="••••••••" className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500" />
+            </div>
+          )}
 
           {error && <div className="rounded-2xl border border-red-500/40 bg-red-950/30 px-3 py-2 text-xs text-red-300">{error}</div>}
 
-          <button type="submit" disabled={saving} className="btn-neon btn-red w-full mt-6"><UserPlus className="w-4 h-4" /><span>{saving ? 'CRÉATION…' : 'Créer l’utilisateur'}</span></button>
+          <button type="submit" disabled={saving} className="btn-neon btn-red w-full mt-6"><UserPlus className="w-4 h-4" /><span>{saving ? 'ENREGISTREMENT…' : mode === 'assign' ? 'Mettre à jour les affectations' : 'Créer l’utilisateur'}</span></button>
         </form>
       </div>
     </div>

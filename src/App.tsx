@@ -637,7 +637,7 @@ const todayLeads =
         : activeTab === 'tab3'
           ? <MerchantSupervisorArchivesView />
           : activeTab === 'admin'
-            ? <MerchantSupervisorView currentUser={effectiveUser} openFundRequestId={fundRequestToOpen} onFundRequestOpened={() => setFundRequestToOpen(null)} openFundRequests={openFundRequests} onFundRequestsOpened={() => setOpenFundRequests(false)} />
+            ? <MerchantSupervisorView currentUser={effectiveUser} onOpenUserModal={() => setIsUserModalOpen(true)} openFundRequestId={fundRequestToOpen} onFundRequestOpened={() => setFundRequestToOpen(null)} openFundRequests={openFundRequests} onFundRequestsOpened={() => setOpenFundRequests(false)} />
             : (effectiveRole === 'admin' || effectiveRole === 'super_admin')
               ? <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} pendingFundRequestCount={fundRequestAlerts.length} onOpenFundRequests={() => { setOpenFundRequests(true); setActiveTab('admin'); }} />
               : <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} podiumSlot={<MerchantPodiumView />} pendingFundRequestCount={fundRequestAlerts.length} onOpenFundRequests={() => { setOpenFundRequests(true); setActiveTab('admin'); }} />;
@@ -670,6 +670,7 @@ const todayLeads =
           onOpenAgentProfile={(agent) => setSelectedAgentForProfile(agent)}
           onOpenTodayClientsModal={(agent) => setSelectedAgentForTodayClients(agent)}
           onOpenLocationModal={(agent) => setSelectedLocationAgent(agent)}
+          onOpenUserModal={() => setIsUserModalOpen(true)}
           onRefreshData={refreshSupervisorMonitoring}
         />
       );

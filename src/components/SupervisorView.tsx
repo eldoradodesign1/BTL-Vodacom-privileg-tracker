@@ -10,7 +10,7 @@ toISO
  } from '../utils/storage';
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
-import { Trophy, FileCheck, Eye, Search, Store, UserCheck, User as UserIcon, MapPin, Archive, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight, X, Check, Circle, FileX2 } from 'lucide-react';
+import { Trophy, FileCheck, Eye, Search, Store, UserCheck, UserPlus, User as UserIcon, MapPin, Archive, Camera, Clock3, FileText, ChevronDown, CalendarDays, ChevronLeft, ChevronRight, X, Check, Circle, FileX2 } from 'lucide-react';
 import { DateIconPicker } from './DateIconPicker';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 import { CampaignPauseControl } from './CampaignPauseControl';
@@ -24,6 +24,7 @@ interface SupervisorViewProps {
   onOpenTodayClientsModal?: (agent: AgentMasterStatus) => void;
   onOpenLocationModal?: (agent: AgentMasterStatus) => void;
   onRefreshData?: () => void;
+  onOpenUserModal?: () => void;
   globalScope?: boolean;
 }
 
@@ -36,6 +37,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   onOpenTodayClientsModal,
   onOpenLocationModal,
   onRefreshData,
+  onOpenUserModal,
   globalScope = false
 }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -964,13 +966,20 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   if (activeTab === 'admin') {
     return (
       <div className="space-y-4 animate-pop pb-28">
-        <div>
-          <h1 className="text-2xl font-black text-white tracking-tight">
-            Shops & <span className="text-red-500">Affectations</span>
-          </h1>
-          <p className="text-xs font-semibold text-gray-400 mt-0.5">
-            Gestion des affectations des hôtesses aux points de vente Vodacom
-          </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-black text-white tracking-tight">
+              Shops & <span className="text-red-500">Affectations</span>
+            </h1>
+            <p className="text-xs font-semibold text-gray-400 mt-0.5">
+              Gestion des affectations des hôtesses aux points de vente Vodacom
+            </p>
+          </div>
+          {onOpenUserModal && (
+            <button type="button" onClick={onOpenUserModal} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase text-amber-100 transition hover:border-amber-200/50 hover:bg-amber-500/20">
+              <UserPlus size={14} /> Agent
+            </button>
+          )}
         </div>
 
         <CampaignPauseControl currentUser={currentUser} campaignCode="vodacom-privilege" campaignLabel="Vodacom Privilège" minDate={activityStartIso} accent="amber"/>
