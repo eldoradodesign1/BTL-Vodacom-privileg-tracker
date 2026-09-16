@@ -159,6 +159,29 @@ export async function setUserCampaignAssignment(input: { userId: string; campaig
   fail(error, input.isActive ? 'Impossible d’affecter l’agent à la campagne' : 'Impossible de désaffecter l’agent de la campagne');
 }
 
+export interface CampaignAssignmentOverview {
+  userId: string;
+  campaignId: string;
+  isActive: boolean;
+  campaign: Campaign | null;
+}
+
+export async function getCampaignAssignmentsOverview(): Promise<CampaignAssignmentOverview[]> {
+  const client = getMerchantClient();
+  const { data, error } = await client
+    .from('user_campaign_assignments')
+    .select('user_id,campaign_id,is_active,campaign:campaigns(*)')
+    .eq('is_active', true)
+    .order('user_id', { ascending: true });
+  fail(error, 'Impossible de charger les affectations de campagnes');
+  return ((data || []) as Array<{ user_id: string; campaign_id: string; is_active: boolean; campaign?: Campaign | Campaign[] | null }>).map((row) => ({
+    userId: row.user_id,
+    campaignId: row.campaign_id,
+    isActive: row.is_active,
+    campaign: Array.isArray(row.campaign) ? row.campaign[0] || null : row.campaign || null,
+  }));
+}
+
 export async function getCampaignsForUser(userId: string): Promise<Campaign[]> {
   const client = getMerchantClient();
   const { data, error } = await client

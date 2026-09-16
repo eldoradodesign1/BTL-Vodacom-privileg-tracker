@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Shop, AgentMasterStatus, User } from '../types';
 import { getAdminMasterList, getCheckins, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl, saveTargetDefinition } from '../utils/storage';
+import { getCampaignAssignmentsOverview, type CampaignAssignmentOverview } from '../utils/merchantCampaign';
 import { TabType } from './BottomNav';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { UserPlus, Store, FileSpreadsheet, Eye, User as UserIcon, UserCheck, FileText, Search, Filter, MapPin, Clock3, Pencil, X, Check, Circle, CalendarDays, ChevronLeft, ChevronRight, FileX2 } from 'lucide-react';
@@ -45,7 +46,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [subTab, setSubTab] = useState<'manage' | 'monitoring' | 'stats' | 'leads' | 'reports'>(
     activeTab === 'home' ? 'stats' : (activeTab === 'tab3' ? 'reports' : (activeTab === 'admin' ? 'manage' : 'monitoring'))
   );
-  const [manageSection, setManageSection] = useState<'hostess' | 'supervisors' | 'shops' | 'targets'>('hostess');
+  const [manageSection, setManageSection] = useState<'hostess' | 'supervisors' | 'shops' | 'targets' | 'campaigns'>('hostess');
   const [startDate, setStartDate] = useState('2026-07-01');
   const todayIso = toISO(new Date());
   const [endDate, setEndDate] = useState(todayIso);
@@ -123,6 +124,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [assignUser, setAssignUser] = useState('');
   const [assignShop, setAssignShop] = useState('');
   const [assignSupervisor, setAssignSupervisor] = useState('');
+  const [campaignAssignments, setCampaignAssignments] = useState<CampaignAssignmentOverview[]>([]);
+  const [campaignAssignmentsLoading, setCampaignAssignmentsLoading] = useState(false);
+  const [campaignAssignmentsError, setCampaignAssignmentsError] = useState('');
 
   const masterList = getAdminMasterList(undefined, false);
   const monitoringMasterList = getAdminMasterList(monitoringDate, true);
@@ -224,6 +228,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const d = toISO(ld.timestamp);
     return d >= leadStartDate && d <= leadEndDate;
   });
+  useEffect(() => {
+    if (subTab !== 'manage' || manageSection !== 'campaigns') return;
+    let mounted = true;
+    setCampaignAssignmentsLoading(true);
+    setCampaignAssignmentsError('');
+    void getCampaignAssignmentsOverview()
+      .then((rows) => { if (mounted) setCampaignAssignments(rows); })
+      .catch((cause) => { if (mounted) setCampaignAssignmentsError(cause instanceof Error ? cause.message : 'Les affectations de campagnes sont indisponibles.'); })
+      .finally(() => { if (mounted) setCampaignAssignmentsLoading(false); });
+    return () => { mounted = false; };
+  }, [manageSection, subTab]);
+
   // Sync internal subTab when activeTab changes
   React.useEffect(() => {
     if (activeTab === 'home') setSubTab('stats');
@@ -522,6 +538,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </span>
           </button>
           <button
+            onClick={() => setManageSection('campaigns')}
+            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
+              manageSection === 'campaigns' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            <span className="inline-flex items-center justify-center gap-1">
+              <UserPlus className="w-3.5 h-3.5" />
+              <span>Camp.</span>
+            </span>
+          </button>
+          <button
             onClick={() => setManageSection('targets')}
             className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
               manageSection === 'targets' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
@@ -768,6 +795,25 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
           )}
 
+          {manageSection === 'campaigns' && (
+            <div className="space-y-4">
+              <section className="glass-card border border-violet-300/25 bg-violet-500/[0.06] p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-xs font-black uppercase tracking-wider text-violet-100">Affectations de campagnes</h2>
+                    <p className="mt-1 max-w-xl text-[10px] font-semibold leading-relaxed text-gray-400">Affectez un agent à Privilège, Merchant ou Youth F2F sans créer de doublon. Un agent BA peut appartenir à plusieurs campagnes ; une Hôtesse reste limitée à Privilège.</p>
+                  </div>
+                  <button type="button" onClick={onOpenUserModal} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-violet-200/30 bg-violet-500/20 px-3 py-2 text-[10px] font-black uppercase text-violet-50 transition hover:bg-violet-500/35"><UserPlus className="h-3.5 w-3.5" /> Ajouter / affecter</button>
+                </div>
+              </section>
+              <section className="glass-card border border-white/10 p-4">
+                <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-[11px] font-black uppercase tracking-wider text-amber-300">Agents et campagnes actives</h2><span className="rounded-xl border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-black text-gray-300">{new Set(campaignAssignments.map((item) => item.userId)).size} agents</span></div>
+                {campaignAssignmentsLoading && <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center text-xs text-gray-400">Chargement des affectations…</p>}
+                {campaignAssignmentsError && <p className="rounded-2xl border border-amber-300/20 bg-amber-500/10 p-4 text-xs font-bold text-amber-100">{campaignAssignmentsError}</p>}
+                {!campaignAssignmentsLoading && !campaignAssignmentsError && <div className="space-y-2">{allUsers.filter((user) => user.role === 'agent').sort((a, b) => a.name.localeCompare(b.name, 'fr')).map((agent) => { const assignments = campaignAssignments.filter((item) => item.userId === agent.id); return <div key={agent.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-3"><div className="min-w-0"><b className="block truncate text-xs text-white">{agent.name}</b><span className="text-[10px] font-bold text-gray-500">{agent.phone} · {agent.userCategory === 'hostess' ? 'Hôtesse' : 'BA'}</span></div><div className="flex max-w-[58%] flex-wrap justify-end gap-1.5">{assignments.length ? assignments.map((item) => <span key={item.campaignId} className="rounded-lg border border-violet-300/25 bg-violet-500/10 px-2 py-1 text-[9px] font-black text-violet-100">{item.campaign?.name || item.campaignId}</span>) : <span className="rounded-lg border border-rose-300/25 bg-rose-500/10 px-2 py-1 text-[9px] font-black text-rose-100">Non affecté</span>}</div></div> })}</div>}
+              </section>
+            </div>
+          )}
           {manageSection === 'targets' && (
             <div className="space-y-4">
               <CampaignPauseControl currentUser={currentUser} campaignCode="vodacom-privilege" campaignLabel="Vodacom Privilège" minDate={activityStartIso} accent="amber"/>
