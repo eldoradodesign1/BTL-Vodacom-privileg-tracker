@@ -67,7 +67,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const [, setCheckinRevision] = useState(0);
-  const todayIso = new Date().toISOString().split('T')[0];
+  const todayIso = toISO(new Date());
   // const [reportsStartDate, setReportsStartDate] = useState(todayIso);
   // const [reportsEndDate, setReportsEndDate] = useState(todayIso);
   const getMondayIso = () => {
@@ -75,7 +75,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     const day = d.getDay();
     const diff = day === 0 ? -6 : 1 - day;
     d.setDate(d.getDate() + diff);
-    return d.toISOString().split('T')[0];
+    return toISO(d);
   };
 
   const [reportsStartDate, setReportsStartDate] = useState(getMondayIso());
@@ -139,7 +139,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   
 
   const teamData = globalScope
-    ? getAdminMasterList(selectedDate)
+    ? getAdminMasterList(selectedDate, true)
     : getSupervisorLiveView(currentUser.id, selectedDate);
   const allCheckins = getCheckins();
   const allReports = getReports();
@@ -154,8 +154,10 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const teamAgentIds = teamData.map((agent) => agent.id);
   const teamReports = allReports.filter((report) => teamAgentIds.includes(report.agent_id));
   const reportDateList = [...new Set(teamReports.map((r) => r.date))].sort();
-  const consolidationMinDate = reportDateList[0] || todayIso;
-  const consolidationMaxDate = reportDateList[reportDateList.length - 1] || todayIso;
+  const consolidationMinDate = reportDateList[0] || '2026-07-01';
+  const consolidationMaxDate = (reportDateList.length > 0 && reportDateList[reportDateList.length - 1] > todayIso)
+    ? reportDateList[reportDateList.length - 1]
+    : todayIso;
   const consolidationStartDate = reportsStartDate < consolidationMinDate
     ? consolidationMinDate
     : (reportsStartDate > consolidationMaxDate ? consolidationMaxDate : reportsStartDate);

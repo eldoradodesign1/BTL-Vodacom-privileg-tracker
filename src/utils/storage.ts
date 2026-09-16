@@ -479,10 +479,25 @@ function saveItem<T>(key: string, data: T): void {
 }
 
 export function toISO(dateVal?: Date | string): string {
-  if (!dateVal) return new Date().toISOString().split('T')[0];
+  if (!dateVal) {
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Kinshasa',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+    } catch {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+  }
   if (typeof dateVal === 'string') {
     const trimmed = dateVal.trim();
-    if (trimmed.includes('T')) return trimmed.split('T')[0];
+    if (trimmed.includes('T')) {
+      const datePart = trimmed.split('T')[0];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) return datePart;
+    }
     const firstPart = trimmed.split(' ')[0];
     if (firstPart.includes('-')) {
       const parts = firstPart.split('-');
@@ -506,15 +521,32 @@ export function toISO(dateVal?: Date | string): string {
     try {
       const d = new Date(trimmed);
       if (!isNaN(d.getTime())) {
-        return d.toISOString().split('T')[0];
+        try {
+          return new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Africa/Kinshasa',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          }).format(d);
+        } catch {
+          return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
       }
     } catch {}
   } else if (dateVal instanceof Date) {
     try {
-      return dateVal.toISOString().split('T')[0];
-    } catch {}
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Kinshasa',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(dateVal);
+    } catch {
+      return `${dateVal.getFullYear()}-${String(dateVal.getMonth() + 1).padStart(2, '0')}-${String(dateVal.getDate()).padStart(2, '0')}`;
+    }
   }
-  return new Date().toISOString().split('T')[0];
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 // --- USERS ---
@@ -1363,7 +1395,7 @@ function isActivePrivilegeHostess(user: User, shops: Shop[]): boolean {
     && shops.some((shop) => shop.id === user.permanentShopId);
 }
 
-export function getAdminMasterList(dateISO?: string): AgentMasterStatus[] {
+export function getAdminMasterList(dateISO?: string, onlyAssigned = false): AgentMasterStatus[] {
   const users = getUsers();
   const checkins = getCheckins();
   const reports = getReports();
@@ -1371,7 +1403,9 @@ export function getAdminMasterList(dateISO?: string): AgentMasterStatus[] {
   const shops = getShops();
   const targetDate = dateISO || toISO(new Date());
 
-  const agents = users.filter((user) => isActivePrivilegeHostess(user, shops));
+  const agents = onlyAssigned
+    ? users.filter((user) => isActivePrivilegeHostess(user, shops))
+    : users.filter((user) => user.role === 'agent' && user.userCategory === 'hostess');
 
   return agents.map(agent => {
     const hasIn = checkins.some(c => (c.agent_id === agent.id || c.agent_id === agent.name || isMatchAgent(c.agent_id, agent)) && toISO(c.timestamp) === targetDate && c.type === 'IN');
@@ -1448,24 +1482,22 @@ export function getSupervisorLiveView(supervisorId: string, dateISO?: string) {
 export function getDashboardData(filters: { start?: string; end?: string; agentId?: string }) {
   const leads = getLeads();
   const users = getUsers();
-  const activeHostesses = users.filter((user) => isActivePrivilegeHostess(user, getShops()));
+  const hostesses = users.filter((u) => u.role === 'agent' && u.userCategory === 'hostess');
   const start = filters.start || '1900-01-01';
   const end = filters.end || '2100-01-01';
   const agentId = filters.agentId || '';
-  const selectedAgent = activeHostesses.find((user) => user.id === agentId);
+  const selectedAgent = users.find((user) => user.id === agentId);
 
   let priv = 0, roam = 0, bund = 0, total = 0;
   const daily: Record<string, number> = {};
 
   leads.forEach(l => {
     const d = toISO(l.timestamp);
-    const belongsToPrivilegeHostess = selectedAgent
-      ? isMatchAgent(l.agent_id, selectedAgent)
-      : activeHostesses.some((hostess) => isMatchAgent(l.agent_id, hostess));
-    if (d >= start && d <= end && belongsToPrivilegeHostess) {
+    const matchesAgent = !agentId || (selectedAgent ? isMatchAgent(l.agent_id, selectedAgent) : l.agent_id === agentId);
+    if (d >= start && d <= end && matchesAgent) {
       total++;
-      if (l.action_type.includes('Privilège')) priv++;
-      else if (l.action_type.includes('Roaming')) roam++;
+      if (String(l.action_type).includes('Privil')) priv++;
+      else if (String(l.action_type).includes('Roam')) roam++;
       else bund++;
       daily[d] = (daily[d] || 0) + 1;
     }
@@ -1486,7 +1518,7 @@ export function getDashboardData(filters: { start?: string; end?: string; agentI
   return {
     kpi: {
       totalLeads: total,
-      presence: activeHostesses.length
+      presence: hostesses.length
     },
     pieData,
     lineData
