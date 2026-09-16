@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Banknote, CalendarDays, CheckCircle2, Circle, FileText, MapPin, ReceiptText, RefreshCw, Search, Store, UserRound, UsersRound, XCircle } from 'lucide-react';
 import type { CampaignRun } from '../types';
-import { clampMerchantActivityDate, getActiveCampaignRuns, getMerchantCampaign, getMerchantMonitoring, MERCHANT_CAMPAIGN_START, merchantTodayIso, type MerchantTeamActivity } from '../utils/merchantCampaign';
+import { clampMerchantActivityDate, getActiveCampaignRuns, getCampaignAssignmentsOverview, getMerchantCampaign, getMerchantMonitoring, MERCHANT_CAMPAIGN_START, merchantTodayIso, type MerchantTeamActivity } from '../utils/merchantCampaign';
 import { DateIconPicker } from './DateIconPicker';
 import { MerchantBAOperationsModal } from './Modals/MerchantBAOperationsModal';
 import { MerchantVisitedPosModal } from './Modals/MerchantVisitedPosModal';
@@ -32,7 +32,24 @@ export const MerchantMonitoringView: React.FC = () => {
       const safeDate = clampMerchantActivityDate(date);
       if (safeDate !== date) setDate(safeDate);
       setRun(activeRun);
-      setTeam(activeRun ? await getMerchantMonitoring(activeRun.id, safeDate) : []);
+
+      if (!activeRun) {
+        setTeam([]);
+        return;
+      }
+
+      // Le monitoring est strictement limité aux BA affectés à la campagne active.
+      // Le menu Gestion reste la source de vérité pour la liste complète et les affectations.
+      const [monitoring, assignments] = await Promise.all([
+        getMerchantMonitoring(activeRun.id, safeDate),
+        getCampaignAssignmentsOverview(),
+      ]);
+      const assignedBaIds = new Set(
+        assignments
+          .filter((assignment) => assignment.campaignId === campaign.id && assignment.isActive)
+          .map((assignment) => assignment.userId)
+      );
+      setTeam(monitoring.filter((item) => assignedBaIds.has(item.ba.id)));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Chargement du monitoring impossible.');
     } finally {
