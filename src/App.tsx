@@ -25,7 +25,6 @@ import {
   flushOfflineOutbox,
 } from './utils/storage';
 
-
 import {
   fetchUsersFromSupabase,
   fetchShopsFromSupabase,
@@ -64,6 +63,7 @@ const MerchantSupervisorArchivesView = lazy(() => import('./components/MerchantS
 const MerchantAdminDashboard = lazy(() => import('./components/MerchantAdminDashboard').then(({ MerchantAdminDashboard: component }) => ({ default: component })));
 const MerchantPodiumView = lazy(() => import('./components/MerchantPodiumView').then(({ MerchantPodiumView: component }) => ({ default: component })));
 const YouthF2FView = lazy(() => import('./components/YouthF2FView').then(({ YouthF2FView: component }) => ({ default: component })));
+const MpesaMikiliView = lazy(() => import('./components/MpesaMikiliView').then(({ MpesaMikiliView: component }) => ({ default: component })));
 
 const APP_DATA_SYNC_KEY = 'btl_last_full_data_sync_at';
 const APP_DATA_SYNC_INTERVAL_MS = 60 * 60 * 1000;
@@ -109,7 +109,7 @@ export default function App() {
   const [activeCampaign, setActiveCampaign] = useState<CampaignContext>(() => {
     try {
       const saved = localStorage.getItem('btl_active_campaign');
-      if (saved === 'merchant-educational' || saved === 'youth-f2f') return saved;
+      if (saved === 'merchant-educational' || saved === 'youth-f2f' || saved === 'mpesa-mikili') return saved;
       return 'vodacom-privilege';
     } catch {
       return 'vodacom-privilege';
@@ -186,7 +186,6 @@ export default function App() {
         const pauses = await getCampaignPauses(privilegeCampaign.id, true);
         if (!cancelled) setPrivilegeRemindersPaused(isCampaignPausedOn(pauses, toISO(new Date())));
       } catch {
-        // En cas d’incertitude réseau, les rappels restent suspendus plutôt que d’enfreindre une pause.
         if (!cancelled) setPrivilegeRemindersPaused(true);
       }
     };
@@ -245,9 +244,7 @@ export default function App() {
     return () => { cancelled = true; window.clearInterval(timer); };
   }, [activeCampaign, currentUser, dataRevision, simulatedRole, simulatedUserId, users]);
 
-  const setThemeMode = (nextTheme: ThemeMode) => {
-    setTheme(nextTheme);
-  };
+  const setThemeMode = (nextTheme: ThemeMode) => setTheme(nextTheme);
 
   const setCampaignContext = (campaign: CampaignContext) => {
     setActiveCampaign(campaign);
@@ -255,8 +252,6 @@ export default function App() {
     setActiveTab('home');
   };
 
-  // En mode Simulation Master, le contexte de campagne doit suivre l’agent simulé,
-  // et non le compte maître qui pilote la simulation.
   const campaignSubject = simulatedUserId
     ? users.find((user) => user.id === simulatedUserId) || null
     : currentUser;
@@ -280,7 +275,9 @@ export default function App() {
             ? campaign.code === 'youth-f2f'
             : activeCampaign === 'merchant-educational'
               ? campaign.code === 'merchant-educational-campaign'
-              : campaign.code === 'vodacom-privilege'
+              : activeCampaign === 'mpesa-mikili'
+                ? campaign.code === 'mpesa-mikili'
+                : campaign.code === 'vodacom-privilege'
         ));
         if (!current) {
           const fallback = campaigns[0];
@@ -297,7 +294,9 @@ export default function App() {
             ? 'youth-f2f'
             : fallback.code === 'merchant-educational-campaign'
               ? 'merchant-educational'
-              : 'vodacom-privilege';
+              : fallback.code === 'mpesa-mikili'
+                ? 'mpesa-mikili'
+                : 'vodacom-privilege';
           setActiveCampaign(nextContext);
           localStorage.setItem('btl_active_campaign', nextContext);
           const pauses = await getCampaignPauses(fallback.id);
@@ -319,94 +318,41 @@ export default function App() {
     return () => { cancelled = true; };
   }, [campaignSubjectId, campaignSubjectRole, campaignSubject?.userCategory, activeCampaign, dataRevision]);
 
-const refreshData = useCallback(async (force = false) => {
-  // Une action explicite de l’utilisateur doit toujours repartir des données réseau,
-  // y compris si une autre synchronisation applicative échoue ensuite.
-  if (force) invalidateMerchantCache();
-  if (!isSupabaseConfigured()) {
-    setUsers(getUsers());
-    setShops(getShops());
-    return;
-  }
-
-  // La file terrain est toujours rejouée avant de respecter le cache horaire :
-  // un pointage pris hors ligne doit partir dès que la connexion revient.
-  try {
-    await flushOfflineOutbox();
-  } catch (error) {
-    console.warn('Offline outbox flush failed:', error);
-  }
-
-  const lastSyncAt = Number(localStorage.getItem(APP_DATA_SYNC_KEY) || 0);
-  const cacheIsFresh = !force && Date.now() - lastSyncAt < APP_DATA_SYNC_INTERVAL_MS;
-  if (cacheIsFresh) {
-    setUsers(getUsers());
-    setShops(getShops());
-    return;
-  }
-
-  try {
-    const [usersData, shopsData] = await Promise.all([fetchUsersFromSupabase(), fetchShopsFromSupabase()]);
-    await Promise.all([
-      refreshLeadsFromSupabase(),
-      refreshCheckinsFromSupabase(),
-      refreshReportsFromSupabase(),
-    ]);
-    saveUsers(usersData);
-    saveShops(shopsData);
-    const mergedUsers = getUsers();
-    localStorage.setItem(APP_DATA_SYNC_KEY, String(Date.now()));
-    invalidateMerchantCache();
-    setUsers(mergedUsers);
-    setShops(shopsData);
-    setDataRevision((prev) => prev + 1);
-  } catch (error) {
-    console.warn('Supabase refresh failed:', error);
-    setUsers(getUsers());
-    setShops(getShops());
-  }
+  const refreshData = useCallback(async (force = false) => {
+    if (force) invalidateMerchantCache();
+    if (!isSupabaseConfigured()) {
+      setUsers(getUsers());
+      setShops(getShops());
+      return;
+    }
+    try { await flushOfflineOutbox(); } catch (error) { console.warn('Offline outbox flush failed:', error); }
+    const lastSyncAt = Number(localStorage.getItem(APP_DATA_SYNC_KEY) || 0);
+    const cacheIsFresh = !force && Date.now() - lastSyncAt < APP_DATA_SYNC_INTERVAL_MS;
+    if (cacheIsFresh) {
+      setUsers(getUsers());
+      setShops(getShops());
+      return;
+    }
+    try {
+      const [usersData, shopsData] = await Promise.all([fetchUsersFromSupabase(), fetchShopsFromSupabase()]);
+      await Promise.all([refreshLeadsFromSupabase(), refreshCheckinsFromSupabase(), refreshReportsFromSupabase()]);
+      saveUsers(usersData); saveShops(shopsData);
+      const mergedUsers = getUsers();
+      localStorage.setItem(APP_DATA_SYNC_KEY, String(Date.now()));
+      invalidateMerchantCache();
+      setUsers(mergedUsers); setShops(shopsData); setDataRevision((prev) => prev + 1);
+    } catch (error) {
+      console.warn('Supabase refresh failed:', error);
+      setUsers(getUsers()); setShops(getShops());
+    }
   }, []);
 
-  // Le suivi superviseur est opérationnellement sensible : ses pointages du jour
-  // doivent quitter le cache horaire dès l’ouverture de la vue ou d’un changement de date.
-  const refreshSupervisorMonitoring = useCallback(() => {
-    void refreshData(true);
-  }, [refreshData]);
-
-  const enforceUserConformityAfterSync = () => {
-    const freshUsers = getUsers();
-    const persistedRaw = localStorage.getItem('vodacom_user');
-    if (!persistedRaw) return;
-
-    try {
-      const persistedUser = JSON.parse(persistedRaw) as User;
-      const matched = freshUsers.find((u) => u.id === persistedUser.id);
-      if (!matched) {
-        setCurrentUser(null);
-        setMasterUser(null);
-        setSimulatedRole(null);
-        setSimulatedUserId(null);
-        setToast({
-          message: 'Votre compte n’est plus actif dans la base. Reconnectez-vous avec un compte valide.',
-          level: 'error'
-        });
-        return;
-      }
-
-      setCurrentUser((prev) => (prev && prev.id === matched.id ? matched : prev));
-      setMasterUser((prev) => (prev && prev.id === matched.id ? matched : prev));
-      setSimulatedUserId((prev) => (prev && !freshUsers.some((u) => u.id === prev) ? null : prev));
-    } catch {
-      // Ignore malformed persisted payload and keep app flow unchanged.
-    }
-  };
+  const refreshSupervisorMonitoring = useCallback(() => { void refreshData(true); }, [refreshData]);
 
   useEffect(() => {
     void refreshData();
     const hourlySync = window.setInterval(() => { void refreshData(); }, APP_DATA_SYNC_INTERVAL_MS);
     const onOnline = () => { void refreshData(); };
-    // Sur une nouvelle installation PWA, la configuration partagée arrive après le
-    // premier rendu. Cette notification vide immédiatement la file hors-ligne.
     const onRuntimeConfigUpdated = () => { void refreshData(true); };
     window.addEventListener('online', onOnline);
     window.addEventListener('btl-runtime-config-updated', onRuntimeConfigUpdated);
@@ -420,9 +366,7 @@ const refreshData = useCallback(async (force = false) => {
   useEffect(() => {
     if (currentUser?.role !== 'super_admin') return;
     let cancelled = false;
-    void refreshUsersFromSupabase()
-      .then(() => { if (!cancelled) setUsers(getUsers()); })
-      .catch(() => { if (!cancelled) setUsers(getUsers()); });
+    void refreshUsersFromSupabase().then(() => { if (!cancelled) setUsers(getUsers()); }).catch(() => { if (!cancelled) setUsers(getUsers()); });
     return () => { cancelled = true; };
   }, [currentUser?.id, currentUser?.role]);
 
@@ -437,35 +381,19 @@ const refreshData = useCallback(async (force = false) => {
     const interval = window.setInterval(refreshStatus, 30000);
     const onOnline = () => setOnline(true);
     const onOffline = () => setOnline(false);
-    window.addEventListener('online', onOnline);
-    window.addEventListener('offline', onOffline);
-    return () => {
-      window.clearInterval(interval);
-      window.removeEventListener('online', onOnline);
-      window.removeEventListener('offline', onOffline);
-    };
+    window.addEventListener('online', onOnline); window.addEventListener('offline', onOffline);
+    return () => { window.clearInterval(interval); window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); };
   }, [currentUser?.id, activeTab, users.length, privilegeRemindersPaused]);
 
   useEffect(() => {
-    if (activeTab === 'chat' && currentUser) {
-      markChatAsRead(currentUser.id);
-      setChatUnreadCount(getUnreadChatCount(currentUser.id));
-    }
+    if (activeTab === 'chat' && currentUser) { markChatAsRead(currentUser.id); setChatUnreadCount(getUnreadChatCount(currentUser.id)); }
   }, [activeTab, currentUser?.id]);
 
-  useEffect(() => {
-    if (currentUser) {
-      void ensureNotificationsPermission();
-    }
-  }, [currentUser?.id]);
+  useEffect(() => { if (currentUser) void ensureNotificationsPermission(); }, [currentUser?.id]);
 
   useEffect(() => {
     const profileUser = simulatedUserId ? users.find((user) => user.id === simulatedUserId) || currentUser : currentUser;
-    if (!profileUser || profileUser.userCategory !== 'brand_ambassador') {
-      setMerchantProfilePhotoUrl('');
-      return;
-    }
-
+    if (!profileUser || profileUser.userCategory !== 'brand_ambassador') { setMerchantProfilePhotoUrl(''); return; }
     let cancelled = false;
     void (async () => {
       try {
@@ -477,11 +405,8 @@ const refreshData = useCallback(async (force = false) => {
         const attendance = await getDailyAttendance(profileUser.id, activeRun.id, toISO(new Date()));
         const photoUrl = await getMerchantEvidencePublicUrl(attendance?.checkin_photo_path);
         if (!cancelled) setMerchantProfilePhotoUrl(photoUrl);
-      } catch {
-        if (!cancelled) setMerchantProfilePhotoUrl('');
-      }
+      } catch { if (!cancelled) setMerchantProfilePhotoUrl(''); }
     })();
-
     return () => { cancelled = true; };
   }, [currentUser?.id, currentUser?.userCategory, simulatedUserId]);
 
@@ -492,54 +417,50 @@ const refreshData = useCallback(async (force = false) => {
       if (!message) return;
       const level = custom.detail?.level || 'success';
       setToast({ message, level });
-      window.setTimeout(() => {
-        setToast((prev) => (prev?.message === message ? null : prev));
-      }, 2400);
+      window.setTimeout(() => { setToast((prev) => (prev?.message === message ? null : prev)); }, 2400);
     };
-
     window.addEventListener('vodacom-toast', onToast as EventListener);
     return () => window.removeEventListener('vodacom-toast', onToast as EventListener);
   }, []);
 
   if (!currentUser) {
-    return <LoginScreen onLoginSuccess={(u, campaign) => {
-      setCurrentUser(u);
-      setMasterUser(u);
-      if (campaign) setCampaignContext(campaign);
-    }} />;
+    return <LoginScreen onLoginSuccess={(u, campaign) => { setCurrentUser(u); setMasterUser(u); if (campaign) setCampaignContext(campaign); }} />;
   }
 
   const realMasterUser = masterUser || currentUser;
   let baseUser = currentUser;
   if (simulatedUserId) {
-    const foundU = users.find((u) => u.id === simulatedUserId);
+    const foundU = users.find((user) => user.id === simulatedUserId);
     if (foundU) baseUser = foundU;
   }
 
   const effectiveRole = simulatedRole || baseUser.role;
-  const effectiveUser: User = {
-    ...baseUser,
-    role: effectiveRole
-  };
+  const effectiveUser: User = { ...baseUser, role: effectiveRole };
 
   const agentCampaignOptions = agentCampaigns.map((campaign) => ({
     key: (campaign.code === 'youth-f2f'
       ? 'youth-f2f'
       : campaign.code === 'merchant-educational-campaign'
         ? 'merchant-educational'
-        : 'vodacom-privilege') as CampaignContext,
+        : campaign.code === 'mpesa-mikili'
+          ? 'mpesa-mikili'
+          : 'vodacom-privilege') as CampaignContext,
     label: campaign.name,
     note: campaign.code === 'youth-f2f'
       ? 'Sensibilisation universitaire'
-      : campaign.campaign_type === 'brand_ambassador'
-        ? 'Brand Ambassador'
-        : 'Hôtesses',
+      : campaign.code === 'mpesa-mikili'
+        ? 'Brand Ambassador · M-Pesa'
+        : campaign.campaign_type === 'brand_ambassador'
+          ? 'Brand Ambassador'
+          : 'Hôtesses',
   })).filter((campaign, index, list) => list.findIndex((item) => item.key === campaign.key) === index);
+
   const inferredAgentMerchant = effectiveRole === 'agent' && effectiveUser.userCategory === 'brand_ambassador';
-  const isYouthContext = effectiveRole === 'agent'
+  const isMikiliContext = activeCampaign === 'mpesa-mikili';
+  const isYouthContext = !isMikiliContext && (effectiveRole === 'agent'
     ? (agentCampaignOptions.length > 0 && activeCampaign === 'youth-f2f')
-    : activeCampaign === 'youth-f2f';
-  const isMerchantContext = !isYouthContext && (effectiveRole === 'agent'
+    : activeCampaign === 'youth-f2f');
+  const isMerchantContext = !isMikiliContext && !isYouthContext && (effectiveRole === 'agent'
     ? (agentCampaignOptions.length > 0 ? activeCampaign === 'merchant-educational' : inferredAgentMerchant)
     : activeCampaign === 'merchant-educational');
   const campaignIsPaused = effectiveRole === 'agent' && Boolean(activeCampaignPause);
@@ -548,48 +469,23 @@ const refreshData = useCallback(async (force = false) => {
   };
 
   const todayStr = toISO(new Date());
-
-const allCheckins = getCheckins();
-const allLeads = getLeads();
-
-const todayCheckin =
-  allCheckins.find(
-    (c) =>
-      c.agent_id === effectiveUser.id &&
-      toISO(c.timestamp) === todayStr &&
-      c.type === 'IN'
-  ) || null;
-
-const todayLeads =
-  allLeads.filter(
-    (l) =>
-      l.agent_id === effectiveUser.id &&
-      toISO(l.timestamp) === todayStr
-  );
-
-
+  const allCheckins = getCheckins();
+  const allLeads = getLeads();
+  const todayCheckin = allCheckins.find((c) => c.agent_id === effectiveUser.id && toISO(c.timestamp) === todayStr && c.type === 'IN') || null;
+  const todayLeads = allLeads.filter((l) => l.agent_id === effectiveUser.id && toISO(l.timestamp) === todayStr);
   const agentReports = getReports().filter((r) => r.agent_id === effectiveUser.id);
   const notifications = getNotifications(effectiveUser.id);
   const todayCheckinPhoto = getTodayCheckinPhoto(effectiveUser.id);
-  const selectedAgentTodayLeads = selectedAgentForTodayClients
-    ? getLeads().filter((l) => l.agent_id === selectedAgentForTodayClients.id && toISO(l.timestamp) === todayStr)
-    : [];
+  const selectedAgentTodayLeads = selectedAgentForTodayClients ? getLeads().filter((l) => l.agent_id === selectedAgentForTodayClients.id && toISO(l.timestamp) === todayStr) : [];
 
   const resetSimulationContext = () => {
-    setActiveTab('home');
-    setHomeTabPressCount(0);
-    setSelectedAgentForProfile(null);
-    setSelectedAgentForTodayClients(null);
-    setSelectedLocationAgent(null);
-    setPdfModalUrl(null);
+    setActiveTab('home'); setHomeTabPressCount(0); setSelectedAgentForProfile(null); setSelectedAgentForTodayClients(null); setSelectedLocationAgent(null); setPdfModalUrl(null);
   };
 
   const handleSimulateUserChange = (userId: string) => {
     const found = users.find((u) => u.id === userId);
     if (!found) return;
-    resetSimulationContext();
-    setSimulatedUserId(userId);
-    setSimulatedRole(found.role);
+    resetSimulationContext(); setSimulatedUserId(userId); setSimulatedRole(found.role);
   };
 
   const handleSimulateRoleChange = (role: UserRole) => {
@@ -602,32 +498,19 @@ const todayLeads =
           : role === 'admin'
             ? users.find((user) => user.name.trim().toLowerCase() === 'bradley izamaboko')
             : null;
-      if (target) {
-        setSimulatedUserId(target.id);
-        setSimulatedRole(role);
-        return;
-      }
+      if (target) { setSimulatedUserId(target.id); setSimulatedRole(role); return; }
     }
     setSimulatedRole(role);
   };
 
-  const handleResetSimulation = () => {
-    resetSimulationContext();
-    setSimulatedRole(null);
-    setSimulatedUserId(null);
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    setMasterUser(null);
-    setSimulatedRole(null);
-    setSimulatedUserId(null);
-  };
+  const handleResetSimulation = () => { resetSimulationContext(); setSimulatedRole(null); setSimulatedUserId(null); };
+  const handleLogout = () => { setCurrentUser(null); setMasterUser(null); setSimulatedRole(null); setSimulatedUserId(null); };
 
   const renderContent = () => {
     let content: React.ReactNode;
-
-    if (isYouthContext && activeTab !== 'chat') {
+    if (isMikiliContext && effectiveRole === 'agent' && activeTab !== 'chat') {
+      content = <MpesaMikiliView currentUser={effectiveUser} activeTab={activeTab} />;
+    } else if (isYouthContext && activeTab !== 'chat') {
       content = <YouthF2FView currentUser={effectiveUser} />;
     } else if (activeTab === 'chat') {
       content = <ChatView currentUser={effectiveUser} onDataChanged={refreshData} />;
@@ -650,64 +533,13 @@ const todayLeads =
               ? <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} pendingFundRequestCount={fundRequestAlerts.length} onOpenFundRequests={() => { setOpenFundRequests(true); setActiveTab('admin'); }} />
               : <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} podiumSlot={<MerchantPodiumView />} pendingFundRequestCount={fundRequestAlerts.length} onOpenFundRequests={() => { setOpenFundRequests(true); setActiveTab('admin'); }} />;
     } else if (effectiveRole === 'admin' || effectiveRole === 'super_admin') {
-      content = (
-        <AdminView
-          currentUser={effectiveUser}
-          shops={shops}
-          activeTab={activeTab}
-          homeTabPressCount={homeTabPressCount}
-          onRequestTabChange={(tab) => setActiveTab(tab)}
-          onSimulateRole={handleSimulateRoleChange}
-          onOpenUserModal={() => setIsUserModalOpen(true)}
-          onOpenShopModal={() => setIsShopModalOpen(true)}
-          onOpenAgentProfile={(agent) => setSelectedAgentForProfile(agent)}
-          onOpenPdfModal={(url) => setPdfModalUrl(url)}
-          onOpenTodayClientsModal={(agent) => setSelectedAgentForTodayClients(agent)}
-          onOpenLocationModal={(agent) => setSelectedLocationAgent(agent)}
-          onRefreshData={refreshData}
-        />
-      );
+      content = <AdminView currentUser={effectiveUser} shops={shops} activeTab={activeTab} homeTabPressCount={homeTabPressCount} onRequestTabChange={(tab) => setActiveTab(tab)} onSimulateRole={handleSimulateRoleChange} onOpenUserModal={() => setIsUserModalOpen(true)} onOpenShopModal={() => setIsShopModalOpen(true)} onOpenAgentProfile={(agent) => setSelectedAgentForProfile(agent)} onOpenPdfModal={(url) => setPdfModalUrl(url)} onOpenTodayClientsModal={(agent) => setSelectedAgentForTodayClients(agent)} onOpenLocationModal={(agent) => setSelectedLocationAgent(agent)} onRefreshData={refreshData} />;
     } else if (effectiveRole === 'supervisor' || effectiveRole === 'sub_admin') {
-      content = (
-        <SupervisorView
-          currentUser={effectiveUser}
-          globalScope={effectiveRole === 'sub_admin'}
-          activeTab={activeTab}
-          shops={shops}
-          onOpenPdfModal={(url) => setPdfModalUrl(url)}
-          onOpenAgentProfile={(agent) => setSelectedAgentForProfile(agent)}
-          onOpenTodayClientsModal={(agent) => setSelectedAgentForTodayClients(agent)}
-          onOpenLocationModal={(agent) => setSelectedLocationAgent(agent)}
-          onOpenUserModal={() => setIsUserModalOpen(true)}
-          onRefreshData={refreshSupervisorMonitoring}
-        />
-      );
+      content = <SupervisorView currentUser={effectiveUser} globalScope={effectiveRole === 'sub_admin'} activeTab={activeTab} shops={shops} onOpenPdfModal={(url) => setPdfModalUrl(url)} onOpenAgentProfile={(agent) => setSelectedAgentForProfile(agent)} onOpenTodayClientsModal={(agent) => setSelectedAgentForTodayClients(agent)} onOpenLocationModal={(agent) => setSelectedLocationAgent(agent)} onOpenUserModal={() => setIsUserModalOpen(true)} onRefreshData={refreshSupervisorMonitoring} />;
     } else {
-      content = (
-        <AgentView
-                currentUser={effectiveUser}
-                campaignPaused={campaignIsPaused}
-                pauseReason={activeCampaignPause?.reason || ''}
-          activeShopId={activeShopId}
-          activeTab={activeTab}
-          todayLeads={todayLeads}
-          todayCheckin={todayCheckin}
-          agentReports={agentReports}
-          onOpenLeadModal={() => setIsLeadModalOpen(true)}
-          onOpenReportModal={() => setIsReportModalOpen(true)}
-          onOpenPdfModal={(url) => setPdfModalUrl(url)}
-          onRefreshData={refreshData}
-        />
-      );
+      content = <AgentView currentUser={effectiveUser} campaignPaused={campaignIsPaused} pauseReason={activeCampaignPause?.reason || ''} activeShopId={activeShopId} activeTab={activeTab} todayLeads={todayLeads} todayCheckin={todayCheckin} agentReports={agentReports} onOpenLeadModal={() => setIsLeadModalOpen(true)} onOpenReportModal={() => setIsReportModalOpen(true)} onOpenPdfModal={(url) => setPdfModalUrl(url)} onRefreshData={refreshData} />;
     }
-
-    return (
-      <Suspense fallback={<SectionLoader />}>
-        <React.Fragment key={`${effectiveRole}-${effectiveUser.id}`}>
-          {content}
-        </React.Fragment>
-      </Suspense>
-    );
+    return <Suspense fallback={<SectionLoader />}><React.Fragment key={`${effectiveRole}-${effectiveUser.id}`}>{content}</React.Fragment></Suspense>;
   };
 
   const themeSurfaceStyle = theme === 'anthracite'
@@ -724,21 +556,16 @@ const todayLeads =
               ? { backgroundColor: '#23150c', backgroundImage: 'linear-gradient(135deg, #23150c 0%, #92400e 50%, #fde68a 100%)', color: '#fffef7' }
               : { backgroundColor: '#111317', backgroundImage: 'linear-gradient(135deg, #0b0d11 0%, #1a1f27 42%, #2b2320 100%)', color: '#f8fafc' };
 
+  const superAdminCampaignOptions = [
+    { key: 'vodacom-privilege' as const, label: 'Vodacom Privilège', note: 'Hôtesses' },
+    { key: 'merchant-educational' as const, label: 'Merchant Education', note: 'Brand Ambassadors' },
+    { key: 'youth-f2f' as const, label: 'Youth F2F', note: 'Sensibilisation universitaire' },
+    { key: 'mpesa-mikili' as const, label: 'M-Pesa Mikili', note: 'Brand Ambassador · M-Pesa' },
+  ];
+
   return (
-    <div
-      className="app-shell h-screen flex flex-col relative overflow-hidden font-sans select-none transition-colors"
-      style={{ color: themeSurfaceStyle.color }}
-    >
-      {realMasterUser.role === 'super_admin' && <SimulationBar
-        masterUser={realMasterUser}
-        effectiveUser={effectiveUser}
-        users={users}
-        simulatedRole={simulatedRole}
-        theme={theme}
-        onSimulateRole={handleSimulateRoleChange}
-        onSimulateUserChange={handleSimulateUserChange}
-        onResetSimulation={handleResetSimulation}
-      />}
+    <div className="app-shell h-screen flex flex-col relative overflow-hidden font-sans select-none transition-colors" style={{ color: themeSurfaceStyle.color }}>
+      {realMasterUser.role === 'super_admin' && <SimulationBar masterUser={realMasterUser} effectiveUser={effectiveUser} users={users} simulatedRole={simulatedRole} theme={theme} onSimulateRole={handleSimulateRoleChange} onSimulateUserChange={handleSimulateUserChange} onResetSimulation={handleResetSimulation} />}
 
       <Header
         user={effectiveUser}
@@ -746,172 +573,45 @@ const todayLeads =
         unreadChatCount={chatUnreadCount}
         online={online}
         syncPendingCount={syncPendingCount}
-        profilePhotoUrl={(isMerchantContext && effectiveUser.userCategory === 'brand_ambassador' ? merchantProfilePhotoUrl : isYouthContext ? '' : todayCheckinPhoto) || undefined}
-        onPointageRecorded={campaignIsPaused || isYouthContext ? undefined : refreshData}
-        allowCheckin={!campaignIsPaused && !isYouthContext}
-        checkinUnavailableLabel={isYouthContext ? 'Utilisez le pointage Youth F2F ci-dessous' : 'Pointage indisponible pendant la pause de campagne'}
+        profilePhotoUrl={(isMerchantContext && effectiveUser.userCategory === 'brand_ambassador' ? merchantProfilePhotoUrl : isYouthContext || isMikiliContext ? '' : todayCheckinPhoto) || undefined}
+        onPointageRecorded={campaignIsPaused || isYouthContext || isMikiliContext ? undefined : refreshData}
+        allowCheckin={!campaignIsPaused && !isYouthContext && !isMikiliContext}
+        checkinUnavailableLabel={isYouthContext ? 'Utilisez le pointage Youth F2F ci-dessous' : isMikiliContext ? 'Utilisez le pointage M-Pesa Mikili ci-dessous' : 'Pointage indisponible pendant la pause de campagne'}
         theme={theme}
         onSetTheme={setThemeMode}
         activeCampaign={activeCampaign}
-        campaignOptions={effectiveRole === 'agent' ? agentCampaignOptions : undefined}
+        campaignOptions={effectiveRole === 'agent' ? agentCampaignOptions : realMasterUser.role === 'super_admin' ? superAdminCampaignOptions : undefined}
         onSetCampaign={effectiveRole === 'agent'
           ? (agentCampaignOptions.length > 1 ? setPermittedCampaignContext : undefined)
           : (realMasterUser.role === 'admin' || realMasterUser.role === 'super_admin' || realMasterUser.role === 'supervisor' || realMasterUser.role === 'sub_admin' ? setCampaignContext : undefined)}
-        onMarkNotifsRead={() => {
-          markNotifsAsRead(effectiveUser.id);
-          markChatAsRead(effectiveUser.id);
-          refreshData();
-        }}
-        onClearNotifications={() => {
-          clearNotifications(effectiveUser.id);
-          refreshData();
-        }}
+        onMarkNotifsRead={() => { markNotifsAsRead(effectiveUser.id); markChatAsRead(effectiveUser.id); refreshData(); }}
+        onClearNotifications={() => { clearNotifications(effectiveUser.id); refreshData(); }}
         fundRequestAlerts={fundRequestAlerts}
-        onOpenFundRequest={(requestId) => {
-          setFundRequestToOpen(requestId);
-          setOpenFundRequests(false);
-          setCampaignContext('merchant-educational');
-          setActiveTab('admin');
-        }}
+        onOpenFundRequest={(requestId) => { setFundRequestToOpen(requestId); setOpenFundRequests(false); setCampaignContext('merchant-educational'); setActiveTab('admin'); }}
         onLogout={handleLogout}
         onOpenPasswordModal={() => setIsPasswordModalOpen(true)}
         onRefreshData={realMasterUser.role === 'super_admin' ? undefined : () => { void refreshData(true); }}
       />
 
       <main className="flex-1 min-h-0 px-3 sm:px-4 pt-3 pb-32 max-w-2xl mx-auto w-full overflow-y-auto overflow-x-hidden">
-        {activeTab === 'admin' && realMasterUser.role === 'super_admin' && (
-          <button type="button" onClick={() => setIsSystemConfigurationOpen(true)} className="glass-card mb-3 flex w-full items-center justify-between border border-fuchsia-300/25 bg-fuchsia-400/[0.06] px-4 py-3 text-left transition hover:bg-fuchsia-400/[0.1]">
-            <span><b className="block text-xs font-black uppercase tracking-wide text-fuchsia-100">Paramètres de la base</b><span className="mt-1 block text-[10px] font-semibold text-gray-400">Supabase, Gemini OCR, schéma, export et cache</span></span>
-            <span className="rounded-xl border border-fuchsia-200/25 px-2 py-1 text-[10px] font-black text-fuchsia-100">OUVRIR</span>
-          </button>
-        )}
+        {activeTab === 'admin' && realMasterUser.role === 'super_admin' && <button type="button" onClick={() => setIsSystemConfigurationOpen(true)} className="glass-card mb-3 flex w-full items-center justify-between border border-fuchsia-300/25 bg-fuchsia-400/[0.06] px-4 py-3 text-left transition hover:bg-fuchsia-400/[0.1]"><span><b className="block text-xs font-black uppercase tracking-wide text-fuchsia-100">Paramètres de la base</b><span className="mt-1 block text-[10px] font-semibold text-gray-400">Supabase, Gemini OCR, schéma, export et cache</span></span><span className="rounded-xl border border-fuchsia-200/25 px-2 py-1 text-[10px] font-black text-fuchsia-100">OUVRIR</span></button>}
         {renderContent()}
       </main>
 
-      <BottomNav
-        userRole={effectiveRole}
-        activeTab={activeTab}
-        unreadChatCount={chatUnreadCount}
-        merchantContext={isMerchantContext}
-        youthContext={isYouthContext}
-        onTabChange={(tab) => {
-          if (tab === 'home') {
-            setHomeTabPressCount((prev) => prev + 1);
-          }
-          setActiveTab(tab);
-        }}
-      />
+      <BottomNav userRole={effectiveRole} activeTab={activeTab} unreadChatCount={chatUnreadCount} merchantContext={isMerchantContext} youthContext={isYouthContext} onTabChange={(tab) => { if (tab === 'home') setHomeTabPressCount((prev) => prev + 1); setActiveTab(tab); }} />
 
-      {toast && (() => {
-        const isError = toast.level === 'error';
-        const ToastIcon = isError ? CircleAlert : CheckCircle2;
-        return <div className="pointer-events-none fixed inset-x-0 top-[max(0.75rem,env(safe-area-inset-top))] z-[160] flex justify-center px-3 sm:px-5" aria-live="polite" aria-atomic="true">
-          <div className={`app-toast app-toast--${isError ? 'error' : 'success'} animate-toast-in flex w-full max-w-md items-center gap-3 overflow-hidden rounded-[1.35rem] border p-2.5 pr-3 shadow-2xl backdrop-blur-2xl`}>
-            <span className="app-toast__icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"><ToastIcon size={18} strokeWidth={2.4}/></span>
-            <div className="min-w-0 flex-1"><p className="app-toast__eyebrow text-[8px] font-black uppercase tracking-[0.18em]">{isError ? 'À vérifier' : 'Synchronisation'}</p><p className="mt-0.5 text-[11px] font-bold leading-snug">{toast.message}</p></div>
-            <span className="app-toast__glow pointer-events-none absolute inset-x-5 bottom-0 h-px" />
-          </div>
-        </div>;
-      })()}
+      {toast && (() => { const isError = toast.level === 'error'; const ToastIcon = isError ? CircleAlert : CheckCircle2; return <div className="pointer-events-none fixed inset-x-0 top-[max(0.75rem,env(safe-area-inset-top))] z-[160] flex justify-center px-3 sm:px-5" aria-live="polite" aria-atomic="true"><div className={`app-toast app-toast--${isError ? 'error' : 'success'} animate-toast-in flex w-full max-w-md items-center gap-3 overflow-hidden rounded-[1.35rem] border p-2.5 pr-3 shadow-2xl backdrop-blur-2xl`}><span className="app-toast__icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"><ToastIcon size={18} strokeWidth={2.4}/></span><div className="min-w-0 flex-1"><p className="app-toast__eyebrow text-[8px] font-black uppercase tracking-[0.18em]">{isError ? 'À vérifier' : 'Synchronisation'}</p><p className="mt-0.5 text-[11px] font-bold leading-snug">{toast.message}</p></div><span className="app-toast__glow pointer-events-none absolute inset-x-5 bottom-0 h-px" /></div></div>; })()}
 
-      {isLeadModalOpen && (
-        <Suspense fallback={null}>
-          <LeadModal
-            isOpen
-            currentUser={effectiveUser}
-            activeShopId={activeShopId}
-            onClose={() => setIsLeadModalOpen(false)}
-            onSuccess={refreshData}
-          />
-        </Suspense>
-      )}
-
-      {isReportModalOpen && (
-        <Suspense fallback={null}>
-          <ReportModal
-            isOpen
-            currentUser={effectiveUser}
-            todayLeads={todayLeads}
-            activeShopId={activeShopId}
-            onClose={() => setIsReportModalOpen(false)}
-            onReportGenerated={(url) => {
-              refreshData();
-              setPdfModalUrl(url);
-            }}
-          />
-        </Suspense>
-      )}
-
-      {isUserModalOpen && (
-        <Suspense fallback={null}>
-          <UserModal isOpen shops={shops} onClose={() => setIsUserModalOpen(false)} onSuccess={refreshData} />
-        </Suspense>
-      )}
-
-      {isShopModalOpen && (
-        <Suspense fallback={null}>
-          <ShopModal isOpen onClose={() => setIsShopModalOpen(false)} onSuccess={refreshData} />
-        </Suspense>
-      )}
-
-      {isPasswordModalOpen && (
-        <Suspense fallback={null}>
-          <PasswordModal isOpen currentUser={effectiveUser} onClose={() => setIsPasswordModalOpen(false)} />
-        </Suspense>
-      )}
-
-      {pdfModalUrl && (
-        <Suspense fallback={null}>
-          <PdfViewerModal isOpen pdfUrl={pdfModalUrl} onClose={() => setPdfModalUrl(null)} />
-        </Suspense>
-      )}
-
-      {selectedAgentForProfile && (
-        <Suspense fallback={null}>
-          <AgentProfileModal
-            isOpen
-            agent={selectedAgentForProfile}
-            agentReports={getReports().filter((r) => r.agent_id === selectedAgentForProfile.id)}
-            todayLeads={getLeads().filter((l) => l.agent_id === selectedAgentForProfile.id && toISO(l.timestamp) === todayStr)}
-            shops={shops}
-            onClose={() => setSelectedAgentForProfile(null)}
-            onOpenPdf={(url) => setPdfModalUrl(url)}
-            onAssignmentChanged={refreshData}
-            onCompileAgent={() => {
-              setSelectedAgentForProfile(null);
-              setActiveTab('admin');
-            }}
-          />
-        </Suspense>
-      )}
-
-      {selectedAgentForTodayClients && (
-        <Suspense fallback={null}>
-          <TodayClientsModal
-            isOpen
-            agent={selectedAgentForTodayClients}
-            dayLeads={selectedAgentTodayLeads}
-            onClose={() => setSelectedAgentForTodayClients(null)}
-          />
-        </Suspense>
-      )}
-
-      {selectedLocationAgent && (
-        <Suspense fallback={null}>
-          <LocationModal isOpen agent={selectedLocationAgent} onClose={() => setSelectedLocationAgent(null)} />
-        </Suspense>
-      )}
-
-      {isSystemConfigurationOpen && (
-        <Suspense fallback={null}>
-          <SystemConfigurationModal
-            isOpen
-            currentUser={realMasterUser}
-            onClose={() => setIsSystemConfigurationOpen(false)}
-            onRefreshData={() => { void refreshData(); }}
-          />
-        </Suspense>
-      )}
+      {isLeadModalOpen && <Suspense fallback={null}><LeadModal isOpen currentUser={effectiveUser} activeShopId={activeShopId} onClose={() => setIsLeadModalOpen(false)} onSuccess={refreshData} /></Suspense>}
+      {isReportModalOpen && <Suspense fallback={null}><ReportModal isOpen currentUser={effectiveUser} todayLeads={todayLeads} activeShopId={activeShopId} onClose={() => setIsReportModalOpen(false)} onReportGenerated={(url) => { refreshData(); setPdfModalUrl(url); }} /></Suspense>}
+      {isUserModalOpen && <Suspense fallback={null}><UserModal isOpen shops={shops} onClose={() => setIsUserModalOpen(false)} onSuccess={refreshData} /></Suspense>}
+      {isShopModalOpen && <Suspense fallback={null}><ShopModal isOpen onClose={() => setIsShopModalOpen(false)} onSuccess={refreshData} /></Suspense>}
+      {isPasswordModalOpen && <Suspense fallback={null}><PasswordModal isOpen currentUser={effectiveUser} onClose={() => setIsPasswordModalOpen(false)} /></Suspense>}
+      {pdfModalUrl && <Suspense fallback={null}><PdfViewerModal isOpen pdfUrl={pdfModalUrl} onClose={() => setPdfModalUrl(null)} /></Suspense>}
+      {selectedAgentForProfile && <Suspense fallback={null}><AgentProfileModal isOpen agent={selectedAgentForProfile} agentReports={getReports().filter((r) => r.agent_id === selectedAgentForProfile.id)} todayLeads={getLeads().filter((l) => l.agent_id === selectedAgentForProfile.id && toISO(l.timestamp) === todayStr)} shops={shops} onClose={() => setSelectedAgentForProfile(null)} onOpenPdf={(url) => setPdfModalUrl(url)} onAssignmentChanged={refreshData} onCompileAgent={() => { setSelectedAgentForProfile(null); setActiveTab('admin'); }} /></Suspense>}
+      {selectedAgentForTodayClients && <Suspense fallback={null}><TodayClientsModal isOpen agent={selectedAgentForTodayClients} dayLeads={selectedAgentTodayLeads} onClose={() => setSelectedAgentForTodayClients(null)} /></Suspense>}
+      {selectedLocationAgent && <Suspense fallback={null}><LocationModal isOpen agent={selectedLocationAgent} onClose={() => setSelectedLocationAgent(null)} /></Suspense>}
+      {isSystemConfigurationOpen && <Suspense fallback={null}><SystemConfigurationModal isOpen currentUser={realMasterUser} onClose={() => setIsSystemConfigurationOpen(false)} onRefreshData={() => { void refreshData(); }} /></Suspense>}
     </div>
   );
 }
