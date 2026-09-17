@@ -545,7 +545,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           >
             <span className="inline-flex items-center justify-center gap-1">
               <UserPlus className="w-3.5 h-3.5" />
-              <span>Camp.</span>
+              <span>Campagnes</span>
             </span>
           </button>
           <button
