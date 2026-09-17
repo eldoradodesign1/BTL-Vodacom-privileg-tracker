@@ -255,8 +255,16 @@ export default function App() {
     setActiveTab('home');
   };
 
+  // En mode Simulation Master, le contexte de campagne doit suivre l’agent simulé,
+  // et non le compte maître qui pilote la simulation.
+  const campaignSubject = simulatedUserId
+    ? users.find((user) => user.id === simulatedUserId) || null
+    : currentUser;
+  const campaignSubjectId = campaignSubject?.id || null;
+  const campaignSubjectRole = simulatedUserId ? 'agent' : currentUser?.role;
+
   useEffect(() => {
-    if (!currentUser || currentUser.role !== 'agent') {
+    if (!campaignSubjectId || campaignSubjectRole !== 'agent') {
       setAgentCampaigns([]);
       setActiveCampaignPause(null);
       return;
@@ -264,7 +272,7 @@ export default function App() {
     let cancelled = false;
     void (async () => {
       try {
-        const campaigns = await getCampaignsForUser(currentUser.id);
+        const campaigns = await getCampaignsForUser(campaignSubjectId);
         if (cancelled) return;
         setAgentCampaigns(campaigns);
         const current = campaigns.find((campaign) => (
@@ -277,7 +285,7 @@ export default function App() {
         if (!current) {
           const fallback = campaigns[0];
           if (!fallback) {
-            const inferredContext: CampaignContext = currentUser.userCategory === 'brand_ambassador'
+            const inferredContext: CampaignContext = campaignSubject?.userCategory === 'brand_ambassador'
               ? 'merchant-educational'
               : 'vodacom-privilege';
             setActiveCampaign(inferredContext);
@@ -301,7 +309,7 @@ export default function App() {
       } catch {
         if (!cancelled) {
           setAgentCampaigns([]);
-          const inferredContext = currentUser.userCategory === 'brand_ambassador' ? 'merchant-educational' : 'vodacom-privilege';
+          const inferredContext = campaignSubject?.userCategory === 'brand_ambassador' ? 'merchant-educational' : 'vodacom-privilege';
           setActiveCampaign(inferredContext);
           localStorage.setItem('btl_active_campaign', inferredContext);
           setActiveCampaignPause(null);
@@ -309,7 +317,7 @@ export default function App() {
       }
     })();
     return () => { cancelled = true; };
-  }, [currentUser?.id, currentUser?.role, activeCampaign, dataRevision]);
+  }, [campaignSubjectId, campaignSubjectRole, campaignSubject?.userCategory, activeCampaign, dataRevision]);
 
 const refreshData = useCallback(async (force = false) => {
   // Une action explicite de l’utilisateur doit toujours repartir des données réseau,
