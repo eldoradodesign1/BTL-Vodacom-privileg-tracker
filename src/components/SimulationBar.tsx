@@ -41,6 +41,11 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
   const isDiamondTheme = theme === 'diamond';
   const activeRole = simulatedRole || effectiveUser.role;
   const selectedUser = simulationUsers.find((user) => user.id === effectiveUser.id) || effectiveUser;
+  const shortcutTargets = {
+    agent: simulationUsers.find((user) => user.name.trim().toLowerCase() === 'agent test'),
+    supervisor: simulationUsers.find((user) => ['hervé ntalu', 'herve ntalu'].includes(user.name.trim().toLowerCase())),
+    admin: simulationUsers.find((user) => user.name.trim().toLowerCase() === 'bradley izamaboko'),
+  };
   const surface = isDiamondTheme
     ? 'border-slate-300/80 bg-white/90 text-slate-800 shadow-[0_10px_30px_rgba(100,116,139,.20)]'
     : 'border-white/10 bg-[#080d19]/90 text-white shadow-[0_10px_35px_rgba(0,0,0,.42)]';
@@ -54,7 +59,14 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
         <div className={`mx-auto flex min-h-11 max-w-6xl items-center gap-2 px-2.5 sm:px-4 ${expanded ? 'py-1.5' : 'py-1'}`}>
           <div className="flex min-w-0 items-center gap-2">
             <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100"><Shield size={14}/><span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_8px_currentColor]"/></div>
-            {expanded && <div className="hidden min-w-0 sm:block"><p className="text-[8px] font-black uppercase tracking-[0.2em] text-cyan-200/80">Simulation Master</p><p className={`truncate text-[9px] font-bold ${muted}`}>Origine · {masterUser.name}</p></div>}
+            {expanded ? (
+              <div className="hidden min-w-0 sm:block">
+                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-cyan-200/80">Simulation Master</p>
+                <p className={`truncate text-[9px] font-bold ${muted}`}>Origine · {masterUser.name}</p>
+              </div>
+            ) : (
+              <span className="hidden sm:inline rounded-lg border border-cyan-300/20 bg-cyan-400/10 px-2 py-1 text-[8px] font-black uppercase tracking-[0.18em] text-cyan-100">SIM</span>
+            )}
           </div>
 
           <button
@@ -64,14 +76,30 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             title="Choisir l'utilisateur simulé"
           >
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white/10"><UserRound size={12}/></span>
-            <span className="min-w-0 flex-1"><b className="block truncate text-[9px] font-black">{selectedUser.name}</b><span className={`block truncate text-[7px] font-black uppercase tracking-wider ${muted}`}>{selectedUser.role} · {selectedUser.userCategory || 'utilisateur'}</span></span>
-            <SlidersHorizontal size={13} className={`shrink-0 transition group-hover:text-red-300 ${muted}`}/>
+            <span className="min-w-0 flex-1">
+              <b className="block truncate text-[9px] font-black">{selectedUser.name}</b>
+              {expanded && <span className={`block truncate text-[7px] font-black uppercase tracking-wider ${muted}`}>{selectedUser.role} · {selectedUser.userCategory || 'utilisateur'}</span>}
+            </span>
+            {expanded ? <SlidersHorizontal size={13} className={`shrink-0 transition group-hover:text-red-300 ${muted}`}/> : <span className="text-[8px] font-black uppercase text-cyan-200">SIMULER</span>}
           </button>
 
-          {expanded && <div className={`hidden items-center gap-1 rounded-xl border p-0.5 sm:flex ${chip}`}>
-            {(['agent','supervisor','admin'] as UserRole[]).map((role) => (
-              <button key={role} type="button" onClick={() => onSimulateRole(role)} className={`rounded-lg px-2.5 py-1 text-[8px] font-black uppercase transition ${activeRole === role ? activeChip : muted + ' hover:text-white'}`}>{role === 'supervisor' ? 'Sup' : role}</button>
-            ))}
+          {expanded && <div className={`hidden items-center gap-1 rounded-xl border p-1 sm:flex ${chip}`}>
+            {(['agent','supervisor','admin'] as UserRole[]).map((role) => {
+              const target = shortcutTargets[role as keyof typeof shortcutTargets];
+              const label = role === 'agent' ? 'AGENT' : role === 'supervisor' ? 'SUP' : 'ADMIN';
+              const name = target?.name || (role === 'agent' ? 'Agent Test' : role === 'supervisor' ? 'Hervé Ntalu' : 'Bradley Izamaboko');
+              return (
+                <button
+                  key={role}
+                  type="button"
+                  onClick={() => onSimulateRole(role)}
+                  className={`rounded-lg px-2.5 py-1 text-[8px] font-black uppercase transition ${activeRole === role ? activeChip : muted + ' hover:text-white'}`}
+                  title={`Simuler ${role === 'supervisor' ? 'le superviseur' : role} : ${name}`}
+                >
+                  {label} · <span className="normal-case tracking-normal">{name}</span>
+                </button>
+              );
+            })}
           </div>}
 
           {simulatedRole && <button type="button" onClick={onResetSimulation} className={`flex h-8 shrink-0 items-center gap-1 rounded-xl border px-2 text-[8px] font-black uppercase transition ${chip} ${muted}`} title="Quitter la simulation"><RotateCcw size={12}/><span className="hidden md:inline">Quitter</span></button>}
