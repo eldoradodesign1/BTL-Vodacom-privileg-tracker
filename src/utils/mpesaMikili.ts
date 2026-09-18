@@ -318,3 +318,18 @@ export async function getMikiliTeam(
     })
     .sort((a, b) => b.transactions - a.transactions || b.clients - a.clients || a.name.localeCompare(b.name, 'fr'));
 }
+
+
+export async function getMikiliCampaignClients(
+  campaignId: string,
+  startDate?: string,
+  endDate?: string,
+): Promise<MikiliClient[]> {
+  const db = getClient();
+  let query = db.from('mpesa_mikili_clients').select('*, location:campaign_locations(*)').eq('campaign_id', campaignId).order('activity_date', { ascending: false }).order('created_at', { ascending: false });
+  if (startDate) query = query.gte('activity_date', startDate);
+  if (endDate) query = query.lte('activity_date', endDate);
+  const { data, error } = await query.limit(1000);
+  fail(error, 'Impossible de charger les archives M-Pesa Mikili');
+  return (data || []) as MikiliClient[];
+}
