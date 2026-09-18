@@ -357,6 +357,21 @@ export async function getMikiliTeam(
 }
 
 
+export async function getMikiliAttendanceRange(
+  campaignId: string,
+  baId: string,
+  startDate?: string,
+  endDate?: string,
+): Promise<MikiliAttendance[]> {
+  const db = getClient();
+  let query = db.from('mpesa_mikili_daily_attendance').select('*').eq('campaign_id', campaignId).eq('ba_id', baId).order('activity_date', { ascending: true });
+  if (startDate) query = query.gte('activity_date', startDate);
+  if (endDate) query = query.lte('activity_date', endDate);
+  const { data, error } = await query;
+  fail(error, 'Impossible de charger le registre de présence M-Pesa Mikili');
+  return (data || []) as MikiliAttendance[];
+}
+
 export async function getMikiliCampaignClients(
   campaignId: string,
   startDate?: string,
