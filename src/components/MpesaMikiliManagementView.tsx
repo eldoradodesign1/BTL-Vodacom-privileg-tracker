@@ -214,7 +214,9 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
           <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-200/80">Podium du jour</p><h2 className="mt-1 text-lg font-black text-white">La course Mikili</h2></div><Trophy size={21} className="text-amber-200"/></div>
           <div className="mt-3 grid grid-cols-3 gap-2">{[0,1,2].map((index) => { const entry=podium[index]; return <div key={entry?.userId || index} className={rankClasses[index] + ' min-h-24 rounded-2xl border p-3'}><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-black/15 text-[10px] font-black">{index+1}</span><b className="mt-2 block truncate text-[10px]">{entry?.name?.split(' ')[0] || '—'}</b><span className="mt-1 block text-[9px] font-bold opacity-80">{entry ? entry.transactions + ' Tx · ' + entry.clients + ' clients' : 'À saisir'}</span></div>; })}</div>
         </section>
-      </>      {activeTab === 'tab2' && <>
+      </>}
+
+      {activeTab === 'tab2' && <>
         <section className="glass-card p-4"><div className="flex items-center gap-2"><UsersRound size={19} className="text-red-200"/><div><h2 className="font-black text-white">Monitoring M-Pesa Mikili</h2><p className="text-[9px] text-gray-500">{dayLabel(date)} · {team.length} BA affectés à la campagne</p></div></div></section>
         <section className="space-y-2">{team.map((member) => {
           const status = member.attendance?.checkout_at ? 'Clôturé' : member.attendance?.checkin_at ? 'En action' : 'Absent';
