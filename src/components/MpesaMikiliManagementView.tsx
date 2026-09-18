@@ -1,17 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Archive, BarChart3, CalendarDays, CheckCircle2, ChevronRight, CircleAlert, MapPin, RefreshCw, Trophy, UsersRound, Zap } from 'lucide-react';
+import { Archive, BarChart3, CalendarDays, CheckCircle2, ChevronRight, CircleAlert, MapPin, RefreshCw, Trophy, UsersRound, Zap, Target, Settings2, ArrowUpRight } from 'lucide-react';
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { User } from '../types';
 import {
   getMikiliCampaign,
   getMikiliCampaignClients,
   getMikiliPodium,
   getMikiliSupervisorRegions,
+  getMikiliTargets,
   getMikiliTeam,
   mikiliTodayIso,
+  saveMikiliTargets,
   type MikiliClient,
   type MikiliPodiumEntry,
   type MikiliRegion,
   type MikiliTeamMember,
+  type MikiliTargets,
 } from '../utils/mpesaMikili';
 import { DateIconPicker } from './DateIconPicker';
 
@@ -26,6 +30,8 @@ const rankClasses = [
   'border-orange-300/25 bg-orange-500/[0.08] text-orange-100',
 ];
 
+const START_DATE = '2026-09-01';
+const CHART_COLORS = ['#ef4444', '#22c55e', '#f59e0b', '#38bdf8', '#a78bfa'];
 const dayLabel = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' });
 
 export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, activeTab }) => {
@@ -36,6 +42,10 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
   const [podium, setPodium] = useState<MikiliPodiumEntry[]>([]);
   const [archiveClients, setArchiveClients] = useState<MikiliClient[]>([]);
   const [regions, setRegions] = useState<MikiliRegion[]>([]);
+  const [periodClients, setPeriodClients] = useState<MikiliClient[]>([]);
+  const [targets, setTargets] = useState<MikiliTargets>({ dailyClients: 0, dailyTransactions: 0 });
+  const [draftTargets, setDraftTargets] = useState<MikiliTargets>({ dailyClients: 0, dailyTransactions: 0 });
+  const [savingTargets, setSavingTargets] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -54,16 +64,20 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
         ? await getMikiliSupervisorRegions(campaign.id, currentUser.id)
         : [];
       setRegions(scopeRegions);
-      const [nextTeam, nextPodium] = await Promise.all([
+      const [nextTeam, nextPodium, nextTargets, nextClients] = await Promise.all([
         getMikiliTeam(campaign.id, date, isSupervisor && currentUser.role !== 'sub_admin' ? { supervisorId: currentUser.id, regions: scopeRegions } : {}),
         getMikiliPodium(campaign.id, date, 10),
+        getMikiliTargets(campaign.id),
+        getMikiliCampaignClients(campaign.id, START_DATE, today),
       ]);
+      const teamIds = new Set(nextTeam.map((member) => member.userId));
+      const scopedClients = isSupervisor && currentUser.role !== 'sub_admin' ? nextClients.filter((client) => teamIds.has(client.agent_id)) : nextClients;
       setTeam(nextTeam);
       setPodium(nextPodium);
-      if (activeTab === 'tab3') {
-        const history = await getMikiliCampaignClients(campaign.id);
-        setArchiveClients(history);
-      }
+      setTargets(nextTargets);
+      setDraftTargets(nextTargets);
+      setPeriodClients(scopedClients);
+      setArchiveClients(scopedClients);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Chargement M-Pesa Mikili impossible.');
     } finally {
@@ -93,6 +107,49 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
     return Array.from(map.entries()).sort((a, b) => b[1].transactions - a[1].transactions);
   }, [team]);
 
+  const chartData = useMemo(() => {
+    const map = new Map<string, { date: string; clients: number; transactions: number }>();
+    const cursor = new Date(START_DATE + 'T12:00:00');
+    const end = new Date(today + 'T12:00:00');
+    while (cursor <= end) {
+      const iso = cursor.toISOString().slice(0, 10);
+      map.set(iso, { date: iso, clients: 0, transactions: 0 });
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    periodClients.forEach((item) => {
+      const row = map.get(item.activity_date);
+      if (row) { row.clients += 1; if (item.transaction_done) row.transactions += 1; }
+    });
+    return Array.from(map.values()).map((row) => ({ ...row, label: row.date.slice(8) + '/' + row.date.slice(5, 7) }));
+  }, [periodClients, today]);
+
+  const selectedDayClients = useMemo(() => periodClients.filter((item) => item.activity_date === date), [periodClients, date]);
+
+  const donutData = useMemo(() => ({
+    transactions: [
+      { name: 'Transactions', value: selectedDayClients.filter((x) => x.transaction_done).length },
+      { name: 'Sans transaction', value: selectedDayClients.filter((x) => !x.transaction_done).length },
+    ],
+    interactions: [
+      { name: 'Envoi', value: selectedDayClients.filter((x) => x.presented_service === 'send' || x.presented_service === 'both').length },
+      { name: 'Réception', value: selectedDayClients.filter((x) => x.presented_service === 'receive' || x.presented_service === 'both').length },
+    ],
+    clients: [
+      { name: 'Déjà utilisateur', value: selectedDayClients.filter((x) => x.existing_mikili_user === 'yes').length },
+      { name: 'Non utilisateur', value: selectedDayClients.filter((x) => x.existing_mikili_user === 'no').length },
+      { name: 'Ne connaît pas', value: selectedDayClients.filter((x) => x.existing_mikili_user === 'unknown').length },
+    ],
+  }), [selectedDayClients]);
+
+  const saveTargets = async () => {
+    if (!campaignId) return;
+    setSavingTargets(true);
+    setError('');
+    try { await saveMikiliTargets(campaignId, draftTargets); setTargets(draftTargets); }
+    catch (caught) { setError(caught instanceof Error ? caught.message : 'Impossible d’enregistrer les objectifs.'); }
+    finally { setSavingTargets(false); }
+  };
+
   const transactionBreakdown = useMemo(() => {
     const source = activeTab === 'tab3' ? archiveClients.filter((item) => item.activity_date === date) : [];
     return {
@@ -118,7 +175,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
           <button type="button" onClick={() => void load(false)} className="rounded-2xl border border-white/10 bg-black/20 p-3 text-gray-200 transition hover:bg-white/10 active:scale-95" title="Actualiser"><RefreshCw size={17} className={refreshing ? 'animate-spin' : ''}/></button>
         </div>
         <div className="relative mt-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 p-2">
-          <DateIconPicker value={date} min="2026-09-01" max={today} onChange={setDate} className="flex min-w-0 flex-1 items-center" buttonClassName="h-10 w-10 shrink-0 rounded-xl border border-red-300/20 bg-red-500/10 text-red-100" labelClassName="truncate text-[10px] font-black uppercase text-gray-200"/>
+          <DateIconPicker value={date} min={START_DATE} max={today} onChange={setDate} className="flex min-w-0 flex-1 items-center" buttonClassName="h-10 w-10 shrink-0 rounded-xl border border-red-300/20 bg-red-500/10 text-red-100" labelClassName="truncate text-[10px] font-black uppercase text-gray-200"/>
           <button type="button" onClick={() => setDate(today)} className={date === today ? 'rounded-xl border border-red-300/50 bg-red-500/20 px-3 py-2 text-[9px] font-black uppercase text-red-100' : 'rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[9px] font-black uppercase text-gray-400'}>Aujourd’hui</button>
         </div>
       </section>
@@ -136,28 +193,29 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
       </section>
 
       {activeTab === 'home' && <>
+        <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[
+            ['BA présents', metrics.present, UsersRound, 'text-cyan-100'],
+            ['Clients', metrics.clients, UsersRound, 'text-white'],
+            ['Transactions', metrics.transactions, Zap, 'text-emerald-200'],
+            ['Conversion', metrics.conversion + '%', BarChart3, 'text-amber-100'],
+          ].map(([label, value, Icon, tone]) => { const I = Icon as React.ElementType; return <div key={String(label)} className="glass-card p-3"><I size={15} className={String(tone)}/><b className="mt-2 block text-xl font-black text-white">{value as React.ReactNode}</b><span className="text-[8px] font-black uppercase tracking-wider text-gray-500">{label}</span></div>; })}
+        </section>
+
         <section className="glass-card overflow-hidden p-4">
-          <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-200/80">Podium du jour</p><h2 className="mt-1 text-lg font-black text-white">Qui fait bouger Mikili ?</h2></div><Trophy size={21} className="text-amber-200"/></div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {[0,1,2].map((index) => {
-              const entry = podium[index];
-              return <div key={entry?.userId || index} className={`relative min-h-24 overflow-hidden rounded-2xl border p-3 ${rankClasses[index]}`}>
-                <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-black/15 text-[10px] font-black">{index + 1}</span>
-                <b className="mt-2 block truncate text-[10px]">{entry?.name?.split(' ')[0] || '—'}</b>
-                <span className="mt-1 block text-[9px] font-bold opacity-80">{entry ? entry.transactions + ' Tx · ' + entry.clients + ' clients' : 'À saisir'}</span>
-              </div>;
-            })}
-          </div>
-          <p className="mt-3 rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-[9px] font-semibold text-gray-400">Classement basé sur les transactions enregistrées, puis le volume de clients.</p>
+          <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-200/80">Progression</p><h2 className="mt-1 text-lg font-black text-white">Le terrain depuis le 1er septembre</h2></div><ArrowUpRight size={20} className="text-cyan-200"/></div>
+          <div className="mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><LineChart data={chartData}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.07)"/><XAxis dataKey="label" tick={{fontSize:9,fill:'#6b7280'}} axisLine={false} tickLine={false}/><YAxis allowDecimals={false} tick={{fontSize:9,fill:'#6b7280'}} axisLine={false} tickLine={false}/><Tooltip contentStyle={{background:'#11141d',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,fontSize:11}}/><Line type="monotone" dataKey="clients" name="Clients" stroke="#ef4444" strokeWidth={3} dot={false}/><Line type="monotone" dataKey="transactions" name="Transactions" stroke="#22c55e" strokeWidth={3} dot={false}/></LineChart></ResponsiveContainer></div>
         </section>
 
-        <section className="glass-card p-4">
-          <div className="flex items-center gap-2"><MapPin size={18} className="text-red-200"/><div><h2 className="font-black text-white">Terrain</h2><p className="text-[9px] text-gray-500">{metrics.present} présents · {metrics.closed} journées clôturées · {metrics.absent} absents</p></div></div>
-          <div className="mt-3 space-y-2">{team.slice(0, 8).map((member) => <div key={member.userId} className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] p-3"><div className="min-w-0"><b className="block truncate text-xs text-white">{member.name}</b><span className="text-[9px] text-gray-500">{member.locations.filter((item) => ['Kinshasa','Kongo-Central','Haut-Katanga'].includes(item)).join(' · ') || 'Lieu non encore renseigné'}</span></div><div className="text-right"><b className="block text-xs text-emerald-200">{member.transactions} Tx</b><span className="text-[8px] font-black uppercase text-gray-500">{member.clients} clients</span></div></div>)}</div>
+        <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+          donuts
         </section>
-      </>}
 
-      {activeTab === 'tab2' && <>
+        <section className="glass-card overflow-hidden p-4">
+          <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-200/80">Podium du jour</p><h2 className="mt-1 text-lg font-black text-white">La course Mikili</h2></div><Trophy size={21} className="text-amber-200"/></div>
+          <div className="mt-3 grid grid-cols-3 gap-2">{[0,1,2].map((index) => { const entry=podium[index]; return <div key={entry?.userId || index} className={rankClasses[index] + ' min-h-24 rounded-2xl border p-3'}><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-black/15 text-[10px] font-black">{index+1}</span><b className="mt-2 block truncate text-[10px]">{entry?.name?.split(' ')[0] || '—'}</b><span className="mt-1 block text-[9px] font-bold opacity-80">{entry ? entry.transactions + ' Tx · ' + entry.clients + ' clients' : 'À saisir'}</span></div>; })}</div>
+        </section>
+      </>      {activeTab === 'tab2' && <>
         <section className="glass-card p-4"><div className="flex items-center gap-2"><UsersRound size={19} className="text-red-200"/><div><h2 className="font-black text-white">Monitoring M-Pesa Mikili</h2><p className="text-[9px] text-gray-500">{dayLabel(date)} · {team.length} BA affectés à la campagne</p></div></div></section>
         <section className="space-y-2">{team.map((member) => {
           const status = member.attendance?.checkout_at ? 'Clôturé' : member.attendance?.checkin_at ? 'En action' : 'Absent';
