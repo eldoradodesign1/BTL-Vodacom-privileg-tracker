@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, CheckCircle2, CircleAlert, ChevronDown, FileText, MapPin, PlusCircle, RefreshCw, UsersRound, X, Zap } from 'lucide-react';
+import { Camera, CheckCircle2, CircleAlert, ChevronDown, FileText, MapPin, PlusCircle, RefreshCw, Search, Trophy, UsersRound, X, Zap } from 'lucide-react';
 import type { User } from '../types';
 import { runInBackground } from '../utils/backgroundOperations';
+import { DateIconPicker } from './DateIconPicker';
 import {
   addMikiliClient,
   closeMikiliAttendance,
@@ -10,6 +11,7 @@ import {
   getMikiliClientHistory,
   getMikiliClientsForDay,
   getMikiliLocations,
+  getMikiliPodium,
   mikiliDisplayExisting,
   mikiliDisplayService,
   mikiliDisplayTransaction,
@@ -65,6 +67,12 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
   const [locations, setLocations] = useState<MikiliLocation[]>([]);
   const [attendance, setAttendance] = useState<MikiliAttendance | null>(null);
   const [todayClients, setTodayClients] = useState<MikiliClient[]>([]);
+  const [clientsView, setClientsView] = useState<MikiliClient[]>([]);
+  const [clientsDate, setClientsDate] = useState(today);
+  const [clientsFilter, setClientsFilter] = useState<'all' | 'transaction' | 'sensibilise'>('all');
+  const [clientsSearch, setClientsSearch] = useState('');
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [podium, setPodium] = useState<Array<{ userId: string; name: string; phone: string; clients: number; transactions: number }>>([]);
   const [history, setHistory] = useState<MikiliClient[]>([]);
   const [historyLoaded, setHistoryLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -99,14 +107,17 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
       const campaign = await getMikiliCampaign();
       if (!campaign) throw new Error('La campagne M-Pesa Mikili est introuvable.');
       setCampaignId(campaign.id);
-      const [nextLocations, nextAttendance, nextClients] = await Promise.all([
+      const [nextLocations, nextAttendance, nextClients, nextPodium] = await Promise.all([
         getMikiliLocations(campaign.id),
         getMikiliAttendance(currentUser.id, campaign.id, today),
         getMikiliClientsForDay(currentUser.id, campaign.id, today),
+        getMikiliPodium(campaign.id, today, 10),
       ]);
       setLocations(nextLocations);
       setAttendance(nextAttendance);
       setTodayClients(nextClients);
+      setClientsView(clientsDate === today ? nextClients : clientsView);
+      setPodium(nextPodium);
       setClosingComment(nextAttendance?.closing_comment || '');
 
     } catch (caught) {
@@ -114,7 +125,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
     } finally {
       if (showLoader) setLoading(false);
     }
-  }, [currentUser.id, today]);
+  }, [currentUser.id, today, clientsDate]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -125,6 +136,17 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
     void getMikiliEvidenceUrl(path).then((url) => { if (!cancelled) setCheckinPhotoUrl(url); }).catch(() => { if (!cancelled) setCheckinPhotoUrl(''); });
     return () => { cancelled = true; };
   }, [attendance?.checkin_photo_path]);
+
+  useEffect(() => {
+    if (activeTab !== 'tab2' || !campaignId) return;
+    let cancelled = false;
+    setClientsLoading(true);
+    void getMikiliClientsForDay(currentUser.id, campaignId, clientsDate)
+      .then((rows) => { if (!cancelled) setClientsView(rows); })
+      .catch((caught) => { if (!cancelled) setError(caught instanceof Error ? caught.message : 'Impossible de charger les clients.'); })
+      .finally(() => { if (!cancelled) setClientsLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeTab, campaignId, currentUser.id, clientsDate]);
 
   useEffect(() => {
     if (activeTab !== 'tab3' || !campaignId || historyLoaded) return;
@@ -228,7 +250,10 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
               <h1 className="text-[2rem] font-black leading-none tracking-tight text-white">Bonjour,<br /><span className="text-red-300">{currentUser.name.split(' ')[0]}.</span></h1>
               <p className="mt-3 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-400">{new Date(today + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
             </div>
-            <div className="flex h-16 w-16 shrink-0 rotate-3 items-center justify-center rounded-[1.4rem] border border-white/15 bg-black/20 text-red-200 shadow-xl"><MapPin size={28} /></div>
+            <div className="relative flex h-16 w-16 shrink-0 rotate-3 items-center justify-center overflow-hidden rounded-[1.4rem] border border-white/15 bg-black/20 text-red-200 shadow-xl">
+              {checkinPhotoUrl ? <img src={checkinPhotoUrl} alt="" className="absolute inset-0 h-full w-full object-cover" /> : <MapPin size={28} />}
+              {isCheckedIn && <span className="absolute bottom-1 right-1 flex h-5 w-5 items-center justify-center rounded-full border border-white/40 bg-emerald-500 text-white"><CheckCircle2 size={12}/></span>}
+            </div>
           </div>
         </section>
 
@@ -243,37 +268,39 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
           </div>
         </section>
 
-        <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-white/[0.06] to-transparent p-4">
-          <div className="mb-3 flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-500">Départ</p><p className="mt-1 text-sm font-black text-white">{attendance?.checkin_at ? 'Journée déverrouillée' : checkinPending ? 'Check-in en cours…' : 'Prêt à partir ?'}</p></div>{attendance?.checkin_at && <span className="rounded-full bg-emerald-500/15 px-2 py-1 text-[8px] font-black uppercase text-emerald-200">GPS ✓</span>}</div>
-          {isCheckedIn ? (
-            <div className="relative overflow-hidden rounded-[1.5rem] border border-emerald-300/15 bg-black/30">
-              {checkinPhotoUrl ? <img src={checkinPhotoUrl} alt="Check-in M-Pesa Mikili" className="h-44 w-full object-cover" /> : <div className="flex h-44 items-center justify-center bg-gradient-to-br from-red-500/20 to-emerald-500/10"><Camera size={34} className="animate-pulse text-white/70" /></div>}
-              <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/90 to-transparent px-4 pb-3 pt-10"><span className="text-[9px] font-black uppercase tracking-widest text-white">{checkinPending ? 'Check-in en attente' : 'Check-in validé'}</span><CheckCircle2 size={18} className="text-emerald-300" /></div>
-            </div>
-          ) : (
-            <button type="button" onClick={() => checkinInputRef.current?.click()} disabled={isClosed} className="group flex w-full items-center gap-4 rounded-[1.5rem] border border-dashed border-red-300/25 bg-red-500/[0.06] p-4 text-left transition hover:bg-red-500/10 active:scale-[0.99] disabled:opacity-40">
-              <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-red-500 text-white shadow-lg shadow-red-500/25 transition group-hover:rotate-3"><Camera size={25} /></span>
-              <span><b className="block text-sm font-black text-white">Déverrouiller ma journée</b><span className="mt-1 block text-[9px] font-semibold text-gray-500">Photo + position GPS</span></span>
-            </button>
-          )}
-          <input ref={checkinInputRef} type="file" accept="image/*" capture="user" onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ''; if (file) handleCheckin(file); }} className="hidden" />
-        </section>
-
         <button type="button" onClick={() => { setError(''); setIsClientOpen(true); }} disabled={!isCheckedIn || isClosed} className="group relative flex w-full items-center justify-between overflow-hidden rounded-[2rem] border border-red-300/20 bg-red-500 p-5 text-left shadow-xl shadow-red-500/15 transition hover:-translate-y-0.5 active:scale-[0.99] disabled:opacity-35">
           <span className="absolute -right-8 -top-12 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
           <span><b className="block text-lg font-black text-white">Nouveau client</b><span className="mt-1 text-[9px] font-black uppercase tracking-[0.18em] text-red-100">Ajouter une interaction +</span></span><PlusCircle size={30} className="text-white transition group-hover:rotate-90" />
         </button>
 
         <section className="grid grid-cols-2 gap-3">
-          <button type="button" onClick={() => { if (attendance?.checkin_at && !isClosed) setIsReportOpen(true); }} className="glass-card flex min-h-24 flex-col justify-between p-4 text-left transition hover:-translate-y-0.5"><FileText size={19} className="text-red-300" /><span className="text-[10px] font-black uppercase tracking-wide text-gray-300">Mon bilan</span></button>
-          <div className="glass-card flex min-h-24 flex-col justify-between p-4"><div className="flex items-center justify-between"><span className="text-[9px] font-black uppercase tracking-widest text-gray-500">État</span><span className={isClosed ? 'h-2 w-2 rounded-full bg-gray-500' : isCheckedIn ? 'h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.8)]' : 'h-2 w-2 rounded-full bg-amber-400'} /></div><span className="text-[10px] font-black uppercase text-gray-300">{isClosed ? 'Journée close' : isCheckedIn ? 'En action' : 'À démarrer'}</span></div>
+          <button type="button" onClick={() => { setError(''); setIsClientOpen(true); }} disabled={!isCheckedIn || isClosed} className="group relative min-h-24 overflow-hidden rounded-[1.8rem] border border-red-300/25 bg-red-500/[0.16] p-4 text-left transition hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-35">
+            <PlusCircle size={20} className="text-red-200 transition group-hover:rotate-90" />
+            <b className="mt-5 block text-[11px] font-black uppercase tracking-wide text-white">Enregistrer</b>
+            <span className="mt-1 block text-[8px] font-bold uppercase tracking-wider text-red-100/70">Nouveau client</span>
+          </button>
+          <button type="button" onClick={() => { setError(''); setIsReportOpen(true); }} disabled={!isCheckedIn || isClosed} className="group relative min-h-24 overflow-hidden rounded-[1.8rem] border border-emerald-300/20 bg-emerald-500/[0.10] p-4 text-left transition hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-35">
+            <FileText size={20} className="text-emerald-200" />
+            <b className="mt-5 block text-[11px] font-black uppercase tracking-wide text-white">{isClosed ? 'Clôturé' : 'Clôturer'}</b>
+            <span className="mt-1 block text-[8px] font-bold uppercase tracking-wider text-emerald-100/70">Bilan + fin de journée</span>
+          </button>
+        </section>
+
+        <section className="glass-card overflow-hidden p-4">
+          <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-200/80">Podium du jour</p><h2 className="mt-1 text-lg font-black text-white">Votre course Mikili</h2></div><Trophy size={21} className="text-amber-200" /></div>
+          <div className="mt-3 grid grid-cols-3 gap-2">{[0,1,2].map((index) => { const entry = podium[index]; const colors = ['border-amber-300/35 bg-amber-400/[0.12] text-amber-100','border-slate-200/25 bg-slate-200/[0.08] text-slate-100','border-orange-300/25 bg-orange-500/[0.08] text-orange-100']; return <div key={entry?.userId || index} className={`min-h-24 rounded-2xl border p-3 ${colors[index]}`}><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-black/15 text-[10px] font-black">{index+1}</span><b className="mt-2 block truncate text-[10px]">{entry?.name?.split(' ')[0] || '—'}</b><span className="mt-1 block text-[9px] font-bold opacity-80">{entry ? entry.transactions + ' Tx · ' + entry.clients + ' clients' : 'À saisir'}</span></div>; })}</div>
         </section>
       </>}
 
       {activeTab === 'tab2' && <section className="space-y-3">
-        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-red-500/[0.16] to-transparent p-5"><p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-200">Carnet terrain</p><div className="mt-1 flex items-end justify-between"><h2 className="text-2xl font-black text-white">{todayClients.length} clients</h2><button type="button" onClick={() => void refresh(false)} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-gray-300"><RefreshCw size={16} /></button></div></div>
-        {todayClients.length === 0 ? <div className="glass-card p-8 text-center"><UsersRound size={28} className="mx-auto text-gray-600" /><p className="mt-3 text-xs font-bold text-gray-500">Le carnet est encore vide.</p></div> : todayClients.map((item) => <article key={item.id} className="group relative overflow-hidden rounded-[1.7rem] border border-white/8 bg-white/[0.035] p-4 transition hover:bg-white/[0.06]"><div className="absolute right-0 top-0 h-24 w-24 rounded-full bg-red-500/[0.07] blur-2xl" /><div className="relative flex items-start justify-between gap-3"><div><h3 className="text-sm font-black text-white">{item.client_name}</h3><p className="mt-1 text-[10px] font-semibold text-gray-500">{item.client_phone} · {item.location?.name || 'Lieu non renseigné'}</p></div><span className={item.transaction_done ? 'rounded-full bg-emerald-500/15 px-2 py-1 text-[8px] font-black uppercase text-emerald-200' : 'rounded-full bg-white/8 px-2 py-1 text-[8px] font-black uppercase text-gray-400'}>{item.transaction_done ? 'Transaction' : 'Sensibilisé'}</span></div><div className="relative mt-3 flex flex-wrap gap-1.5"><span className="rounded-full bg-white/[0.05] px-2 py-1 text-[8px] font-bold text-gray-400">{mikiliDisplayExisting(item.existing_mikili_user)}</span><span className="rounded-full bg-white/[0.05] px-2 py-1 text-[8px] font-bold text-gray-400">{mikiliDisplayService(item.presented_service)}</span>{item.transaction_done && <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[8px] font-bold text-emerald-200">{mikiliDisplayTransaction(item.transaction_type)}</span>}</div></article>)}
-      </section>}
+        <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-red-500/[0.16] to-transparent p-5">
+          <div className="flex items-end justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-200">Carnet terrain</p><h2 className="mt-1 text-2xl font-black text-white">{clientsView.length} clients</h2></div><button type="button" onClick={() => void refresh(false)} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-gray-300"><RefreshCw size={16}/></button></div>
+          <div className="mt-3 flex items-center rounded-2xl border border-white/10 bg-black/15 px-2 py-1"><DateIconPicker value={clientsDate} min="2026-09-01" max={today} onChange={setClientsDate} className="flex min-w-0 flex-1 items-center" buttonClassName="h-10 w-10 shrink-0 rounded-xl border border-red-300/20 bg-red-500/10 text-red-100" labelClassName="truncate text-[10px] font-black uppercase text-gray-200"/><button type="button" onClick={() => setClientsDate(today)} className="ml-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[9px] font-black uppercase text-gray-400">Aujourd’hui</button></div>
+          <div className="relative mt-2"><Search size={15} className="absolute left-3 top-3 text-gray-500"/><input value={clientsSearch} onChange={(e)=>setClientsSearch(e.target.value)} placeholder="Rechercher un client ou téléphone" className="app-input w-full rounded-2xl py-2.5 pl-9 pr-3 text-xs"/></div>
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">{([['all','Tous'],['transaction','Transactions'],['sensibilise','Sensibilisés']] as const).map(([id,label])=><button key={id} type="button" onClick={()=>setClientsFilter(id)} className={clientsFilter===id ? 'whitespace-nowrap rounded-xl border border-red-300/45 bg-red-500/15 px-3 py-2 text-[9px] font-black uppercase text-red-100' : 'whitespace-nowrap rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[9px] font-black uppercase text-gray-500'}>{label}</button>)}</div>
+        </div>
+        {clientsLoading ? <div className="glass-card p-7 text-center text-[10px] font-black uppercase tracking-widest text-gray-500">Chargement du carnet…</div> : (() => { const needle=clientsSearch.trim().toLowerCase(); const rows=clientsView.filter((item)=> (clientsFilter==='all' || (clientsFilter==='transaction' ? item.transaction_done : !item.transaction_done)) && (!needle || `${item.client_name} ${item.client_phone}`.toLowerCase().includes(needle))); return rows.length===0 ? <div className="glass-card p-8 text-center"><UsersRound size={28} className="mx-auto text-gray-600"/><p className="mt-3 text-xs font-bold text-gray-500">Aucune interaction pour ces critères.</p></div> : rows.map((item)=><article key={item.id} className="group relative overflow-hidden rounded-[1.7rem] border border-white/8 bg-white/[0.035] p-4 transition hover:bg-white/[0.06]"><div className="relative flex items-start justify-between gap-3"><div><h3 className="text-sm font-black text-white">{item.client_name}</h3><p className="mt-1 text-[10px] font-semibold text-gray-500">{item.client_phone} · {item.location?.name || 'Lieu non renseigné'}</p></div><span className={item.transaction_done ? 'rounded-full bg-emerald-500/15 px-2 py-1 text-[8px] font-black uppercase text-emerald-200' : 'rounded-full bg-white/8 px-2 py-1 text-[8px] font-black uppercase text-gray-400'}>{item.transaction_done ? 'Transaction' : 'Sensibilisé'}</span></div><div className="relative mt-3 flex flex-wrap gap-1.5"><span className="rounded-full bg-white/[0.05] px-2 py-1 text-[8px] font-bold text-gray-400">{mikiliDisplayExisting(item.existing_mikili_user)}</span><span className="rounded-full bg-white/[0.05] px-2 py-1 text-[8px] font-bold text-gray-400">{mikiliDisplayService(item.presented_service)}</span>{item.transaction_done && <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[8px] font-bold text-emerald-200">{mikiliDisplayTransaction(item.transaction_type)}</span>}</div></article>); })()}
+      </section>
 
       {activeTab === 'tab3' && <section className="space-y-3">
         <div className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-fuchsia-500/[0.12] to-transparent p-5"><p className="text-[9px] font-black uppercase tracking-[0.2em] text-fuchsia-200">Mémoire terrain</p><h2 className="mt-1 text-2xl font-black text-white">Archives</h2><p className="mt-1 text-[10px] font-semibold text-gray-500">Vos interactions précédentes.</p></div>
@@ -295,7 +322,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
         <button type="submit" disabled={saving} className="group flex w-full items-center justify-center gap-2 rounded-[1.5rem] bg-red-500 px-4 py-4 text-xs font-black uppercase tracking-wide text-white shadow-xl shadow-red-500/20 transition hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50"><CheckCircle2 size={18} />{saving ? 'Enregistrement…' : 'C’est parti !'}</button>
       </form></ModalShell>}
 
-      {isReportOpen && <ModalShell title="Mon bilan" onClose={() => !saving && setIsReportOpen(false)}><div className="space-y-4"><div className="rounded-[1.7rem] border border-white/10 bg-gradient-to-br from-red-500/[0.12] to-transparent p-4"><p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Aujourd’hui</p><div className="mt-3 grid grid-cols-3 gap-2"><div className="rounded-2xl bg-white/[0.04] p-3 text-center"><b className="block text-xl text-white">{todayClients.length}</b><span className="text-[8px] font-black uppercase text-gray-500">Clients</span></div><div className="rounded-2xl bg-white/[0.04] p-3 text-center"><b className="block text-xl text-white">{existingCount}</b><span className="text-[8px] font-black uppercase text-gray-500">Mikili</span></div><div className="rounded-2xl bg-emerald-500/[0.06] p-3 text-center"><b className="block text-xl text-emerald-200">{txCount}</b><span className="text-[8px] font-black uppercase text-gray-500">Trans.</span></div></div></div><div><label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Note de fin de journée *</label><textarea className={FIELD + ' min-h-28'} value={closingComment} onChange={(e) => setClosingComment(e.target.value)} placeholder="Un mot sur votre journée…" disabled={isClosed} /></div><button type="button" onClick={() => void closeDay()} disabled={saving || isClosed} className="w-full rounded-[1.5rem] bg-red-500 px-4 py-4 text-xs font-black uppercase tracking-wide text-white disabled:opacity-40">{saving ? 'Clôture…' : isClosed ? 'Journée clôturée ✓' : 'Terminer la journée'}</button></div></ModalShell>}
+      {isReportOpen && <ModalShell title="Clôturer la journée"<div className="space-y-4"><div className="rounded-[1.7rem] border border-white/10 bg-gradient-to-br from-red-500/[0.12] to-transparent p-4"><p className="text-[9px] font-black uppercase tracking-widest text-gray-500">Aujourd’hui</p><div className="mt-3 grid grid-cols-3 gap-2"><div className="rounded-2xl bg-white/[0.04] p-3 text-center"><b className="block text-xl text-white">{todayClients.length}</b><span className="text-[8px] font-black uppercase text-gray-500">Clients</span></div><div className="rounded-2xl bg-white/[0.04] p-3 text-center"><b className="block text-xl text-white">{existingCount}</b><span className="text-[8px] font-black uppercase text-gray-500">Déjà Mikili</span></div><div className="rounded-2xl bg-emerald-500/[0.06] p-3 text-center"><b className="block text-xl text-emerald-200">{txCount}</b><span className="text-[8px] font-black uppercase text-gray-500">Transactions</span></div></div><div className="mt-3 grid grid-cols-2 gap-2"><div className="rounded-2xl border border-red-300/10 bg-red-500/[0.04] p-3"><b className="block text-lg text-red-100">{todayClients.filter((item)=>item.transaction_done && (item.transaction_type==='send' || item.transaction_type==='both')).length}</b><span className="text-[8px] font-black uppercase text-gray-500">Envois</span></div><div className="rounded-2xl border border-cyan-300/10 bg-cyan-500/[0.04] p-3"><b className="block text-lg text-cyan-100">{todayClients.filter((item)=>item.transaction_done && (item.transaction_type==='receive' || item.transaction_type==='both')).length}</b><span className="text-[8px] font-black uppercase text-gray-500">Réceptions</span></div></div></div><div><label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Note de fin de journée *</label><textarea className={FIELD + ' min-h-28'} value={closingComment} onChange={(e) => setClosingComment(e.target.value)} placeholder="Un mot sur votre journée…" disabled={isClosed} /></div><button type="button" onClick={() => void closeDay()} disabled={saving || isClosed} className="w-full rounded-[1.5rem] bg-red-500 px-4 py-4 text-xs font-black uppercase tracking-wide text-white disabled:opacity-40">{saving ? 'Clôture…' : isClosed ? 'Journée clôturée ✓' : 'Terminer la journée'}</button></div></ModalShell>}
     </div>
   );
 };
