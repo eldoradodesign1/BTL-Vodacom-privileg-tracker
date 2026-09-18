@@ -270,7 +270,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {visibleCampaigns.map((campaign) => (
                     <button
                       key={campaign.key}
-                      onClick={() => { onSetCampaign(campaign.key as 'vodacom-privilege' | 'merchant-educational'); setShowCampaignMenu(false); }}
+                      onClick={() => { onSetCampaign(campaign.key); setShowCampaignMenu(false); }}
                       className={`w-full text-left px-3 py-2.5 rounded-xl transition-all ${
                         activeCampaign === campaign.key ? 'bg-red-600 text-white' : (isDarkTheme ? 'hover:bg-white/10 text-gray-100' : 'hover:bg-zinc-100 text-zinc-700')
                       }`}
