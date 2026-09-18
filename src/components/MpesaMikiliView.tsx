@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, CheckCircle2, CircleAlert, FileText, MapPin, PlusCircle, RefreshCw, UsersRound, X } from 'lucide-react';
+import { Camera, CheckCircle2, CircleAlert, ChevronDown, FileText, MapPin, PlusCircle, RefreshCw, UsersRound, X, Zap } from 'lucide-react';
 import type { User } from '../types';
 import { runInBackground } from '../utils/backgroundOperations';
 import {
@@ -79,6 +79,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
   const [clientName, setClientName] = useState('');
   const [clientPhone, setClientPhone] = useState('');
   const [locationId, setLocationId] = useState('');
+  const [locationRegion, setLocationRegion] = useState<'Kinshasa' | 'Kongo-Central' | 'Haut-Katanga' | ''>('');
   const [existingUser, setExistingUser] = useState<MikiliExistingUser | ''>('');
   const [presentedService, setPresentedService] = useState<MikiliPresentedService | ''>('');
   const [transactionDone, setTransactionDone] = useState<boolean | null>(null);
@@ -88,6 +89,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
 
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinPending;
   const isClosed = Boolean(attendance?.checkout_at);
+  const mikiliRegions = ['Kinshasa', 'Kongo-Central', 'Haut-Katanga'] as const;
   const groupedLocations = useMemo(() => locations.reduce<Record<string, MikiliLocation[]>>((acc, item) => {
     (acc[item.region] ||= []).push(item);
     return acc;
@@ -147,8 +149,10 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
   };
 
   const resetClientForm = () => {
-    setClientName(''); setClientPhone(''); setExistingUser(''); setPresentedService(''); setTransactionDone(null); setTransactionType('na'); setTransactionReference('');
+    setClientName(''); setClientPhone(''); setLocationId(''); setLocationRegion(''); setExistingUser(''); setPresentedService(''); setTransactionDone(null); setTransactionType('na'); setTransactionReference('');
   };
+
+  const visibleLocations = useMemo(() => locationRegion ? locations.filter((item) => item.region === locationRegion) : [], [locations, locationRegion]);
 
   const togglePresentedService = (service: 'send' | 'receive') => {
     setPresentedService((current) => {
@@ -247,17 +251,24 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
       {isClientOpen && <ModalShell title="Ajouter un client · M-Pesa Mikili" onClose={() => !saving && setIsClientOpen(false)}><form onSubmit={saveClient} className="space-y-4">
         <div><label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Nom du client *</label><input className={FIELD} value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Nom complet" /></div>
         <div><label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Numéro de téléphone *</label><input className={FIELD} inputMode="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="08XXXXXXXX" /></div>
-        <div className="relative">
+        <div className="space-y-2">
           <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Lieu d’activité *</label>
-          <button type="button" aria-haspopup="listbox" aria-expanded={locationOpen} onClick={() => setLocationOpen((open) => !open)} className={`${FIELD} flex items-center justify-between text-left ${locationId ? 'text-white' : 'text-gray-500'}`}>
-            <span>{locations.find((item) => item.id === locationId)?.name || 'Sélectionner'}</span>
-            <span className="text-gray-500">⌄</span>
-          </button>
-          {locationOpen && <div role="listbox" className="absolute left-0 right-0 z-30 mt-2 max-h-64 overflow-y-auto custom-scrollbar rounded-2xl border border-white/15 bg-[#11141d] p-2 shadow-2xl backdrop-blur-2xl">
-            {Object.entries(groupedLocations).map(([region, items]) => <div key={region}>
-              <p className="px-2 pb-1 pt-2 text-[9px] font-black uppercase tracking-[0.16em] text-red-200/70">{region}</p>
-              {items.map((item) => <button key={item.id} type="button" role="option" aria-selected={locationId === item.id} onClick={() => { setLocationId(item.id); setLocationOpen(false); }} className={`w-full rounded-xl px-3 py-2.5 text-left text-[10px] font-black transition ${locationId === item.id ? 'bg-red-500/20 text-white' : 'text-gray-300 hover:bg-white/10'}`}>{item.name}</button>)}
-            </div>)}
+          <div className="grid grid-cols-3 gap-2">
+            {mikiliRegions.map((region) => (
+              <button key={region} type="button" onClick={() => { setLocationRegion(region); setLocationId(''); setLocationOpen(false); }}
+                className={`rounded-2xl border px-2 py-3 text-[9px] font-black uppercase tracking-tight transition active:scale-[0.98] ${locationRegion === region ? 'border-red-400/60 bg-red-500/20 text-white shadow-lg shadow-red-500/10' : 'border-white/10 bg-white/[0.03] text-gray-400 hover:bg-white/[0.07]'}`}>
+                {region}
+              </button>
+            ))}
+          </div>
+          {locationRegion && <div className="relative">
+            <button type="button" aria-haspopup="listbox" aria-expanded={locationOpen} onClick={() => setLocationOpen((open) => !open)} className={`${FIELD} flex items-center justify-between text-left ${locationId ? 'text-white' : 'text-gray-500'}`}>
+              <span>{locations.find((item) => item.id === locationId)?.name || 'Choisir une localisation'}</span>
+              <ChevronDown size={17} strokeWidth={2.4} className={`transition-transform ${locationOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {locationOpen && <div role="listbox" className="absolute left-0 right-0 z-30 mt-2 max-h-64 overflow-y-auto custom-scrollbar rounded-2xl border border-white/15 bg-[#11141d] p-2 shadow-2xl backdrop-blur-2xl">
+              {visibleLocations.map((item) => <button key={item.id} type="button" role="option" aria-selected={locationId === item.id} onClick={() => { setLocationId(item.id); setLocationOpen(false); }} className={`w-full rounded-xl px-3 py-2.5 text-left text-[10px] font-black transition ${locationId === item.id ? 'bg-red-500/20 text-white' : 'text-gray-300 hover:bg-white/10'}`}>{item.name}</button>)}
+            </div>}
           </div>}
         </div>
         <div><label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Le client est-il déjà utilisateur de M-Pesa Mikili ? *</label><div className="grid grid-cols-3 gap-2 mt-2">{([['yes','OUI'],['no','NON'],['unknown','Ne connaît pas le service']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setExistingUser(value)} className={`rounded-2xl border px-2 py-3 text-[10px] font-black ${existingUser === value ? 'border-red-400/60 bg-red-500/20 text-white' : 'border-white/10 bg-white/[0.03] text-gray-400'}`}>{label}</button>)}</div></div>
@@ -272,10 +283,18 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
             })}
           </div>
         </div>
-        <div>
-          <button type="button" role="checkbox" aria-checked={transactionDone === true} onClick={() => { const next = transactionDone !== true; setTransactionDone(next); if (!next) setTransactionType('na'); }} className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left text-[10px] font-black transition ${transactionDone === true ? 'border-red-400/60 bg-red-500/20 text-white' : 'border-white/10 bg-white/[0.03] text-gray-400'}`}>
-            <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${transactionDone === true ? 'border-red-400 bg-red-500 text-white' : 'border-white/20 bg-black/20'}`}>{transactionDone === true ? '✓' : ''}</span>
-            Transaction effectuée
+        <div className="relative pt-4">
+          <div className="pointer-events-none absolute left-0 right-0 top-0 border-t border-white/10" />
+          <div className="mb-3 flex items-center gap-2">
+            <Zap size={14} className="text-emerald-300" />
+            <span className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-200/80">Action du client</span>
+          </div>
+          <button type="button" role="switch" aria-checked={transactionDone === true} onClick={() => { const next = transactionDone !== true; setTransactionDone(next); if (!next) setTransactionType('na'); }} className={`group flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.99] ${transactionDone === true ? 'border-emerald-400/50 bg-emerald-500/[0.12] text-white shadow-lg shadow-emerald-500/10' : 'border-white/10 bg-white/[0.025] text-gray-400 hover:bg-white/[0.06]'}`}>
+            <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition ${transactionDone === true ? 'border-emerald-300/60 bg-emerald-500 text-white' : 'border-white/15 bg-black/20 text-gray-500'}`}>
+              <Zap size={18} fill={transactionDone === true ? 'currentColor' : 'none'} />
+            </span>
+            <span className="min-w-0 flex-1"><b className="block text-[11px] font-black">Transaction effectuée</b><span className="mt-0.5 block text-[9px] font-semibold text-gray-500">{transactionDone === true ? 'Oui · le client a effectué une transaction' : 'Activer si une transaction a été réalisée'}</span></span>
+            <span className={`relative h-6 w-11 shrink-0 rounded-full p-1 transition ${transactionDone === true ? 'bg-emerald-500' : 'bg-white/10'}`}><span className={`block h-4 w-4 rounded-full bg-white shadow transition-transform ${transactionDone === true ? 'translate-x-5' : 'translate-x-0'}`} /></span>
           </button>
         </div>
         {transactionDone && <><div>
