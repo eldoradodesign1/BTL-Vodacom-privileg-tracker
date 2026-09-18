@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BarChart3, FileText, CalendarDays, CheckCircle2, CircleAlert, MapPin, RefreshCw, Trophy, UsersRound, UserRound, Zap, Target, Settings2, ArrowUpRight } from 'lucide-react';
+import { Archive, BarChart3, FileText, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, MapPin, RefreshCw, Trophy, UsersRound, UserRound, Zap, Target, Settings2, ArrowUpRight } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { User } from '../types';
 import {
@@ -60,9 +60,9 @@ const PresencePanel: React.FC<{
   });
   return <div className="mt-4 rounded-2xl border border-white/10 bg-white/[.025] p-3">
     <div className="flex items-center justify-between mb-3">
-      <button type="button" onClick={()=>setMonth(new Date(year,monthIndex-1,1))} className="h-8 w-8 rounded-xl border border-white/10 bg-white/5 text-gray-200">‹</button>
+      <button type="button" onClick={()=>setMonth(new Date(year,monthIndex-1,1))} className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-200" aria-label="Mois précédent"><ChevronLeft size={14}/></button>
       <div className="text-xs font-black uppercase text-white">{month.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</div>
-      <button type="button" onClick={()=>setMonth(new Date(year,monthIndex+1,1))} className="h-8 w-8 rounded-xl border border-white/10 bg-white/5 text-gray-200">›</button>
+      <button type="button" onClick={()=>setMonth(new Date(year,monthIndex+1,1))} className="flex h-8 w-8 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gray-200" aria-label="Mois suivant"><ChevronRight size={14}/></button>
     </div>
     <div className="grid grid-cols-7 gap-1 mb-1">{['Lu','Ma','Me','Je','Ve','Sa','Di'].map(d=><span key={d} className="py-1 text-center text-[8px] font-black uppercase text-gray-600">{d}</span>)}</div>
     <div className="grid grid-cols-7 gap-1">
@@ -311,6 +311,8 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
           })}
           {!team.length && <div className="glass-card p-8 text-center text-[10px] font-bold text-gray-500">Aucun BA rattaché à cette campagne.</div>}
         </section>
+      </>}
+      
       {activeTab === 'tab3' && <>
         <section className="flex items-center justify-between gap-2 rounded-[1.5rem] border border-white/10 bg-white/[0.025] p-3"><div className="flex items-center gap-2"><Archive size={18} className="text-fuchsia-200"/><div><p className="text-[8px] font-black uppercase tracking-[0.18em] text-gray-500">Archives</p><h2 className="mt-0.5 text-sm font-black text-white">Rapports présentés</h2></div></div><DateIconPicker value={date} min={START_DATE} max={today} onChange={setDate} className="flex min-w-0 items-center" buttonClassName="h-9 w-9 shrink-0 rounded-xl border border-fuchsia-300/20 bg-fuchsia-500/10 text-fuchsia-100" labelClassName="hidden sm:block truncate text-[9px] font-black uppercase text-gray-300"/></section>
         <section className="space-y-2">
