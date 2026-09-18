@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Archive, BarChart3, FileText, CalendarDays, CheckCircle2, CircleAlert, MapPin, RefreshCw, Trophy, UsersRound, UserRound, Zap, Target, Settings2, ArrowUpRight } from 'lucide-react';
+import { BarChart3, FileText, CalendarDays, CheckCircle2, CircleAlert, MapPin, RefreshCw, Trophy, UsersRound, UserRound, Zap, Target, Settings2, ArrowUpRight } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { User } from '../types';
 import {
@@ -40,12 +40,10 @@ const CHART_COLORS = ['#ef4444', '#22c55e', '#f59e0b', '#38bdf8', '#a78bfa'];
 const dayLabel = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' });
 
 const PresencePanel: React.FC<{
-  agent: MikiliTeamMember;
   attendance: MikiliAttendance[];
-  clients: MikiliClient[];
   startDate: string;
   endDate: string;
-}> = ({ agent, attendance, clients, startDate, endDate }) => {
+}> = ({ attendance, startDate, endDate }) => {
   const [month, setMonth] = useState(() => new Date());
   const year = month.getFullYear();
   const monthIndex = month.getMonth();
@@ -91,11 +89,9 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [monitorSection, setMonitorSection] = useState<'agents' | 'presence' | 'checkins' | 'reports'>('agents');
   const [selectedAgent, setSelectedAgent] = useState<MikiliTeamMember | null>(null);
   const [agentAttendance, setAgentAttendance] = useState<MikiliAttendance[]>([]);
   const [agentModal, setAgentModal] = useState<'profile' | 'presence' | 'location' | 'reports' | null>(null);
-  const [reportsAgent, setReportsAgent] = useState<MikiliTeamMember | null>(null);
   const [reportsStart, setReportsStart] = useState(START_DATE);
   const [reportsEnd, setReportsEnd] = useState(today);
   const isSupervisor = currentUser.role === 'supervisor';
@@ -185,7 +181,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
       }
     }
   };
-  const closeAgentModal = () => { setAgentModal(null); setSelectedAgent(null); setReportsAgent(null); };
+  const closeAgentModal = () => { setAgentModal(null); setSelectedAgent(null); };
 
 
   const donutData = useMemo(() => ({
@@ -280,20 +276,41 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
           <div className="mt-3 grid grid-cols-3 gap-2">{[0,1,2].map((index)=>{const entry=podium[index];return <div key={entry?.userId||index} className={`min-h-24 rounded-2xl border p-3 ${rankClasses[index]}`}><span className="text-[9px] font-black">{index+1}</span><b className="mt-2 block truncate text-[10px]">{entry?.name?.split(' ')[0]||'—'}</b><span className="mt-1 block text-[8px] font-bold opacity-70">{entry ? entry.transactions+' Tx · '+entry.clients+' clients' : 'À saisir'}</span></div>})}</div>
         </section>}
 
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-          {[
-            ['agents','Détail agent',UsersRound],['presence','Registre de présence',CheckCircle2],['checkins','Pointage journalier',MapPin],['reports','Rapports',Archive]
-          ].map(([key,label,Icon]) => { const I=Icon as React.ElementType; const active=monitorSection===key; return <button key={String(key)} type="button" onClick={()=>setMonitorSection(key as typeof monitorSection)} className={`rounded-2xl border px-2 py-3 text-left transition ${active ? 'border-red-300/40 bg-red-500/12 text-red-100 shadow-lg shadow-red-950/10' : 'border-white/10 bg-white/[0.025] text-gray-500 hover:bg-white/[0.06]'}`}><I size={15}/><span className="mt-2 block text-[8px] font-black uppercase leading-tight tracking-wide">{label}</span></button>; })}
-        </div>
-        {monitorSection === 'agents' && <section className="space-y-2">{team.map((member) => {
-          const status = member.attendance?.checkout_at ? 'Clôturé' : member.attendance?.checkin_at ? 'En action' : 'Absent';
-          return <article key={member.userId} className="glass-card overflow-hidden p-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-sm font-black text-white">{member.name}</h3><p className="mt-0.5 text-[10px] text-gray-500">{member.phone}</p><p className="mt-1 text-[9px] font-bold text-red-200">{member.locations.filter((item) => ['Kinshasa','Kongo-Central','Haut-Katanga'].includes(item)).join(' · ') || 'Lieu non renseigné'}</p></div><span className={status === 'Clôturé' ? 'rounded-full border border-emerald-300/30 bg-emerald-500/10 px-2 py-1 text-[8px] font-black uppercase text-emerald-200' : status === 'En action' ? 'rounded-full border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100' : 'rounded-full border border-red-300/20 bg-red-500/10 px-2 py-1 text-[8px] font-black uppercase text-red-200'}>{status}</span></div><div className="mt-3 grid grid-cols-2 gap-2"><div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3"><b className="block text-lg text-white">{member.clients}</b><span className="text-[8px] font-black uppercase text-gray-500">Clients</span></div><div className="rounded-2xl border border-emerald-300/10 bg-emerald-500/[0.04] p-3"><b className="block text-lg text-emerald-200">{member.transactions}</b><span className="text-[8px] font-black uppercase text-gray-500">Transactions</span></div></div><div className="mt-3 flex items-center justify-between gap-3"><div className="min-w-0 text-[9px] text-gray-500"><span>{member.attendance?.checkin_at ? 'Arrivée ' + new Date(member.attendance.checkin_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : 'Pas de pointage'}</span></div><div className="grid grid-cols-4 gap-1.5 shrink-0"><button type="button" onClick={() => void openAgentModal(member,'profile')} title="Détail agent" className="h-8 w-8 rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95 flex items-center justify-center"><UserRound size={14}/></button><button type="button" onClick={() => void openAgentModal(member,'presence')} title="Registre de présence" className="h-8 w-8 rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95 flex items-center justify-center"><CalendarDays size={14}/></button><button type="button" onClick={() => void openAgentModal(member,'location')} title="Localisation du pointage" className="h-8 w-8 rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95 flex items-center justify-center"><MapPin size={14}/></button><button type="button" onClick={() => { setReportsAgent(member); setSelectedAgent(member); setReportsStart(START_DATE); setReportsEnd(today); setAgentModal('reports'); }} title="Rapports présentés" className="h-8 w-8 rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95 flex items-center justify-center"><FileText size={14}/></button></div></div></article>;
-        })}</section>}
-        {monitorSection === 'presence' && <section className="space-y-2">{team.map((member) => { const present=Boolean(member.attendance?.checkin_at); const closed=Boolean(member.attendance?.checkout_at); return <article key={member.userId} className="glass-card flex items-center justify-between gap-3 p-3"><div className="min-w-0"><b className="block truncate text-xs text-white">{member.name}</b><span className="text-[8px] uppercase text-gray-500">{present ? 'Présent' : 'Absent'}{closed ? ' · Journée clôturée' : ''}</span></div><span className={closed ? 'rounded-full bg-emerald-500/10 px-2 py-1 text-[8px] font-black uppercase text-emerald-200' : present ? 'rounded-full bg-cyan-500/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100' : 'rounded-full bg-red-500/10 px-2 py-1 text-[8px] font-black uppercase text-red-200'}>{closed ? 'Clôturé' : present ? 'Présent' : 'Absent'}</span></article>; })}</section>}
-        {monitorSection === 'checkins' && <section className="space-y-2">{team.map((member) => <article key={member.userId} className="glass-card p-3"><div className="flex items-center justify-between gap-3"><div className="min-w-0"><b className="block truncate text-xs text-white">{member.name}</b><span className="text-[8px] uppercase text-gray-500">{member.attendance?.checkin_at ? 'Pointé à ' + new Date(member.attendance.checkin_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : 'Aucun pointage'}</span></div><MapPin size={17} className={member.attendance?.checkin_at ? 'text-cyan-200' : 'text-gray-600'}/></div>{member.attendance?.checkin_latitude != null && <div className="mt-2 text-[8px] font-bold text-gray-500">{Number(member.attendance.checkin_latitude).toFixed(5)} · {Number(member.attendance.checkin_longitude).toFixed(5)}{member.attendance.checkin_accuracy_m ? ' · ±' + Math.round(member.attendance.checkin_accuracy_m) + ' m' : ''}</div>}</article>)}</section>}
-        {monitorSection === 'reports' && <section className="space-y-2">{Array.from(new Set(periodClients.map((item) => item.activity_date))).sort((a,b)=>b.localeCompare(a)).map((reportDate) => { const rows=periodClients.filter((item)=>item.activity_date===reportDate); const tx=rows.filter((item)=>item.transaction_done).length; return <article key={reportDate} className="glass-card flex items-center justify-between gap-3 p-3"><div><b className="block text-xs text-white">Rapport terrain · {dayLabel(reportDate)}</b><span className="text-[8px] font-bold uppercase text-gray-500">{new Set(rows.map((item)=>item.agent_id)).size} BA · {rows.length} clients · {tx} transactions</span></div><FileText size={17} className="text-fuchsia-200"/></article>; })}</section>}
-      </>}
-      
+        <section className="space-y-2">
+          {team.map((member) => {
+            const status = member.attendance?.checkout_at ? 'Clôturé' : member.attendance?.checkin_at ? 'En action' : 'Absent';
+            return (
+              <article key={member.userId} className="glass-card overflow-hidden p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-black text-white">{member.name}</h3>
+                    <p className="mt-0.5 text-[10px] text-gray-500">{member.phone}</p>
+                    <p className="mt-1 text-[9px] font-bold text-red-200">{member.locations.filter((item) => ['Kinshasa','Kongo-Central','Haut-Katanga'].includes(item)).join(' · ') || 'Lieu non renseigné'}</p>
+                  </div>
+                  <span className={status === 'Clôturé' ? 'rounded-full border border-emerald-300/30 bg-emerald-500/10 px-2 py-1 text-[8px] font-black uppercase text-emerald-200' : status === 'En action' ? 'rounded-full border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100' : 'rounded-full border border-red-300/20 bg-red-500/10 px-2 py-1 text-[8px] font-black uppercase text-red-200'}>{status}</span>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3"><b className="block text-lg text-white">{member.clients}</b><span className="text-[8px] font-black uppercase text-gray-500">Clients</span></div>
+                  <div className="rounded-2xl border border-emerald-300/10 bg-emerald-500/[0.04] p-3"><b className="block text-lg text-emerald-200">{member.transactions}</b><span className="text-[8px] font-black uppercase text-gray-500">Transactions</span></div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <div className="min-w-0 text-[9px] text-gray-500">
+                    <span>{member.attendance?.checkin_at ? 'Arrivée ' + new Date(member.attendance.checkin_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : 'Pas de pointage'}</span>
+                  </div>
+                  <div className="grid shrink-0 grid-cols-4 gap-1.5">
+                    <button type="button" onClick={() => void openAgentModal(member,'profile')} title="Détail agent" aria-label="Détail agent" className="flex h-8 w-8 items-center justify-center rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95"><UserRound size={14}/></button>
+                    <button type="button" onClick={() => void openAgentModal(member,'presence')} title="Registre de présence" aria-label="Registre de présence" className="flex h-8 w-8 items-center justify-center rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95"><CalendarDays size={14}/></button>
+                    <button type="button" onClick={() => void openAgentModal(member,'location')} title="Pointage journalier" aria-label="Pointage journalier" className="flex h-8 w-8 items-center justify-center rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95"><MapPin size={14}/></button>
+                    <button type="button" onClick={() => { setSelectedAgent(member); setReportsStart(START_DATE); setReportsEnd(today); setAgentModal('reports'); }} title="Rapports" aria-label="Rapports" className="flex h-8 w-8 items-center justify-center rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95"><FileText size={14}/></button>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+          {!team.length && <div className="glass-card p-8 text-center text-[10px] font-bold text-gray-500">Aucun BA rattaché à cette campagne.</div>}
+        </section>
       {activeTab === 'tab3' && <>
         <section className="flex items-center justify-between gap-2 rounded-[1.5rem] border border-white/10 bg-white/[0.025] p-3"><div className="flex items-center gap-2"><Archive size={18} className="text-fuchsia-200"/><div><p className="text-[8px] font-black uppercase tracking-[0.18em] text-gray-500">Archives</p><h2 className="mt-0.5 text-sm font-black text-white">Rapports présentés</h2></div></div><DateIconPicker value={date} min={START_DATE} max={today} onChange={setDate} className="flex min-w-0 items-center" buttonClassName="h-9 w-9 shrink-0 rounded-xl border border-fuchsia-300/20 bg-fuchsia-500/10 text-fuchsia-100" labelClassName="hidden sm:block truncate text-[9px] font-black uppercase text-gray-300"/></section>
         <section className="space-y-2">
@@ -335,7 +352,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
               <div className="grid grid-cols-2 gap-2 text-[9px] font-bold text-gray-400"><div className="rounded-xl bg-white/5 p-3">Pointages : <b className="text-white">{agentAttendance.filter(x=>x.checkin_at).length}</b></div><div className="rounded-xl bg-white/5 p-3">Journées clôturées : <b className="text-emerald-200">{agentAttendance.filter(x=>x.status==='closed').length}</b></div></div>
             </div>}
 
-            {agentModal === 'presence' && <PresencePanel agent={selectedAgent} attendance={agentAttendance} clients={periodClients} startDate={START_DATE} endDate={today} />}
+            {agentModal === 'presence' && <PresencePanel attendance={agentAttendance} startDate={START_DATE} endDate={today} />}
 
             {agentModal === 'location' && <div className="mt-4 space-y-3"><div className="rounded-2xl border border-blue-300/15 bg-blue-500/[.06] p-3"><p className="text-[8px] font-black uppercase text-blue-200/70">Pointage journalier</p><p className="mt-1 text-xs font-black text-white">{selectedAgent.attendance?.checkin_at ? new Date(selectedAgent.attendance.checkin_at).toLocaleString('fr-FR') : 'Aucun pointage'}</p><p className="mt-1 text-[9px] text-gray-500">{selectedAgent.attendance?.checkin_latitude != null ? `${Number(selectedAgent.attendance.checkin_latitude).toFixed(6)} · ${Number(selectedAgent.attendance.checkin_longitude).toFixed(6)} · ±${Math.round(selectedAgent.attendance.checkin_accuracy_m || 0)} m` : 'Coordonnées indisponibles'}</p></div><div className="h-80 overflow-hidden rounded-2xl border border-white/10"><iframe title="Localisation du pointage" className="h-full w-full border-0" src={getLocationEmbedUrl({shop:'M-Pesa Mikili',lat:selectedAgent.attendance?.checkin_latitude ?? undefined,long:selectedAgent.attendance?.checkin_longitude ?? undefined})}/></div></div>}
 
