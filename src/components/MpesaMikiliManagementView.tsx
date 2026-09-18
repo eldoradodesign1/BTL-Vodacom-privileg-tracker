@@ -246,20 +246,36 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
       {activeTab === 'home' && <>
         <section className="relative overflow-hidden rounded-[2rem] border border-red-300/15 bg-gradient-to-br from-red-500/[0.20] via-white/[0.05] to-transparent p-5 shadow-2xl shadow-red-950/20">
           <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-red-500/20 blur-3xl"/>
-          <div className="relative flex items-start justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.22em] text-red-200">M-Pesa Mikili · pilotage</p><h1 className="mt-1 text-3xl font-black tracking-tight text-white">{isSupervisor ? 'Mon équipe terrain' : 'Cockpit Mikili'}</h1><p className="mt-1 text-[10px] font-semibold text-gray-400">{isSupervisor && regions.length ? regions.join(' · ') : 'Pilotage de la sensibilisation et des transactions'}</p></div><button type="button" onClick={() => void load(false)} className="rounded-2xl border border-white/10 bg-black/20 p-3 text-gray-200 transition hover:bg-white/10 active:scale-95" title="Actualiser"><RefreshCw size={17} className={refreshing ? 'animate-spin' : ''}/></button></div>
+          <div className="relative flex items-start justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.22em] text-red-200">M-Pesa Mikili · pilotage</p><h1 className="mt-1 text-3xl font-black tracking-tight text-white">Bonjour,<br /><span className="text-red-300">{currentUser.name.split(' ')[0]}.</span></h1><p className="mt-1 text-[10px] font-semibold text-gray-400">{isSupervisor && regions.length ? regions.join(' · ') : 'Pilotage de la sensibilisation et des transactions'}</p></div><button type="button" onClick={() => void load(false)} className="rounded-2xl border border-white/10 bg-black/20 p-3 text-gray-200 transition hover:bg-white/10 active:scale-95" title="Actualiser"><RefreshCw size={17} className={refreshing ? 'animate-spin' : ''}/></button></div>
           <div className="relative mt-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 p-2"><DateIconPicker value={date} min={START_DATE} max={today} onChange={setDate} className="flex min-w-0 flex-1 items-center" buttonClassName="h-10 w-10 shrink-0 rounded-xl border border-red-300/20 bg-red-500/10 text-red-100" labelClassName="truncate text-[10px] font-black uppercase text-gray-200"/><button type="button" onClick={() => setDate(today)} className={date === today ? 'rounded-xl border border-red-300/50 bg-red-500/20 px-3 py-2 text-[9px] font-black uppercase text-red-100' : 'rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[9px] font-black uppercase text-gray-400'}>Aujourd’hui</button></div>
         </section>
         <section className="relative overflow-hidden rounded-[1.7rem] border border-white/10 bg-white/[0.025] px-4 py-3">
           <div className="flex items-stretch divide-x divide-white/10 overflow-x-auto">{[['Présents',metrics.present,UsersRound,'text-cyan-100'],['Clients',metrics.clients,UsersRound,'text-white'],['Transactions',metrics.transactions,Zap,'text-emerald-200'],['Conversion',metrics.conversion+'%',BarChart3,'text-amber-100']].map(([label,value,Icon,tone])=>{const I=Icon as React.ElementType;return <div key={String(label)} className="min-w-[105px] flex-1 px-3 first:pl-0 last:pr-0"><div className="flex items-center gap-2"><I size={14} className={String(tone)}/><span className="text-[8px] font-black uppercase tracking-[0.16em] text-gray-500">{label}</span></div><b className="mt-1 block text-2xl font-black text-white">{value as React.ReactNode}</b></div>})}</div>
         </section>
-        {isSupervisor && <section className="relative overflow-hidden rounded-[2rem] border border-cyan-300/15 bg-gradient-to-br from-cyan-400/[0.10] via-white/[0.03] to-transparent p-4">
-          <div className="flex items-center justify-between"><div><p className="text-[8px] font-black uppercase tracking-[0.2em] text-cyan-200/70">Vue superviseur</p><h2 className="mt-1 text-xl font-black text-white">Pulse de mon équipe</h2></div><span className="rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100">{metrics.present}/{team.length} présents</span></div>
-          <div className="mt-5 space-y-3">{[['Présence',metrics.present,Math.max(1,team.length)],['Clients',metrics.clients,Math.max(1,targets.dailyClients*Math.max(1,team.length))],['Transactions',metrics.transactions,Math.max(1,targets.dailyTransactions*Math.max(1,team.length))]].map(([label,value,target])=>{const pct=Math.min(100,Math.round(Number(value)/Number(target)*100));return <div key={String(label)}><div className="flex justify-between text-[9px] font-black uppercase"><span className="text-gray-400">{label}</span><span className="text-white">{value} <span className="text-gray-600">/ {target}</span></span></div><div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/[0.06]"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-400 to-emerald-400" style={{width:pct+'%'}}/></div></div>})}</div>
-          <div className="mt-4 grid grid-cols-3 gap-2">{team.slice(0,3).map((member,index)=><div key={member.userId} className="rounded-2xl border border-white/8 bg-black/15 p-3"><span className="text-[8px] font-black text-cyan-200/60">0{index+1}</span><b className="mt-1 block truncate text-[10px] text-white">{member.name}</b><span className="mt-1 block text-[8px] font-bold text-gray-500">{member.clients} clients · {member.transactions} Tx</span></div>)}</div>
+        {isSupervisor && <section className="glass-card overflow-hidden p-3 border border-cyan-300/15">
+          <div className="flex items-center justify-between"><div><p className="text-[8px] font-black uppercase tracking-[0.2em] text-cyan-200/70">Performance équipe</p><h2 className="mt-1 text-lg font-black text-white">Indicateurs du jour</h2></div><span className="text-[8px] font-black uppercase text-cyan-100">{metrics.present}/{team.length} présents</span></div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {[
+              { title: 'Clients / objectif', value: metrics.clients, target: targets.dailyClients * team.length, tone: '#38bdf8' },
+              { title: 'Transactions / objectif', value: metrics.transactions, target: targets.dailyTransactions * team.length, tone: '#22c55e' },
+              { title: 'Présence équipe', value: metrics.present, target: team.length, tone: '#f59e0b' },
+            ].map((item) => {
+              const pct = item.target > 0 ? Math.min(100, Math.round(item.value / item.target * 100)) : 0;
+              const donut = [{ name: 'Réalisé', value: item.value }, { name: 'Reste', value: Math.max(0, item.target - item.value) }];
+              return <div key={item.title} className="rounded-2xl border border-white/10 bg-black/15 p-2">
+                <p className="truncate text-center text-[7px] font-black uppercase text-gray-500">{item.title}</p>
+                <div className="relative mx-auto h-28 max-w-[145px]">
+                  <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={donut} dataKey="value" innerRadius={34} outerRadius={48} paddingAngle={2} stroke="none"><Cell fill={item.tone}/><Cell fill="rgba(255,255,255,.07)"/></Pie></PieChart></ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><b className="text-base font-black text-white">{item.value}</b><span className="text-[7px] font-black text-gray-500">{item.target > 0 ? String(pct) + '%' : '—'}</span></div>
+                </div>
+                <p className="text-center text-[7px] font-bold text-gray-500">{item.target > 0 ? String(item.value) + ' / ' + String(item.target) : 'Objectif non défini'}</p>
+              </div>;
+            })}
+          </div>
         </section>}
         <section className="grid grid-cols-2 gap-2">
           <div className="glass-card p-4"><p className="text-[8px] font-black uppercase tracking-[0.18em] text-gray-500">Conversion</p><b className="mt-2 block text-3xl font-black text-emerald-200">{metrics.conversion}%</b><div className="mt-3 h-1.5 rounded-full bg-white/[0.06]"><div className="h-full rounded-full bg-emerald-400" style={{width:metrics.conversion+'%'}}/></div></div>
-          <div className="glass-card p-4"><p className="text-[8px] font-black uppercase tracking-[0.18em] text-gray-500">Couverture</p><b className="mt-2 block text-3xl font-black text-cyan-100">{team.length ? Math.round(metrics.present/team.length*100) : 0}%</b><span className="mt-2 block text-[8px] font-bold text-gray-500">{metrics.present} / {team.length} BA présents</span></div>
+          <div className="glass-card p-4"><p className="text-[8px] font-black uppercase tracking-[0.18em] text-gray-500">Couverture</p><b className="mt-2 block text-3xl font-black text-cyan-100">{targets.dailyClients > 0 && team.length ? Math.min(100, Math.round(metrics.clients / (targets.dailyClients * team.length) * 100)) : 0}%</b><span className="mt-2 block text-[8px] font-bold text-gray-500">{metrics.clients} / {targets.dailyClients * team.length || 0} clients objectif</span></div>
         </section>
 
         {!isSupervisor && (        <section className="glass-card overflow-hidden p-4">
@@ -268,20 +284,29 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
         </section>
 
     )}
-    {!isSupervisor && (    <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-          {[
-            ['Transactions', donutData.transactions],
-            ['Types d’interactions', donutData.interactions],
-            ['Profil des clients', donutData.clients],
-          ].map(([title, data]) => {
-            const values = data as Array<{ name: string; value: number }>;
-            return <div key={String(title)} className="glass-card min-w-0 overflow-hidden p-4">
-              <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.18em] text-gray-500">{title as React.ReactNode}</p><p className="mt-1 text-[9px] text-gray-600">{selectedDayClients.length} interactions · {dayLabel(date)}</p></div><BarChart3 size={17} className="text-red-200"/></div>
-              <div className="relative mt-1 h-44"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={values} dataKey="value" nameKey="name" innerRadius={48} outerRadius={68} paddingAngle={3} stroke="none">{values.map((entry,index)=><Cell key={entry.name} fill={CHART_COLORS[index % CHART_COLORS.length]}/>)}</Pie><Tooltip contentStyle={{background:'#11141d',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,fontSize:11}}/></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><b className="text-xl font-black text-white">{values.reduce((sum,item)=>sum+item.value,0)}</b><span className="text-[8px] font-black uppercase text-gray-500">Total</span></div></div>
-              <div className="flex flex-wrap justify-center gap-2">{values.map((item,index)=><span key={item.name} className="text-[8px] font-bold text-gray-500"><i className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{background:CHART_COLORS[index % CHART_COLORS.length]}}/>{item.name} · {item.value}</span>)}</div>
-            </div>;
-          })}
-        </section>)}
+    {!isSupervisor && <section className="glass-card overflow-hidden p-3">
+          <div className="flex items-center justify-between px-1"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-200/80">Indicateurs</p><h2 className="mt-1 text-lg font-black text-white">Lecture du terrain</h2></div><span className="text-[8px] font-black uppercase text-gray-500">{dayLabel(date)}</span></div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {[
+              { title: 'Clients / objectif', done: metrics.clients, target: targets.dailyClients * team.length, tone: '#38bdf8' },
+              { title: 'Transactions / objectif', done: metrics.transactions, target: targets.dailyTransactions * team.length, tone: '#22c55e' },
+              { title: 'Profil clients', done: selectedDayClients.filter((x)=>x.existing_mikili_user==='yes').length, target: selectedDayClients.length, tone: '#f59e0b' },
+            ].map((item) => {
+              const pct = item.target > 0 ? Math.min(100, Math.round(item.done / item.target * 100)) : 0;
+              const donut = item.title === 'Profil clients'
+                ? [{ name: 'Déjà utilisateur', value: item.done }, { name: 'Pas encore', value: Math.max(0, item.target - item.done) }]
+                : [{ name: 'Réalisé', value: item.done }, { name: 'Reste', value: Math.max(0, item.target - item.done) }];
+              return <div key={item.title} className="min-w-0 rounded-2xl border border-white/10 bg-white/[.025] p-2">
+                <p className="truncate text-center text-[7px] font-black uppercase tracking-wide text-gray-500">{item.title}</p>
+                <div className="relative mx-auto h-28 max-w-[145px]">
+                  <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={donut} dataKey="value" innerRadius={34} outerRadius={48} paddingAngle={2} stroke="none"><Cell fill={item.tone}/><Cell fill="rgba(255,255,255,.07)"/></Pie></PieChart></ResponsiveContainer>
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><b className="text-base font-black text-white">{item.done}</b><span className="text-[7px] font-black text-gray-500">{item.target > 0 ? String(pct) + '%' : '—'}</span></div>
+                </div>
+                <p className="truncate text-center text-[7px] font-bold text-gray-500">{item.title === 'Profil clients' ? String(item.done) + ' / ' + String(item.target) + ' client(s)' : item.target > 0 ? String(item.done) + ' / ' + String(item.target) : 'Objectif non défini'}</p>
+              </div>;
+            })}
+          </div>
+        </section>}
 
         {!isSupervisor && <section className="glass-card overflow-hidden p-4">
           <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-200/80">Podium du jour</p><h2 className="mt-1 text-lg font-black text-white">La course Mikili</h2></div><Trophy size={21} className="text-amber-200"/></div>
