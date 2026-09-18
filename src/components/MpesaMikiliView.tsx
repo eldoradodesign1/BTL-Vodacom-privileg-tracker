@@ -90,11 +90,6 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinPending;
   const isClosed = Boolean(attendance?.checkout_at);
   const mikiliRegions = ['Kinshasa', 'Kongo-Central', 'Haut-Katanga'] as const;
-  const groupedLocations = useMemo(() => locations.reduce<Record<string, MikiliLocation[]>>((acc, item) => {
-    (acc[item.region] ||= []).push(item);
-    return acc;
-  }, {}), [locations]);
-
   const refresh = useCallback(async (showLoader = true) => {
     if (showLoader) setLoading(true);
     setError('');
@@ -111,7 +106,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
       setAttendance(nextAttendance);
       setTodayClients(nextClients);
       setClosingComment(nextAttendance?.closing_comment || '');
-      if (!locationId && nextLocations[0]) setLocationId(nextLocations[0].id);
+
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : 'Chargement de M-Pesa Mikili impossible.');
     } finally {
