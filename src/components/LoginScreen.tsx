@@ -27,6 +27,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
 
   const finishLogin = (user: User, campaign?: Campaign | null) => {
+    // Pour les comptes de gestion (admin/superviseur), l'absence de campagne
+    // signifie "ne pas modifier le contexte déjà mémorisé" — surtout pas
+    // revenir automatiquement à Vodacom Privilège.
+    if (campaign === undefined) {
+      onLoginSuccess(user);
+      return;
+    }
     onLoginSuccess(user, toCampaignContext(campaign));
   };
 
