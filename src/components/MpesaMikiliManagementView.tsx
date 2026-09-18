@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Archive, BarChart3, FileText, CalendarDays, CheckCircle2, CircleAlert, MapPin, RefreshCw, Trophy, UsersRound, UserRound, Zap, Target, Settings2, ArrowUpRight } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { User } from '../types';
 import {
   getMikiliCampaign,
   getMikiliCampaignClients,
+  getMikiliAttendanceRange,
   getMikiliPodium,
   getMikiliSupervisorRegions,
   getMikiliTargets,
@@ -12,12 +14,15 @@ import {
   mikiliTodayIso,
   saveMikiliTargets,
   type MikiliClient,
+  type MikiliAttendance,
   type MikiliPodiumEntry,
   type MikiliRegion,
   type MikiliTeamMember,
   type MikiliTargets,
 } from '../utils/mpesaMikili';
 import { DateIconPicker } from './DateIconPicker';
+import { DateRangeKnobSlider } from './DateRangeKnobSlider';
+import { getLocationEmbedUrl } from '../utils/location';
 
 interface Props {
   currentUser: User;
@@ -50,6 +55,12 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [monitorSection, setMonitorSection] = useState<'agents' | 'presence' | 'checkins' | 'reports'>('agents');
+  const [selectedAgent, setSelectedAgent] = useState<MikiliTeamMember | null>(null);
+  const [agentAttendance, setAgentAttendance] = useState<MikiliAttendance[]>([]);
+  const [agentModal, setAgentModal] = useState<'profile' | 'presence' | 'location' | 'reports' | null>(null);
+  const [reportsAgent, setReportsAgent] = useState<MikiliTeamMember | null>(null);
+  const [reportsStart, setReportsStart] = useState(START_DATE);
+  const [reportsEnd, setReportsEnd] = useState(today);
   const isSupervisor = currentUser.role === 'supervisor';
 
   const load = async (showLoader = true) => {
@@ -124,6 +135,21 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
   }, [periodClients, today]);
 
   const selectedDayClients = useMemo(() => periodClients.filter((item) => item.activity_date === date), [periodClients, date]);
+
+  const openAgentModal = async (member: MikiliTeamMember, modal: 'profile' | 'presence' | 'location' | 'reports') => {
+    setSelectedAgent(member);
+    setAgentModal(modal);
+    if (modal === 'profile' || modal === 'presence') {
+      try {
+        const rows = await getMikiliAttendanceRange(campaignId, member.userId, START_DATE, today);
+        setAgentAttendance(rows);
+      } catch {
+        setAgentAttendance([]);
+      }
+    }
+  };
+  const closeAgentModal = () => { setAgentModal(null); setSelectedAgent(null); setReportsAgent(null); };
+
 
   const donutData = useMemo(() => ({
     transactions: [
@@ -224,7 +250,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
         </div>
         {monitorSection === 'agents' && <section className="space-y-2">{team.map((member) => {
           const status = member.attendance?.checkout_at ? 'Clôturé' : member.attendance?.checkin_at ? 'En action' : 'Absent';
-          return <article key={member.userId} className="glass-card overflow-hidden p-4"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-sm font-black text-white">{member.name}</h3><p className="mt-0.5 text-[10px] text-gray-500">{member.phone}</p><p className="mt-1 text-[9px] font-bold text-red-200">{member.locations.filter((item) => ['Kinshasa','Kongo-Central','Haut-Katanga'].includes(item)).join(' · ') || 'Lieu non renseigné'}</p></div><span className={status === 'Clôturé' ? 'rounded-full border border-emerald-300/30 bg-emerald-500/10 px-2 py-1 text-[8px] font-black uppercase text-emerald-200' : status === 'En action' ? 'rounded-full border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100' : 'rounded-full border border-red-300/20 bg-red-500/10 px-2 py-1 text-[8px] font-black uppercase text-red-200'}>{status}</span></div><div className="mt-3 grid grid-cols-2 gap-2"><div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3"><b className="block text-lg text-white">{member.clients}</b><span className="text-[8px] font-black uppercase text-gray-500">Clients</span></div><div className="rounded-2xl border border-emerald-300/10 bg-emerald-500/[0.04] p-3"><b className="block text-lg text-emerald-200">{member.transactions}</b><span className="text-[8px] font-black uppercase text-gray-500">Transactions</span></div></div><div className="mt-3 flex items-center justify-between gap-3"><div className="min-w-0 text-[9px] text-gray-500"><span>{member.attendance?.checkin_at ? 'Arrivée ' + new Date(member.attendance.checkin_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : 'Pas de pointage'}</span></div><div className="grid grid-cols-4 gap-2 shrink-0"><button type="button" onClick={() => setMonitorSection('agents')} title="Détail agent" className="h-9 w-9 rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95 flex items-center justify-center"><UserRound size={16}/></button><button type="button" onClick={() => setMonitorSection('presence')} title="Registre de présence" className="h-9 w-9 rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95 flex items-center justify-center"><CalendarDays size={16}/></button><button type="button" onClick={() => setMonitorSection('checkins')} title="Pointage journalier" className="h-9 w-9 rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95 flex items-center justify-center"><MapPin size={16}/></button><button type="button" onClick={() => setMonitorSection('reports')} title="Rapports" className="h-9 w-9 rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95 flex items-center justify-center"><FileText size={16}/></button></div></div></article>;
+          return <article key={member.userId} className="glass-card overflow-hidden p-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate text-sm font-black text-white">{member.name}</h3><p className="mt-0.5 text-[10px] text-gray-500">{member.phone}</p><p className="mt-1 text-[9px] font-bold text-red-200">{member.locations.filter((item) => ['Kinshasa','Kongo-Central','Haut-Katanga'].includes(item)).join(' · ') || 'Lieu non renseigné'}</p></div><span className={status === 'Clôturé' ? 'rounded-full border border-emerald-300/30 bg-emerald-500/10 px-2 py-1 text-[8px] font-black uppercase text-emerald-200' : status === 'En action' ? 'rounded-full border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100' : 'rounded-full border border-red-300/20 bg-red-500/10 px-2 py-1 text-[8px] font-black uppercase text-red-200'}>{status}</span></div><div className="mt-3 grid grid-cols-2 gap-2"><div className="rounded-2xl border border-white/8 bg-white/[0.03] p-3"><b className="block text-lg text-white">{member.clients}</b><span className="text-[8px] font-black uppercase text-gray-500">Clients</span></div><div className="rounded-2xl border border-emerald-300/10 bg-emerald-500/[0.04] p-3"><b className="block text-lg text-emerald-200">{member.transactions}</b><span className="text-[8px] font-black uppercase text-gray-500">Transactions</span></div></div><div className="mt-3 flex items-center justify-between gap-3"><div className="min-w-0 text-[9px] text-gray-500"><span>{member.attendance?.checkin_at ? 'Arrivée ' + new Date(member.attendance.checkin_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : 'Pas de pointage'}</span></div><div className="grid grid-cols-4 gap-1.5 shrink-0"><button type="button" onClick={() => void openAgentModal(member,'profile')} title="Détail agent" className="h-8 w-8 rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95 flex items-center justify-center"><UserRound size={14}/></button><button type="button" onClick={() => void openAgentModal(member,'presence')} title="Registre de présence" className="h-8 w-8 rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95 flex items-center justify-center"><CalendarDays size={14}/></button><button type="button" onClick={() => void openAgentModal(member,'location')} title="Localisation du pointage" className="h-8 w-8 rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95 flex items-center justify-center"><MapPin size={14}/></button><button type="button" onClick={() => { setReportsAgent(member); setSelectedAgent(member); setReportsStart(START_DATE); setReportsEnd(today); setAgentModal('reports'); }} title="Rapports présentés" className="h-8 w-8 rounded-xl border border-blue-400/35 bg-blue-500/10 text-blue-200 transition hover:bg-blue-500/20 active:scale-95 flex items-center justify-center"><FileText size={14}/></button></div></div></article>;
         })}</section>}
         {monitorSection === 'presence' && <section className="space-y-2">{team.map((member) => { const present=Boolean(member.attendance?.checkin_at); const closed=Boolean(member.attendance?.checkout_at); return <article key={member.userId} className="glass-card flex items-center justify-between gap-3 p-3"><div className="min-w-0"><b className="block truncate text-xs text-white">{member.name}</b><span className="text-[8px] uppercase text-gray-500">{present ? 'Présent' : 'Absent'}{closed ? ' · Journée clôturée' : ''}</span></div><span className={closed ? 'rounded-full bg-emerald-500/10 px-2 py-1 text-[8px] font-black uppercase text-emerald-200' : present ? 'rounded-full bg-cyan-500/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100' : 'rounded-full bg-red-500/10 px-2 py-1 text-[8px] font-black uppercase text-red-200'}>{closed ? 'Clôturé' : present ? 'Présent' : 'Absent'}</span></article>; })}</section>}
         {monitorSection === 'checkins' && <section className="space-y-2">{team.map((member) => <article key={member.userId} className="glass-card p-3"><div className="flex items-center justify-between gap-3"><div className="min-w-0"><b className="block truncate text-xs text-white">{member.name}</b><span className="text-[8px] uppercase text-gray-500">{member.attendance?.checkin_at ? 'Pointé à ' + new Date(member.attendance.checkin_at).toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}) : 'Aucun pointage'}</span></div><MapPin size={17} className={member.attendance?.checkin_at ? 'text-cyan-200' : 'text-gray-600'}/></div>{member.attendance?.checkin_latitude != null && <div className="mt-2 text-[8px] font-bold text-gray-500">{Number(member.attendance.checkin_latitude).toFixed(5)} · {Number(member.attendance.checkin_longitude).toFixed(5)}{member.attendance.checkin_accuracy_m ? ' · ±' + Math.round(member.attendance.checkin_accuracy_m) + ' m' : ''}</div>}</article>)}</section>}
@@ -258,6 +284,29 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
         </div><button type="button" onClick={()=>void saveTargets()} disabled={savingTargets} className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-red-500 px-4 py-3 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-40"><CheckCircle2 size={15}/>{savingTargets?'Enregistrement…':'Enregistrer les targets'}</button></section>
         <section className="glass-card p-4"><div className="flex items-center justify-between"><div><h2 className="font-black text-white">Population campagne</h2><p className="text-[9px] text-gray-500">{team.length} BA affectés sur le périmètre affiché.</p></div><UsersRound size={19} className="text-cyan-200"/></div><div className="mt-3 space-y-2">{regionSummary.length ? regionSummary.map(([region, stats]) => <div key={region} className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] p-3"><span className="text-[10px] font-black uppercase text-gray-300">{region}</span><span className="text-[9px] font-bold text-gray-500">{stats.clients} clients · {stats.transactions} Tx</span></div>) : <p className="rounded-2xl bg-white/[0.03] p-4 text-[10px] font-semibold text-gray-500">Les régions apparaîtront dès que les premières interactions terrain seront enregistrées.</p>}</div></section>
       </>}
+      {agentModal && selectedAgent && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-3 backdrop-blur-md" onClick={closeAgentModal}>
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] border border-white/10 bg-[#0a1220]/95 p-4 shadow-2xl animate-pop" onClick={(e)=>e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div><p className="text-[8px] font-black uppercase tracking-[.2em] text-blue-200/70">M-Pesa Mikili · {agentModal === 'profile' ? 'Détail agent' : agentModal === 'presence' ? 'Registre de présence' : agentModal === 'location' ? 'Localisation' : 'Rapports'}</p><h2 className="mt-1 text-lg font-black text-white">{selectedAgent.name}</h2></div>
+              <button type="button" onClick={closeAgentModal} className="h-9 w-9 rounded-xl border border-white/10 bg-white/5 text-gray-300">×</button>
+            </div>
+
+            {agentModal === 'profile' && <div className="mt-4 space-y-3">
+              <div className="grid grid-cols-3 gap-2"><div className="rounded-2xl bg-white/5 p-3"><b className="text-2xl text-white">{periodClients.filter(x=>x.agent_id===selectedAgent.userId).length}</b><span className="block text-[8px] font-black uppercase text-gray-500">Clients</span></div><div className="rounded-2xl bg-emerald-500/5 p-3"><b className="text-2xl text-emerald-200">{periodClients.filter(x=>x.agent_id===selectedAgent.userId&&x.transaction_done).length}</b><span className="block text-[8px] font-black uppercase text-gray-500">Transactions</span></div><div className="rounded-2xl bg-blue-500/5 p-3"><b className="text-2xl text-blue-200">{agentAttendance.filter(x=>x.checkin_at).length}</b><span className="block text-[8px] font-black uppercase text-gray-500">Pointages</span></div></div>
+              <div className="rounded-2xl border border-white/10 bg-white/[.025] p-3"><p className="text-[8px] font-black uppercase text-gray-500">Courbe d’évolution</p><div className="mt-2 h-48"><ResponsiveContainer width="100%" height="100%"><LineChart data={Array.from(new Set(periodClients.filter(x=>x.agent_id===selectedAgent.userId).map(x=>x.activity_date))).sort().map(d=>{const rows=periodClients.filter(x=>x.agent_id===selectedAgent.userId&&x.activity_date===d);return {label:d.slice(8)+'/'+d.slice(5,7),clients:rows.length,transactions:rows.filter(x=>x.transaction_done).length};})}><XAxis dataKey="label" tick={{fontSize:8,fill:'#6b7280'}} axisLine={false} tickLine={false}/><YAxis allowDecimals={false} tick={{fontSize:8,fill:'#6b7280'}} axisLine={false} tickLine={false}/><Tooltip/><Line type="monotone" dataKey="clients" stroke="#ef4444" strokeWidth={3} dot={false}/><Line type="monotone" dataKey="transactions" stroke="#22c55e" strokeWidth={3} dot={false}/></LineChart></ResponsiveContainer></div></div>
+              <div className="grid grid-cols-2 gap-2 text-[9px] font-bold text-gray-400"><div className="rounded-xl bg-white/5 p-3">Pointages : <b className="text-white">{agentAttendance.filter(x=>x.checkin_at).length}</b></div><div className="rounded-xl bg-white/5 p-3">Journées clôturées : <b className="text-emerald-200">{agentAttendance.filter(x=>x.status==='closed').length}</b></div></div>
+            </div>}
+
+            {agentModal === 'presence' && <PresencePanel agent={selectedAgent} attendance={agentAttendance} clients={periodClients} startDate={START_DATE} endDate={today} />}
+
+            {agentModal === 'location' && <div className="mt-4 space-y-3"><div className="rounded-2xl border border-blue-300/15 bg-blue-500/[.06] p-3"><p className="text-[8px] font-black uppercase text-blue-200/70">Pointage journalier</p><p className="mt-1 text-xs font-black text-white">{selectedAgent.attendance?.checkin_at ? new Date(selectedAgent.attendance.checkin_at).toLocaleString('fr-FR') : 'Aucun pointage'}</p><p className="mt-1 text-[9px] text-gray-500">{selectedAgent.attendance?.checkin_latitude != null ? `${Number(selectedAgent.attendance.checkin_latitude).toFixed(6)} · ${Number(selectedAgent.attendance.checkin_longitude).toFixed(6)} · ±${Math.round(selectedAgent.attendance.checkin_accuracy_m || 0)} m` : 'Coordonnées indisponibles'}</p></div><div className="h-80 overflow-hidden rounded-2xl border border-white/10"><iframe title="Localisation du pointage" className="h-full w-full border-0" src={getLocationEmbedUrl({shop:'M-Pesa Mikili',lat:selectedAgent.attendance?.checkin_latitude ?? undefined,long:selectedAgent.attendance?.checkin_longitude ?? undefined})}/></div></div>}
+
+            {agentModal === 'reports' && <div className="mt-4 space-y-3"><DateRangeKnobSlider minDate={START_DATE} maxDate={today} startDate={reportsStart} endDate={reportsEnd} onChange={({startDate,endDate})=>{setReportsStart(startDate);setReportsEnd(endDate)}}/><div className="space-y-2">{Array.from(new Set(periodClients.filter(x=>x.agent_id===selectedAgent.userId&&x.activity_date>=reportsStart&&x.activity_date<=reportsEnd).map(x=>x.activity_date))).sort((a,b)=>b.localeCompare(a)).map(d=>{const rows=periodClients.filter(x=>x.agent_id===selectedAgent.userId&&x.activity_date===d);return <article key={d} className="rounded-2xl border border-white/10 bg-white/[.025] p-3"><p className="text-[8px] font-black uppercase text-fuchsia-200/70">Rapport présenté</p><b className="text-xs text-white">{dayLabel(d)}</b><p className="mt-1 text-[9px] text-gray-500">{rows.length} clients · {rows.filter(x=>x.transaction_done).length} transactions</p></article>})}{!periodClients.some(x=>x.agent_id===selectedAgent.userId&&x.activity_date>=reportsStart&&x.activity_date<=reportsEnd)&&<div className="rounded-2xl bg-white/5 p-6 text-center text-[10px] text-gray-500">Aucun rapport présenté sur la période.</div>}</div></div>}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
