@@ -210,7 +210,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
                 </div>
               </div>,
               document.body
-            )}            )}
+            )}
           </div>
 
           <div className={`flex space-x-1 rounded-xl border p-1 ${chipBaseClasses}`}>
