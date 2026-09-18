@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { User, UserRole } from '../types';
-import { Shield, RotateCcw } from 'lucide-react';
+import { Shield, RotateCcw, ChevronDown, Search, UserRound, X } from 'lucide-react';
 import type { ThemeMode } from './Header';
 
 interface SimulationBarProps {
@@ -33,7 +33,15 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
 
   const activeRole = simulatedRole || effectiveUser.role;
   const simulationUsers = sortUsersForSimulation(users);
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [selectorQuery, setSelectorQuery] = useState('');
   const isDiamondTheme = theme === 'diamond';
+  const selectedUser = simulationUsers.find((user) => user.id === effectiveUser.id) || effectiveUser;
+  const filteredSimulationUsers = useMemo(() => {
+    const needle = selectorQuery.trim().toLowerCase();
+    if (!needle) return simulationUsers;
+    return simulationUsers.filter((user) => `${user.name} ${user.phone} ${user.role}`.toLowerCase().includes(needle));
+  }, [selectorQuery, simulationUsers.length]);
   const simulationBackground = theme === 'diamond' ? 'diamond-light.jpg' : `${theme}.jpg`;
   const shellClasses = theme === 'rubis'
     ? 'border-rose-300/30 shadow-[0_10px_34px_rgba(127,29,29,0.42)]'
@@ -109,17 +117,53 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={effectiveUser.id}
-            onChange={(e) => onSimulateUserChange(e.target.value)}
-            className={`w-36 rounded-xl border px-2.5 py-1.5 text-[11px] font-bold shadow-inner outline-none focus:border-red-300 ${selectClasses}`}
-          >
-            {simulationUsers.map(u => (
-              <option key={u.id} value={u.id}>
-                👤 {u.name} ({u.role.toUpperCase()})
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setSelectorOpen((open) => !open)}
+              aria-haspopup="listbox"
+              aria-expanded={selectorOpen}
+              className={`flex w-52 items-center gap-2 rounded-2xl border px-2.5 py-1.5 text-left shadow-inner transition hover:border-red-300/50 ${selectClasses}`}
+            >
+              <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border ${iconClasses}`}><UserRound size={13}/></span>
+              <span className="min-w-0 flex-1">
+                <b className="block truncate text-[10px] font-black">{selectedUser.name}</b>
+                <span className={`block text-[8px] font-black uppercase tracking-wider ${isDiamondTheme ? 'text-slate-500' : 'text-white/45'}`}>{selectedUser.role}</span>
+              </span>
+              <ChevronDown size={15} className={selectorOpen ? 'rotate-180 transition-transform' : 'transition-transform'}/>
+            </button>
+            {selectorOpen && (
+              <div className={`absolute right-0 top-[calc(100%+0.5rem)] z-[70] w-72 overflow-hidden rounded-2xl border p-2 shadow-2xl backdrop-blur-2xl ${isDiamondTheme ? 'border-slate-300 bg-white/95' : 'border-white/15 bg-[#0b1020]/95'}`}>
+                <div className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 ${isDiamondTheme ? 'border-slate-200 bg-slate-100' : 'border-white/10 bg-black/30'}`}>
+                  <Search size={14} className={isDiamondTheme ? 'text-slate-500' : 'text-gray-500'}/>
+                  <input
+                    autoFocus
+                    value={selectorQuery}
+                    onChange={(event) => setSelectorQuery(event.target.value)}
+                    placeholder="Rechercher un utilisateur…"
+                    className={`min-w-0 flex-1 bg-transparent text-[10px] font-bold outline-none ${isDiamondTheme ? 'text-slate-800 placeholder:text-slate-400' : 'text-white placeholder:text-gray-600'}`}
+                  />
+                  {selectorQuery && <button type="button" onClick={() => setSelectorQuery('')} className={isDiamondTheme ? 'text-slate-500' : 'text-gray-500'} aria-label="Effacer"><X size={13}/></button>}
+                </div>
+                <div className="mt-2 max-h-64 space-y-1 overflow-y-auto custom-scrollbar">
+                  {filteredSimulationUsers.map((user) => (
+                    <button
+                      key={user.id}
+                      type="button"
+                      role="option"
+                      aria-selected={user.id === effectiveUser.id}
+                      onClick={() => { onSimulateUserChange(user.id); setSelectorOpen(false); setSelectorQuery(''); }}
+                      className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left transition ${user.id === effectiveUser.id ? (isDiamondTheme ? 'bg-slate-800 text-white' : 'bg-red-500/20 text-white') : (isDiamondTheme ? 'text-slate-700 hover:bg-slate-100' : 'text-gray-300 hover:bg-white/10')}`}
+                    >
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10"><UserRound size={13}/></span>
+                      <span className="min-w-0 flex-1"><b className="block truncate text-[10px]">{user.name}</b><span className="text-[8px] font-black uppercase opacity-50">{user.role} · {user.userCategory || '—'}</span></span>
+                    </button>
+                  ))}
+                  {filteredSimulationUsers.length === 0 && <div className="px-3 py-5 text-center text-[10px] font-bold opacity-50">Aucun utilisateur trouvé.</div>}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className={`flex space-x-1 rounded-xl border p-1 ${chipBaseClasses}`}>
             <button
