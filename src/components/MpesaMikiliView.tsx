@@ -131,16 +131,16 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
     if (!campaignId || isClosed) return;
     setCheckinPending(true);
     setError('');
-    setNotice('Pointage enregistré sur cet appareil. Synchronisation en arrière-plan…');
+    setNotice('Déverrouillage de la journée enregistré sur cet appareil. Synchronisation en arrière-plan…');
     runInBackground('Pointage M-Pesa Mikili', async () => {
       const geo = await locate();
       const path = await uploadMikiliEvidence(`${currentUser.id}/${today}/checkin-${Date.now()}.jpg`, file);
       const nextAttendance = await recordMikiliCheckin({ campaignId, baId: currentUser.id, activityDate: today, checkinAt: new Date().toISOString(), latitude: geo.latitude, longitude: geo.longitude, accuracy: geo.accuracy, photoPath: path });
       return nextAttendance;
     }, {
-      queued: 'Pointage M-Pesa Mikili lancé en arrière-plan.',
-      success: 'Pointage M-Pesa Mikili synchronisé.',
-      onSuccess: (next) => { setAttendance(next); setCheckinPending(false); setNotice('Pointage synchronisé avec photo et position GPS.'); },
+      queued: 'Déverrouillage M-Pesa Mikili lancé en arrière-plan.',
+      success: 'Journée M-Pesa Mikili déverrouillée.',
+      onSuccess: (next) => { setAttendance(next); setCheckinPending(false); setNotice('Journée déverrouillée avec photo et position GPS.'); },
       onError: (caught) => { setCheckinPending(false); setNotice(''); setError(caught.message); },
     });
   };
@@ -151,7 +151,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
 
   const saveClient = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!campaignId || !attendance?.id || !isCheckedIn || isClosed) return setError('Validez votre pointage du matin avant d’enregistrer un client.');
+    if (!campaignId || !attendance?.id || !isCheckedIn || isClosed) return setError('Effectuez le pointage de début de journée avant d’enregistrer un client.');
     if (!clientName.trim()) return setError('Le nom du client est obligatoire.');
     const normalizedPhone = normalizeMikiliPhone(clientPhone);
     if (!normalizedPhone || normalizedPhone.replace(/\D/g, '').length < 9) return setError('Saisissez un numéro de téléphone valide.');
@@ -202,7 +202,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
 
         <section className="glass-card p-4">
           <div className="flex items-center justify-between gap-3">
-            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-400">Pointage du matin</p><p className="mt-1 text-sm font-black text-white">{attendance?.checkin_at ? 'Présent' : checkinPending ? 'Synchronisation…' : 'À effectuer'}</p></div>
+            <div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-400">Déverrouillage de la journée</p><p className="mt-1 text-sm font-black text-white">{attendance?.checkin_at ? 'Journée déverrouillée' : checkinPending ? 'Synchronisation…' : 'À effectuer'}</p></div>
             <button type="button" onClick={() => checkinInputRef.current?.click()} disabled={isCheckedIn || isClosed} className="rounded-2xl border border-red-300/25 bg-red-500/15 px-4 py-3 text-[10px] font-black uppercase tracking-wide text-red-100 disabled:opacity-40"><Camera size={16} className="mr-1 inline" />{isCheckedIn ? 'Pointé' : 'Pointer'}</button>
           </div>
           <input ref={checkinInputRef} type="file" accept="image/*" capture="user" onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ''; if (file) handleCheckin(file); }} className="hidden" />
