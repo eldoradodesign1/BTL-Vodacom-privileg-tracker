@@ -163,9 +163,31 @@ export default function App() {
   if (simulatedUserId) { const foundU = users.find((user) => user.id === simulatedUserId); if (foundU) baseUser = foundU; }
   const effectiveRole = simulatedRole || baseUser.role;
   const effectiveUser: User = { ...baseUser, role: effectiveRole };
+  const superAdminCampaignOptions = [
+    { key: 'vodacom-privilege' as const, label: 'Vodacom Privilège', note: 'Hôtesses' },
+    { key: 'merchant-educational' as const, label: 'Merchant Education', note: 'Brand Ambassadors' },
+    { key: 'youth-f2f' as const, label: 'Youth F2F', note: 'Sensibilisation universitaire' },
+    { key: 'mpesa-mikili' as const, label: 'M-Pesa Mikili', note: 'Brand Ambassador · M-Pesa' },
+  ];
   const agentCampaignOptions = (realMasterUser.role === 'super_admin' && simulatedUserId)
     ? superAdminCampaignOptions
-    : const agentCampaignOptions = agentCampaigns.map((campaign) => ({ key: (campaign.code === 'youth-f2f' ? 'youth-f2f' : campaign.code === 'merchant-educational-campaign' ? 'merchant-educational' : campaign.code === 'mpesa-mikili' ? 'mpesa-mikili' : 'vodacom-privilege') as CampaignContext, label: campaign.name, note: campaign.code === 'youth-f2f' ? 'Sensibilisation universitaire' : campaign.code === 'mpesa-mikili' ? 'Brand Ambassador · M-Pesa' : campaign.campaign_type === 'brand_ambassador' ? 'Brand Ambassador' : 'Hôtesses' })).filter((campaign, index, list) => list.findIndex((item) => item.key === campaign.key) === index);
+    : agentCampaigns.map((campaign) => ({
+        key: (campaign.code === 'youth-f2f'
+          ? 'youth-f2f'
+          : campaign.code === 'merchant-educational-campaign'
+            ? 'merchant-educational'
+            : campaign.code === 'mpesa-mikili'
+              ? 'mpesa-mikili'
+              : 'vodacom-privilege') as CampaignContext,
+        label: campaign.name,
+        note: campaign.code === 'youth-f2f'
+          ? 'Sensibilisation universitaire'
+          : campaign.code === 'mpesa-mikili'
+            ? 'Brand Ambassador · M-Pesa'
+            : campaign.campaign_type === 'brand_ambassador'
+              ? 'Brand Ambassador'
+              : 'Hôtesses',
+      })).filter((campaign, index, list) => list.findIndex((item) => item.key === campaign.key) === index);
   const inferredAgentMerchant = effectiveRole === 'agent' && effectiveUser.userCategory === 'brand_ambassador';
   const isMikiliContext = activeCampaign === 'mpesa-mikili';
   const isYouthContext = !isMikiliContext && (effectiveRole === 'agent' ? (agentCampaignOptions.length > 0 && activeCampaign === 'youth-f2f') : activeCampaign === 'youth-f2f');
