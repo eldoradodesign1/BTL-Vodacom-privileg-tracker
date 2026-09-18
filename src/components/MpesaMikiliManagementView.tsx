@@ -177,7 +177,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
           <div className="flex items-center justify-between"><div><p className="text-[8px] font-black uppercase tracking-[0.2em] text-cyan-200/70">Vue superviseur</p><h2 className="mt-1 text-xl font-black text-white">Pulse de mon équipe</h2></div><span className="rounded-xl border border-cyan-300/20 bg-cyan-400/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100">{metrics.present}/{team.length} présents</span></div>
           <div className="mt-5 space-y-3">{[['Présence',metrics.present,Math.max(1,team.length)],['Clients',metrics.clients,Math.max(1,targets.dailyClients*Math.max(1,team.length))],['Transactions',metrics.transactions,Math.max(1,targets.dailyTransactions*Math.max(1,team.length))]].map(([label,value,target])=>{const pct=Math.min(100,Math.round(Number(value)/Number(target)*100));return <div key={String(label)}><div className="flex justify-between text-[9px] font-black uppercase"><span className="text-gray-400">{label}</span><span className="text-white">{value} <span className="text-gray-600">/ {target}</span></span></div><div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/[0.06]"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-blue-400 to-emerald-400" style={{width:pct+'%'}}/></div></div>})}</div>
           <div className="mt-4 grid grid-cols-3 gap-2">{team.slice(0,3).map((member,index)=><div key={member.userId} className="rounded-2xl border border-white/8 bg-black/15 p-3"><span className="text-[8px] font-black text-cyan-200/60">0{index+1}</span><b className="mt-1 block truncate text-[10px] text-white">{member.name}</b><span className="mt-1 block text-[8px] font-bold text-gray-500">{member.clients} clients · {member.transactions} Tx</span></div>)}</div>
-        </section>
+        </section>}
         <section className="grid grid-cols-2 gap-2">
           <div className="glass-card p-4"><p className="text-[8px] font-black uppercase tracking-[0.18em] text-gray-500">Conversion</p><b className="mt-2 block text-3xl font-black text-emerald-200">{metrics.conversion}%</b><div className="mt-3 h-1.5 rounded-full bg-white/[0.06]"><div className="h-full rounded-full bg-emerald-400" style={{width:metrics.conversion+'%'}}/></div></div>
           <div className="glass-card p-4"><p className="text-[8px] font-black uppercase tracking-[0.18em] text-gray-500">Couverture</p><b className="mt-2 block text-3xl font-black text-cyan-100">{team.length ? Math.round(metrics.present/team.length*100) : 0}%</b><span className="mt-2 block text-[8px] font-bold text-gray-500">{metrics.present} / {team.length} BA présents</span></div>
@@ -189,7 +189,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
         </section>
 
     )}
-    <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
+    {!isSupervisor && (    <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
           {[
             ['Transactions', donutData.transactions],
             ['Types d’interactions', donutData.interactions],
@@ -202,12 +202,12 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
               <div className="flex flex-wrap justify-center gap-2">{values.map((item,index)=><span key={item.name} className="text-[8px] font-bold text-gray-500"><i className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{background:CHART_COLORS[index % CHART_COLORS.length]}}/>{item.name} · {item.value}</span>)}</div>
             </div>;
           })}
-        </section>
+        </section>)}
 
-        <section className="glass-card overflow-hidden p-4">
+        {!isSupervisor && <section className="glass-card overflow-hidden p-4">
           <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-200/80">Podium du jour</p><h2 className="mt-1 text-lg font-black text-white">La course Mikili</h2></div><Trophy size={21} className="text-amber-200"/></div>
           <div className="mt-3 grid grid-cols-3 gap-2">{[0,1,2].map((index) => { const entry=podium[index]; return <div key={entry?.userId || index} className={rankClasses[index] + ' min-h-24 rounded-2xl border p-3'}><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-black/15 text-[10px] font-black">{index+1}</span><b className="mt-2 block truncate text-[10px]">{entry?.name?.split(' ')[0] || '—'}</b><span className="mt-1 block text-[9px] font-bold opacity-80">{entry ? entry.transactions + ' Tx · ' + entry.clients + ' clients' : 'À saisir'}</span></div>; })}</div>
-        </section>
+        </section>}
       </>}
 
       {activeTab === 'tab2' && <>
