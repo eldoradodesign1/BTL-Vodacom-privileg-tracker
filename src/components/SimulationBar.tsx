@@ -33,6 +33,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
   const [selectorQuery, setSelectorQuery] = useState('');
   const selectorRef = useRef<HTMLDivElement | null>(null);
   const selectorButtonRef = useRef<HTMLButtonElement | null>(null);
+  const selectorMenuRef = useRef<HTMLDivElement | null>(null);
   const [selectorRect, setSelectorRect] = useState<{ top: number; right: number; width: number } | null>(null);
   // Le bac à sable opérationnel est réservé au compte super_admin.
   if (masterUser.role !== 'super_admin') return null;
@@ -46,7 +47,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
     };
     const handleOutside = (event: PointerEvent) => {
       const target = event.target as Node;
-      if (!selectorRef.current?.contains(target)) {
+      if (!selectorRef.current?.contains(target) && !selectorMenuRef.current?.contains(target)) {
         setSelectorOpen(false);
         setSelectorQuery('');
       }
@@ -174,6 +175,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             </button>
             {selectorOpen && selectorRect && typeof document !== 'undefined' && createPortal(
               <div
+                ref={selectorMenuRef}
                 className={`fixed z-[9999] overflow-hidden rounded-2xl border p-2 shadow-2xl backdrop-blur-2xl ${isDiamondTheme ? 'border-slate-300 bg-white/95' : 'border-white/15 bg-[#0b1020]/95'}`}
                 style={{ top: selectorRect.top, right: selectorRect.right, width: Math.max(280, selectorRect.width) }}
                 role="listbox"
