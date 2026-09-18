@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { User, UserRole } from '../types';
 import { Shield, RotateCcw, ChevronDown, Search, UserRound, X } from 'lucide-react';
 import type { ThemeMode } from './Header';
@@ -28,20 +28,19 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
   onSimulateUserChange,
   onResetSimulation
 }) => {
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const [selectorQuery, setSelectorQuery] = useState('');
   // Le bac à sable opérationnel est réservé au compte super_admin.
   if (masterUser.role !== 'super_admin') return null;
 
   const activeRole = simulatedRole || effectiveUser.role;
   const simulationUsers = sortUsersForSimulation(users);
-  const [selectorOpen, setSelectorOpen] = useState(false);
-  const [selectorQuery, setSelectorQuery] = useState('');
   const isDiamondTheme = theme === 'diamond';
   const selectedUser = simulationUsers.find((user) => user.id === effectiveUser.id) || effectiveUser;
-  const filteredSimulationUsers = useMemo(() => {
-    const needle = selectorQuery.trim().toLowerCase();
-    if (!needle) return simulationUsers;
-    return simulationUsers.filter((user) => `${user.name} ${user.phone} ${user.role}`.toLowerCase().includes(needle));
-  }, [selectorQuery, simulationUsers.length]);
+  const needle = selectorQuery.trim().toLowerCase();
+  const filteredSimulationUsers = !needle
+    ? simulationUsers
+    : simulationUsers.filter((user) => `${user.name} ${user.phone} ${user.role}`.toLowerCase().includes(needle));
   const simulationBackground = theme === 'diamond' ? 'diamond-light.jpg' : `${theme}.jpg`;
   const shellClasses = theme === 'rubis'
     ? 'border-rose-300/30 shadow-[0_10px_34px_rgba(127,29,29,0.42)]'
