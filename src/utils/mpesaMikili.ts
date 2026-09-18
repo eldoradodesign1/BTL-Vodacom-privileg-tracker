@@ -209,3 +209,112 @@ export function mikiliDisplayService(value: MikiliPresentedService): string {
 export function mikiliDisplayTransaction(value: MikiliTransactionType): string {
   return value === 'send' ? 'Envoi vers l’étranger' : value === 'receive' ? 'Réception depuis l’étranger' : value === 'both' ? 'Envoi + réception' : 'NA';
 }
+
+
+export interface MikiliPodiumEntry {
+  userId: string;
+  name: string;
+  phone: string;
+  clients: number;
+  transactions: number;
+}
+
+export interface MikiliTeamMember {
+  userId: string;
+  name: string;
+  phone: string;
+  supervisorId: string | null;
+  clients: number;
+  transactions: number;
+  attendance: MikiliAttendance | null;
+  locations: string[];
+}
+
+export async function getMikiliPodium(campaignId: string, activityDate = kinshasaDate(), limit = 10): Promise<MikiliPodiumEntry[]> {
+  const db = getClient();
+  const [assignmentsResponse, usersResponse, clientsResponse] = await Promise.all([
+    db.from('user_campaign_assignments').select('user_id').eq('campaign_id', campaignId).eq('is_active', true),
+    db.from('users').select('id,full_name,phone,role,user_category').eq('role', 'agent').eq('user_category', 'brand_ambassador'),
+    db.from('mpesa_mikili_clients').select('agent_id,transaction_done').eq('campaign_id', campaignId).eq('activity_date', activityDate),
+  ]);
+  fail(assignmentsResponse.error, 'Impossible de charger le podium M-Pesa Mikili');
+  fail(usersResponse.error, 'Impossible de charger les BA M-Pesa Mikili');
+  fail(clientsResponse.error, 'Impossible de charger les performances M-Pesa Mikili');
+
+  const assignedIds = new Set((assignmentsResponse.data || []).map((row: { user_id: string }) => row.user_id));
+  const stats = new Map<string, { clients: number; transactions: number }>();
+  ((clientsResponse.data || []) as Array<{ agent_id: string; transaction_done: boolean }>).forEach((row) => {
+    const current = stats.get(row.agent_id) || { clients: 0, transactions: 0 };
+    current.clients += 1;
+    if (row.transaction_done) current.transactions += 1;
+    stats.set(row.agent_id, current);
+  });
+
+  return ((usersResponse.data || []) as Array<{ id: string; full_name?: string | null; phone?: string | null }>)
+    .filter((user) => assignedIds.has(user.id))
+    .map((user) => ({
+      userId: user.id,
+      name: user.full_name || 'Brand Ambassador',
+      phone: user.phone || '',
+      clients: stats.get(user.id)?.clients || 0,
+      transactions: stats.get(user.id)?.transactions || 0,
+    }))
+    .sort((a, b) => b.transactions - a.transactions || b.clients - a.clients || a.name.localeCompare(b.name, 'fr'))
+    .slice(0, Math.max(1, limit));
+}
+
+export async function getMikiliTeam(
+  campaignId: string,
+  activityDate = kinshasaDate(),
+  options: { supervisorId?: string | null; regions?: MikiliRegion[] } = {},
+): Promise<MikiliTeamMember[]> {
+  const db = getClient();
+  const [assignmentsResponse, usersResponse, attendanceResponse, clientsResponse] = await Promise.all([
+    db.from('user_campaign_assignments').select('user_id').eq('campaign_id', campaignId).eq('is_active', true),
+    db.from('users').select('id,full_name,phone,role,user_category,supervisor_id').eq('role', 'agent').eq('user_category', 'brand_ambassador'),
+    db.from('mpesa_mikili_daily_attendance').select('*').eq('campaign_id', campaignId).eq('activity_date', activityDate),
+    db.from('mpesa_mikili_clients').select('agent_id,transaction_done,location_id,location:campaign_locations(region,name)').eq('campaign_id', campaignId).eq('activity_date', activityDate),
+  ]);
+  fail(assignmentsResponse.error, 'Impossible de charger les affectations M-Pesa Mikili');
+  fail(usersResponse.error, 'Impossible de charger les BA M-Pesa Mikili');
+  fail(attendanceResponse.error, 'Impossible de charger les pointages M-Pesa Mikili');
+  fail(clientsResponse.error, 'Impossible de charger les clients M-Pesa Mikili');
+
+  const assignedIds = new Set((assignmentsResponse.data || []).map((row: { user_id: string }) => row.user_id));
+  const attendanceByBa = new Map(((attendanceResponse.data || []) as MikiliAttendance[]).map((row) => [row.ba_id, row]));
+  const stats = new Map<string, { clients: number; transactions: number; locations: Set<string> }>();
+  ((clientsResponse.data || []) as Array<{ agent_id: string; transaction_done: boolean; location?: { region?: string | null; name?: string | null } | Array<{ region?: string | null; name?: string | null }> | null }>).forEach((row) => {
+    const current = stats.get(row.agent_id) || { clients: 0, transactions: 0, locations: new Set<string>() };
+    current.clients += 1;
+    if (row.transaction_done) current.transactions += 1;
+    const location = Array.isArray(row.location) ? row.location[0] : row.location;
+    if (location?.region) current.locations.add(location.region);
+    if (location?.name) current.locations.add(location.name);
+    stats.set(row.agent_id, current);
+  });
+
+  const allowedRegions = new Set(options.regions || []);
+  return ((usersResponse.data || []) as Array<{ id: string; full_name?: string | null; phone?: string | null; supervisor_id?: string | null }>)
+    .filter((user) => {
+      if (!assignedIds.has(user.id)) return false;
+      if (!options.supervisorId) return true;
+      if (user.supervisor_id === options.supervisorId) return true;
+      if (allowedRegions.size === 0) return false;
+      const userRegions = stats.get(user.id)?.locations || new Set<string>();
+      return Array.from(allowedRegions).some((region) => userRegions.has(region));
+    })
+    .map((user) => {
+      const row = stats.get(user.id);
+      return {
+        userId: user.id,
+        name: user.full_name || 'Brand Ambassador',
+        phone: user.phone || '',
+        supervisorId: user.supervisor_id || null,
+        clients: row?.clients || 0,
+        transactions: row?.transactions || 0,
+        attendance: attendanceByBa.get(user.id) || null,
+        locations: Array.from(row?.locations || []),
+      };
+    })
+    .sort((a, b) => b.transactions - a.transactions || b.clients - a.clients || a.name.localeCompare(b.name, 'fr'));
+}
