@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { Archive, BarChart3, FileText, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, MapPin, RefreshCw, Trophy, UsersRound, UserRound, Zap, Target, Settings2, ArrowUpRight } from 'lucide-react';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { User } from '../types';
@@ -340,9 +339,9 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
         </div><button type="button" onClick={()=>void saveTargets()} disabled={savingTargets} className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-red-500 px-4 py-3 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-40"><CheckCircle2 size={15}/>{savingTargets?'Enregistrement…':'Enregistrer les targets'}</button></section>
         <section className="glass-card p-4"><div className="flex items-center justify-between"><div><h2 className="font-black text-white">Population campagne</h2><p className="text-[9px] text-gray-500">{team.length} BA affectés sur le périmètre affiché.</p></div><UsersRound size={19} className="text-cyan-200"/></div><div className="mt-3 space-y-2">{regionSummary.length ? regionSummary.map(([region, stats]) => <div key={region} className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] p-3"><span className="text-[10px] font-black uppercase text-gray-300">{region}</span><span className="text-[9px] font-bold text-gray-500">{stats.clients} clients · {stats.transactions} Tx</span></div>) : <p className="rounded-2xl bg-white/[0.03] p-4 text-[10px] font-semibold text-gray-500">Les régions apparaîtront dès que les premières interactions terrain seront enregistrées.</p>}</div></section>
       </>}
-      {agentModal && selectedAgent && createPortal(
+      {agentModal && selectedAgent && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-3 backdrop-blur-md" onClick={closeAgentModal}>
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] border border-white/10 bg-[#0a1220]/95 p-4 shadow-2xl animate-pop" onClick={(e)=>e.stopPropagation()}>
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] border border-white/10 bg-[#0a1220]/95 p-4 shadow-2xl" onClick={(e)=>e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div><p className="text-[8px] font-black uppercase tracking-[.2em] text-blue-200/70">M-Pesa Mikili · {agentModal === 'profile' ? 'Détail agent' : agentModal === 'presence' ? 'Registre de présence' : agentModal === 'location' ? 'Localisation' : 'Rapports'}</p><h2 className="mt-1 text-lg font-black text-white">{selectedAgent.name}</h2></div>
               <button type="button" onClick={closeAgentModal} className="h-9 w-9 rounded-xl border border-white/10 bg-white/5 text-gray-300">×</button>
