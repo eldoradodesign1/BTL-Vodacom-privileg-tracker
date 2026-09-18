@@ -84,6 +84,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
   const [transactionDone, setTransactionDone] = useState<boolean | null>(null);
   const [transactionType, setTransactionType] = useState<MikiliTransactionType>('na');
   const [transactionReference, setTransactionReference] = useState('');
+  const [locationOpen, setLocationOpen] = useState(false);
 
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinPending;
   const isClosed = Boolean(attendance?.checkout_at);
@@ -147,6 +148,24 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
 
   const resetClientForm = () => {
     setClientName(''); setClientPhone(''); setExistingUser(''); setPresentedService(''); setTransactionDone(null); setTransactionType('na'); setTransactionReference('');
+  };
+
+  const togglePresentedService = (service: 'send' | 'receive') => {
+    setPresentedService((current) => {
+      if (current === service) return '';
+      if ((current === 'send' && service === 'receive') || (current === 'receive' && service === 'send')) return 'both';
+      if (current === 'both') return service === 'send' ? 'receive' : 'send';
+      return service;
+    });
+  };
+
+  const toggleTransactionType = (type: 'send' | 'receive') => {
+    setTransactionType((current) => {
+      if (current === type) return 'na';
+      if ((current === 'send' && type === 'receive') || (current === 'receive' && type === 'send')) return 'both';
+      if (current === 'both') return type === 'send' ? 'receive' : 'send';
+      return type;
+    });
   };
 
   const saveClient = async (event: React.FormEvent) => {
@@ -228,11 +247,48 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
       {isClientOpen && <ModalShell title="Ajouter un client · M-Pesa Mikili" onClose={() => !saving && setIsClientOpen(false)}><form onSubmit={saveClient} className="space-y-4">
         <div><label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Nom du client *</label><input className={FIELD} value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Nom complet" /></div>
         <div><label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Numéro de téléphone *</label><input className={FIELD} inputMode="tel" value={clientPhone} onChange={(e) => setClientPhone(e.target.value)} placeholder="08XXXXXXXX" /></div>
-        <div><label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Lieu d’activité *</label><select className={FIELD} value={locationId} onChange={(e) => setLocationId(e.target.value)}><option value="">Sélectionner</option>{Object.entries(groupedLocations).map(([region, items]) => <optgroup key={region} label={region}>{items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</optgroup>)}</select></div>
+        <div className="relative">
+          <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Lieu d’activité *</label>
+          <button type="button" aria-haspopup="listbox" aria-expanded={locationOpen} onClick={() => setLocationOpen((open) => !open)} className={`${FIELD} flex items-center justify-between text-left ${locationId ? 'text-white' : 'text-gray-500'}`}>
+            <span>{locations.find((item) => item.id === locationId)?.name || 'Sélectionner'}</span>
+            <span className="text-gray-500">⌄</span>
+          </button>
+          {locationOpen && <div role="listbox" className="absolute left-0 right-0 z-30 mt-2 max-h-64 overflow-y-auto custom-scrollbar rounded-2xl border border-white/15 bg-[#11141d] p-2 shadow-2xl backdrop-blur-2xl">
+            {Object.entries(groupedLocations).map(([region, items]) => <div key={region}>
+              <p className="px-2 pb-1 pt-2 text-[9px] font-black uppercase tracking-[0.16em] text-red-200/70">{region}</p>
+              {items.map((item) => <button key={item.id} type="button" role="option" aria-selected={locationId === item.id} onClick={() => { setLocationId(item.id); setLocationOpen(false); }} className={`w-full rounded-xl px-3 py-2.5 text-left text-[10px] font-black transition ${locationId === item.id ? 'bg-red-500/20 text-white' : 'text-gray-300 hover:bg-white/10'}`}>{item.name}</button>)}
+            </div>)}
+          </div>}
+        </div>
         <div><label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Le client est-il déjà utilisateur de M-Pesa Mikili ? *</label><div className="grid grid-cols-3 gap-2 mt-2">{([['yes','OUI'],['no','NON'],['unknown','Ne connaît pas le service']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setExistingUser(value)} className={`rounded-2xl border px-2 py-3 text-[10px] font-black ${existingUser === value ? 'border-red-400/60 bg-red-500/20 text-white' : 'border-white/10 bg-white/[0.03] text-gray-400'}`}>{label}</button>)}</div></div>
-        <div><label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Service M-Pesa Mikili présenté *</label><div className="space-y-2 mt-2">{([['send','Envoi d’argent vers l’étranger'],['receive','Réception de l’argent vers l’étranger'],['both','Les deux services : Envoi et Réception']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setPresentedService(value)} className={`w-full rounded-2xl border px-3 py-3 text-left text-[10px] font-black ${presentedService === value ? 'border-red-400/60 bg-red-500/20 text-white' : 'border-white/10 bg-white/[0.03] text-gray-400'}`}>{label}</button>)}</div></div>
-        <div><label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Après sensibilisation, transaction M-Pesa Mikili ? *</label><div className="grid grid-cols-2 gap-2 mt-2">{[[true,'OUI'],[false,'NON']].map(([value,label]) => <button key={String(value)} type="button" onClick={() => { setTransactionDone(value as boolean); if (!(value as boolean)) setTransactionType('na'); }} className={`rounded-2xl border px-3 py-3 text-[10px] font-black ${transactionDone === value ? 'border-red-400/60 bg-red-500/20 text-white' : 'border-white/10 bg-white/[0.03] text-gray-400'}`}>{label}</button>)}</div></div>
-        {transactionDone && <><div><label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Type de transaction *</label><select className={FIELD} value={transactionType} onChange={(e) => setTransactionType(e.target.value as MikiliTransactionType)}><option value="send">Envoi d’argent vers l’étranger</option><option value="receive">Réception de l’argent vers l’étranger</option><option value="both">Les deux</option></select></div><div><label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Référence de la transaction</label><input className={FIELD} value={transactionReference} onChange={(e) => setTransactionReference(e.target.value)} placeholder="Référence" /></div></>}
+        <div>
+          <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Service M-Pesa Mikili présenté *</label>
+          <div className="mt-2 space-y-2">
+            {([['send','Envoi vers l’étranger'],['receive','Réception depuis l’étranger']] as const).map(([value,label]) => {
+              const checked = presentedService === value || presentedService === 'both';
+              return <button key={value} type="button" role="checkbox" aria-checked={checked} onClick={() => togglePresentedService(value)} className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left text-[10px] font-black transition ${checked ? 'border-red-400/60 bg-red-500/20 text-white' : 'border-white/10 bg-white/[0.03] text-gray-400'}`}>
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${checked ? 'border-red-400 bg-red-500 text-white' : 'border-white/20 bg-black/20'}`}>{checked ? '✓' : ''}</span>{label}
+              </button>;
+            })}
+          </div>
+        </div>
+        <div>
+          <button type="button" role="checkbox" aria-checked={transactionDone === true} onClick={() => { const next = transactionDone !== true; setTransactionDone(next); if (!next) setTransactionType('na'); }} className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left text-[10px] font-black transition ${transactionDone === true ? 'border-red-400/60 bg-red-500/20 text-white' : 'border-white/10 bg-white/[0.03] text-gray-400'}`}>
+            <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${transactionDone === true ? 'border-red-400 bg-red-500 text-white' : 'border-white/20 bg-black/20'}`}>{transactionDone === true ? '✓' : ''}</span>
+            Transaction effectuée
+          </button>
+        </div>
+        {transactionDone && <><div>
+          <label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Type de transaction *</label>
+          <div className="mt-2 space-y-2">
+            {([['send','Envoi vers l’étranger'],['receive','Réception depuis l’étranger']] as const).map(([value,label]) => {
+              const checked = transactionType === value || transactionType === 'both';
+              return <button key={value} type="button" role="checkbox" aria-checked={checked} onClick={() => toggleTransactionType(value)} className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left text-[10px] font-black transition ${checked ? 'border-red-400/60 bg-red-500/20 text-white' : 'border-white/10 bg-white/[0.03] text-gray-400'}`}>
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${checked ? 'border-red-400 bg-red-500 text-white' : 'border-white/20 bg-black/20'}`}>{checked ? '✓' : ''}</span>{label}
+              </button>;
+            })}
+          </div>
+        </div><div><label className="text-[10px] font-black uppercase tracking-wide text-gray-400">Référence de la transaction</label><input className={FIELD} value={transactionReference} onChange={(e) => setTransactionReference(e.target.value)} placeholder="Référence" /></div></>}
         <button type="submit" disabled={saving} className="w-full rounded-2xl bg-red-500 px-4 py-3 text-xs font-black uppercase tracking-wide text-white disabled:opacity-50">{saving ? 'Enregistrement…' : 'Enregistrer le client'}</button>
       </form></ModalShell>}
 
