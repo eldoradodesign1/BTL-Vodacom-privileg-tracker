@@ -26,7 +26,6 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
   const [expanded, setExpanded] = useState(true);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [selectorQuery, setSelectorQuery] = useState('');
-  const [shortcutHover, setShortcutHover] = useState<string | null>(null);
 
   useEffect(() => {
     if (!pickerOpen) return;
@@ -53,9 +52,9 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
   const isDiamondTheme = theme === 'diamond';
   const selectedUser = simulationUsers.find((user) => user.id === effectiveUser.id) || effectiveUser;
   const shortcutTargets = [
-    { key: 'agent', tag: 'AG', target: simulationUsers.find((user) => user.name.trim().toLowerCase() === 'agent test') },
-    { key: 'supervisor', tag: 'SUP', target: simulationUsers.find((user) => ['hervé ntalu', 'herve ntalu'].includes(user.name.trim().toLowerCase())) },
-    { key: 'admin', tag: 'ADM', target: simulationUsers.find((user) => user.name.trim().toLowerCase() === 'bradley izamaboko') },
+    { key: 'agent', tag: 'AG', target: simulationUsers.find((user) => user.id === 'agt-test-ba-herve-0821000001' || user.name.trim().toLowerCase() === 'agent test') },
+    { key: 'supervisor', tag: 'SUP', target: simulationUsers.find((user) => user.id === 'sup-0001-4a11-a881-100000000001' || ['hervé ntalu', 'herve ntalu'].includes(user.name.trim().toLowerCase())) },
+    { key: 'admin', tag: 'ADM', target: simulationUsers.find((user) => user.id === 'adm-0001-4a11-a881-100000000001' || user.name.trim().toLowerCase() === 'bradley izamaboko') },
   ];
 
   const surface = isDiamondTheme
@@ -131,8 +130,6 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             exit={{ opacity: 0, scale: 0.72, y: -12, borderRadius: 28 }}
             transition={{ type: 'spring', stiffness: 420, damping: 32, mass: 0.7 }}
             className="fixed right-4 top-4 z-[900]"
-            onMouseEnter={() => setShortcutHover('simulation')}
-            onMouseLeave={() => setShortcutHover(null)}
           >
             <button
               type="button"
@@ -142,19 +139,6 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             >
               <Shield size={17} className="text-cyan-200 transition-transform duration-300 group-hover:rotate-12"/>
               <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_10px_currentColor]"/>
-              <AnimatePresence>
-                {shortcutHover === 'simulation' && (
-                  <motion.span
-                    initial={{ opacity: 0, x: 8, scale: 0.92 }}
-                    animate={{ opacity: 1, x: 0, scale: 1 }}
-                    exit={{ opacity: 0, x: 8, scale: 0.92 }}
-                    transition={{ duration: 0.18 }}
-                    className={`pointer-events-none absolute right-[calc(100%+8px)] top-1/2 -translate-y-1/2 whitespace-nowrap rounded-xl border px-2.5 py-1.5 text-[9px] font-black shadow-xl backdrop-blur-xl ${surface}`}
-                  >
-                    {selectedUser.name}
-                  </motion.span>
-                )}
-              </AnimatePresence>
             </button>
           </motion.div>
         ) : (
@@ -201,25 +185,10 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
                       type="button"
                       disabled={!target}
                       onClick={() => target && onSimulateUserChange(target.id)}
-                      onMouseEnter={() => setShortcutHover(key)}
-                      onMouseLeave={() => setShortcutHover(null)}
                       aria-label={target ? `Simuler ${target.name}` : `Compte ${key} indisponible`}
-                      title={target?.name || 'Compte indisponible'}
                       className={`relative flex h-7 min-w-7 items-center justify-center rounded-lg border px-2 text-[8px] font-black uppercase tracking-wide transition-all duration-200 ${active ? activeChip : `${muted} border-transparent hover:border-white/10 hover:bg-white/[0.06] hover:text-white`} ${!target ? 'cursor-not-allowed opacity-30' : 'cursor-pointer'}`}
                     >
                       {tag}
-                      <AnimatePresence>
-                        {shortcutHover === key && target && (
-                          <motion.span
-                            initial={{ opacity: 0, y: 5, scale: 0.9 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 5, scale: 0.9 }}
-                            className={`pointer-events-none absolute right-0 top-[calc(100%+7px)] z-20 whitespace-nowrap rounded-lg border px-2 py-1 text-[8px] font-black shadow-xl backdrop-blur-xl ${surface}`}
-                          >
-                            {target.name}
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
                     </button>
                   );
                 })}
