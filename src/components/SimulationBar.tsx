@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { User, UserRole } from '../types';
 import { Shield, RotateCcw, ChevronDown, Search, UserRound, X } from 'lucide-react';
 import type { ThemeMode } from './Header';
@@ -30,8 +31,48 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
 }) => {
   const [selectorOpen, setSelectorOpen] = useState(false);
   const [selectorQuery, setSelectorQuery] = useState('');
+  const selectorRef = useRef<HTMLDivElement | null>(null);
+  const selectorButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [selectorRect, setSelectorRect] = useState<{ top: number; right: number; width: number } | null>(null);
   // Le bac à sable opérationnel est réservé au compte super_admin.
   if (masterUser.role !== 'super_admin') return null;
+
+  useEffect(() => {
+    if (!selectorOpen) return;
+    const updatePosition = () => {
+      const rect = selectorButtonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      setSelectorRect({ top: rect.bottom + 8, right: Math.max(8, window.innerWidth - rect.right), width: Math.max(280, rect.width) });
+    };
+    const handleOutside = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!selectorRef.current?.contains(target)) {
+        setSelectorOpen(false);
+        setSelectorQuery('');
+      }
+    };
+    updatePosition();
+    document.addEventListener('pointerdown', handleOutside, true);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    return () => {
+      document.removeEventListener('pointerdown', handleOutside, true);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+    };
+  }, [selectorOpen]);
+
+  useEffect(() => {
+    if (!selectorOpen) return;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setSelectorOpen(false);
+        setSelectorQuery('');
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [selectorOpen]);
 
   const activeRole = simulatedRole || effectiveUser.role;
   const simulationUsers = sortUsersForSimulation(users);
@@ -116,8 +157,8 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative">
-            <button
+          <div ref={selectorRef} className="relative">
+            <button ref={selectorButtonRef}
               type="button"
               onClick={() => setSelectorOpen((open) => !open)}
               aria-haspopup="listbox"
@@ -131,8 +172,13 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
               </span>
               <ChevronDown size={15} className={selectorOpen ? 'rotate-180 transition-transform' : 'transition-transform'}/>
             </button>
-            {selectorOpen && (
-              <div className={`absolute right-0 top-[calc(100%+0.5rem)] z-[70] w-72 overflow-hidden rounded-2xl border p-2 shadow-2xl backdrop-blur-2xl ${isDiamondTheme ? 'border-slate-300 bg-white/95' : 'border-white/15 bg-[#0b1020]/95'}`}>
+            {selectorOpen && selectorRect && typeof document !== 'undefined' && createPortal(
+              <div
+                className={`fixed z-[9999] overflow-hidden rounded-2xl border p-2 shadow-2xl backdrop-blur-2xl ${isDiamondTheme ? 'border-slate-300 bg-white/95' : 'border-white/15 bg-[#0b1020]/95'}`}
+                style={{ top: selectorRect.top, right: selectorRect.right, width: Math.max(280, selectorRect.width) }}
+                role="listbox"
+                onPointerDown={(event) => event.stopPropagation()}
+              >
                 <div className={`flex items-center gap-2 rounded-xl border px-2.5 py-2 ${isDiamondTheme ? 'border-slate-200 bg-slate-100' : 'border-white/10 bg-black/30'}`}>
                   <Search size={14} className={isDiamondTheme ? 'text-slate-500' : 'text-gray-500'}/>
                   <input
@@ -160,8 +206,9 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
                   ))}
                   {filteredSimulationUsers.length === 0 && <div className="px-3 py-5 text-center text-[10px] font-bold opacity-50">Aucun utilisateur trouvé.</div>}
                 </div>
-              </div>
-            )}
+              </div>,
+              document.body
+            )}            )}
           </div>
 
           <div className={`flex space-x-1 rounded-xl border p-1 ${chipBaseClasses}`}>
