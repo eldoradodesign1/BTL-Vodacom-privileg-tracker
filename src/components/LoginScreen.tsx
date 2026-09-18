@@ -9,8 +9,10 @@ interface LoginScreenProps {
 }
 
 const toCampaignContext = (campaign?: Campaign | null): CampaignContext => {
-  if (campaign?.code === 'youth-f2f') return 'youth-f2f';
-  return campaign?.campaign_type === 'brand_ambassador' || campaign?.code === 'merchant-educational-campaign'
+  const code = (campaign?.code || '').trim().toLowerCase().replace(/_/g, '-');
+  if (code === 'youth-f2f' || code === 'youth-f2f-campaign') return 'youth-f2f';
+  if (code === 'mpesa-mikili' || code === 'm-pesa-mikili' || code === 'mpesa-mikili-campaign') return 'mpesa-mikili';
+  return campaign?.campaign_type === 'brand_ambassador' || code === 'merchant-educational' || code === 'merchant-educational-campaign'
     ? 'merchant-educational'
     : 'vodacom-privilege';
 };

@@ -41,6 +41,14 @@ const APP_DATA_SYNC_KEY = 'btl_last_full_data_sync_at';
 const APP_DATA_SYNC_INTERVAL_MS = 60 * 60 * 1000;
 const SectionLoader = () => (<div className="flex min-h-[12rem] items-center justify-center"><div className="glass-card px-5 py-3 text-[11px] font-black uppercase tracking-[0.16em] text-gray-300">Chargement de l’espace…</div></div>);
 async function ensureNotificationsPermission(): Promise<void> { if (typeof window === 'undefined' || !('Notification' in window)) return; if (window.Notification.permission === 'granted' || window.Notification.permission === 'denied') return; await window.Notification.requestPermission(); }
+function campaignCodeToContext(code?: string | null): CampaignContext {
+  const normalized = (code || '').trim().toLowerCase().replace(/_/g, '-');
+  if (normalized === 'youth-f2f' || normalized === 'youth-f2f-campaign') return 'youth-f2f';
+  if (normalized === 'merchant-educational' || normalized === 'merchant-educational-campaign') return 'merchant-educational';
+  if (normalized === 'mpesa-mikili' || normalized === 'm-pesa-mikili' || normalized === 'mpesa-mikili-campaign') return 'mpesa-mikili';
+  return 'vodacom-privilege';
+}
+function campaignContextMatches(campaign: Campaign, context: CampaignContext): boolean { return campaignCodeToContext(campaign.code) === context; }
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(() => { try { const saved = localStorage.getItem('vodacom_user'); return saved ? (JSON.parse(saved) as User) : null; } catch { return null; } });
@@ -104,19 +112,11 @@ export default function App() {
           : await getCampaignsForUser(campaignSubjectId);
         if (cancelled) return;
         setAgentCampaigns(campaigns);
-        const current = campaigns.find((campaign) => (
-          activeCampaign === 'youth-f2f'
-            ? campaign.code === 'youth-f2f'
-            : activeCampaign === 'merchant-educational'
-              ? campaign.code === 'merchant-educational-campaign'
-              : activeCampaign === 'mpesa-mikili'
-                ? campaign.code === 'mpesa-mikili'
-                : campaign.code === 'vodacom-privilege'
-        ));
+        const current = campaigns.find((campaign) => campaignContextMatches(campaign, activeCampaign));
         if (!current) {
           const fallback = campaigns[0];
           if (!fallback) { const inferredContext: CampaignContext = campaignSubject?.userCategory === 'brand_ambassador' ? 'merchant-educational' : 'vodacom-privilege'; setActiveCampaign(inferredContext); localStorage.setItem('btl_active_campaign', inferredContext); setActiveCampaignPause(null); return; }
-          const nextContext: CampaignContext = fallback.code === 'youth-f2f' ? 'youth-f2f' : fallback.code === 'merchant-educational-campaign' ? 'merchant-educational' : fallback.code === 'mpesa-mikili' ? 'mpesa-mikili' : 'vodacom-privilege';
+          const nextContext = campaignCodeToContext(fallback.code);
           setActiveCampaign(nextContext); localStorage.setItem('btl_active_campaign', nextContext);
           const pauses = await getCampaignPauses(fallback.id);
           if (!cancelled) setActiveCampaignPause(pauses.find((pause) => pause.starts_on <= toISO(new Date()) && (!pause.ends_on || pause.ends_on >= toISO(new Date()))) || null);
@@ -172,17 +172,11 @@ export default function App() {
   const agentCampaignOptions = (realMasterUser.role === 'super_admin' && simulatedUserId)
     ? superAdminCampaignOptions
     : agentCampaigns.map((campaign) => ({
-        key: (campaign.code === 'youth-f2f'
-          ? 'youth-f2f'
-          : campaign.code === 'merchant-educational-campaign'
-            ? 'merchant-educational'
-            : campaign.code === 'mpesa-mikili'
-              ? 'mpesa-mikili'
-              : 'vodacom-privilege') as CampaignContext,
+        key: campaignCodeToContext(campaign.code),
         label: campaign.name,
-        note: campaign.code === 'youth-f2f'
+        note: campaignCodeToContext(campaign.code) === 'youth-f2f'
           ? 'Sensibilisation universitaire'
-          : campaign.code === 'mpesa-mikili'
+          : campaignCodeToContext(campaign.code) === 'mpesa-mikili'
             ? 'Brand Ambassador · M-Pesa'
             : campaign.campaign_type === 'brand_ambassador'
               ? 'Brand Ambassador'
@@ -210,7 +204,6 @@ export default function App() {
   const handleLogout = () => { setCurrentUser(null); setMasterUser(null); setSimulatedRole(null); setSimulatedUserId(null); };
   const renderContent = () => { let content: React.ReactNode; if (isMikiliContext && effectiveRole === 'agent' && activeTab !== 'chat') content = <MpesaMikiliView currentUser={effectiveUser} activeTab={activeTab} />; else if (isYouthContext && activeTab !== 'chat') content = <YouthF2FView currentUser={effectiveUser} />; else if (activeTab === 'chat') content = <ChatView currentUser={effectiveUser} onDataChanged={refreshData} />; else if (isMerchantContext && effectiveRole === 'agent') content = activeTab === 'tab2' ? <MerchantTransactionsView currentUser={effectiveUser} campaignPaused={campaignIsPaused} onRecordTransaction={() => { if (!campaignIsPaused) { setMerchantTransactionRequested(true); setActiveTab('home'); } }} /> : activeTab === 'pos' ? <MerchantPosVisitsView currentUser={effectiveUser} campaignPaused={campaignIsPaused} /> : activeTab === 'tab3' ? <MerchantArchivesView currentUser={effectiveUser} /> : <MerchantBAView currentUser={effectiveUser} campaignPaused={campaignIsPaused} pauseReason={activeCampaignPause?.reason || ''} openTransactionRequested={merchantTransactionRequested} onTransactionRequestHandled={() => setMerchantTransactionRequested(false)} onPointagePhotoRecorded={(path) => { void getMerchantEvidencePublicUrl(path).then(setMerchantProfilePhotoUrl).catch(() => setMerchantProfilePhotoUrl('')); }} />; else if (isMerchantContext && (effectiveRole === 'admin' || effectiveRole === 'super_admin' || effectiveRole === 'supervisor' || effectiveRole === 'sub_admin')) content = activeTab === 'tab2' ? <MerchantMonitoringView /> : activeTab === 'tab3' ? <MerchantSupervisorArchivesView /> : activeTab === 'admin' ? <MerchantSupervisorView currentUser={effectiveUser} onOpenUserModal={() => setIsUserModalOpen(true)} openFundRequestId={fundRequestToOpen} onFundRequestOpened={() => setFundRequestToOpen(null)} openFundRequests={openFundRequests} onFundRequestsOpened={() => setOpenFundRequests(false)} /> : (effectiveRole === 'admin' || effectiveRole === 'super_admin') ? <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} pendingFundRequestCount={fundRequestAlerts.length} onOpenFundRequests={() => { setOpenFundRequests(true); setActiveTab('admin'); }} /> : <MerchantAdminDashboard onOpenManagement={() => setActiveTab('admin')} podiumSlot={<MerchantPodiumView />} pendingFundRequestCount={fundRequestAlerts.length} onOpenFundRequests={() => { setOpenFundRequests(true); setActiveTab('admin'); }} />; else if (effectiveRole === 'admin' || effectiveRole === 'super_admin') content = <AdminView currentUser={effectiveUser} shops={shops} activeTab={activeTab} homeTabPressCount={homeTabPressCount} onRequestTabChange={(tab) => setActiveTab(tab)} onSimulateRole={handleSimulateRoleChange} onOpenUserModal={() => setIsUserModalOpen(true)} onOpenShopModal={() => setIsShopModalOpen(true)} onOpenAgentProfile={(agent) => setSelectedAgentForProfile(agent)} onOpenPdfModal={(url) => setPdfModalUrl(url)} onOpenTodayClientsModal={(agent) => setSelectedAgentForTodayClients(agent)} onOpenLocationModal={(agent) => setSelectedLocationAgent(agent)} onRefreshData={refreshData} />; else if (effectiveRole === 'supervisor' || effectiveRole === 'sub_admin') content = <SupervisorView currentUser={effectiveUser} globalScope={effectiveRole === 'sub_admin'} activeTab={activeTab} shops={shops} onOpenPdfModal={(url) => setPdfModalUrl(url)} onOpenAgentProfile={(agent) => setSelectedAgentForProfile(agent)} onOpenTodayClientsModal={(agent) => setSelectedAgentForTodayClients(agent)} onOpenLocationModal={(agent) => setSelectedLocationAgent(agent)} onOpenUserModal={() => setIsUserModalOpen(true)} onRefreshData={refreshSupervisorMonitoring} />; else content = <AgentView currentUser={effectiveUser} campaignPaused={campaignIsPaused} pauseReason={activeCampaignPause?.reason || ''} activeShopId={activeShopId} activeTab={activeTab} todayLeads={todayLeads} todayCheckin={todayCheckin} agentReports={agentReports} onOpenLeadModal={() => setIsLeadModalOpen(true)} onOpenReportModal={() => setIsReportModalOpen(true)} onOpenPdfModal={(url) => setPdfModalUrl(url)} onRefreshData={refreshData} />; return <Suspense fallback={<SectionLoader />}><React.Fragment key={`${effectiveRole}-${effectiveUser.id}`}>{content}</React.Fragment></Suspense>; };
   const themeSurfaceStyle = theme === 'anthracite' ? { backgroundColor: '#111317', backgroundImage: 'linear-gradient(135deg, #0b0d11 0%, #1a1f27 42%, #2b2320 100%)', color: '#f8fafc' } : theme === 'rubis' ? { backgroundColor: '#220b11', backgroundImage: 'linear-gradient(135deg, #2a0d15 0%, #7f1d1d 45%, #fb7185 100%)', color: '#fff7f7' } : theme === 'silver' ? { backgroundColor: '#0f172a', backgroundImage: 'linear-gradient(135deg, #0f172a 0%, #334155 46%, #dbeafe 100%)', color: '#f8fafc' } : theme === 'diamond' ? { backgroundColor: '#f6f4f1', backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.94) 0%, rgba(242,242,247,0.88) 52%, rgba(225,221,228,0.9) 100%)', color: '#28303a' } : theme === 'sapphire' ? { backgroundColor: '#071120', backgroundImage: 'linear-gradient(135deg, #071120 0%, #1d4ed8 48%, #93c5fd 100%)', color: '#f8fbff' } : theme === 'ambre' ? { backgroundColor: '#23150c', backgroundImage: 'linear-gradient(135deg, #23150c 0%, #92400e 50%, #fde68a 100%)', color: '#fffef7' } : { backgroundColor: '#111317', backgroundImage: 'linear-gradient(135deg, #0b0d11 0%, #1a1f27 42%, #2b2320 100%)', color: '#f8fafc' };
-  const superAdminCampaignOptions = [{ key: 'vodacom-privilege' as const, label: 'Vodacom Privilège', note: 'Hôtesses' }, { key: 'merchant-educational' as const, label: 'Merchant Education', note: 'Brand Ambassadors' }, { key: 'youth-f2f' as const, label: 'Youth F2F', note: 'Sensibilisation universitaire' }, { key: 'mpesa-mikili' as const, label: 'M-Pesa Mikili', note: 'Brand Ambassador · M-Pesa' }];
   return (<div className="app-shell h-screen flex flex-col relative overflow-hidden font-sans select-none transition-colors" style={{ color: themeSurfaceStyle.color }}>
     {realMasterUser.role === 'super_admin' && <SimulationBar masterUser={realMasterUser} effectiveUser={effectiveUser} users={users} simulatedRole={simulatedRole} theme={theme} onSimulateRole={handleSimulateRoleChange} onSimulateUserChange={handleSimulateUserChange} onResetSimulation={handleResetSimulation} />}
     <Header user={effectiveUser} notifications={notifications} unreadChatCount={chatUnreadCount} online={online} syncPendingCount={syncPendingCount} profilePhotoUrl={(isMerchantContext && effectiveUser.userCategory === 'brand_ambassador' ? merchantProfilePhotoUrl : isYouthContext || isMikiliContext ? '' : todayCheckinPhoto) || undefined} onPointageRecorded={campaignIsPaused || isYouthContext || isMikiliContext ? undefined : refreshData} allowCheckin={!campaignIsPaused && !isYouthContext && !isMikiliContext} checkinUnavailableLabel={isYouthContext ? 'Utilisez le pointage Youth F2F ci-dessous' : isMikiliContext ? 'Utilisez le pointage M-Pesa Mikili ci-dessous' : 'Pointage indisponible pendant la pause de campagne'} theme={theme} onSetTheme={setThemeMode} activeCampaign={activeCampaign} campaignOptions={realMasterUser.role === 'super_admin' ? (effectiveRole === 'agent' ? agentCampaignOptions : superAdminCampaignOptions) : effectiveRole === 'agent' ? agentCampaignOptions : undefined} onSetCampaign={effectiveRole === 'agent' ? ((agentCampaignOptions.length > 1 || (realMasterUser.role === 'super_admin' && simulatedUserId)) ? setPermittedCampaignContext : undefined) : (realMasterUser.role === 'admin' || realMasterUser.role === 'super_admin' || realMasterUser.role === 'supervisor' || realMasterUser.role === 'sub_admin' ? setCampaignContext : undefined)} onMarkNotifsRead={() => { markNotifsAsRead(effectiveUser.id); markChatAsRead(effectiveUser.id); refreshData(); }} onClearNotifications={() => { clearNotifications(effectiveUser.id); refreshData(); }} fundRequestAlerts={fundRequestAlerts} onOpenFundRequest={(requestId) => { setFundRequestToOpen(requestId); setOpenFundRequests(false); setCampaignContext('merchant-educational'); setActiveTab('admin'); }} onLogout={handleLogout} onOpenPasswordModal={() => setIsPasswordModalOpen(true)} onRefreshData={realMasterUser.role === 'super_admin' ? undefined : () => { void refreshData(true); }} />
