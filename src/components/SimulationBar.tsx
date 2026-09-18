@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';\nimport { createPortal } from 'react-dom';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { User, UserRole } from '../types';
 import { Shield, RotateCcw, Search, UserRound, X, SlidersHorizontal, Minimize2, Maximize2 } from 'lucide-react';
 import type { ThemeMode } from './Header';
