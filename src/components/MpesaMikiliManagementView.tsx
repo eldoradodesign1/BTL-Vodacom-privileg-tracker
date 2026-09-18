@@ -212,6 +212,11 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
 
       {activeTab === 'tab2' && <>
         <section className="flex items-center justify-between gap-2 rounded-[1.5rem] border border-white/10 bg-white/[0.025] p-3"><div className="flex items-center gap-2"><UsersRound size={18} className="text-red-200"/><div><p className="text-[8px] font-black uppercase tracking-[0.18em] text-gray-500">Monitoring Mikili</p><h2 className="mt-0.5 text-sm font-black text-white">{dayLabel(date)} · {team.length} BA</h2></div></div><DateIconPicker value={date} min={START_DATE} max={today} onChange={setDate} className="flex min-w-0 items-center" buttonClassName="h-9 w-9 shrink-0 rounded-xl border border-red-300/20 bg-red-500/10 text-red-100" labelClassName="hidden sm:block truncate text-[9px] font-black uppercase text-gray-300"/></section>
+        {!isSupervisor && <section className="glass-card overflow-hidden p-4">
+          <div className="flex items-center justify-between"><div><p className="text-[8px] font-black uppercase tracking-[0.18em] text-amber-200/80">Performance</p><h2 className="mt-1 text-lg font-black text-white">Podium du jour</h2></div><Trophy size={19} className="text-amber-200"/></div>
+          <div className="mt-3 grid grid-cols-3 gap-2">{[0,1,2].map((index)=>{const entry=podium[index];return <div key={entry?.userId||index} className={`min-h-24 rounded-2xl border p-3 ${rankClasses[index]}`}><span className="text-[9px] font-black">{index+1}</span><b className="mt-2 block truncate text-[10px]">{entry?.name?.split(' ')[0]||'—'}</b><span className="mt-1 block text-[8px] font-bold opacity-70">{entry ? entry.transactions+' Tx · '+entry.clients+' clients' : 'À saisir'}</span></div>})}</div>
+        </section>}
+
         <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
           {[
             ['agents','Détail agent',UsersRound],['presence','Registre de présence',CheckCircle2],['checkins','Pointage journalier',MapPin],['reports','Rapports',Archive]
