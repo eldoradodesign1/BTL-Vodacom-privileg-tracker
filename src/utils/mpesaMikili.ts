@@ -339,5 +339,14 @@ export async function getMikiliSupervisorRegions(campaignId: string, supervisorI
   const db = getClient();
   const { data, error } = await db.from('campaign_supervisor_regions').select('region').eq('campaign_id', campaignId).eq('supervisor_id', supervisorId).eq('is_active', true);
   fail(error, 'Impossible de charger le périmètre régional M-Pesa Mikili');
-  return Array.from(new Set(((data || []) as Array<{ region: string }>).map((row) => row.region).filter((region): region is MikiliRegion => (MPESA_MIKILI_REGIONS as readonly string[]).includes(region))));
+  const configured = Array.from(new Set(((data || []) as Array<{ region: string }>).map((row) => row.region).filter((region): region is MikiliRegion => (MPESA_MIKILI_REGIONS as readonly string[]).includes(region))));
+  if (configured.length) return configured;
+
+  // Fallback métier tant que les lignes campaign_supervisor_regions ne sont pas encore renseignées.
+  const { data: supervisor, error: supervisorError } = await db.from('users').select('full_name').eq('id', supervisorId).maybeSingle();
+  fail(supervisorError, 'Impossible de déterminer le superviseur M-Pesa Mikili');
+  const name = String(supervisor?.full_name || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
+  if (name.includes('herve')) return ['Kinshasa'];
+  if (name.includes('serge')) return ['Kongo-Central', 'Haut-Katanga'];
+  return [];
 }
