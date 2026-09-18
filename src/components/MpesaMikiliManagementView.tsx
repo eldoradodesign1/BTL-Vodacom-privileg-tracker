@@ -22,6 +22,7 @@ import {
 import { DateIconPicker } from './DateIconPicker';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 import { getLocationEmbedUrl } from '../utils/location';
+import { getMerchantEvidencePublicUrl } from '../utils/merchantCampaign';
 
 interface Props {
   currentUser: User;
@@ -93,7 +94,27 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
   const [agentModal, setAgentModal] = useState<'profile' | 'presence' | 'location' | 'reports' | null>(null);
   const [reportsStart, setReportsStart] = useState(START_DATE);
   const [reportsEnd, setReportsEnd] = useState(today);
+  const [profileDate, setProfileDate] = useState(today);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState('');
   const isSupervisor = currentUser.role === 'supervisor';
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedAgent || agentModal !== 'profile') {
+      setProfilePhotoUrl('');
+      return;
+    }
+    setProfileDate(today);
+    const attendance = agentAttendance.find((row) => row.activity_date === today) || agentAttendance.slice().sort((a,b)=>b.activity_date.localeCompare(a.activity_date))[0];
+    if (!attendance?.checkin_photo_path) {
+      setProfilePhotoUrl('');
+      return;
+    }
+    void getMerchantEvidencePublicUrl(attendance.checkin_photo_path)
+      .then((url) => { if (!cancelled) setProfilePhotoUrl(url || ''); })
+      .catch(() => { if (!cancelled) setProfilePhotoUrl(''); });
+    return () => { cancelled = true; };
+  }, [selectedAgent?.userId, agentModal, agentAttendance, today]);
 
   const load = async (showLoader = true) => {
     if (showLoader) setLoading(true);
@@ -347,11 +368,83 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
               <button type="button" onClick={closeAgentModal} className="h-9 w-9 rounded-xl border border-white/10 bg-white/5 text-gray-300">×</button>
             </div>
 
-            {agentModal === 'profile' && <div className="mt-4 space-y-3">
-              <div className="grid grid-cols-3 gap-2"><div className="rounded-2xl bg-white/5 p-3"><b className="text-2xl text-white">{periodClients.filter(x=>x.agent_id===selectedAgent.userId).length}</b><span className="block text-[8px] font-black uppercase text-gray-500">Clients</span></div><div className="rounded-2xl bg-emerald-500/5 p-3"><b className="text-2xl text-emerald-200">{periodClients.filter(x=>x.agent_id===selectedAgent.userId&&x.transaction_done).length}</b><span className="block text-[8px] font-black uppercase text-gray-500">Transactions</span></div><div className="rounded-2xl bg-blue-500/5 p-3"><b className="text-2xl text-blue-200">{agentAttendance.filter(x=>x.checkin_at).length}</b><span className="block text-[8px] font-black uppercase text-gray-500">Pointages</span></div></div>
-              <div className="rounded-2xl border border-white/10 bg-white/[.025] p-3"><p className="text-[8px] font-black uppercase text-gray-500">Courbe d’évolution</p><div className="mt-2 h-48"><ResponsiveContainer width="100%" height="100%"><LineChart data={Array.from(new Set(periodClients.filter(x=>x.agent_id===selectedAgent.userId).map(x=>x.activity_date))).sort().map(d=>{const rows=periodClients.filter(x=>x.agent_id===selectedAgent.userId&&x.activity_date===d);return {label:d.slice(8)+'/'+d.slice(5,7),clients:rows.length,transactions:rows.filter(x=>x.transaction_done).length};})}><XAxis dataKey="label" tick={{fontSize:8,fill:'#6b7280'}} axisLine={false} tickLine={false}/><YAxis allowDecimals={false} tick={{fontSize:8,fill:'#6b7280'}} axisLine={false} tickLine={false}/><Tooltip/><Line type="monotone" dataKey="clients" stroke="#ef4444" strokeWidth={3} dot={false}/><Line type="monotone" dataKey="transactions" stroke="#22c55e" strokeWidth={3} dot={false}/></LineChart></ResponsiveContainer></div></div>
-              <div className="grid grid-cols-2 gap-2 text-[9px] font-bold text-gray-400"><div className="rounded-xl bg-white/5 p-3">Pointages : <b className="text-white">{agentAttendance.filter(x=>x.checkin_at).length}</b></div><div className="rounded-xl bg-white/5 p-3">Journées clôturées : <b className="text-emerald-200">{agentAttendance.filter(x=>x.status==='closed').length}</b></div></div>
-            </div>}
+            {agentModal === 'profile' && (() => {
+              const agentClients = periodClients.filter((x) => x.agent_id === selectedAgent.userId);
+              const selectedDayClients = agentClients.filter((x) => x.activity_date === profileDate);
+              const closedDays = agentAttendance.filter((x) => x.status === 'closed').sort((a,b) => b.activity_date.localeCompare(a.activity_date));
+              const evolution = agentAttendance
+                .filter((x) => x.activity_date >= START_DATE && x.activity_date <= today)
+                .sort((a,b) => a.activity_date.localeCompare(b.activity_date))
+                .map((attendance) => {
+                  const rows = agentClients.filter((x) => x.activity_date === attendance.activity_date);
+                  return {
+                    date: attendance.activity_date,
+                    label: attendance.activity_date.slice(8) + '/' + attendance.activity_date.slice(5,7),
+                    clients: rows.length,
+                    transactions: rows.filter((x) => x.transaction_done).length,
+                  };
+                });
+              const initials = selectedAgent.name.split(' ').map((part) => part[0]).join('').slice(0,2).toUpperCase();
+              const selectedAttendance = agentAttendance.find((x) => x.activity_date === profileDate);
+              return <div className="mt-4 space-y-3">
+                <div className="flex flex-col items-center rounded-[1.7rem] border border-white/10 bg-white/[.025] px-4 py-4 text-center">
+                  <div className="mb-3 h-20 w-20 overflow-hidden rounded-[1.7rem] border-2 border-cyan-300/35 bg-cyan-500/10 shadow-[0_0_30px_rgba(34,211,238,.12)]">
+                    {profilePhotoUrl ? <img src={profilePhotoUrl} alt={selectedAgent.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-xl font-black text-cyan-100">{initials}</div>}
+                  </div>
+                  <h3 className="text-xl font-black uppercase tracking-wide text-white">{selectedAgent.name}</h3>
+                  <p className="mt-1 text-[9px] font-black uppercase text-gray-500">{selectedAgent.phone} · {selectedAgent.locations.filter((x) => ['Kinshasa','Kongo-Central','Haut-Katanga'].includes(x)).join(' · ') || 'Région non renseignée'}</p>
+                  <span className={`mt-3 rounded-full border px-3 py-1 text-[9px] font-black uppercase ${selectedAgent.attendance?.status === 'closed' ? 'border-emerald-300/30 bg-emerald-500/10 text-emerald-200' : selectedAgent.attendance?.checkin_at ? 'border-blue-300/30 bg-blue-500/10 text-blue-200' : 'border-red-300/30 bg-red-500/10 text-red-200'}`}>
+                    {selectedAgent.attendance?.status === 'closed' ? 'Clôturé' : selectedAgent.attendance?.checkin_at ? 'En action' : 'Absent'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3"><b className="block text-2xl font-black text-white">{agentClients.length}</b><span className="text-[8px] font-black uppercase text-gray-500">Clients</span></div>
+                  <div className="rounded-2xl border border-emerald-300/10 bg-emerald-500/[.05] p-3"><b className="block text-2xl font-black text-emerald-200">{agentClients.filter((x)=>x.transaction_done).length}</b><span className="text-[8px] font-black uppercase text-gray-500">Transactions</span></div>
+                  <div className="rounded-2xl border border-blue-300/10 bg-blue-500/[.05] p-3"><b className="block text-2xl font-black text-blue-200">{agentAttendance.filter((x)=>x.checkin_at).length}</b><span className="text-[8px] font-black uppercase text-gray-500">Pointages</span></div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-black uppercase tracking-[.2em] text-gray-400">Évolution quotidienne</p><span className="text-[9px] font-black uppercase text-cyan-200">Clients · Transactions</span></div>
+                  <div className="h-40">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={evolution}>
+                        <XAxis dataKey="label" tick={{fontSize:8,fill:'#6b7280'}} axisLine={false} tickLine={false}/>
+                        <YAxis allowDecimals={false} tick={{fontSize:8,fill:'#6b7280'}} axisLine={false} tickLine={false}/>
+                        <Tooltip contentStyle={{background:'#111827',border:'1px solid rgba(255,255,255,.1)',borderRadius:12,fontSize:10}}/>
+                        <Line type="monotone" dataKey="clients" stroke="#38bdf8" strokeWidth={2.5} dot={{r:3}}/>
+                        <Line type="monotone" dataKey="transactions" stroke="#22c55e" strokeWidth={2.5} dot={{r:3}}/>
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-black uppercase tracking-[.2em] text-gray-400">Détail clients</p><DateIconPicker value={profileDate} onChange={setProfileDate} /></div>
+                  <div className="mb-2 flex items-center justify-between text-[8px] font-black uppercase text-gray-500"><span>{dayLabel(profileDate)}</span><span className="text-emerald-200">{selectedDayClients.length} client(s) · {selectedDayClients.filter((x)=>x.transaction_done).length} transaction(s)</span></div>
+                  <div className="max-h-32 space-y-1.5 overflow-y-auto pr-1 custom-scrollbar">
+                    {selectedDayClients.map((client) => <div key={client.id} className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/20 px-2.5 py-2"><div className="min-w-0"><b className="block truncate text-[9px] text-white">{client.client_name}</b><span className="text-[8px] text-gray-500">{client.client_phone}</span></div><span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[7px] font-black uppercase text-emerald-200">{client.transaction_done ? 'Transaction' : 'Sensibilisé'}</span></div>)}
+                    {!selectedDayClients.length && <p className="py-4 text-center text-[9px] italic text-gray-500">Aucun client enregistré ce jour.</p>}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-[9px] font-bold text-gray-400">
+                  <div className="rounded-xl bg-white/5 p-3">Pointages <b className="text-white">{agentAttendance.filter((x)=>x.checkin_at).length}</b></div>
+                  <div className="rounded-xl bg-white/5 p-3">Journées clôturées <b className="text-emerald-200">{closedDays.length}</b></div>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 text-[10px] font-black uppercase tracking-[.18em] text-gray-400">Historique des rapports ({closedDays.length})</h3>
+                  <div className="space-y-1.5">
+                    {closedDays.slice(0,10).map((row) => {
+                      const rows = agentClients.filter((x)=>x.activity_date===row.activity_date);
+                      return <div key={row.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2.5"><div><b className="block text-[9px] text-white">{dayLabel(row.activity_date)}</b><span className="text-[8px] text-gray-500">{rows.length} clients · {rows.filter((x)=>x.transaction_done).length} transactions</span></div><span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[7px] font-black uppercase text-emerald-200">Rapport présenté</span></div>;
+                    })}
+                    {!closedDays.length && <p className="py-4 text-center text-[9px] italic text-gray-500">Aucun rapport présenté pour cet agent.</p>}
+                  </div>
+                </div>
+              </div>;
+            })()}
 
             {agentModal === 'presence' && <PresencePanel attendance={agentAttendance} startDate={START_DATE} endDate={today} />}
 
