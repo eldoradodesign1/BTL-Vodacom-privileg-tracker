@@ -155,7 +155,35 @@ export default function App() {
   useEffect(() => { const refreshStatus = () => { runScheduledDailyReminders(new Date(), privilegeRemindersPaused); setOnline(typeof navigator !== 'undefined' ? navigator.onLine : true); setChatUnreadCount(currentUser ? getUnreadChatCount(currentUser.id) : 0); setSyncPendingCount(getSyncPendingCount()); }; refreshStatus(); const interval = window.setInterval(refreshStatus, 30000); const onOnline = () => setOnline(true); const onOffline = () => setOnline(false); window.addEventListener('online', onOnline); window.addEventListener('offline', onOffline); return () => { window.clearInterval(interval); window.removeEventListener('online', onOnline); window.removeEventListener('offline', onOffline); }; }, [currentUser?.id, activeTab, users.length, privilegeRemindersPaused]);
   useEffect(() => { if (activeTab === 'chat' && currentUser) { markChatAsRead(currentUser.id); setChatUnreadCount(getUnreadChatCount(currentUser.id)); } }, [activeTab, currentUser?.id]);
   useEffect(() => { if (currentUser) void ensureNotificationsPermission(); }, [currentUser?.id]);
-  useEffect(() => { const profileUser = simulatedUserId ? users.find((user) => user.id === simulatedUserId) || currentUser : currentUser; if (!profileUser || profileUser.userCategory !== 'brand_ambassador') { setMerchantProfilePhotoUrl(''); return; } let cancelled = false; void (async () => { try { const campaign = await getMerchantCampaign(); if (!campaign) return; const runs = await getActiveCampaignRuns(campaign.id); const activeRun = runs.find((run) => run.status === 'active') || runs[0]; if (!activeRun) return; const attendance = await getDailyAttendance(profileUser.id, activeRun.id, toISO(new Date())); const photoUrl = await getMerchantEvidencePublicUrl(attendance?.checkin_photo_path); if (!cancelled) setMerchantProfilePhotoUrl(photoUrl); } catch { if (!cancelled) setMerchantProfilePhotoUrl(''); } })(); return () => { cancelled = true; }; }, [currentUser?.id, currentUser?.userCategory, simulatedUserId]);
+  useEffect(() => {
+    const profileUser = simulatedUserId ? users.find((user) => user.id === simulatedUserId) || currentUser : currentUser;
+    if (!profileUser || profileUser.userCategory !== 'brand_ambassador') { setMerchantProfilePhotoUrl(''); return; }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const activityDate = toISO(new Date());
+        if (activeCampaign === 'mpesa-mikili') {
+          const campaign = await getMikiliCampaign();
+          if (!campaign) throw new Error('Mikili campaign unavailable');
+          const attendance = await getMikiliAttendance(profileUser.id, campaign.id, activityDate);
+          const photoUrl = await getMikiliEvidenceUrl(attendance?.checkin_photo_path);
+          if (!cancelled) setMerchantProfilePhotoUrl(photoUrl);
+          return;
+        }
+        const campaign = await getMerchantCampaign();
+        if (!campaign) return;
+        const runs = await getActiveCampaignRuns(campaign.id);
+        const activeRun = runs.find((run) => run.status === 'active') || runs[0];
+        if (!activeRun) return;
+        const attendance = await getDailyAttendance(profileUser.id, activeRun.id, activityDate);
+        const photoUrl = await getMerchantEvidencePublicUrl(attendance?.checkin_photo_path);
+        if (!cancelled) setMerchantProfilePhotoUrl(photoUrl);
+      } catch {
+        if (!cancelled) setMerchantProfilePhotoUrl('');
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [activeCampaign, currentUser?.id, currentUser?.userCategory, simulatedUserId, users]);
   useEffect(() => { const onToast = (event: Event) => { const custom = event as CustomEvent<{ message?: string; level?: 'success' | 'error' }>; const message = custom.detail?.message; if (!message) return; const level = custom.detail?.level || 'success'; setToast({ message, level }); window.setTimeout(() => { setToast((prev) => (prev?.message === message ? null : prev)); }, 2400); }; window.addEventListener('vodacom-toast', onToast as EventListener); return () => window.removeEventListener('vodacom-toast', onToast as EventListener); }, []);
   if (!currentUser) return <LoginScreen onLoginSuccess={(u, campaign) => { setCurrentUser(u); setMasterUser(u); if (campaign) setCampaignContext(campaign); }} />;
 
