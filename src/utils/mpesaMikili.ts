@@ -333,3 +333,11 @@ export async function getMikiliCampaignClients(
   fail(error, 'Impossible de charger les archives M-Pesa Mikili');
   return (data || []) as MikiliClient[];
 }
+
+
+export async function getMikiliSupervisorRegions(campaignId: string, supervisorId: string): Promise<MikiliRegion[]> {
+  const db = getClient();
+  const { data, error } = await db.from('campaign_supervisor_regions').select('region').eq('campaign_id', campaignId).eq('supervisor_id', supervisorId).eq('is_active', true);
+  fail(error, 'Impossible de charger le périmètre régional M-Pesa Mikili');
+  return Array.from(new Set(((data || []) as Array<{ region: string }>).map((row) => row.region).filter((region): region is MikiliRegion => (MPESA_MIKILI_REGIONS as readonly string[]).includes(region))));
+}
