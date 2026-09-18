@@ -39,6 +39,43 @@ const START_DATE = '2026-09-01';
 const CHART_COLORS = ['#ef4444', '#22c55e', '#f59e0b', '#38bdf8', '#a78bfa'];
 const dayLabel = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' });
 
+const PresencePanel: React.FC<{
+  agent: MikiliTeamMember;
+  attendance: MikiliAttendance[];
+  clients: MikiliClient[];
+  startDate: string;
+  endDate: string;
+}> = ({ agent, attendance, clients, startDate, endDate }) => {
+  const [month, setMonth] = useState(() => new Date());
+  const year = month.getFullYear();
+  const monthIndex = month.getMonth();
+  const days = new Date(year, monthIndex + 1, 0).getDate();
+  const offset = (new Date(year, monthIndex, 1).getDay() + 6) % 7;
+  const cells = Array.from({ length: 42 }, (_, i) => {
+    const day = i - offset + 1;
+    if (day < 1 || day > days) return null;
+    const iso = `${year}-${String(monthIndex + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const row = attendance.find(x => x.activity_date === iso);
+    const inPeriod = iso >= startDate && iso <= endDate;
+    const status = !inPeriod ? 'outside' : row?.status === 'closed' ? 'closed' : row?.checkin_at ? 'open' : 'absent';
+    return { day, iso, status };
+  });
+  return <div className="mt-4 rounded-2xl border border-white/10 bg-white/[.025] p-3">
+    <div className="flex items-center justify-between mb-3">
+      <button type="button" onClick={()=>setMonth(new Date(year,monthIndex-1,1))} className="h-8 w-8 rounded-xl border border-white/10 bg-white/5 text-gray-200">‹</button>
+      <div className="text-xs font-black uppercase text-white">{month.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}</div>
+      <button type="button" onClick={()=>setMonth(new Date(year,monthIndex+1,1))} className="h-8 w-8 rounded-xl border border-white/10 bg-white/5 text-gray-200">›</button>
+    </div>
+    <div className="grid grid-cols-7 gap-1 mb-1">{['Lu','Ma','Me','Je','Ve','Sa','Di'].map(d=><span key={d} className="py-1 text-center text-[8px] font-black uppercase text-gray-600">{d}</span>)}</div>
+    <div className="grid grid-cols-7 gap-1">
+      {cells.map((cell,i)=>cell ? <div key={cell.iso} title={cell.status === 'closed' ? 'Rapport présenté' : cell.status === 'open' ? 'Pointage effectué · journée non clôturée' : cell.status === 'absent' ? 'Absent · aucun pointage' : 'Hors période'} className={`flex h-9 items-center justify-center rounded-lg border text-[10px] font-black ${cell.status==='closed'?'border-emerald-400/40 bg-emerald-500/25 text-emerald-200':cell.status==='open'?'border-blue-400/40 bg-blue-500/25 text-blue-200':cell.status==='absent'?'border-red-400/35 bg-red-500/20 text-red-200':'border-white/10 bg-white/5 text-gray-600'}`}>{cell.day}</div> : <div key={'e'+i} className="h-9"/>)}
+    </div>
+    <div className="mt-3 flex flex-wrap justify-center gap-3 text-[8px] font-black uppercase">
+      <span className="text-emerald-200">● Rapport présenté</span><span className="text-blue-200">● Pointé · non clôturé</span><span className="text-red-200">● Absent</span>
+    </div>
+  </div>;
+};
+
 export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, activeTab }) => {
   const today = mikiliTodayIso();
   const [campaignId, setCampaignId] = useState('');
