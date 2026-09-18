@@ -99,7 +99,10 @@ export default function App() {
   const setCampaignContext = (campaign: CampaignContext) => { setActiveCampaign(campaign); localStorage.setItem('btl_active_campaign', campaign); setActiveTab('home'); };
   const campaignSubject = simulatedUserId ? users.find((user) => user.id === simulatedUserId) || null : currentUser;
   const campaignSubjectId = campaignSubject?.id || null;
-  const campaignSubjectRole = simulatedUserId ? 'agent' : currentUser?.role;
+  // Le filtrage des campagnes ne s'applique qu'à un véritable agent.
+  // Un superviseur/admin simulé doit conserver le même accès global qu'un
+  // superviseur/admin connecté directement.
+  const campaignSubjectRole = simulatedUserId ? (simulatedRole || campaignSubject?.role) : currentUser?.role;
 
   useEffect(() => {
     if (!campaignSubjectId || campaignSubjectRole !== 'agent') { setAgentCampaigns([]); setActiveCampaignPause(null); return; }
@@ -126,7 +129,9 @@ export default function App() {
       } catch {
         if (!cancelled) {
           setAgentCampaigns([]);
-          if (!(currentUser?.role === 'super_admin' && simulatedUserId)) {
+          // Ne jamais réinitialiser le contexte d'un compte de gestion
+          // lorsqu'un chargement de campagnes échoue.
+          if (campaignSubjectRole === 'agent') {
             const inferredContext = campaignSubject?.userCategory === 'brand_ambassador' ? 'merchant-educational' : 'vodacom-privilege';
             setActiveCampaign(inferredContext);
             localStorage.setItem('btl_active_campaign', inferredContext);
