@@ -105,11 +105,9 @@ export default function App() {
     let cancelled = false;
     void (async () => {
       try {
-        // En Simulation Master, l’agent simulé doit voir l’intégralité des campagnes.
-        // Les restrictions d’affectation restent applicables aux vrais comptes agents.
-        const campaigns = currentUser?.role === 'super_admin' && simulatedUserId
-          ? await getCampaigns()
-          : await getCampaignsForUser(campaignSubjectId);
+        // Un agent, y compris lorsqu’il est simulé par le super-admin,
+        // ne voit que les campagnes qui lui sont réellement affectées.
+        const campaigns = await getCampaignsForUser(campaignSubjectId);
         if (cancelled) return;
         setAgentCampaigns(campaigns);
         const current = campaigns.find((campaign) => campaignContextMatches(campaign, activeCampaign));
