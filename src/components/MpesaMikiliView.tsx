@@ -232,6 +232,16 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
 
   const txCount = todayClients.filter((item) => item.transaction_done).length;
   const existingCount = todayClients.filter((item) => item.existing_mikili_user === 'yes').length;
+  const filteredClientsView = useMemo(() => {
+    const needle = clientsSearch.trim().toLowerCase();
+    return clientsView.filter((item) => {
+      const matchesFilter = clientsFilter === 'all'
+        || (clientsFilter === 'transaction' && item.transaction_done)
+        || (clientsFilter === 'sensibilise' && !item.transaction_done);
+      const matchesSearch = !needle || `${item.client_name} ${item.client_phone}`.toLowerCase().includes(needle);
+      return matchesFilter && matchesSearch;
+    });
+  }, [clientsFilter, clientsSearch, clientsView]);
 
   if (loading) return <div className="glass-card p-6 text-center text-xs font-black uppercase tracking-widest text-gray-400">Chargement de votre journée M-Pesa Mikili…</div>;
 
@@ -268,11 +278,6 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
           </div>
         </section>
 
-        <button type="button" onClick={() => { setError(''); setIsClientOpen(true); }} disabled={!isCheckedIn || isClosed} className="group relative flex w-full items-center justify-between overflow-hidden rounded-[2rem] border border-red-300/20 bg-red-500 p-5 text-left shadow-xl shadow-red-500/15 transition hover:-translate-y-0.5 active:scale-[0.99] disabled:opacity-35">
-          <span className="absolute -right-8 -top-12 h-32 w-32 rounded-full bg-white/10 blur-2xl" />
-          <span><b className="block text-lg font-black text-white">Nouveau client</b><span className="mt-1 text-[9px] font-black uppercase tracking-[0.18em] text-red-100">Ajouter une interaction +</span></span><PlusCircle size={30} className="text-white transition group-hover:rotate-90" />
-        </button>
-
         <section className="grid grid-cols-2 gap-3">
           <button type="button" onClick={() => { setError(''); setIsClientOpen(true); }} disabled={!isCheckedIn || isClosed} className="group relative min-h-24 overflow-hidden rounded-[1.8rem] border border-red-300/25 bg-red-500/[0.16] p-4 text-left transition hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-35">
             <PlusCircle size={20} className="text-red-200 transition group-hover:rotate-90" />
@@ -294,12 +299,28 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
 
       {activeTab === 'tab2' && <section className="space-y-3">
         <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-red-500/[0.16] to-transparent p-5">
-          <div className="flex items-end justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-200">Carnet terrain</p><h2 className="mt-1 text-2xl font-black text-white">{clientsView.length} clients</h2></div><button type="button" onClick={() => void refresh(false)} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-gray-300"><RefreshCw size={16}/></button></div>
-          <div className="mt-3 flex items-center rounded-2xl border border-white/10 bg-black/15 px-2 py-1"><DateIconPicker value={clientsDate} min="2026-09-01" max={today} onChange={setClientsDate} className="flex min-w-0 flex-1 items-center" buttonClassName="h-10 w-10 shrink-0 rounded-xl border border-red-300/20 bg-red-500/10 text-red-100" labelClassName="truncate text-[10px] font-black uppercase text-gray-200"/><button type="button" onClick={() => setClientsDate(today)} className="ml-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[9px] font-black uppercase text-gray-400">Aujourd’hui</button></div>
+          <div className="flex items-end justify-between gap-3">
+            <div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-200">Carnet terrain</p><h2 className="mt-1 text-2xl font-black text-white">{filteredClientsView.length} clients</h2></div>
+            <button type="button" onClick={() => void refresh(false)} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-gray-300"><RefreshCw size={16}/></button>
+          </div>
+          <div className="mt-3 flex items-center rounded-2xl border border-white/10 bg-black/15 px-2 py-1">
+            <DateIconPicker value={clientsDate} min="2026-09-01" max={today} onChange={setClientsDate} className="flex min-w-0 flex-1 items-center" buttonClassName="h-10 w-10 shrink-0 rounded-xl border border-red-300/20 bg-red-500/10 text-red-100" labelClassName="truncate text-[10px] font-black uppercase text-gray-200"/>
+            <button type="button" onClick={() => setClientsDate(today)} className="ml-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[9px] font-black uppercase text-gray-400">Aujourd’hui</button>
+          </div>
           <div className="relative mt-2"><Search size={15} className="absolute left-3 top-3 text-gray-500"/><input value={clientsSearch} onChange={(e)=>setClientsSearch(e.target.value)} placeholder="Rechercher un client ou téléphone" className="app-input w-full rounded-2xl py-2.5 pl-9 pr-3 text-xs"/></div>
-          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">{([['all','Tous'],['transaction','Transactions'],['sensibilise','Sensibilisés']] as const).map(([id,label])=><button key={id} type="button" onClick={()=>setClientsFilter(id)} className={clientsFilter===id ? 'whitespace-nowrap rounded-xl border border-red-300/45 bg-red-500/15 px-3 py-2 text-[9px] font-black uppercase text-red-100' : 'whitespace-nowrap rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[9px] font-black uppercase text-gray-500'}>{label}</button>)}</div>
+          <div className="mt-2 flex gap-2 overflow-x-auto pb-1">
+            {([['all','Tous'],['transaction','Transactions'],['sensibilise','Sensibilisés']] as const).map(([id,label]) => <button key={id} type="button" onClick={()=>setClientsFilter(id)} className={clientsFilter===id ? 'whitespace-nowrap rounded-xl border border-red-300/45 bg-red-500/15 px-3 py-2 text-[9px] font-black uppercase text-red-100' : 'whitespace-nowrap rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[9px] font-black uppercase text-gray-500'}>{label}</button>)}
+          </div>
         </div>
-        {clientsLoading ? <div className="glass-card p-7 text-center text-[10px] font-black uppercase tracking-widest text-gray-500">Chargement du carnet…</div> : (() => { const needle=clientsSearch.trim().toLowerCase(); const rows=clientsView.filter((item)=> (clientsFilter==='all' || (clientsFilter==='transaction' ? item.transaction_done : !item.transaction_done)) && (!needle || `${item.client_name} ${item.client_phone}`.toLowerCase().includes(needle))); return rows.length===0 ? <div className="glass-card p-8 text-center"><UsersRound size={28} className="mx-auto text-gray-600"/><p className="mt-3 text-xs font-bold text-gray-500">Aucune interaction pour ces critères.</p></div> : rows.map((item)=><article key={item.id} className="group relative overflow-hidden rounded-[1.7rem] border border-white/8 bg-white/[0.035] p-4 transition hover:bg-white/[0.06]"><div className="relative flex items-start justify-between gap-3"><div><h3 className="text-sm font-black text-white">{item.client_name}</h3><p className="mt-1 text-[10px] font-semibold text-gray-500">{item.client_phone} · {item.location?.name || 'Lieu non renseigné'}</p></div><span className={item.transaction_done ? 'rounded-full bg-emerald-500/15 px-2 py-1 text-[8px] font-black uppercase text-emerald-200' : 'rounded-full bg-white/8 px-2 py-1 text-[8px] font-black uppercase text-gray-400'}>{item.transaction_done ? 'Transaction' : 'Sensibilisé'}</span></div><div className="relative mt-3 flex flex-wrap gap-1.5"><span className="rounded-full bg-white/[0.05] px-2 py-1 text-[8px] font-bold text-gray-400">{mikiliDisplayExisting(item.existing_mikili_user)}</span><span className="rounded-full bg-white/[0.05] px-2 py-1 text-[8px] font-bold text-gray-400">{mikiliDisplayService(item.presented_service)}</span>{item.transaction_done && <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[8px] font-bold text-emerald-200">{mikiliDisplayTransaction(item.transaction_type)}</span>}</div></article>); })()}
+        {clientsLoading ? <div className="glass-card p-7 text-center text-[10px] font-black uppercase tracking-widest text-gray-500">Chargement du carnet…</div> : filteredClientsView.length === 0 ? <div className="glass-card p-8 text-center"><UsersRound size={28} className="mx-auto text-gray-600"/><p className="mt-3 text-xs font-bold text-gray-500">Aucune interaction pour ces critères.</p></div> : filteredClientsView.map((item) => (
+          <article key={item.id} className="group relative overflow-hidden rounded-[1.7rem] border border-white/8 bg-white/[0.035] p-4 transition hover:bg-white/[0.06]">
+            <div className="relative flex items-start justify-between gap-3">
+              <div><h3 className="text-sm font-black text-white">{item.client_name}</h3><p className="mt-1 text-[10px] font-semibold text-gray-500">{item.client_phone} · {item.location?.name || 'Lieu non renseigné'}</p></div>
+              <span className={item.transaction_done ? 'rounded-full bg-emerald-500/15 px-2 py-1 text-[8px] font-black uppercase text-emerald-200' : 'rounded-full bg-white/8 px-2 py-1 text-[8px] font-black uppercase text-gray-400'}>{item.transaction_done ? 'Transaction' : 'Sensibilisé'}</span>
+            </div>
+            <div className="relative mt-3 flex flex-wrap gap-1.5"><span className="rounded-full bg-white/[0.05] px-2 py-1 text-[8px] font-bold text-gray-400">{mikiliDisplayExisting(item.existing_mikili_user)}</span><span className="rounded-full bg-white/[0.05] px-2 py-1 text-[8px] font-bold text-gray-400">{mikiliDisplayService(item.presented_service)}</span>{item.transaction_done && <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[8px] font-bold text-emerald-200">{mikiliDisplayTransaction(item.transaction_type)}</span>}</div>
+          </article>
+        ))}
       </section>
 
       {activeTab === 'tab3' && <section className="space-y-3">
