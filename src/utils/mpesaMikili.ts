@@ -350,3 +350,29 @@ export async function getMikiliSupervisorRegions(campaignId: string, supervisorI
   if (name.includes('serge')) return ['Kongo-Central', 'Haut-Katanga'];
   return [];
 }
+
+
+export interface MikiliTargets {
+  dailyClients: number;
+  dailyTransactions: number;
+}
+
+export async function getMikiliTargets(campaignId: string): Promise<MikiliTargets> {
+  const db = getClient();
+  const { data, error } = await db.from('campaigns').select('daily_pos_target,transactions_per_pos_target').eq('id', campaignId).single();
+  fail(error, 'Impossible de charger les objectifs M-Pesa Mikili');
+  return {
+    dailyClients: Number(data?.daily_pos_target || 0),
+    dailyTransactions: Number(data?.transactions_per_pos_target || 0),
+  };
+}
+
+export async function saveMikiliTargets(campaignId: string, targets: MikiliTargets): Promise<void> {
+  const db = getClient();
+  const { error } = await db.from('campaigns').update({
+    daily_pos_target: Math.max(0, Math.round(targets.dailyClients)),
+    transactions_per_pos_target: Math.max(0, Math.round(targets.dailyTransactions)),
+  }).eq('id', campaignId);
+  fail(error, 'Impossible d’enregistrer les objectifs M-Pesa Mikili');
+  invalidateMerchantCache('campaign');
+}
