@@ -345,7 +345,7 @@ export async function getMikiliSupervisorRegions(campaignId: string, supervisorI
   // Fallback métier tant que les lignes campaign_supervisor_regions ne sont pas encore renseignées.
   const { data: supervisor, error: supervisorError } = await db.from('users').select('full_name').eq('id', supervisorId).maybeSingle();
   fail(supervisorError, 'Impossible de déterminer le superviseur M-Pesa Mikili');
-  const name = String(supervisor?.full_name || '').toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
+  const name = String(supervisor?.full_name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   if (name.includes('herve')) return ['Kinshasa'];
   if (name.includes('serge')) return ['Kongo-Central', 'Haut-Katanga'];
   return [];
