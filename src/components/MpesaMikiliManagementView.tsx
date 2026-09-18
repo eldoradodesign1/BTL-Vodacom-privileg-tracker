@@ -163,51 +163,33 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
     <div className="space-y-4 pb-6">
       {error && <div className="glass-card flex items-center gap-2 border border-red-400/30 bg-red-500/[0.08] p-3 text-xs font-bold text-red-100"><CircleAlert size={16}/>{error}</div>}
 
-      <section className="relative overflow-hidden rounded-[2rem] border border-red-300/15 bg-gradient-to-br from-red-500/[0.22] via-white/[0.05] to-transparent p-5 shadow-2xl shadow-red-950/25">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-red-500/20 blur-3xl"/>
-        <div className="relative flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.22em] text-red-200">M-Pesa Mikili · pilotage</p>
-            <h1 className="mt-1 text-2xl font-black text-white">{isSupervisor ? 'Mon équipe terrain' : 'Cockpit opérationnel'}</h1>
-            <p className="mt-1 text-[10px] font-semibold text-gray-400">{isSupervisor && regions.length ? regions.join(' · ') : 'Sensibilisation et transactions hors boutique'}</p>
-          </div>
-          <button type="button" onClick={() => void load(false)} className="rounded-2xl border border-white/10 bg-black/20 p-3 text-gray-200 transition hover:bg-white/10 active:scale-95" title="Actualiser"><RefreshCw size={17} className={refreshing ? 'animate-spin' : ''}/></button>
-        </div>
-        <div className="relative mt-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 p-2">
-          <DateIconPicker value={date} min={START_DATE} max={today} onChange={setDate} className="flex min-w-0 flex-1 items-center" buttonClassName="h-10 w-10 shrink-0 rounded-xl border border-red-300/20 bg-red-500/10 text-red-100" labelClassName="truncate text-[10px] font-black uppercase text-gray-200"/>
-          <button type="button" onClick={() => setDate(today)} className={date === today ? 'rounded-xl border border-red-300/50 bg-red-500/20 px-3 py-2 text-[9px] font-black uppercase text-red-100' : 'rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[9px] font-black uppercase text-gray-400'}>Aujourd’hui</button>
-        </div>
-      </section>
-
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {[
-          ['BA actifs', metrics.present, UsersRound, 'text-cyan-100'],
-          ['Clients', metrics.clients, UsersRound, 'text-white'],
-          ['Transactions', metrics.transactions, Zap, 'text-emerald-200'],
-          ['Conversion', metrics.conversion + '%', BarChart3, 'text-amber-100'],
-        ].map(([label, value, Icon, tone]) => {
-          const IconComponent = Icon as React.ElementType;
-          return <div key={String(label)} className="glass-card relative overflow-hidden p-3"><IconComponent size={15} className={String(tone)}/><b className="mt-2 block text-xl font-black text-white">{value as React.ReactNode}</b><span className="text-[8px] font-black uppercase tracking-wider text-gray-500">{label}</span></div>;
-        })}
-      </section>
-
       {activeTab === 'home' && <>
-        <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {[
-            ['BA présents', metrics.present, UsersRound, 'text-cyan-100'],
-            ['Clients', metrics.clients, UsersRound, 'text-white'],
-            ['Transactions', metrics.transactions, Zap, 'text-emerald-200'],
-            ['Conversion', metrics.conversion + '%', BarChart3, 'text-amber-100'],
-          ].map(([label, value, Icon, tone]) => { const I = Icon as React.ElementType; return <div key={String(label)} className="glass-card p-3"><I size={15} className={String(tone)}/><b className="mt-2 block text-xl font-black text-white">{value as React.ReactNode}</b><span className="text-[8px] font-black uppercase tracking-wider text-gray-500">{label}</span></div>; })}
+        <section className="relative overflow-hidden rounded-[2rem] border border-red-300/15 bg-gradient-to-br from-red-500/[0.20] via-white/[0.05] to-transparent p-5 shadow-2xl shadow-red-950/20">
+          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-red-500/20 blur-3xl"/>
+          <div className="relative flex items-start justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.22em] text-red-200">M-Pesa Mikili · pilotage</p><h1 className="mt-1 text-3xl font-black tracking-tight text-white">{isSupervisor ? 'Mon équipe terrain' : 'Cockpit Mikili'}</h1><p className="mt-1 text-[10px] font-semibold text-gray-400">{isSupervisor && regions.length ? regions.join(' · ') : 'Pilotage de la sensibilisation et des transactions'}</p></div><button type="button" onClick={() => void load(false)} className="rounded-2xl border border-white/10 bg-black/20 p-3 text-gray-200 transition hover:bg-white/10 active:scale-95" title="Actualiser"><RefreshCw size={17} className={refreshing ? 'animate-spin' : ''}/></button></div>
+          <div className="relative mt-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 p-2"><DateIconPicker value={date} min={START_DATE} max={today} onChange={setDate} className="flex min-w-0 flex-1 items-center" buttonClassName="h-10 w-10 shrink-0 rounded-xl border border-red-300/20 bg-red-500/10 text-red-100" labelClassName="truncate text-[10px] font-black uppercase text-gray-200"/><button type="button" onClick={() => setDate(today)} className={date === today ? 'rounded-xl border border-red-300/50 bg-red-500/20 px-3 py-2 text-[9px] font-black uppercase text-red-100' : 'rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[9px] font-black uppercase text-gray-400'}>Aujourd’hui</button></div>
         </section>
-
+        <section className="relative overflow-hidden rounded-[1.7rem] border border-white/10 bg-white/[0.025] px-4 py-3">
+          <div className="flex items-stretch divide-x divide-white/10 overflow-x-auto">{[['Présents',metrics.present,UsersRound,'text-cyan-100'],['Clients',metrics.clients,UsersRound,'text-white'],['Transactions',metrics.transactions,Zap,'text-emerald-200'],['Conversion',metrics.conversion+'%',BarChart3,'text-amber-100']].map(([label,value,Icon,tone])=>{const I=Icon as React.ElementType;return <div key={String(label)} className="min-w-[105px] flex-1 px-3 first:pl-0 last:pr-0"><div className="flex items-center gap-2"><I size={14} className={String(tone)}/><span className="text-[8px] font-black uppercase tracking-[0.16em] text-gray-500">{label}</span></div><b className="mt-1 block text-2xl font-black text-white">{value as React.ReactNode}</b></div>})}</div>
+        </section>
         <section className="glass-card overflow-hidden p-4">
           <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-200/80">Progression</p><h2 className="mt-1 text-lg font-black text-white">Le terrain depuis le 1er septembre</h2></div><ArrowUpRight size={20} className="text-cyan-200"/></div>
           <div className="mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><LineChart data={chartData}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.07)"/><XAxis dataKey="label" tick={{fontSize:9,fill:'#6b7280'}} axisLine={false} tickLine={false}/><YAxis allowDecimals={false} tick={{fontSize:9,fill:'#6b7280'}} axisLine={false} tickLine={false}/><Tooltip contentStyle={{background:'#11141d',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,fontSize:11}}/><Line type="monotone" dataKey="clients" name="Clients" stroke="#ef4444" strokeWidth={3} dot={false}/><Line type="monotone" dataKey="transactions" name="Transactions" stroke="#22c55e" strokeWidth={3} dot={false}/></LineChart></ResponsiveContainer></div>
         </section>
 
         <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-          donuts
+          {[
+            ['Transactions', donutData.transactions],
+            ['Types d’interactions', donutData.interactions],
+            ['Profil des clients', donutData.clients],
+          ].map(([title, data]) => {
+            const values = data as Array<{ name: string; value: number }>;
+            return <div key={String(title)} className="glass-card min-w-0 overflow-hidden p-4">
+              <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.18em] text-gray-500">{title as React.ReactNode}</p><p className="mt-1 text-[9px] text-gray-600">{selectedDayClients.length} interactions · {dayLabel(date)}</p></div><BarChart3 size={17} className="text-red-200"/></div>
+              <div className="relative mt-1 h-44"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={values} dataKey="value" nameKey="name" innerRadius={48} outerRadius={68} paddingAngle={3} stroke="none">{values.map((entry,index)=><Cell key={entry.name} fill={CHART_COLORS[index % CHART_COLORS.length]}/>)}</Pie><Tooltip contentStyle={{background:'#11141d',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,fontSize:11}}/></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><b className="text-xl font-black text-white">{values.reduce((sum,item)=>sum+item.value,0)}</b><span className="text-[8px] font-black uppercase text-gray-500">Total</span></div></div>
+              <div className="flex flex-wrap justify-center gap-2">{values.map((item,index)=><span key={item.name} className="text-[8px] font-bold text-gray-500"><i className="mr-1 inline-block h-1.5 w-1.5 rounded-full" style={{background:CHART_COLORS[index % CHART_COLORS.length]}}/>{item.name} · {item.value}</span>)}</div>
+            </div>;
+          })}
         </section>
 
         <section className="glass-card overflow-hidden p-4">
