@@ -98,12 +98,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
             </div>
           </div>
         </div>
-      ))}
+      ), document.body)}
     </>
   );
 };
-
-// Small local portal helper keeps the picker completely outside the app layout.
-function ReactDOMPortal(target: HTMLElement, children: React.ReactNode) {
-  return requirePortal(target, children);
-}
