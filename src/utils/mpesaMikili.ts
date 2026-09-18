@@ -103,6 +103,14 @@ export async function getMikiliAttendance(baId: string, campaignId: string, date
   return data as MikiliAttendance | null;
 }
 
+async function getMikiliSharedRunId(campaignId: string): Promise<string> {
+  const db = getClient();
+  const { data, error } = await db.from('campaign_runs').select('id').eq('campaign_id', campaignId).eq('status', 'active').order('starts_on', { ascending: false }).limit(1).maybeSingle();
+  fail(error, 'Impossible de charger la vague M-Pesa Mikili');
+  if (!data?.id) throw new Error('La vague opérationnelle M-Pesa Mikili est introuvable.');
+  return data.id as string;
+}
+
 export async function recordMikiliCheckin(input: {
   campaignId: string;
   baId: string;
@@ -126,6 +134,23 @@ export async function recordMikiliCheckin(input: {
     checkin_photo_path: input.photoPath,
   }, { onConflict: 'campaign_id,ba_id,activity_date' }).select('*').single();
   fail(error, 'Impossible d’enregistrer le pointage M-Pesa Mikili');
+
+  // Miroir dans la table commune : le reste de l’application peut donc
+  // traiter Mikili comme n’importe quelle campagne BA, sans perdre le modèle métier dédié.
+  const sharedRunId = await getMikiliSharedRunId(input.campaignId);
+  const { error: sharedError } = await db.from('ba_daily_attendance').upsert({
+    campaign_run_id: sharedRunId,
+    ba_id: input.baId,
+    activity_date: input.activityDate,
+    status: 'open',
+    checkin_at: input.checkinAt,
+    checkin_latitude: input.latitude,
+    checkin_longitude: input.longitude,
+    checkin_accuracy_m: input.accuracy,
+    checkin_photo_path: input.photoPath,
+  }, { onConflict: 'campaign_run_id,ba_id,activity_date' });
+  fail(sharedError, 'Impossible de synchroniser le pointage M-Pesa Mikili dans le registre commun');
+
   return data as MikiliAttendance;
 }
 
@@ -144,6 +169,18 @@ export async function closeMikiliAttendance(input: {
     checkout_longitude: input.longitude, checkout_accuracy_m: input.accuracy, closing_comment: input.comment.trim(),
   }).eq('id', input.attendanceId).select('*').single();
   fail(error, 'Impossible de clôturer la journée M-Pesa Mikili');
+
+  const sharedRunId = await getMikiliSharedRunId(data.campaign_id as string);
+  const { error: sharedError } = await db.from('ba_daily_attendance').update({
+    status: 'closed',
+    checkout_at: input.checkoutAt,
+    checkout_latitude: input.latitude,
+    checkout_longitude: input.longitude,
+    checkout_accuracy_m: input.accuracy,
+    closing_comment: input.comment.trim(),
+  }).eq('campaign_run_id', sharedRunId).eq('ba_id', data.ba_id).eq('activity_date', data.activity_date);
+  fail(sharedError, 'Impossible de synchroniser la clôture M-Pesa Mikili dans le registre commun');
+
   return data as MikiliAttendance;
 }
 
