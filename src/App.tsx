@@ -59,6 +59,7 @@ export default function App() {
   const [theme, setTheme] = useState<ThemeMode>(() => { try { const saved = localStorage.getItem('vodacom_theme') as ThemeMode | null; const allowed: ThemeMode[] = ['anthracite', 'rubis', 'silver', 'diamond', 'sapphire', 'ambre']; return saved && allowed.includes(saved) ? saved : 'anthracite'; } catch { return 'anthracite'; } });
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [activeCampaign, setActiveCampaign] = useState<CampaignContext>(() => { try { const saved = localStorage.getItem('btl_active_campaign'); if (saved === 'merchant-educational' || saved === 'youth-f2f' || saved === 'mpesa-mikili') return saved; return 'vodacom-privilege'; } catch { return 'vodacom-privilege'; } });
+  const managerCampaignRef = useRef<CampaignContext | null>(null);
   const [homeTabPressCount, setHomeTabPressCount] = useState(0);
   const [users, setUsers] = useState<User[]>(() => getUsers());
   const [shops, setShops] = useState<Shop[]>(() => getShops());
@@ -96,13 +97,27 @@ export default function App() {
   useEffect(() => { const base = simulatedUserId ? users.find((user) => user.id === simulatedUserId) || currentUser : currentUser; const role = simulatedRole || base?.role; const canReviewFunds = role === 'supervisor' || role === 'admin' || role === 'super_admin' || role === 'sub_admin'; if (!base || !canReviewFunds || activeCampaign !== 'merchant-educational') { setFundRequestAlerts([]); alertedFundRequestIdsRef.current = new Set(); return; } let cancelled = false; const emitStrongFundAlert = (requests: Array<{ id: string; baName: string; amount: number; posLabel: string }>, notifySystem = false) => { emitFundRequestAlertSound(); const first = requests[0]; if (notifySystem && first) void showFundRequestSystemNotification(first); const initialTitle = document.title; document.title = `⚠ ${requests.length} demande${requests.length > 1 ? 's' : ''} de fonds`; window.setTimeout(() => { if (document.title.startsWith('⚠ ')) document.title = initialTitle; }, 8000); }; const refreshFundAlerts = async () => { try { const campaign = await getMerchantCampaign(); if (!campaign) return; const runs = await getActiveCampaignRuns(campaign.id); const activeRun = runs.find((run) => run.status === 'active') || runs[0]; if (!activeRun) return; const requests = await getMerchantFundRequests({ runId: activeRun.id, ...(role === 'supervisor' ? { supervisorId: base.id } : {}) }); const pending = requests.filter((request) => request.status === 'pending').map((request) => ({ id: request.id, baName: request.ba?.name || 'Brand Ambassador', amount: Number(request.amount), posLabel: request.point_of_sale?.denomination || request.point_of_sale?.agent_number || 'POS non renseigné', requestedAt: request.requested_at })); if (!cancelled) { const unseen = pending.filter((request) => !alertedFundRequestIdsRef.current.has(request.id)); const now = Date.now(); if (unseen.length) { emitStrongFundAlert(unseen, true); lastFundAlertSignalAtRef.current = now; } else if (pending.length > 0 && now - lastFundAlertSignalAtRef.current >= 15000) { emitStrongFundAlert([pending[0]]); lastFundAlertSignalAtRef.current = now; } if (pending.length === 0) lastFundAlertSignalAtRef.current = 0; alertedFundRequestIdsRef.current = new Set(pending.map((request) => request.id)); setFundRequestAlerts(pending); } } catch { if (!cancelled) setFundRequestAlerts([]); } }; void refreshFundAlerts(); const timer = window.setInterval(() => { void refreshFundAlerts(); }, 15000); return () => { cancelled = true; window.clearInterval(timer); }; }, [activeCampaign, currentUser, dataRevision, simulatedRole, simulatedUserId, users]);
 
   const setThemeMode = (nextTheme: ThemeMode) => setTheme(nextTheme);
-  const setCampaignContext = (campaign: CampaignContext) => { setActiveCampaign(campaign); localStorage.setItem('btl_active_campaign', campaign); setActiveTab('home'); };
+  const setCampaignContext = (campaign: CampaignContext) => { managerCampaignRef.current = campaign; setActiveCampaign(campaign); localStorage.setItem('btl_active_campaign', campaign); setActiveTab('home'); };
   const campaignSubject = simulatedUserId ? users.find((user) => user.id === simulatedUserId) || null : currentUser;
   const campaignSubjectId = campaignSubject?.id || null;
   // Le filtrage des campagnes ne s'applique qu'à un véritable agent.
   // Un superviseur/admin simulé doit conserver le même accès global qu'un
   // superviseur/admin connecté directement.
   const campaignSubjectRole = simulatedUserId ? (simulatedRole || campaignSubject?.role) : currentUser?.role;
+  useEffect(() => {
+    const isManager = ['admin','super_admin','supervisor','sub_admin'].includes(campaignSubjectRole || '');
+    if (!isManager) {
+      managerCampaignRef.current = null;
+      return;
+    }
+    const stored = localStorage.getItem('btl_active_campaign');
+    if (stored === 'vodacom-privilege' || stored === 'merchant-educational' || stored === 'youth-f2f' || stored === 'mpesa-mikili') {
+      if (managerCampaignRef.current === null) managerCampaignRef.current = stored;
+      if (activeCampaign !== managerCampaignRef.current) {
+        setActiveCampaign(managerCampaignRef.current);
+      }
+    }
+  }, [campaignSubjectRole, simulatedUserId, activeCampaign]);
 
   useEffect(() => {
     if (!campaignSubjectId || campaignSubjectRole !== 'agent') { setAgentCampaigns([]); setActiveCampaignPause(null); return; }
