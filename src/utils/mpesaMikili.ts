@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Campaign, User } from '../types';
 import { getSupabaseConfig } from './supabase';
-import { getMerchantEvidencePublicUrl, uploadMerchantEvidence } from './merchantCampaign';
+import { getMerchantEvidencePublicUrl, uploadMerchantEvidence, invalidateMerchantCache } from './merchantCampaign';
 
 export const MPESA_MIKILI_CAMPAIGN_CODE = 'mpesa-mikili';
 export const MPESA_MIKILI_REGIONS = ['Kinshasa', 'Kongo-Central', 'Haut-Katanga'] as const;

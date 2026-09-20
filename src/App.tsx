@@ -5,6 +5,7 @@ import {
 } from './utils/storage';
 import { fetchUsersFromSupabase, fetchShopsFromSupabase, fetchLeadsFromSupabase, isSupabaseConfigured } from './utils/supabase';
 import { getActiveCampaignRuns, getCampaignPauses, getCampaigns, getCampaignsForUser, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, getMerchantFundRequests, invalidateMerchantCache, isCampaignPausedOn } from './utils/merchantCampaign';
+import { getMikiliCampaign, getMikiliAttendance, getMikiliEvidenceUrl } from './utils/mpesaMikili';
 import { armFundRequestAlertAudio, emitFundRequestAlertSound, showFundRequestSystemNotification } from './utils/fundRequestAlert';
 import { CheckCircle2, CircleAlert } from 'lucide-react';
 import { SimulationBar } from './components/SimulationBar';

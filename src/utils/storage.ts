@@ -673,7 +673,7 @@ export function updateUserSupervisor(userId: string, supervisorId: string): bool
 }
 
 export function getDefaultPasswordForRole(role: UserRole): string {
-  return 'password';
+  return role === 'supervisor' || role === 'sub_admin' || role === 'admin' || role === 'super_admin' ? 'test' : 'password';
 }
 
 function normalizeLoginToken(value: string): string {

@@ -24,6 +24,10 @@ function readEnv(name: string): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
+export function normalizeSupabaseUrl(value: string): string {
+  return value.trim().replace(/\/rest\/v1\/?$/, '').replace(/\/$/, '');
+}
+
 function validConfig(config: Partial<RuntimeSupabaseConfig> | null | undefined): config is RuntimeSupabaseConfig {
   return Boolean(config?.url?.trim() && config.anonKey?.trim());
 }
@@ -46,7 +50,7 @@ function readCachedSharedConfig(): SharedRuntimeConfig | null {
     if (!parsed || !validConfig(parsed)) return null;
     const shared = parsed as SharedRuntimeConfig;
     if (typeof shared.geminiConfigured !== 'boolean' || !shared.updatedAt) return null;
-    return { url: shared.url.trim(), anonKey: shared.anonKey.trim(), geminiConfigured: shared.geminiConfigured, updatedAt: shared.updatedAt };
+    return { url: normalizeSupabaseUrl(shared.url), anonKey: shared.anonKey.trim(), geminiConfigured: shared.geminiConfigured, updatedAt: shared.updatedAt };
   } catch {
     return null;
   }
@@ -55,7 +59,7 @@ function readCachedSharedConfig(): SharedRuntimeConfig | null {
 function fallbackConfig(): RuntimeSupabaseConfig | null {
   const url = readEnv('VITE_SUPABASE_URL') || readEnv('SUPABASE_URL');
   const anonKey = readEnv('VITE_SUPABASE_ANON_KEY') || readEnv('SUPABASE_ANON_KEY');
-  return validConfig({ url, anonKey }) ? { url, anonKey } : null;
+  return validConfig({ url, anonKey }) ? { url: normalizeSupabaseUrl(url as string), anonKey: (anonKey as string).trim() } : null;
 }
 
 export function getRuntimeSupabaseConfig(): RuntimeSupabaseConfig | null {
@@ -87,7 +91,7 @@ export async function loadSharedRuntimeConfig(): Promise<SharedRuntimeConfig | n
     const source = payload.config;
     if (!source || !validConfig({ url: source.supabaseUrl, anonKey: source.publishableKey }) || typeof source.geminiConfigured !== 'boolean' || !source.updatedAt) return getSharedRuntimeConfig();
     const config: SharedRuntimeConfig = {
-      url: source.supabaseUrl.trim(),
+      url: normalizeSupabaseUrl(source.supabaseUrl),
       anonKey: source.publishableKey.trim(),
       geminiConfigured: source.geminiConfigured,
       updatedAt: source.updatedAt,
@@ -118,7 +122,7 @@ export async function updateSharedRuntimeConfig(update: SharedRuntimeUpdate): Pr
   const source = payload.config;
   if (!validConfig({ url: source.supabaseUrl, anonKey: source.publishableKey }) || typeof source.geminiConfigured !== 'boolean' || !source.updatedAt) throw new Error('Réponse de configuration invalide.');
   const config: SharedRuntimeConfig = {
-    url: source.supabaseUrl.trim(),
+    url: normalizeSupabaseUrl(source.supabaseUrl),
     anonKey: source.publishableKey.trim(),
     geminiConfigured: source.geminiConfigured,
     updatedAt: source.updatedAt,
