@@ -1449,7 +1449,13 @@ export function getSupervisorLiveView(supervisorId: string, dateISO?: string) {
   const leads = getLeads();
   const shops = getShops();
 
-  const myAgents = users.filter((user) => user.supervisorId === supervisorId && isActivePrivilegeHostess(user, shops));
+  const supervisedHostesses = users.filter((user) => user.supervisorId === supervisorId && user.role === 'agent' && user.userCategory === 'hostess');
+  const myAgents = supervisedHostesses.filter((user) => {
+    if (isActivePrivilegeHostess(user, shops)) return true;
+    return checkins.some((checkin) => isMatchAgent(checkin.agent_id, user) && checkin.type === 'IN' && toISO(checkin.timestamp) === targetDate)
+      || reports.some((report) => isMatchAgent(report.agent_id, user) && toISO(report.date) === targetDate)
+      || leads.some((lead) => isMatchAgent(lead.agent_id, user) && toISO(lead.timestamp) === targetDate);
+  });
 
   return myAgents.map(a => {
     const hasIn = checkins.find(c => isMatchAgent(c.agent_id, a) && toISO(c.timestamp) === targetDate && c.type === 'IN');
