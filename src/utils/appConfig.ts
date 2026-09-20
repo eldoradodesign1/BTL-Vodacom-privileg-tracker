@@ -15,6 +15,8 @@ export interface SharedRuntimeUpdate {
   geminiApiKey?: string;
 }
 
+const DEFAULT_SUPABASE_URL = 'https://upkzlppvwckriuidnyvq.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_36S8t4yZQhYXXMZa3p9ldg_EWnP8gPL';
 const SHARED_RUNTIME_CACHE_KEY = 'btl_shared_runtime_config';
 let runtimeConfig: SharedRuntimeConfig | null = null;
 
@@ -57,8 +59,8 @@ function readCachedSharedConfig(): SharedRuntimeConfig | null {
 }
 
 function fallbackConfig(): RuntimeSupabaseConfig | null {
-  const url = readEnv('VITE_SUPABASE_URL') || readEnv('SUPABASE_URL');
-  const anonKey = readEnv('VITE_SUPABASE_ANON_KEY') || readEnv('SUPABASE_ANON_KEY');
+  const url = readEnv('VITE_SUPABASE_URL') || readEnv('SUPABASE_URL') || DEFAULT_SUPABASE_URL;
+  const anonKey = readEnv('VITE_SUPABASE_ANON_KEY') || readEnv('SUPABASE_ANON_KEY') || DEFAULT_SUPABASE_ANON_KEY;
   return validConfig({ url, anonKey }) ? { url: normalizeSupabaseUrl(url as string), anonKey: (anonKey as string).trim() } : null;
 }
 
