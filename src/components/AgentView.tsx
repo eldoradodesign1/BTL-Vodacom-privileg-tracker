@@ -82,7 +82,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
   const myTodayRank = myTodayTotal > 0 ? globalActivityRanking.findIndex(agent => agent.id === currentUser.id) + 1 : 0;
   const podiumTier = myTodayRank === 1 ? 'gold' : (myTodayRank === 2 ? 'silver' : (myTodayRank === 3 ? 'bronze' : null));
   const podiumLabel = myTodayTotal > 0 ? `#${myTodayRank}` : 'Non classé';
-  const showPodium = true;
+  const showPodium = myTodayTotal > 0;
   const evolutionData = [...agentReports]
     .sort((a, b) => a.date.localeCompare(b.date))
     .slice(-6)

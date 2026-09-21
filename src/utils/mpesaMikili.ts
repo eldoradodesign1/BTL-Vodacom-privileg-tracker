@@ -296,6 +296,7 @@ export async function getMikiliPodium(campaignId: string, activityDate = kinshas
       clients: stats.get(user.id)?.clients || 0,
       transactions: stats.get(user.id)?.transactions || 0,
     }))
+    .filter((entry) => entry.clients > 0 || entry.transactions > 0)
     .sort((a, b) => b.transactions - a.transactions || b.clients - a.clients || a.name.localeCompare(b.name, 'fr'))
     .slice(0, Math.max(1, limit));
 }

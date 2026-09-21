@@ -289,10 +289,10 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
           </div>
         </section>
 
-        <section className="glass-card overflow-hidden p-4">
+        {podium.length > 0 && <section className="glass-card overflow-hidden p-4">
           <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-200/80">Podium du jour</p><h2 className="mt-1 text-lg font-black text-white">Votre course Mikili</h2></div><Trophy size={21} className="text-amber-200" /></div>
           <div className="mt-3 grid grid-cols-3 gap-2">{[0,1,2].map((index) => { const entry = podium[index]; const colors = ['border-amber-300/35 bg-amber-400/[0.12] text-amber-100','border-slate-200/25 bg-slate-200/[0.08] text-slate-100','border-orange-300/25 bg-orange-500/[0.08] text-orange-100']; return <div key={entry?.userId || index} className={`min-h-24 rounded-2xl border p-3 ${colors[index]}`}><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-black/15 text-[10px] font-black">{index+1}</span><b className="mt-2 block truncate text-[10px]">{entry?.name?.split(' ')[0] || '—'}</b><span className="mt-1 block text-[9px] font-bold opacity-80">{entry ? entry.transactions + ' Tx · ' + entry.clients + ' clients' : 'À saisir'}</span></div>; })}</div>
-        </section>
+        </section>}
 
         <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-black/20 p-4">
           <div className="flex items-center justify-between">
