@@ -77,6 +77,24 @@ export interface YouthDailyAttendance {
   closing_comment?: string | null;
 }
 
+export type YouthRegion = 'Bandundu' | 'Equateur' | 'Kongo_Central' | 'Kinshasa' | 'Province_Orientale' | 'H_Lualaba' | 'H_Katanga' | 'Kasai_Occidental' | 'Kasai_Oriental' | 'Maniema' | 'Nord_Kivu' | 'Sud_Kivu';
+export type YouthSubscriberType = 'new_connection' | 'existing_mpesa_no_app' | 'existing_no_mpesa_no_app';
+
+export interface YouthContactReport {
+  id: string;
+  campaign_id: string;
+  attendance_id?: string | null;
+  ba_id: string;
+  activity_date: string;
+  region: YouthRegion;
+  subscriber_type: YouthSubscriberType;
+  subscriber_phone: string;
+  subscriber_name: string;
+  actions: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface CampaignPause {
   id: string;
   campaign_id: string;

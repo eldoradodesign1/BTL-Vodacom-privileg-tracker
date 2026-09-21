@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Camera, CheckCircle2, ChevronRight, CircleAlert, FileCheck2, GraduationCap, MapPin, RefreshCw, ShieldCheck, UsersRound, X } from 'lucide-react';
-import type { Campaign, User, YouthDailyAssignment, YouthDailyAttendance, YouthUniversity } from '../types';
+import { CalendarDays, Camera, CheckCircle2, ChevronRight, CircleAlert, FileCheck2, GraduationCap, MapPin, PlusCircle, RefreshCw, ShieldCheck, UsersRound, X } from 'lucide-react';
+import type { Campaign, User, YouthContactReport, YouthDailyAssignment, YouthDailyAttendance, YouthRegion, YouthSubscriberType, YouthUniversity } from '../types';
 import { runInBackground } from '../utils/backgroundOperations';
 import {
   closeYouthAttendance,
+  addYouthContact,
+  getYouthContacts,
   getYouthAgents,
   getYouthAssignment,
   getYouthAttendance,
@@ -72,6 +74,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
   const [assignment, setAssignment] = useState<YouthDailyAssignment | null>(null);
   const [attendance, setAttendance] = useState<YouthDailyAttendance | null>(null);
   const [history, setHistory] = useState<YouthDailyAttendance[]>([]);
+  const [contacts, setContacts] = useState<YouthContactReport[]>([]);
   const [team, setTeam] = useState<User[]>([]);
   const [selectedUniversityId, setSelectedUniversityId] = useState('');
   const [selectedAgentId, setSelectedAgentId] = useState('');
@@ -85,6 +88,13 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
   const [photoUrl, setPhotoUrl] = useState('');
   const [localPhotoUrl, setLocalPhotoUrl] = useState('');
   const [previewUrl, setPreviewUrl] = useState('');
+  const [isContactOpen, setIsContactOpen] = useState(false);
+  const [contactSaving, setContactSaving] = useState(false);
+  const [contactName, setContactName] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactRegion, setContactRegion] = useState<YouthRegion>('Kinshasa');
+  const [subscriberType, setSubscriberType] = useState<YouthSubscriberType | ''>('');
+  const [contactActions, setContactActions] = useState<string[]>([]);
 
   const refresh = useCallback(async (withLoader = true) => {
     if (withLoader) setLoading(true);
@@ -92,17 +102,19 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
     try {
       const currentCampaign = await getYouthCampaign();
       if (!currentCampaign) throw new Error('La campagne Youth F2F est introuvable.');
-      const [nextUniversities, nextAssignment, nextAttendance, nextTeam] = await Promise.all([
+      const [nextUniversities, nextAssignment, nextAttendance, nextTeam, nextContacts] = await Promise.all([
         getYouthUniversities(currentCampaign.id),
         currentUser.role === 'agent' ? getYouthAssignment(currentUser.id, currentCampaign.id, today) : Promise.resolve(null),
         currentUser.role === 'agent' ? getYouthAttendance(currentUser.id, currentCampaign.id, today) : Promise.resolve(null),
         isOperator ? getYouthAgents(currentUser.role === 'supervisor' ? currentUser.id : undefined) : Promise.resolve([]),
+        currentUser.role === 'agent' ? getYouthContacts(currentUser.id, currentCampaign.id, today) : Promise.resolve([]),
       ]);
       setCampaign(currentCampaign);
       setUniversities(nextUniversities);
       setAssignment(nextAssignment);
       setAttendance(nextAttendance);
       setTeam(nextTeam);
+      setContacts(nextContacts);
       setSelectedUniversityId(nextAssignment?.university_id || nextUniversities[0]?.id || '');
       setOperatorUniversityId(nextUniversities[0]?.id || '');
       setSelectedAgentId((previous) => previous || nextTeam[0]?.id || '');
@@ -137,6 +149,18 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinPending;
   const isClosed = Boolean(attendance?.checkout_at);
   const selectedUniversity = universities.find((university) => university.id === selectedUniversityId) || assignment?.university || null;
+  const youthActions = [['activation_bundle', 'Activation Bundles (50U)'], ['mpesa_account', 'Ouverture compte M-Pesa'], ['mpesa_app', 'Téléchargement application M-Pesa'], ['f2f_optin', 'Optin F2F'], ['none', 'Aucun']] as const;
+  const resetContactForm = () => { setContactName(''); setContactPhone(''); setSubscriberType(''); setContactActions([]); };
+  const saveContact = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!campaign || !attendance?.id || !isCheckedIn || isClosed) return setError('Effectuez le pointage avant d’enregistrer un contact.');
+    if (!contactName.trim() || contactPhone.replace(/\D/g, '').length < 10 || !subscriberType || contactActions.length === 0) return setError('Complétez le nom, le téléphone, le type d’abonné et les actions.');
+    setContactSaving(true); setError('');
+    try {
+      const next = await addYouthContact({ campaignId: campaign.id, attendanceId: attendance.id, baId: currentUser.id, activityDate: today, region: contactRegion, subscriberType, subscriberPhone: contactPhone.trim(), subscriberName: contactName, actions: contactActions });
+      setContacts((current) => [next, ...current]); setIsContactOpen(false); resetContactForm(); setNotice('Contact Youth F2F enregistré.');
+    } catch (caught) { setError(caught instanceof Error ? caught.message : 'Enregistrement du contact impossible.'); } finally { setContactSaving(false); }
+  };
 
   const handleAssignment = (agentId = currentUser.id, universityId = selectedUniversityId) => {
     if (!campaign || !universityId || !agentId) {
@@ -311,6 +335,8 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
 
           {isCheckedIn && <section className="glass-card overflow-hidden p-4 sm:p-5"><div className="flex items-start gap-3"><button type="button" onClick={() => setPreviewUrl(photoUrl || localPhotoUrl)} className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100">{(photoUrl || localPhotoUrl) ? <img src={photoUrl || localPhotoUrl} alt="Pointage Youth F2F" className="h-full w-full object-cover"/> : <Camera size={22}/>}</button><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-200">Pointage validé</p><h2 className="mt-1 text-sm font-black text-white">{assignment?.university?.name || 'Université de sensibilisation'}</h2><p className="mt-1 text-[10px] text-gray-400">{attendance?.checkin_at ? new Date(attendance.checkin_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'Synchronisation en cours'} · Photo et GPS associés</p></div></div>{locationUrl(attendance?.checkin_latitude, attendance?.checkin_longitude) && <iframe title="Localisation du pointage Youth F2F" src={locationUrl(attendance?.checkin_latitude, attendance?.checkin_longitude)} className="mt-4 h-56 w-full rounded-2xl border border-white/10" loading="lazy"/>}</section>}
 
+          {isCheckedIn && !isClosed && <section className="glass-card overflow-hidden p-4 sm:p-5"><div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-200"><UsersRound size={19}/></span><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">Reporting terrain</p><h2 className="mt-1 text-sm font-black text-white">Contacts sensibilisés · {contacts.length}</h2><p className="mt-1 text-[11px] leading-relaxed text-gray-400">Saisissez chaque contact selon le formulaire Vodacom, sans inventer de localisation.</p></div></div><button type="button" onClick={() => { setError(''); setIsContactOpen(true); }} className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/35 bg-cyan-400/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-cyan-100 transition hover:bg-cyan-400/20"><PlusCircle size={16}/> Ajouter un contact</button>{contacts.length > 0 && <div className="mt-3 space-y-2">{contacts.slice(0, 4).map((item) => <div key={item.id} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2"><span><b className="block text-[11px] text-white">{item.subscriber_name}</b><span className="text-[9px] text-gray-500">{item.subscriber_phone} · {item.actions.length} action{item.actions.length > 1 ? 's' : ''}</span></span><span className="text-[9px] font-black uppercase text-cyan-200">{item.region.replace('_', ' ')}</span></div>)}</div>}</section>}
+
           {isCheckedIn && !isClosed && <section className="glass-card p-4 sm:p-5"><div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-400/10 text-amber-200"><FileCheck2 size={19}/></span><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-100">Rapport de clôture</p><h2 className="mt-1 text-sm font-black text-white">Clôturer votre journée</h2><p className="mt-1 text-[11px] leading-relaxed text-gray-400">Décrivez brièvement la sensibilisation réalisée. Le commentaire est requis pour clôturer.</p></div></div><textarea value={closingComment} onChange={(event) => setClosingComment(event.target.value)} rows={4} placeholder="Ex. Sensibilisation menée auprès des étudiants ; retours et incidents éventuels…" className="app-input mt-4 w-full resize-none rounded-2xl px-3 py-3 text-sm"/><button type="button" onClick={handleClose} className="mt-3 w-full rounded-2xl border border-amber-300/35 bg-amber-400/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-amber-100 transition hover:bg-amber-400/20">Clôturer ma journée</button></section>}
 
           {isClosed && <section className="glass-card border border-emerald-400/25 p-5 text-center"><CheckCircle2 className="mx-auto text-emerald-300" size={25}/><h2 className="mt-2 text-sm font-black text-white">Journée clôturée</h2><p className="mt-1 text-[11px] leading-relaxed text-gray-400">Votre rapport est conservé dans les archives Youth F2F. Vous pourrez consulter l’emplacement, la photo et le commentaire enregistrés.</p></section>}
@@ -318,6 +344,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
       )}
 
       {previewUrl && <ModalShell title="Photo de pointage" onClose={() => setPreviewUrl('')}><img src={previewUrl} alt="Photo de pointage Youth F2F" className="w-full rounded-2xl border border-white/10 object-contain"/></ModalShell>}
+      {isContactOpen && <ModalShell title="Nouveau contact Youth" onClose={() => !contactSaving && setIsContactOpen(false)}><form onSubmit={saveContact} className="space-y-4"><div><label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Nom de l’abonné *</label><input value={contactName} onChange={(event) => setContactName(event.target.value)} className="app-input mt-1 w-full rounded-2xl px-3 py-3 text-sm" placeholder="Nom complet"/></div><div><label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Numéro de l’abonné *</label><input value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} inputMode="tel" maxLength={13} className="app-input mt-1 w-full rounded-2xl px-3 py-3 text-sm" placeholder="08XXXXXXXXX ou +243…"/></div><div><label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Région *</label><select value={contactRegion} onChange={(event) => setContactRegion(event.target.value as YouthRegion)} className="app-input mt-1 w-full rounded-2xl px-3 py-3 text-sm">{(['Bandundu','Equateur','Kongo_Central','Kinshasa','Province_Orientale','H_Lualaba','H_Katanga','Kasai_Occidental','Kasai_Oriental','Maniema','Nord_Kivu','Sud_Kivu'] as YouthRegion[]).map((region) => <option key={region} value={region}>{region.replaceAll('_', ' ')}</option>)}</select></div><div><label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Type d’abonné *</label><div className="mt-2 space-y-2">{([['new_connection','Nouvel abonné (connexion)'],['existing_mpesa_no_app','Abonné existant avec M-Pesa, sans application'],['existing_no_mpesa_no_app','Abonné existant sans M-Pesa et sans application']] as const).map(([value,label]) => <button type="button" key={value} onClick={() => setSubscriberType(value)} className={`w-full rounded-xl border px-3 py-2.5 text-left text-[10px] font-bold ${subscriberType === value ? 'border-cyan-300/50 bg-cyan-400/15 text-cyan-100' : 'border-white/10 bg-white/[0.03] text-gray-400'}`}>{label}</button>)}</div></div><div><label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Actions prises *</label><div className="mt-2 grid grid-cols-2 gap-2">{youthActions.map(([value,label]) => { const selected = contactActions.includes(value); return <button type="button" key={value} onClick={() => setContactActions((current) => value === 'none' ? (selected ? [] : ['none']) : current.includes(value) ? current.filter((item) => item !== value) : [...current.filter((item) => item !== 'none'), value])} className={`rounded-xl border px-2 py-2.5 text-[9px] font-bold ${selected ? 'border-cyan-300/50 bg-cyan-400/15 text-cyan-100' : 'border-white/10 bg-white/[0.03] text-gray-500'}`}>{selected ? '✓ ' : ''}{label}</button>; })}</div></div><button type="submit" disabled={contactSaving} className="w-full rounded-2xl bg-cyan-500 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50">{contactSaving ? 'Enregistrement…' : 'Enregistrer le contact'}</button></form></ModalShell>}
     </section>
   );
 };

@@ -62,7 +62,7 @@ export interface MpesaMikiliViewProps {
 }
 
 export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, activeTab }) => {
-  const today = useMemo(() => mikiliTodayIso(), []);
+  const [today, setToday] = useState(() => mikiliTodayIso());
   const [campaignId, setCampaignId] = useState('');
   const [locations, setLocations] = useState<MikiliLocation[]>([]);
   const [attendance, setAttendance] = useState<MikiliAttendance | null>(null);
@@ -126,6 +126,28 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
       if (showLoader) setLoading(false);
     }
   }, [currentUser.id, today, clientsDate]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const refreshDay = () => {
+      const nextDay = mikiliTodayIso();
+      if (!cancelled && nextDay !== today) {
+        setToday(nextDay);
+        setClientsDate(nextDay);
+        setClientsView([]);
+        setTodayClients([]);
+        setAttendance(null);
+        setCheckinPending(false);
+        setClosingComment('');
+        setHistoryLoaded(false);
+        setNotice('Nouvelle journée Mikili ouverte.');
+      }
+    };
+    const timer = window.setInterval(refreshDay, 60_000);
+    const onVisibility = () => { if (document.visibilityState === 'visible') refreshDay(); };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => { cancelled = true; window.clearInterval(timer); document.removeEventListener('visibilitychange', onVisibility); };
+  }, [today]);
 
   useEffect(() => { void refresh(); }, [refresh]);
 
@@ -282,6 +304,10 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
             <div className="rounded-2xl border border-emerald-400/10 bg-emerald-500/[0.035] p-3"><b className="block text-xl font-black text-emerald-200">{txCount}</b><span className="text-[8px] font-black uppercase tracking-wider text-gray-500">Transactions</span></div>
           </div>
         </section>
+
+        {!isCheckedIn && !isClosed && <section className="glass-card border border-red-300/25 bg-red-500/[0.08] p-4"><div className="flex items-center gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-300/25 bg-red-500/15 text-red-100"><Camera size={20}/></span><div><p className="text-[9px] font-black uppercase tracking-[0.18em] text-red-200">Début de journée</p><h2 className="mt-1 text-sm font-black text-white">Pointage du matin</h2><p className="mt-1 text-[10px] leading-relaxed text-gray-400">Prenez une photo sur votre lieu d’activité. La photo, l’heure et la position seront enregistrées.</p></div></div><button type="button" onClick={() => checkinInputRef.current?.click()} disabled={checkinPending} className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-red-300/35 bg-red-500/15 px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-red-100 transition hover:bg-red-500/25 disabled:opacity-45"><Camera size={16}/>{checkinPending ? 'Synchronisation…' : 'Prendre ma photo de pointage'}</button><input ref={checkinInputRef} type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleCheckin(file); event.currentTarget.value = ''; }}/></section>}
+
+        {isCheckedIn && <section className="glass-card flex items-center gap-3 border border-emerald-300/20 bg-emerald-500/[0.07] p-4"><CheckCircle2 className="shrink-0 text-emerald-300" size={20}/><div><p className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-200">Pointage confirmé</p><p className="mt-1 text-[11px] font-semibold text-gray-300">Les saisies de clients sont maintenant ouvertes.</p></div></section>}
 
         <section className="grid grid-cols-2 gap-3">
           <button type="button" onClick={() => { setError(''); setIsClientOpen(true); }} disabled={!isCheckedIn || isClosed} className="group relative min-h-24 overflow-hidden rounded-[1.8rem] border border-red-300/25 bg-red-500/[0.16] p-4 text-left transition hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-35">

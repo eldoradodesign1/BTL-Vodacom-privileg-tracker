@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import type { Campaign, User, YouthDailyAssignment, YouthDailyAttendance, YouthUniversity } from '../types';
+import type { Campaign, User, YouthContactReport, YouthDailyAssignment, YouthDailyAttendance, YouthRegion, YouthSubscriberType, YouthUniversity } from '../types';
 import { getSupabaseConfig } from './supabase';
 import { getMerchantEvidencePublicUrl, uploadMerchantEvidence } from './merchantCampaign';
 
@@ -176,17 +176,62 @@ export async function getYouthAttendanceHistory(baId: string, campaignId: string
   return (data || []) as YouthDailyAttendance[];
 }
 
+export async function getYouthContacts(baId: string, campaignId: string, activityDate?: string): Promise<YouthContactReport[]> {
+  const client = getYouthClient();
+  let query = client.from('youth_contact_reports').select('*').eq('ba_id', baId).eq('campaign_id', campaignId).order('created_at', { ascending: false }).limit(500);
+  if (activityDate) query = query.eq('activity_date', activityDate);
+  const { data, error } = await query;
+  if (error?.code === 'PGRST205') return [];
+  fail(error, 'Impossible de charger les contacts Youth F2F');
+  return (data || []) as YouthContactReport[];
+}
+
+export async function addYouthContact(input: {
+  campaignId: string;
+  attendanceId?: string | null;
+  baId: string;
+  activityDate: string;
+  region: YouthRegion;
+  subscriberType: YouthSubscriberType;
+  subscriberPhone: string;
+  subscriberName: string;
+  actions: string[];
+}): Promise<YouthContactReport> {
+  const client = getYouthClient();
+  const { data, error } = await client.from('youth_contact_reports').insert({
+    campaign_id: input.campaignId,
+    attendance_id: input.attendanceId || null,
+    ba_id: input.baId,
+    activity_date: input.activityDate,
+    region: input.region,
+    subscriber_type: input.subscriberType,
+    subscriber_phone: input.subscriberPhone,
+    subscriber_name: input.subscriberName.trim(),
+    actions: input.actions,
+  }).select('*').single();
+  fail(error, 'Impossible d’enregistrer le contact Youth F2F');
+  return data as YouthContactReport;
+}
+
 export async function getYouthAgents(supervisorId?: string): Promise<User[]> {
   const client = getYouthClient();
   const campaign = await getYouthCampaign();
   if (!campaign) return [];
+  const { data: assignmentRows, error: assignmentError } = await client
+    .from('user_campaign_assignments')
+    .select('user_id')
+    .eq('campaign_id', campaign.id)
+    .eq('is_active', true)
+    .limit(1000);
+  fail(assignmentError, 'Impossible de charger les affectations Youth F2F');
+  const agentIds = Array.from(new Set((assignmentRows || []).map((row) => row.user_id).filter(Boolean)));
+  if (agentIds.length === 0) return [];
   let request = client
     .from('users')
-    .select('id,phone,full_name,role,password_hash,supervisor_id,permanent_shop_id,user_category,created_at,last_login,user_campaign_assignments!inner(campaign_id,is_active)')
+    .select('id,phone,full_name,role,password_hash,supervisor_id,permanent_shop_id,user_category,created_at,last_login')
+    .in('id', agentIds)
     .eq('user_category', 'brand_ambassador')
     .eq('role', 'agent')
-    .eq('user_campaign_assignments.campaign_id', campaign.id)
-    .eq('user_campaign_assignments.is_active', true)
     .order('full_name');
   if (supervisorId) request = request.eq('supervisor_id', supervisorId);
   const { data, error } = await request;
