@@ -66,6 +66,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [draggedHostess, setDraggedHostess] = useState<{ agentId: string; fromShopId: string } | null>(null);
   const [dragOverShopId, setDragOverShopId] = useState<string | null>(null);
   const [shopAssignmentModal, setShopAssignmentModal] = useState<{ agentId: string; agentName: string; currentShopId: string; selectedShopId: string } | null>(null);
+  const [shopPickerOpen, setShopPickerOpen] = useState(false);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
   const [presenceCalendarAgentId, setPresenceCalendarAgentId] = useState<string | null>(null);
   const [presenceCalendarPosition, setPresenceCalendarPosition] = useState<{ top: number; left: number } | null>(null);
@@ -1450,16 +1451,45 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
 
             <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">Sélectionner un shop</label>
-            <select
-              value={shopAssignmentModal.selectedShopId}
-              onChange={(e) => setShopAssignmentModal(prev => prev ? { ...prev, selectedShopId: e.target.value } : prev)}
-              className="w-full rounded-2xl border border-white/10 bg-black/60 px-3 py-2.5 text-sm font-bold text-white"
-            >
-              <option value="">Aucun shop</option>
-              {shops.map(shop => (
-                <option key={shop.id} value={shop.id}>{shop.name}</option>
-              ))}
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                aria-haspopup="listbox"
+                aria-expanded={shopPickerOpen}
+                onClick={() => setShopPickerOpen((open) => !open)}
+                className="app-input flex w-full items-center justify-between rounded-2xl px-3 py-2.5 text-left text-sm font-bold text-white"
+              >
+                <span className="truncate">
+                  {shops.find((shop) => shop.id === shopAssignmentModal.selectedShopId)?.name || 'Aucun shop — désaffecter l’hôtesse'}
+                </span>
+                <ChevronRight className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${shopPickerOpen ? 'rotate-90' : ''}`} />
+              </button>
+              {shopPickerOpen && (
+                <div role="listbox" className="absolute inset-x-0 top-full z-30 mt-2 max-h-56 overflow-y-auto rounded-2xl border border-white/15 bg-[#171b27]/95 p-1 shadow-2xl backdrop-blur-xl">
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={!shopAssignmentModal.selectedShopId}
+                    onClick={() => { setShopAssignmentModal((prev) => prev ? { ...prev, selectedShopId: '' } : prev); setShopPickerOpen(false); }}
+                    className={`w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold transition-colors ${!shopAssignmentModal.selectedShopId ? 'bg-red-500/20 text-red-100' : 'text-gray-300 hover:bg-white/10'}`}
+                  >
+                    Aucun shop — désaffecter l’hôtesse
+                  </button>
+                  {shops.map((shop) => (
+                    <button
+                      key={shop.id}
+                      type="button"
+                      role="option"
+                      aria-selected={shopAssignmentModal.selectedShopId === shop.id}
+                      onClick={() => { setShopAssignmentModal((prev) => prev ? { ...prev, selectedShopId: shop.id } : prev); setShopPickerOpen(false); }}
+                      className={`w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold transition-colors ${shopAssignmentModal.selectedShopId === shop.id ? 'bg-cyan-400/20 text-cyan-100' : 'text-gray-300 hover:bg-white/10'}`}
+                    >
+                      {shop.name} · {shop.city}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className="mt-5 flex gap-2">
               <button
