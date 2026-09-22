@@ -1356,10 +1356,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
             <h3 className="text-xs font-black uppercase text-gray-200 tracking-[0.16em] mb-3">
               Évolution Journalière des Leads
             </h3>
-            <div className="w-full overflow-x-auto rounded-3xl border border-white/10 bg-black/20 px-2 py-1 backdrop-blur-sm">
-              <div className="h-48 min-w-[980px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={rollingLineData} margin={{ left: 4, right: 18 }}>
+            <div className="w-full rounded-3xl border border-white/10 bg-black/20 py-1 backdrop-blur-sm">
+              <div className="flex h-48 min-w-0">
+                <div className="z-10 w-10 shrink-0 border-r border-white/10 bg-black/20">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={rollingLineData} margin={{ left: 0, right: 0 }}>
+                      <YAxis stroke="#a1a1aa" fontSize={10} tickLine={false} axisLine={false} width={34} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="min-w-0 flex-1 overflow-x-auto">
+                  <div className="h-full min-w-[980px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={rollingLineData} margin={{ left: 4, right: 18 }}>
                   <defs>
                     <filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">
                       <feGaussianBlur stdDeviation="2.4" result="blur" />
@@ -1371,7 +1380,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   </defs>
                   <CartesianGrid strokeDasharray="4 5" stroke="rgba(161,161,170,0.22)" vertical={false} />
                   <XAxis dataKey="date" stroke="#a1a1aa" fontSize={10} tickLine={false} axisLine={false} interval={2} />
-                  <YAxis stroke="#a1a1aa" fontSize={10} tickLine={false} axisLine={false} width={26} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#09090b', borderColor: '#3f3f46', borderRadius: '14px', fontSize: '12px', boxShadow: '0 12px 25px rgba(0,0,0,0.35)' }}
                     itemStyle={{ color: '#ffffff', fontWeight: 'bold' }}
@@ -1386,8 +1394,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     dot={{ fill: '#fb7185', r: 4, stroke: '#fff', strokeWidth: 1.5 }}
                     activeDot={{ r: 6, fill: '#fb7185', stroke: '#fff', strokeWidth: 2 }}
                   />
-                </LineChart>
-              </ResponsiveContainer>
+                    </LineChart>
+                  </ResponsiveContainer>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
