@@ -59,7 +59,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
   const feedback = buildPointageFeedback({ stage: checkinDone || checkinDoneLocal ? 'captured' : 'idle', gpsMessage: gpsInfo, geoBadge: geoBadge || undefined });
 
   const shopObj = getShopById(currentUser.permanentShopId || activeShopId);
-  const shopName = shopObj ? shopObj.name : "Vodacom Flagship Gombe";
+  const shopName = shopObj ? shopObj.name : 'Non affecté';
 
   const allUsers = getUsers();
   const sameTeamAgents = allUsers.filter(u => u.role === 'agent' && u.supervisorId === currentUser.supervisorId);
