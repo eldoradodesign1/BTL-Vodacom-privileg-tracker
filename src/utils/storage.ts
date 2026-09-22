@@ -27,7 +27,7 @@ function loadPdfGenerator() {
 
 const STORAGE_KEYS = {
   USERS: 'vodacom_users_v6',
-  SHOPS: 'vodacom_shops_v6',
+  SHOPS: 'vodacom_shops_v7_supabase_only',
   CHECKINS: 'vodacom_checkins_v6',
   LEADS: 'vodacom_leads_v6',
   REPORTS: 'vodacom_reports_v6',
@@ -777,7 +777,9 @@ export function authenticate(phone: string, password_hash: string): { success: b
 
 // --- SHOPS ---
 export function getShops(): Shop[] {
-  return loadItem(STORAGE_KEYS.SHOPS, INITIAL_SHOPS);
+  // La table Supabase public.shops est l’unique source de vérité.
+  // Ne jamais réintroduire INITIAL_SHOPS sur un appareil neuf ou hors ligne.
+  return loadItem<Shop[]>(STORAGE_KEYS.SHOPS, []);
 }
 
 export function saveShops(shops: Shop[]): void {

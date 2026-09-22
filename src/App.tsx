@@ -165,7 +165,9 @@ export default function App() {
     try { await flushOfflineOutbox(); } catch (error) { console.warn('Offline outbox flush failed:', error); }
     const lastSyncAt = Number(localStorage.getItem(APP_DATA_SYNC_KEY) || 0);
     const cacheIsFresh = !force && Date.now() - lastSyncAt < APP_DATA_SYNC_INTERVAL_MS;
-    if (cacheIsFresh) { setUsers(getUsers()); setShops(getShops()); return; }
+    // Un cache shops vide ne doit pas empêcher la première lecture de
+    // public.shops : les shops statiques ne sont pas une source de secours.
+    if (cacheIsFresh && getShops().length > 0) { setUsers(getUsers()); setShops(getShops()); return; }
     try { const [usersData, shopsData] = await Promise.all([fetchUsersFromSupabase(), fetchShopsFromSupabase()]); await Promise.all([refreshLeadsFromSupabase(), refreshCheckinsFromSupabase(), refreshReportsFromSupabase()]); saveUsers(usersData); saveShops(shopsData); const mergedUsers = getUsers(); localStorage.setItem(APP_DATA_SYNC_KEY, String(Date.now())); invalidateMerchantCache(); setUsers(mergedUsers); setShops(shopsData); setDataRevision((prev) => prev + 1); } catch (error) { console.warn('Supabase refresh failed:', error); setUsers(getUsers()); setShops(getShops()); }
   }, []);
   const refreshSupervisorMonitoring = useCallback(() => { void refreshData(true); }, [refreshData]);
