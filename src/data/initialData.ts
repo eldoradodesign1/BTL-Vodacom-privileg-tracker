@@ -1,16 +1,4 @@
-import { User, Shop, Lead, DailyReport, NotificationItem, ChatMessage, Checkin } from '../types';
-
-export const INITIAL_SHOPS: Shop[] = [
-  { id: 'S001', name: "Shop Vodacom Gombe (30 Juin)", city: "Kinshasa", lat: -4.3033, long: 15.3015, type: 'Standard' },
-  { id: 'S002', name: "Shop Vodacom Aéroport N'djili", city: "Kinshasa", lat: -4.3856, long: 15.4447, type: 'Airport' },
-  { id: 'S003', name: "Shop Vodacom Limete", city: "Kinshasa", lat: -4.3541, long: 15.3412, type: 'Standard' },
-  { id: 'S004', name: "Shop Vodacom Kintambo", city: "Kinshasa", lat: -4.3167, long: 15.2667, type: 'Standard' },
-  { id: 'S005', name: "Shop Vodacom Matete", city: "Kinshasa", lat: -4.3889, long: 15.3611, type: 'Standard' },
-  { id: 'S006', name: "Shop Vodacom Bandalungwa", city: "Kinshasa", lat: -4.3444, long: 15.2833, type: 'Standard' },
-  { id: 'S007', name: "Shop Vodacom GB", city: "Kinshasa", lat: -4.3917, long: 15.4111, type: 'Standard' },
-  { id: 'S008', name: "Shop Vodacom Victoire (Kalamu)", city: "Kinshasa", lat: -4.3389, long: 15.3139, type: 'Standard' },
-  { id: 'S009', name: "Shop Vodacom Huileries", city: "Kinshasa", lat: -4.3194, long: 15.3083, type: 'Standard' }
-];
+import { User, Lead, DailyReport, NotificationItem, ChatMessage, Checkin } from '../types';
 
 export const INITIAL_USERS: User[] = [
   { id: '0a6a2520-96bb-474d-87b6-b0eb8fc46cd6', phone: '0896332431', name: 'Eldo Bitulu', role: 'super_admin', permanentShopId: 'S001' },

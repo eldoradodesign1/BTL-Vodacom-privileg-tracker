@@ -1,5 +1,5 @@
 import { User, UserRole, Shop, Checkin, Lead, DailyReport, NotificationItem, ChatMessage, ShopTargets, AgentMasterStatus } from '../types';
-import { INITIAL_SHOPS, INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_REPORTS, INITIAL_NOTIFICATIONS, INITIAL_CHAT } from '../data/initialData';
+import { INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_REPORTS, INITIAL_NOTIFICATIONS, INITIAL_CHAT } from '../data/initialData';
 import type { PDFReportData } from './pdfGenerator';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
 import {
@@ -368,10 +368,6 @@ function checkinPhotoCacheKey(agentId: string, isoDate: string): string {
       saveItem(STORAGE_KEYS.USERS, INITIAL_USERS);
     }
 
-    const existingShops = loadItem<Shop[]>(STORAGE_KEYS.SHOPS, INITIAL_SHOPS);
-    if (!Array.isArray(existingShops) || existingShops.length === 0) {
-      saveItem(STORAGE_KEYS.SHOPS, INITIAL_SHOPS);
-    }
   } catch (err) {
     console.warn('Seed initialization exception:', err);
   }
@@ -390,7 +386,7 @@ export function purgeAndResetEverything(): void {
     saveItem(STORAGE_KEYS.NOTIFS, []);
     saveItem(STORAGE_KEYS.CHAT, []);
     saveItem(STORAGE_KEYS.USERS, INITIAL_USERS);
-    saveItem(STORAGE_KEYS.SHOPS, INITIAL_SHOPS);
+    localStorage.removeItem(STORAGE_KEYS.SHOPS);
     localStorage.setItem('vodacom_purged_v6', 'true');
   } catch (e) {
     console.error('Error during full purge:', e);
