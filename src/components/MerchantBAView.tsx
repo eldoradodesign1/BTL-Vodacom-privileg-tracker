@@ -90,8 +90,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
         setPodiumPhotoUrls({});
         return;
       }
-      const [, nextPositions, nextAttendance, nextTransactions, nextVisits, nextStandings] = await Promise.all([
-        finalizePriorMerchantDays(active.id, currentUser.id, today, Number(active.transactions_per_pos_target || 3)),
+      const [nextPositions, nextAttendance, nextTransactions, nextVisits, nextStandings] = await Promise.all([
         getCampaignPos(campaign.id),
         getDailyAttendance(currentUser.id, active.id, today),
         getTransactionsForDay(currentUser.id, active.id, today),
@@ -105,6 +104,9 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
       setTransactions(nextTransactions);
       setPosVisits(nextVisits);
       setStandings(nextStandings);
+      // La mise à jour des journées précédentes ne doit jamais retarder
+      // l’ouverture de l’espace agent sur un réseau lent.
+      void finalizePriorMerchantDays(active.id, currentUser.id, today, Number(active.transactions_per_pos_target || 3)).catch(() => undefined);
       const topPhotoEntries = await Promise.all(nextStandings.slice(0, 3).map(async (entry) => {
         const storagePath = entry.activity.attendance?.checkin_photo_path;
         if (!storagePath) return [entry.activity.ba.id, ''] as const;

@@ -1456,7 +1456,9 @@ export async function getMerchantPosControl(run: CampaignRun): Promise<MerchantP
   const baById = new Map(bas.map((ba) => [ba.id, ba]));
   const target = Number(run.transactions_per_pos_target || 3);
   const incompleteVisitIds = getIncompleteMerchantVisitIds(activity.visits, activity.transactions, activity.attendances, target);
-  await persistHistoricalIncompleteVisits(run.id, incompleteVisitIds);
+  // Cette écriture de rattrapage est utile, mais elle ne doit pas bloquer
+  // l’ouverture de la gestion Merchant sur une connexion lente.
+  void persistHistoricalIncompleteVisits(run.id, incompleteVisitIds).catch(() => undefined);
   const transactionsByPos = new Map<string, BATransaction[]>();
   activity.transactions.forEach((transaction) => {
     const rows = transactionsByPos.get(transaction.pos_id) || [];
