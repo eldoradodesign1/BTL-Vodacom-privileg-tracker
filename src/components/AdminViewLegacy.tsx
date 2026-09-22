@@ -28,6 +28,39 @@ interface AdminViewProps {
   onRefreshData?: () => void;
 }
 
+interface StyledPickerOption {
+  value: string;
+  label: string;
+}
+
+const StyledPicker: React.FC<{
+  value: string;
+  placeholder: string;
+  options: StyledPickerOption[];
+  onChange: (value: string) => void;
+}> = ({ value, placeholder, options, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const selectedLabel = options.find((option) => option.value === value)?.label || placeholder;
+  return (
+    <div className="relative">
+      <button type="button" aria-haspopup="listbox" aria-expanded={open} onClick={() => setOpen((current) => !current)} className="app-input flex w-full items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-bold text-white">
+        <span className="truncate">{selectedLabel}</span>
+        <ChevronRight className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`} />
+      </button>
+      {open && (
+        <div role="listbox" className="absolute inset-x-0 top-full z-40 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/15 bg-[#171b27]/95 p-1 shadow-2xl backdrop-blur-xl">
+          <button type="button" role="option" aria-selected={!value} onClick={() => { onChange(''); setOpen(false); }} className={`w-full rounded-lg px-3 py-2 text-left text-xs font-bold ${!value ? 'bg-cyan-400/20 text-cyan-100' : 'text-gray-300 hover:bg-white/10'}`}>{placeholder}</button>
+          {options.map((option) => (
+            <button key={option.value} type="button" role="option" aria-selected={value === option.value} onClick={() => { onChange(option.value); setOpen(false); }} className={`w-full rounded-lg px-3 py-2 text-left text-xs font-bold ${value === option.value ? 'bg-cyan-400/20 text-cyan-100' : 'text-gray-300 hover:bg-white/10'}`}>
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const AdminView: React.FC<AdminViewProps> = ({
   currentUser,
   shops,
@@ -228,6 +261,18 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const filteredLeads = allLeads.filter(ld => {
     const d = toISO(ld.timestamp);
     return d >= leadStartDate && d <= leadEndDate;
+  });
+  const rollingChartStart = new Date();
+  rollingChartStart.setHours(0, 0, 0, 0);
+  rollingChartStart.setDate(rollingChartStart.getDate() - 29);
+  const rollingChartStartIso = toISO(rollingChartStart);
+  const rollingChartData = getDashboardData({ start: rollingChartStartIso, end: todayIso, agentId: selectedAgentId });
+  const rollingLeadCounts = new Map(rollingChartData.lineData.map((item) => [item.date, item.value]));
+  const rollingLineData = Array.from({ length: 30 }, (_, index) => {
+    const date = new Date(rollingChartStart);
+    date.setDate(rollingChartStart.getDate() + index);
+    const isoDate = toISO(date);
+    return { date: isoDate.slice(5), value: rollingLeadCounts.get(isoDate) || 0 };
   });
   useEffect(() => {
     if (subTab !== 'manage' || manageSection !== 'campaigns') return;
@@ -653,48 +698,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <div className="space-y-2">
                   <div>
                     <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Sélectionner une hôtesse</label>
-                    <select
-                      value={assignUser}
-                      onChange={(e) => setAssignUser(e.target.value)}
-                      className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
-                    >
-                      <option value="">-- Choisir une hôtesse --</option>
-                      {assignableHostesses.map(u => (
-                        <option key={u.id} value={u.id}>
-                          {u.name}
-                        </option>
-                      ))}
-                    </select>
+                    <StyledPicker value={assignUser} placeholder="-- Choisir une hôtesse --" options={assignableHostesses.map((u) => ({ value: u.id, label: u.name }))} onChange={setAssignUser} />
                   </div>
 
                   {assignUser && (
                     <div className="grid grid-cols-2 gap-2 pt-1">
                       <div>
                         <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Affecter au Shop</label>
-                        <select
-                          value={assignShop}
-                          onChange={(e) => setAssignShop(e.target.value)}
-                          className="w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
-                        >
-                          <option value="">-- Conserver shop --</option>
-                          {shops.map(s => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
+                        <StyledPicker value={assignShop} placeholder="-- Conserver shop --" options={shops.map((shop) => ({ value: shop.id, label: `${shop.name} (${shop.city})` }))} onChange={setAssignShop} />
                       </div>
 
                       <div>
                         <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Affecter au Superviseur</label>
-                        <select
-                          value={assignSupervisor}
-                          onChange={(e) => setAssignSupervisor(e.target.value)}
-                          className="w-full bg-black/60 border border-white/10 rounded-xl px-2.5 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
-                        >
-                          <option value="">-- Conserver sup --</option>
-                          {supervisors.map(sup => (
-                            <option key={sup.id} value={sup.id}>{sup.name}</option>
-                          ))}
-                        </select>
+                        <StyledPicker value={assignSupervisor} placeholder="-- Conserver sup --" options={supervisors.map((sup) => ({ value: sup.id, label: sup.name }))} onChange={setAssignSupervisor} />
                       </div>
                     </div>
                   )}
@@ -1340,9 +1356,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
             <h3 className="text-xs font-black uppercase text-gray-200 tracking-[0.16em] mb-3">
               Évolution Journalière des Leads
             </h3>
-            <div className="h-48 w-full rounded-3xl border border-white/10 bg-black/20 backdrop-blur-sm px-2 py-1">
+            <div className="w-full overflow-x-auto rounded-3xl border border-white/10 bg-black/20 px-2 py-1 backdrop-blur-sm">
+              <div className="h-48 min-w-[980px]">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={dashboardData.lineData}>
+                <LineChart data={rollingLineData} margin={{ left: 4, right: 18 }}>
                   <defs>
                     <filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">
                       <feGaussianBlur stdDeviation="2.4" result="blur" />
@@ -1353,7 +1370,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     </filter>
                   </defs>
                   <CartesianGrid strokeDasharray="4 5" stroke="rgba(161,161,170,0.22)" vertical={false} />
-                  <XAxis dataKey="date" stroke="#a1a1aa" fontSize={10} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="date" stroke="#a1a1aa" fontSize={10} tickLine={false} axisLine={false} interval={2} />
                   <YAxis stroke="#a1a1aa" fontSize={10} tickLine={false} axisLine={false} width={26} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#09090b', borderColor: '#3f3f46', borderRadius: '14px', fontSize: '12px', boxShadow: '0 12px 25px rgba(0,0,0,0.35)' }}
@@ -1371,6 +1388,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   />
                 </LineChart>
               </ResponsiveContainer>
+              </div>
             </div>
           </div>
         </div>

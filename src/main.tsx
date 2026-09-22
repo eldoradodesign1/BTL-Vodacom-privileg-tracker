@@ -46,6 +46,12 @@ if (typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (po
 }
 
 if ('serviceWorker' in navigator) {
+  let refreshingAfterUpdate = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshingAfterUpdate) return;
+    refreshingAfterUpdate = true;
+    window.location.reload();
+  });
   window.addEventListener('load', () => {
     const serviceWorkerUrl = `${import.meta.env.BASE_URL}service-worker.js`;
     void navigator.serviceWorker.register(serviceWorkerUrl, {
