@@ -89,12 +89,16 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUse
         const text = error.code === error.PERMISSION_DENIED
           ? `GPS toujours refusé. ${permissionHelp}`
           : error.code === error.TIMEOUT
-            ? 'La demande GPS a expiré. Vérifiez que la localisation est activée puis réessayez.'
+            ? 'Aucun signal GPS n’a été obtenu à temps. Activez la localisation du téléphone, sortez quelques instants à découvert puis réessayez.'
             : 'La position est indisponible pour le moment. Vérifiez votre réseau et réessayez.';
         setPermissionFeedback({ kind: 'error', text });
         setRequesting(null);
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      // Sur Android, demander immédiatement la haute précision provoque souvent
+      // un timeout lorsque le téléphone n’a pas encore de fix GPS. Une position
+      // réseau/cachée suffit ici : le pointage applique ses propres règles de
+      // précision lorsqu’il enregistre réellement l’activité.
+      { enableHighAccuracy: false, timeout: 30000, maximumAge: 120000 },
     );
   };
 
