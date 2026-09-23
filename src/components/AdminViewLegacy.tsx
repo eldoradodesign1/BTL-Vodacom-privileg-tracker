@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Shop, AgentMasterStatus, User } from '../types';
 import { getAdminMasterList, getCheckins, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl, saveTargetDefinition } from '../utils/storage';
-import { getCampaignAssignmentsOverview, type CampaignAssignmentOverview } from '../utils/merchantCampaign';
+import { getCampaignAssignmentsOverview, getCampaignPauses, getCampaigns, type CampaignAssignmentOverview } from '../utils/merchantCampaign';
 import { TabType } from './BottomNav';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 import { UserPlus, Store, FileSpreadsheet, Eye, User as UserIcon, UserCheck, FileText, Search, Filter, MapPin, Clock3, Pencil, X, Check, Circle, CalendarDays, ChevronLeft, ChevronRight, FileX2 } from 'lucide-react';
@@ -107,6 +107,24 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [campaignPausePeriods, setCampaignPausePeriods] = useState<Array<{ starts_on: string; ends_on?: string | null }>>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const campaigns = await getCampaigns();
+        const campaign = campaigns.find((item) => item.code.trim().toLowerCase().replace(/_/g, '-') === 'vodacom-privilege')
+          || campaigns.find((item) => item.campaign_type !== 'brand_ambassador');
+        if (!campaign) return;
+        const pauses = await getCampaignPauses(campaign.id, true);
+        if (!cancelled) setCampaignPausePeriods(pauses.map((pause) => ({ starts_on: pause.starts_on, ends_on: pause.ends_on })));
+      } catch {
+        if (!cancelled) setCampaignPausePeriods([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const getStatusPalette = (status: string) => {
     if (status === 'Clôturé') return 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40';
@@ -129,7 +147,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const d = String(date.getDate()).padStart(2, '0');
     return `${y}-${m}-${d}`;
   };
-  const getAgentStatusForDate = (agent: AgentMasterStatus, isoDate: string): 'Absent' | 'Présent' | 'Clôturé' => {
+  const isPausedOnDate = (isoDate: string) => campaignPausePeriods.some((pause) => pause.starts_on <= isoDate && (!pause.ends_on || pause.ends_on >= isoDate));
+  const getAgentStatusForDate = (agent: AgentMasterStatus, isoDate: string): 'Absent' | 'Présent' | 'Clôturé' | 'Hors campagne' => {
+    if (isPausedOnDate(isoDate)) return 'Hors campagne';
     const hasReport = allReports.some((report) => (
       (report.agent_id === agent.id || report.agent_id === agent.name) && toISO(report.date) === isoDate
     ));
@@ -140,7 +160,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
     ));
     return hasCheckin ? 'Présent' : 'Absent';
   };
-  const getStatusCalendarCellClass = (status: 'Absent' | 'Présent' | 'Clôturé') => {
+  const getStatusCalendarCellClass = (status: 'Absent' | 'Présent' | 'Clôturé' | 'Hors campagne') => {
+    if (status === 'Hors campagne') return 'bg-slate-500/20 text-slate-400 border-slate-400/25';
     if (status === 'Clôturé') return 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40';
     if (status === 'Présent') return 'bg-blue-500/25 text-blue-300 border-blue-500/40';
     return 'bg-red-500/20 text-red-300 border-red-500/35';
@@ -1225,6 +1246,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />Absent</span>
                                 <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-blue-400" />Présent</span>
                                 <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" />Clôturé</span>
+                                <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-400" />Hors campagne</span>
                               </div>
                             </div>
                           </div>,

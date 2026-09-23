@@ -15,6 +15,7 @@ import { Trophy, FileCheck, Eye, Search, Store, UserCheck, UserPlus, User as Use
 import { DateIconPicker } from './DateIconPicker';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 import { CampaignPauseControl } from './CampaignPauseControl';
+import { getCampaignPauses, getCampaigns } from '../utils/merchantCampaign';
 
 interface SupervisorViewProps {
   currentUser: User;
@@ -69,6 +70,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [campaignPausePeriods, setCampaignPausePeriods] = useState<Array<{ starts_on: string; ends_on?: string | null }>>([]);
   const [, setCheckinRevision] = useState(0);
   const todayIso = toISO(new Date());
   // const [reportsStartDate, setReportsStartDate] = useState(todayIso);
@@ -88,6 +90,24 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
   const homeCalendarRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const campaigns = await getCampaigns();
+        const normalized = (campaignCode || '').trim().toLowerCase().replace(/_/g, '-');
+        const campaign = campaigns.find((item) => item.code.trim().toLowerCase().replace(/_/g, '-') === normalized)
+          || campaigns.find((item) => item.code.trim().toLowerCase().replace(/_/g, '-').includes(normalized) || normalized.includes(item.code.trim().toLowerCase().replace(/_/g, '-')));
+        if (!campaign) return;
+        const pauses = await getCampaignPauses(campaign.id, true);
+        if (!cancelled) setCampaignPausePeriods(pauses.map((pause) => ({ starts_on: pause.starts_on, ends_on: pause.ends_on })));
+      } catch {
+        if (!cancelled) setCampaignPausePeriods([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [campaignCode]);
 
 
 
@@ -200,14 +220,17 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     if (status === 'Clôturé') return 'Voir la localisation de clôture';
     return 'Absent';
   };
-  const getStatusCalendarCellClass = (status: 'Absent' | 'Présent' | 'Clôturé') => {
+  const getStatusCalendarCellClass = (status: 'Absent' | 'Présent' | 'Clôturé' | 'Hors campagne') => {
+    if (status === 'Hors campagne') return 'bg-slate-500/20 text-slate-400 border-slate-400/25';
     if (status === 'Clôturé') return 'bg-emerald-500/25 text-emerald-300 border-emerald-500/40';
     if (status === 'Présent') return 'bg-blue-500/25 text-blue-300 border-blue-500/40';
     return 'bg-red-500/20 text-red-300 border-red-500/35';
   };
   const activityStartIso = '2026-07-23';
   const isInsideActivityPeriod = (isoDate: string) => isoDate >= activityStartIso && isoDate <= todayIso;
-  const getAgentStatusForDate = (agent: { id: string; name: string }, isoDate: string): 'Absent' | 'Présent' | 'Clôturé' => {
+  const isPausedOnDate = (isoDate: string) => campaignPausePeriods.some((pause) => pause.starts_on <= isoDate && (!pause.ends_on || pause.ends_on >= isoDate));
+  const getAgentStatusForDate = (agent: { id: string; name: string }, isoDate: string): 'Absent' | 'Présent' | 'Clôturé' | 'Hors campagne' => {
+    if (isPausedOnDate(isoDate)) return 'Hors campagne';
     const hasReport = teamReports.some((report) => (
       (report.agent_id === agent.id || report.agent_id === agent.name) && report.date === isoDate
     ));
@@ -878,6 +901,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />Absent</span>
                   <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-blue-400" />Présent</span>
                   <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" />Clôturé</span>
+                  <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-400" />Hors campagne</span>
                 </div>
               </div>
             </div>,
