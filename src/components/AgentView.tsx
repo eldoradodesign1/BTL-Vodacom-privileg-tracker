@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Lead, Checkin, DailyReport } from '../types';
+import { User, Shop, Lead, Checkin, DailyReport } from '../types';
 import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSyncPendingCount, isMatchAgent, toISO, getUsers, resolveStoredPhotoUrl } from '../utils/storage';
 import { TabType } from './BottomNav';
 import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archive, Eye, Search, Filter, RefreshCw } from 'lucide-react';
@@ -9,6 +9,7 @@ import { DateIconPicker } from './DateIconPicker';
 
 interface AgentViewProps {
   currentUser: User;
+  shops: Shop[];
   activeShopId: string;
   activeTab?: TabType;
   todayLeads: Lead[];
@@ -24,6 +25,7 @@ interface AgentViewProps {
 
 export const AgentView: React.FC<AgentViewProps> = ({
   currentUser,
+  shops,
   activeShopId,
   activeTab = 'home',
   todayLeads,
@@ -58,7 +60,8 @@ export const AgentView: React.FC<AgentViewProps> = ({
   const { checkinDone, reportDone } = checkDailyStatus(currentUser.id, todayStr);
   const feedback = buildPointageFeedback({ stage: checkinDone || checkinDoneLocal ? 'captured' : 'idle', gpsMessage: gpsInfo, geoBadge: geoBadge || undefined });
 
-  const shopObj = getShopById(currentUser.permanentShopId || activeShopId);
+  const assignedShopId = currentUser.permanentShopId || activeShopId;
+  const shopObj = shops.find((shop) => shop.id === assignedShopId) || getShopById(assignedShopId);
   const shopName = shopObj ? shopObj.name : 'Non affecté';
 
   const allUsers = getUsers();
