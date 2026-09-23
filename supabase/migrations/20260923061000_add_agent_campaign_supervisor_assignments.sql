@@ -39,6 +39,7 @@ insert into public.agent_campaign_supervisor_assignments (agent_id, supervisor_i
 select u.id, u.supervisor_id, c.id
 from public.users u
 join public.campaigns c on c.code = 'vodacom-privilege'
+join public.users supervisor on supervisor.id = u.supervisor_id
 where u.role = 'agent'
   and u.user_category = 'hostess'
   and u.supervisor_id is not null
