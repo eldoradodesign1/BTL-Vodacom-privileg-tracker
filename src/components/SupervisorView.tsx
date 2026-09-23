@@ -5,8 +5,9 @@ import { getSupervisorLiveView, getAdminMasterList, getReports, getUsers, getLea
   refreshUsersFromSupabase,
 refreshShopsFromSupabase,
 refreshCheckinsFromSupabase,
-refreshReportsFromSupabase,
-toISO
+  refreshReportsFromSupabase,
+  getSupervisorAgentCampaignAssignments,
+  toISO
  } from '../utils/storage';
 import { formatAgentLocationLine, getLocationEmbedUrl } from '../utils/location';
 import { TabType } from './BottomNav';
@@ -17,6 +18,7 @@ import { CampaignPauseControl } from './CampaignPauseControl';
 
 interface SupervisorViewProps {
   currentUser: User;
+  campaignCode?: string;
   activeTab?: TabType;
   shops: Shop[];
   onOpenPdfModal: (url: string) => void;
@@ -30,6 +32,7 @@ interface SupervisorViewProps {
 
 export const SupervisorView: React.FC<SupervisorViewProps> = ({
   currentUser,
+  campaignCode = 'vodacom-privilege',
   activeTab = 'home',
   shops,
   onOpenPdfModal,
@@ -140,17 +143,22 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
   const teamData = globalScope
     ? getAdminMasterList(selectedDate, true)
-    : getSupervisorLiveView(currentUser.id, selectedDate);
+    : getSupervisorLiveView(currentUser.id, selectedDate, campaignCode);
   const allCheckins = getCheckins();
   const allReports = getReports();
   const allUsers = getUsers();
+  const supervisorAssignments = getSupervisorAgentCampaignAssignments().filter((assignment) => assignment.isActive && (assignment.campaignCode === campaignCode || assignment.campaignId === campaignCode));
+  const hasDetailedAssignment = (agentId: string) => supervisorAssignments.some((assignment) => assignment.agentId === agentId);
+  const isAssignedToCurrentSupervisor = (user: User) => hasDetailedAssignment(user.id)
+    ? supervisorAssignments.some((assignment) => assignment.agentId === user.id && assignment.supervisorId === currentUser.id)
+    : user.supervisorId === currentUser.id;
   const isPrivilegeHostess = (user: User) => user.role === 'agent'
     && user.userCategory === 'hostess';
   // Les Hôtesses désaffectées restent disponibles pour une nouvelle affectation,
   // mais n’entrent jamais dans la population du monitoring et des statistiques.
   const supervisedAgents = globalScope
     ? allUsers.filter(isPrivilegeHostess)
-    : allUsers.filter((user) => isPrivilegeHostess(user) && user.supervisorId === currentUser.id);
+    : allUsers.filter((user) => isPrivilegeHostess(user) && isAssignedToCurrentSupervisor(user));
   const teamAgentIds = teamData.map((agent) => agent.id);
   const teamReports = allReports.filter((report) => teamAgentIds.includes(report.agent_id));
   const reportDateList = [...new Set(teamReports.map((r) => r.date))].sort();

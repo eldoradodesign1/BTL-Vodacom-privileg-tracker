@@ -31,6 +31,15 @@ export interface Campaign {
   transactions_per_pos_target?: number | null;
 }
 
+export interface SupervisorAgentCampaignAssignment {
+  agentId: string;
+  supervisorId: string;
+  campaignId: string;
+  campaignCode?: string;
+  isActive: boolean;
+  assignedAt?: string;
+}
+
 export interface YouthUniversity {
   id: string;
   campaign_id: string;

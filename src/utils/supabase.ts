@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import type { ChatMessage, Checkin, DailyReport, Lead, NotificationItem, Shop, User } from '../types';
+import type { ChatMessage, Checkin, DailyReport, Lead, NotificationItem, Shop, SupervisorAgentCampaignAssignment, User } from '../types';
 import { getRuntimeSupabaseConfig } from './appConfig';
 
 export interface SupabaseConfig {
@@ -284,6 +284,24 @@ export async function fetchShopsFromSupabase(): Promise<Shop[]> {
   }
 
   return (data || []) as Shop[];
+}
+
+export async function fetchSupervisorAgentCampaignAssignmentsFromSupabase(): Promise<SupervisorAgentCampaignAssignment[]> {
+  const client = getSupabaseClient();
+  if (!client) throw new Error('Supabase is not configured.');
+  const { data, error } = await client
+    .from('agent_campaign_supervisor_assignments')
+    .select('agent_id,supervisor_id,campaign_id,is_active,assigned_at,campaign:campaigns(code)')
+    .eq('is_active', true);
+  if (error) throw error;
+  return ((data || []) as Array<{ agent_id: string; supervisor_id: string; campaign_id: string; is_active: boolean; assigned_at?: string; campaign?: { code?: string } | Array<{ code?: string }> | null }>).map((row) => ({
+    agentId: row.agent_id,
+    supervisorId: row.supervisor_id,
+    campaignId: row.campaign_id,
+    campaignCode: Array.isArray(row.campaign) ? row.campaign[0]?.code : row.campaign?.code,
+    isActive: row.is_active,
+    assignedAt: row.assigned_at,
+  }));
 }
 
 export async function fetchLeadsFromSupabase(): Promise<Lead[]> {

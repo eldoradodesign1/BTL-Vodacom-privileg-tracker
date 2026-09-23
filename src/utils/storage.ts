@@ -1,4 +1,4 @@
-import { User, UserRole, Shop, Checkin, Lead, DailyReport, NotificationItem, ChatMessage, ShopTargets, AgentMasterStatus } from '../types';
+import { User, UserRole, Shop, Checkin, Lead, DailyReport, NotificationItem, ChatMessage, ShopTargets, AgentMasterStatus, SupervisorAgentCampaignAssignment } from '../types';
 import { INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_REPORTS, INITIAL_NOTIFICATIONS, INITIAL_CHAT } from '../data/initialData';
 import type { PDFReportData } from './pdfGenerator';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
@@ -10,6 +10,7 @@ import {
   fetchCheckinsFromSupabase,
   fetchUsersFromSupabase,
   fetchShopsFromSupabase,
+  fetchSupervisorAgentCampaignAssignmentsFromSupabase,
   fetchLeadsFromSupabase
 } from './supabase';
 
@@ -35,7 +36,8 @@ const STORAGE_KEYS = {
   CHAT: 'vodacom_chat_v6',
   CURRENT_USER: 'vodacom_user',
   ACTIVE_SHOP_ID: 'active_shop_id',
-  ACTIVE_SHOP_NAME: 'active_shop_name'
+  ACTIVE_SHOP_NAME: 'active_shop_name',
+  SUPERVISOR_ASSIGNMENTS: 'vodacom_supervisor_agent_campaign_assignments_v1'
 };
 
 const memoryStore = new Map<string, unknown>();
@@ -601,6 +603,20 @@ export async function refreshShopsFromSupabase(): Promise<void> {
 
   const shops = await fetchShopsFromSupabase();
   saveShops(shops);
+}
+
+export function getSupervisorAgentCampaignAssignments(): SupervisorAgentCampaignAssignment[] {
+  return loadItem<SupervisorAgentCampaignAssignment[]>(STORAGE_KEYS.SUPERVISOR_ASSIGNMENTS, []);
+}
+
+export function saveSupervisorAgentCampaignAssignments(assignments: SupervisorAgentCampaignAssignment[]): void {
+  saveItem(STORAGE_KEYS.SUPERVISOR_ASSIGNMENTS, assignments);
+}
+
+export async function refreshSupervisorAgentCampaignAssignmentsFromSupabase(): Promise<void> {
+  if (!isSupabaseConfigured()) return;
+  const assignments = await fetchSupervisorAgentCampaignAssignmentsFromSupabase();
+  saveSupervisorAgentCampaignAssignments(assignments);
 }
 
 export function updateUserShopAssignment(userId: string, shopId: string | null): boolean {
@@ -1439,7 +1455,7 @@ export function getAdminMasterList(dateISO?: string, onlyAssigned = false): Agen
   }).sort((left, right) => left.name.localeCompare(right.name, 'fr') || left.id.localeCompare(right.id));
 }
 
-export function getSupervisorLiveView(supervisorId: string, dateISO?: string) {
+export function getSupervisorLiveView(supervisorId: string, dateISO?: string, campaignCode = 'vodacom-privilege') {
   const targetDate = dateISO || toISO(new Date());
   const users = getUsers();
   const checkins = getCheckins();
@@ -1447,7 +1463,13 @@ export function getSupervisorLiveView(supervisorId: string, dateISO?: string) {
   const leads = getLeads();
   const shops = getShops();
 
-  const supervisedHostesses = users.filter((user) => user.supervisorId === supervisorId && user.role === 'agent' && user.userCategory === 'hostess');
+  const supervisorAssignments = getSupervisorAgentCampaignAssignments().filter((assignment) => assignment.isActive && (assignment.campaignCode === campaignCode || assignment.campaignId === campaignCode));
+  const hasDetailedAssignmentForAgent = (agentId: string) => supervisorAssignments.some((assignment) => assignment.agentId === agentId);
+  const isAssignedToSupervisorForCampaign = (user: User) => {
+    if (hasDetailedAssignmentForAgent(user.id)) return supervisorAssignments.some((assignment) => assignment.agentId === user.id && assignment.supervisorId === supervisorId);
+    return user.supervisorId === supervisorId;
+  };
+  const supervisedHostesses = users.filter((user) => isAssignedToSupervisorForCampaign(user) && user.role === 'agent' && user.userCategory === 'hostess');
   const myAgents = supervisedHostesses.filter((user) => {
     if (isActivePrivilegeHostess(user, shops)) return true;
     return checkins.some((checkin) => isMatchAgent(checkin.agent_id, user) && checkin.type === 'IN' && toISO(checkin.timestamp) === targetDate)
