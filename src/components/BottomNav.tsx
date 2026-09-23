@@ -12,6 +12,7 @@ interface BottomNavProps {
   merchantContext?: boolean;
   youthContext?: boolean;
   mikiliContext?: boolean;
+  eventContext?: boolean;
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
@@ -21,7 +22,8 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   onTabChange,
   merchantContext = false,
   youthContext = false,
-  mikiliContext = false
+  mikiliContext = false,
+  eventContext = false
 }) => {
   const getTab2Label = () => {
     if (userRole === 'admin' || userRole === 'super_admin' || userRole === 'supervisor' || userRole === 'sub_admin') return 'Monitoring';
@@ -37,6 +39,13 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     return 'Gestion';
   };
 
+  if (eventContext) {
+    const management = userRole === 'admin' || userRole === 'super_admin' || userRole === 'supervisor' || userRole === 'sub_admin';
+    return <nav className="fixed bottom-4 left-1/2 z-40 flex h-16 w-[calc(100%-1.5rem)] max-w-2xl -translate-x-1/2 items-center justify-around rounded-3xl border border-white/10 bg-black/35 px-2 shadow-2xl backdrop-blur-2xl">
+      <button type="button" onClick={() => onTabChange('home')} className={`app-tab flex flex-1 flex-col items-center justify-center space-y-1 transition-all ${activeTab === 'home' ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'}`}><Home className={`h-6 w-6 ${activeTab === 'home' ? '-translate-y-1 scale-110' : ''}`} /><span className="text-[9px] font-black uppercase tracking-wider">Accueil</span></button>
+      {management && <button type="button" onClick={() => onTabChange('admin')} className={`app-tab flex flex-1 flex-col items-center justify-center space-y-1 transition-all ${activeTab === 'admin' ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'}`}><Settings className={`h-6 w-6 ${activeTab === 'admin' ? '-translate-y-1 scale-110' : ''}`} /><span className="text-[9px] font-black uppercase tracking-wider">Gestion</span></button>}
+    </nav>;
+  }
   if (mikiliContext) {
     const management = userRole === 'admin' || userRole === 'super_admin' || userRole === 'supervisor' || userRole === 'sub_admin';
     const tabs = management
