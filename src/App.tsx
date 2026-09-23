@@ -167,7 +167,31 @@ export default function App() {
     // doivent toujours être relus depuis public.shops au démarrage. Un cache
     // ancien peut contenir un shop supprimé ou renommé et ne doit jamais
     // remplacer la source Supabase.
-    try { const [usersData, shopsData] = await Promise.all([fetchUsersFromSupabase(), fetchShopsFromSupabase()]); await Promise.all([refreshLeadsFromSupabase(), refreshCheckinsFromSupabase(), refreshReportsFromSupabase()]); saveUsers(usersData); saveShops(shopsData); const mergedUsers = getUsers(); localStorage.setItem(APP_DATA_SYNC_KEY, String(Date.now())); invalidateMerchantCache(); setUsers(mergedUsers); setShops(shopsData); setDataRevision((prev) => prev + 1); } catch (error) { console.warn('Supabase refresh failed:', error); setUsers(getUsers()); setShops(getShops()); }
+    try {
+      // Les utilisateurs et les shops sont les données critiques de l’interface
+      // Privilège. Une erreur sur une table secondaire ne doit jamais les
+      // empêcher d’être persistés et affichés.
+      const [usersData, shopsData] = await Promise.all([fetchUsersFromSupabase(), fetchShopsFromSupabase()]);
+      saveUsers(usersData);
+      saveShops(shopsData);
+      const mergedUsers = getUsers();
+      localStorage.setItem(APP_DATA_SYNC_KEY, String(Date.now()));
+      invalidateMerchantCache();
+      setUsers(mergedUsers);
+      setShops(shopsData);
+      setDataRevision((prev) => prev + 1);
+
+      // Les tables opérationnelles sont synchronisées indépendamment.
+      void Promise.allSettled([refreshLeadsFromSupabase(), refreshCheckinsFromSupabase(), refreshReportsFromSupabase()]).then((results) => {
+        results.forEach((result) => {
+          if (result.status === 'rejected') console.warn('Secondary Supabase refresh failed:', result.reason);
+        });
+      });
+    } catch (error) {
+      console.warn('Supabase users/shops refresh failed:', error);
+      setUsers(getUsers());
+      setShops(getShops());
+    }
   }, []);
   const refreshSupervisorMonitoring = useCallback(() => { void refreshData(true); }, [refreshData]);
   useEffect(() => { void refreshData(); const hourlySync = window.setInterval(() => { void refreshData(); }, APP_DATA_SYNC_INTERVAL_MS); const onOnline = () => { void refreshData(); }; const onRuntimeConfigUpdated = () => { void refreshData(true); }; window.addEventListener('online', onOnline); window.addEventListener('btl-runtime-config-updated', onRuntimeConfigUpdated); return () => { window.clearInterval(hourlySync); window.removeEventListener('online', onOnline); window.removeEventListener('btl-runtime-config-updated', onRuntimeConfigUpdated); }; }, [refreshData]);
