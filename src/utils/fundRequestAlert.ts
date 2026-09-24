@@ -6,6 +6,20 @@ export interface FundRequestAlertPayload {
 }
 
 let audioContext: AudioContext | null = null;
+const NOTIFICATIONS_MUTED_PREFIX = 'btl_notifications_muted:';
+
+export function getNotificationsMuted(userId?: string | null): boolean {
+  if (typeof window === 'undefined' || !userId) return false;
+  return window.localStorage.getItem(`${NOTIFICATIONS_MUTED_PREFIX}${userId}`) === 'true';
+}
+
+export function setNotificationsMuted(userId: string, muted: boolean): void {
+  if (typeof window === 'undefined' || !userId) return;
+  const key = `${NOTIFICATIONS_MUTED_PREFIX}${userId}`;
+  if (muted) window.localStorage.setItem(key, 'true');
+  else window.localStorage.removeItem(key);
+  window.dispatchEvent(new CustomEvent('btl-notifications-muted-change', { detail: { userId, muted } }));
+}
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -65,7 +79,7 @@ export function emitFundRequestAlertSound(): void {
   }
 }
 
-export async function showFundRequestSystemNotification(request: FundRequestAlertPayload): Promise<void> {
+export async function showFundRequestSystemNotification(request: FundRequestAlertPayload, muted = false): Promise<void> {
   if (typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') return;
   const options: NotificationOptions = {
     body: `${request.baName} · $${request.amount.toLocaleString('fr-FR')} · ${request.posLabel}`,
@@ -73,7 +87,7 @@ export async function showFundRequestSystemNotification(request: FundRequestAler
     icon: '/favicon.png',
     badge: '/favicon.png',
     requireInteraction: true,
-    silent: false,
+    silent: muted,
   };
   try {
     if ('serviceWorker' in navigator) {

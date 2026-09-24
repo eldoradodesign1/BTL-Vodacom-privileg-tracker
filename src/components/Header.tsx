@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { User, NotificationItem, CampaignContext } from '../types';
-import { Bell, LogOut, Shield, RefreshCw, Palette, Camera, X, BriefcaseBusiness, Banknote } from 'lucide-react';
+import { Bell, LogOut, Shield, RefreshCw, Palette, Camera, X, BriefcaseBusiness, Banknote, Volume2, VolumeX } from 'lucide-react';
 import { addCheckin, getShopById, resolveStoredPhotoUrl } from '../utils/storage';
-import { armFundRequestAlertAudio } from '../utils/fundRequestAlert';
+import { armFundRequestAlertAudio, getNotificationsMuted, setNotificationsMuted } from '../utils/fundRequestAlert';
 
 export type ThemeMode = 'anthracite' | 'rubis' | 'silver' | 'diamond' | 'sapphire' | 'ambre';
 
@@ -61,6 +61,7 @@ export const Header: React.FC<HeaderProps> = ({
   const [localPhotoUrl, setLocalPhotoUrl] = useState(profilePhotoUrl || '');
   const [isPhotoViewerOpen, setIsPhotoViewerOpen] = useState(false);
   const [isPointagePending, setIsPointagePending] = useState(false);
+  const [notificationsMuted, setNotificationsMutedState] = useState(() => getNotificationsMuted(user.id));
   const pointageInputRef = useRef<HTMLInputElement | null>(null);
   const photoSrc = useMemo(() => {
     const source = localPhotoUrl || profilePhotoUrl || '';
@@ -95,6 +96,16 @@ export const Header: React.FC<HeaderProps> = ({
   }, [profilePhotoUrl]);
 
   useEffect(() => {
+    setNotificationsMutedState(getNotificationsMuted(user.id));
+    const handleMuteChange = (event: Event) => {
+      const detail = (event as CustomEvent<{ userId?: string; muted?: boolean }>).detail;
+      if (detail?.userId === user.id) setNotificationsMutedState(Boolean(detail.muted));
+    };
+    window.addEventListener('btl-notifications-muted-change', handleMuteChange);
+    return () => window.removeEventListener('btl-notifications-muted-change', handleMuteChange);
+  }, [user.id]);
+
+  useEffect(() => {
     if (!showNotifPanel && !showThemeMenu && !showCampaignMenu) return;
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
@@ -110,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
   const openNotifications = () => {
     const opening = !showNotifPanel;
     setShowNotifPanel(opening);
-    if (opening) {
+    if (opening && !notificationsMuted) {
       void armFundRequestAlertAudio();
       if ('Notification' in window && Notification.permission === 'default') {
         void Notification.requestPermission();
@@ -386,18 +397,27 @@ export const Header: React.FC<HeaderProps> = ({
               }`}>
                 <div className="flex justify-between items-center mb-3 border-b border-white/10 pb-2">
                   <span className="text-xs font-black uppercase text-gray-400 tracking-wider">Alertes Internes</span>
-                  <button
-                    onClick={() => {
-                      if (onClearNotifications) {
-                        onClearNotifications();
-                      } else {
-                        onMarkNotifsRead();
-                      }
-                    }}
-                    className="text-[9px] font-black uppercase text-red-500 hover:text-red-400"
-                  >
-                    Effacer
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNotificationsMuted(user.id, !notificationsMuted)}
+                      className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[9px] font-black uppercase transition ${notificationsMuted ? 'border-amber-300/35 bg-amber-400/10 text-amber-200' : 'border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'}`}
+                      title={notificationsMuted ? 'Réactiver le son des notifications' : 'Mettre les notifications en sourdine'}
+                      aria-label={notificationsMuted ? 'Réactiver les notifications' : 'Mettre les notifications en sourdine'}
+                    >
+                      {notificationsMuted ? <VolumeX size={12}/> : <Volume2 size={12}/>} {notificationsMuted ? 'Sourdine' : 'Son'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onClearNotifications) onClearNotifications();
+                        else onMarkNotifsRead();
+                      }}
+                      className="text-[9px] font-black uppercase text-red-500 hover:text-red-400"
+                    >
+                      Effacer
+                    </button>
+                  </div>
                 </div>
 
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
