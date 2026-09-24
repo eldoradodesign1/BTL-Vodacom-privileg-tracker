@@ -3,6 +3,7 @@ import { Banknote, ChevronDown, Search, Send, Store, X } from 'lucide-react';
 import type { BAPosVisit, CampaignRun, PointOfSale, User } from '../../types';
 import { createMerchantFundRequest, MERCHANT_FUND_REQUEST_POS_QUOTA } from '../../utils/merchantCampaign';
 import { runInBackground } from '../../utils/backgroundOperations';
+import { sameMerchantMfs } from '../../data/merchantMfs';
 
 interface MerchantFundRequestModalProps {
   isOpen: boolean;
@@ -27,8 +28,8 @@ export const MerchantFundRequestModal: React.FC<MerchantFundRequestModalProps> =
 
   const inactivePosIds = useMemo(() => new Set(visits.filter((visit) => visit.operational_status === 'inactive').map((visit) => visit.pos_id)), [visits]);
   const filteredPositions = useMemo(() => {
-    const normalizedMfs = mfsName.trim().toLowerCase();
-    const source = normalizedMfs ? positions.filter((pos) => (pos.mfs_name || '').trim().toLowerCase() === normalizedMfs) : positions;
+    const matchingPositions = mfsName ? positions.filter((pos) => sameMerchantMfs(pos.mfs_name, mfsName)) : positions;
+    const source = mfsName && matchingPositions.length > 0 ? matchingPositions : positions;
     const needle = query.trim().toLowerCase();
     return source.filter((pos) => !inactivePosIds.has(pos.id) && (!needle || `${pos.denomination} ${pos.agent_number} ${pos.pool}`.toLowerCase().includes(needle)));
   }, [inactivePosIds, mfsName, positions, query]);
@@ -37,7 +38,9 @@ export const MerchantFundRequestModal: React.FC<MerchantFundRequestModalProps> =
   useEffect(() => {
     if (!isOpen) return;
     const mostRecentVisit = [...visits].filter((visit) => visit.operational_status !== 'inactive').sort((a, b) => String(b.visited_at || '').localeCompare(String(a.visited_at || '')))[0];
-    const fallback = mostRecentVisit?.pos_id || (mfsName ? positions.find((pos) => !inactivePosIds.has(pos.id) && (pos.mfs_name || '').trim().toLowerCase() === mfsName.trim().toLowerCase())?.id : positions.find((pos) => !inactivePosIds.has(pos.id))?.id) || '';
+    const matchingPositions = mfsName ? positions.filter((pos) => sameMerchantMfs(pos.mfs_name, mfsName)) : positions;
+    const fallbackPool = mfsName && matchingPositions.length > 0 ? matchingPositions : positions;
+    const fallback = mostRecentVisit?.pos_id || fallbackPool.find((pos) => !inactivePosIds.has(pos.id))?.id || '';
     setPosId(fallback);
     setAmount('4.5');
     setBaPhone(currentUser.phone || '');

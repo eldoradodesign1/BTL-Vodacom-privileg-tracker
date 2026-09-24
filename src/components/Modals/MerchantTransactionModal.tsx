@@ -66,8 +66,9 @@ export const MerchantTransactionModal: React.FC<MerchantTransactionModalProps> =
   const existingVisit = useMemo(() => selectedPos ? visits.find((visit) => visit.pos_id === selectedPos.id) || null : null, [selectedPos, visits]);
   const inactivePosIds = useMemo(() => new Set(visits.filter((visit) => visit.operational_status === 'inactive').map((visit) => visit.pos_id)), [visits]);
   const filteredPositions = useMemo(() => {
-    const mfsFiltered = mfsName ? positions.filter((pos) => sameMerchantMfs(pos.mfs_name, mfsName)) : positions;
-    return mfsFiltered.filter((pos) => !inactivePosIds.has(pos.id));
+    const matchingPositions = mfsName ? positions.filter((pos) => sameMerchantMfs(pos.mfs_name, mfsName)) : positions;
+    const source = mfsName && matchingPositions.length > 0 ? matchingPositions : positions;
+    return source.filter((pos) => !inactivePosIds.has(pos.id));
   }, [inactivePosIds, mfsName, positions]);
   const posVisit = createdVisit || existingVisit;
   const isInactivePos = existingVisit?.operational_status === 'inactive';
