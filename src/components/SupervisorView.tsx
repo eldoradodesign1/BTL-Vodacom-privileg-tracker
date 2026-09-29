@@ -180,7 +180,16 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     ? allUsers.filter(isPrivilegeHostess)
     : allUsers.filter((user) => isPrivilegeHostess(user) && isAssignedToCurrentSupervisor(user));
   const teamAgentIds = teamData.map((agent) => agent.id);
-  const teamReports = allReports.filter((report) => teamAgentIds.includes(report.agent_id));
+  // Le monitoring du jour peut être vide avant le premier pointage, mais cela
+  // ne doit jamais masquer l'historique. Les archives doivent être limitées à
+  // la population affectée à la campagne, et non aux seuls agents actifs à la
+  // date sélectionnée.
+  const supervisedAgentIds = supervisedAgents.map((agent) => agent.id);
+  const supervisedAgentNames = new Set(supervisedAgents.map((agent) => agent.name.trim().toLowerCase()));
+  const teamReports = allReports.filter((report) => (
+    supervisedAgentIds.includes(report.agent_id)
+    || supervisedAgentNames.has((report.agent_name || '').trim().toLowerCase())
+  ));
   const reportDateList = [...new Set(teamReports.map((r) => r.date))].sort();
   const consolidationMinDate = reportDateList[0] || '2026-07-01';
   const consolidationMaxDate = (reportDateList.length > 0 && reportDateList[reportDateList.length - 1] > todayIso)
