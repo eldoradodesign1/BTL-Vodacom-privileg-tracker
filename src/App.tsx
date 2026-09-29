@@ -186,16 +186,20 @@ export default function App() {
       setShops(shopsData);
       setDataRevision((prev) => prev + 1);
 
-      // Les tables opérationnelles sont synchronisées indépendamment.
-      void Promise.allSettled([refreshLeadsFromSupabase(), refreshCheckinsFromSupabase(), refreshReportsFromSupabase()]).then((results) => {
-        results.forEach((result) => {
-          if (result.status === 'rejected') console.warn('Secondary Supabase refresh failed:', result.reason);
-        });
+      // Les tables opérationnelles sont synchronisées séparément, mais le rendu
+      // doit être invalidé après leur écriture locale. Sinon SupervisorView lit
+      // un cache vide au premier rendu et reste affichée à zéro jusqu'à une
+      // action manuelle ou un autre changement d'onglet.
+      const secondaryResults = await Promise.allSettled([
+        refreshLeadsFromSupabase(),
+        refreshCheckinsFromSupabase(),
+        refreshReportsFromSupabase(),
+        refreshSupervisorAgentCampaignAssignmentsFromSupabase()
+      ]);
+      secondaryResults.forEach((result) => {
+        if (result.status === 'rejected') console.warn('Secondary Supabase refresh failed:', result.reason);
       });
-      void refreshSupervisorAgentCampaignAssignmentsFromSupabase().catch((error) => {
-        // La table est ajoutée progressivement : son absence ne doit jamais bloquer l’application.
-        console.warn('Supervisor campaign assignments refresh failed:', error);
-      });
+      setDataRevision((prev) => prev + 1);
     } catch (error) {
       console.warn('Supabase users/shops refresh failed:', error);
       setUsers(getUsers());
