@@ -8,6 +8,36 @@ export const SUPPLIER_FORUM_DATE = '2026-09-25';
 export const SUPPLIER_FORUM_ARRIVAL_DEADLINE = '09:00';
 export const SUPPLIER_FORUM_DEPARTURE_TIME = '15:00';
 
+export const FOUNDATION_FORAGE_CODE = 'vodacom-fondation-inauguration-forage-2026';
+export const FOUNDATION_FORAGE_DATE = '2026-10-02';
+export const FOUNDATION_FORAGE_ARRIVAL_DEADLINE = '09:00';
+export const FOUNDATION_FORAGE_DEPARTURE_TIME = '15:00';
+
+export interface EventConfig {
+  code: string;
+  date: string;
+  arrivalDeadline: string;
+  departureTime: string;
+}
+
+export function getEventConfig(campaignOrCode?: Campaign | string | null): EventConfig {
+  const code = typeof campaignOrCode === 'string' ? campaignOrCode : campaignOrCode?.code;
+  if (code === FOUNDATION_FORAGE_CODE) {
+    return {
+      code: FOUNDATION_FORAGE_CODE,
+      date: FOUNDATION_FORAGE_DATE,
+      arrivalDeadline: FOUNDATION_FORAGE_ARRIVAL_DEADLINE,
+      departureTime: FOUNDATION_FORAGE_DEPARTURE_TIME,
+    };
+  }
+  return {
+    code: SUPPLIER_FORUM_CODE,
+    date: SUPPLIER_FORUM_DATE,
+    arrivalDeadline: SUPPLIER_FORUM_ARRIVAL_DEADLINE,
+    departureTime: SUPPLIER_FORUM_DEPARTURE_TIME,
+  };
+}
+
 export interface EventAttendance {
   id: string;
   event_id: string;
@@ -43,10 +73,14 @@ export function supplierForumDate(now = new Date()): string {
   const values = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, part.value]));
   return `${values.year}-${values.month}-${values.day}`;
 }
-export async function getSupplierForumCampaign(): Promise<Campaign | null> {
-  const { data, error } = await getClient().from('campaigns').select('*').eq('code', SUPPLIER_FORUM_CODE).maybeSingle();
-  fail(error, 'Impossible de charger l’Event Supplier Forum');
+export async function getEventCampaign(code: string): Promise<Campaign | null> {
+  const { data, error } = await getClient().from('campaigns').select('*').eq('code', code).maybeSingle();
+  fail(error, 'Impossible de charger l’Event');
   return data as Campaign | null;
+}
+
+export async function getSupplierForumCampaign(): Promise<Campaign | null> {
+  return getEventCampaign(SUPPLIER_FORUM_CODE);
 }
 export async function getEventAttendance(eventId: string, agentId: string, date = SUPPLIER_FORUM_DATE): Promise<EventAttendance | null> {
   const { data, error } = await getClient().from('event_attendance').select('*').eq('event_id', eventId).eq('agent_id', agentId).eq('activity_date', date).maybeSingle();
