@@ -2,7 +2,7 @@ export type UserRole = 'agent' | 'supervisor' | 'sub_admin' | 'admin' | 'super_a
 
 export type UserCategory = 'hostess' | 'brand_ambassador' | 'operations';
 export type CampaignType = 'hostess' | 'brand_ambassador' | 'event';
-export type CampaignContext = 'vodacom-privilege' | 'merchant-educational' | 'youth-f2f' | 'mpesa-mikili' | 'vodacom-supplier-forum';
+export type CampaignContext = 'vodacom-privilege' | 'merchant-educational' | 'youth-f2f' | 'mpesa-mikili' | 'vodacom-supplier-forum' | 'vodacom-foundation-forage';
 
 export interface User {
   id: string;
