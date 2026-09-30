@@ -12,6 +12,8 @@ const toCampaignContext = (campaign?: Campaign | null): CampaignContext => {
   const code = (campaign?.code || '').trim().toLowerCase().replace(/_/g, '-');
   if (code === 'youth-f2f' || code === 'youth-f2f-campaign') return 'youth-f2f';
   if (code === 'mpesa-mikili' || code === 'm-pesa-mikili' || code === 'mpesa-mikili-campaign') return 'mpesa-mikili';
+  if (code === 'vodacom-supplier-forum' || code === 'vodacom-supplier-forum-sept-2026' || code === 'supplier-forum') return 'vodacom-supplier-forum';
+  if (code === 'vodacom-fondation-inauguration-forage-2026' || code === 'vodacom-foundation-forage' || code === 'foundation-forage') return 'vodacom-foundation-forage';
   return campaign?.campaign_type === 'brand_ambassador' || code === 'merchant-educational' || code === 'merchant-educational-campaign'
     ? 'merchant-educational'
     : 'vodacom-privilege';
