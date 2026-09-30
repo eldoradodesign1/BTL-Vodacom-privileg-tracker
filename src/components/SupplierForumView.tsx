@@ -46,8 +46,8 @@ export const SupplierForumView: React.FC<Props> = ({ currentUser, campaign, onRe
     if (!campaign) return;
     setLoading(true);
     try {
-      if (isManager) setTeam(await getEventTeam(campaign.id));
-      else setAttendance(await getEventAttendance(campaign.id, currentUser.id));
+      if (isManager) setTeam(await getEventTeam(campaign.id, eventConfig.date));
+      else setAttendance(await getEventAttendance(campaign.id, currentUser.id, eventConfig.date));
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Impossible de charger l’Event.'); }
     finally { setLoading(false); }
   };
