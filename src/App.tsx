@@ -264,6 +264,7 @@ export default function App() {
     { key: 'youth-f2f' as const, label: 'Youth F2F', note: 'Sensibilisation universitaire' },
     { key: 'mpesa-mikili' as const, label: 'M-Pesa Mikili', note: 'Brand Ambassador · M-Pesa' },
     { key: 'vodacom-supplier-forum' as const, label: 'Supplier Forum', note: 'Event · Pointage uniquement' },
+    { key: 'vodacom-foundation-forage' as const, label: 'Vodacom Fondation · Inauguration Forage', note: 'Event · Pointage uniquement' },
   ];
   const agentCampaignOptions = agentCampaigns.map((campaign) => ({
         key: campaignCodeToContext(campaign.code),
