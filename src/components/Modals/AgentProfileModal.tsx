@@ -103,7 +103,7 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
         date: rep.date,
         label: rep.date.slice(5),
         value: rep.priv + rep.roam + rep.bund
-      }));
+      })).slice(-30);
   }, [agentReports]);
 
   const allAgentLeads = useMemo(() => {

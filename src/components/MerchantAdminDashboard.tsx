@@ -97,8 +97,19 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
 
     <section className="glass-card relative overflow-hidden p-4">
       <div className="merchant-chart-glow pointer-events-none absolute -right-14 -bottom-16 h-44 w-44 rounded-full bg-emerald-400/[0.08] blur-3xl"/>
-      <div className="relative flex items-center gap-2"><TrendingUp className="text-emerald-200" size={18}/><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">Courbe de progression</p><h2 className="mt-1 text-sm font-black">POS visités sur les 7 derniers jours</h2></div></div>
-      <div className="relative mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><LineChart data={summary.timeline} margin={{ top: 12, right: 8, left: -20, bottom: 3 }}><CartesianGrid stroke="#ffffff12" vertical={false}/><XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false}/><YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} allowDecimals={false} axisLine={false} tickLine={false}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Legend wrapperStyle={{ fontSize: '10px' }}/><Line type="monotone" dataKey="visits" name="POS visités" stroke="#34d399" strokeWidth={3} dot={{ r: 4, fill: '#34d399' }} activeDot={{ r: 6 }} isAnimationActive={false}/><Line type="monotone" dataKey="target" name="Objectif actif" stroke="#fbbf24" strokeWidth={2} strokeDasharray="6 5" dot={false} isAnimationActive={false}/></LineChart></ResponsiveContainer></div>
+      <div className="relative flex items-center gap-2"><TrendingUp className="text-emerald-200" size={18}/><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">Courbe de progression</p><h2 className="mt-1 text-sm font-black">POS visités · 30 derniers jours</h2></div></div>
+      <div className="relative mt-3 h-64 overflow-hidden rounded-2xl border border-white/10 bg-black/10">
+        <div className="flex h-full min-w-0">
+          <div className="z-10 w-12 shrink-0 border-r border-white/10 bg-[#0b1020]/85">
+            <ResponsiveContainer width="100%" height="100%"><LineChart data={summary.timeline} margin={{ top: 12, right: 0, left: 0, bottom: 3 }}><YAxis domain={[0, 'auto']} tick={{ fill: '#9ca3af', fontSize: 10 }} allowDecimals={false} axisLine={false} tickLine={false} width={40}/></LineChart></ResponsiveContainer>
+          </div>
+          <div className="min-w-0 flex-1 overflow-x-auto custom-scrollbar">
+            <div className="h-full" style={{ minWidth: `${Math.max(720, summary.timeline.length * 46)}px` }}>
+              <ResponsiveContainer width="100%" height="100%"><LineChart data={summary.timeline} margin={{ top: 12, right: 18, left: 8, bottom: 3 }}><CartesianGrid stroke="#ffffff12" vertical={false}/><XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false} interval={summary.timeline.length > 15 ? 2 : 0}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Legend wrapperStyle={{ fontSize: '10px' }}/><Line type="monotone" dataKey="visits" name="POS visités" stroke="#34d399" strokeWidth={3} dot={{ r: 3, fill: '#34d399' }} activeDot={{ r: 6 }} isAnimationActive={false}/><Line type="monotone" dataKey="target" name="Objectif actif" stroke="#fbbf24" strokeWidth={2} strokeDasharray="6 5" dot={false} isAnimationActive={false}/></LineChart></ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+      </div>
       <div className="relative mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-[10px]"><span className="font-bold text-gray-400">Transactions aujourd’hui</span><b className="text-emerald-100">{summary.transactionsToday.toLocaleString('fr-FR')}</b><span className="font-bold text-gray-400">Objectifs pilotables dans Gestion</span><CheckCircle2 size={15} className="text-emerald-300"/></div>
     </section>
   </div>;

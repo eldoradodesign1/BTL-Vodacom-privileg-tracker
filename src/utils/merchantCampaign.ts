@@ -1220,7 +1220,10 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
   }).length;
   const completedPos = Array.from(distinctCampaignPos).filter((posId) => latestVisitByPos.get(posId)?.operational_status !== 'inactive' && (transactionCountByPos.get(posId) || 0) >= targets.transactions_per_pos_target).length;
   const untouchedPos = Math.max(0, targets.campaign_pos_target - distinctCampaignPos.size);
-  const days = getDateRange(7, new Date(`${safeActivityDate}T12:00:00`)).filter((day) => day >= MERCHANT_CAMPAIGN_START);
+  // Les dashboards restent lisibles sur mobile : on expose au maximum les
+  // 30 derniers jours, avec le début réel de la campagne comme borne basse.
+  const campaignDayCount = Math.max(1, Math.floor((new Date(`${safeActivityDate}T12:00:00`).getTime() - new Date(`${MERCHANT_CAMPAIGN_START}T12:00:00`).getTime()) / 86400000) + 1);
+  const days = getDateRange(Math.min(30, campaignDayCount), new Date(`${safeActivityDate}T12:00:00`)).filter((day) => day >= MERCHANT_CAMPAIGN_START);
   const timeline = days.map((day) => {
     const present = activity.attendances.filter((item) => item.activity_date === day && Boolean(item.checkin_at)).length;
     return {
