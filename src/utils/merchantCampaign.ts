@@ -416,12 +416,25 @@ function activityWindow(activityDate: string) {
   };
 }
 
-async function getMerchantBAs() {
-  return withMerchantCache('bas', async () => {
+async function getMerchantBAs(campaignId?: string) {
+  return withMerchantCache(`bas:${campaignId || MERCHANT_CAMPAIGN_CODE}`, async () => {
     const client = getMerchantClient();
+    const resolvedCampaignId = campaignId || (await getMerchantCampaign())?.id;
+    if (!resolvedCampaignId) return [];
+    const { data: assignments, error: assignmentsError } = await client
+      .from('user_campaign_assignments')
+      .select('user_id')
+      .eq('campaign_id', resolvedCampaignId)
+      .eq('is_active', true);
+    fail(assignmentsError, 'Impossible de charger les affectations Merchant');
+    const agentIds = Array.from(new Set((assignments || [])
+      .map((assignment: { user_id: string }) => assignment.user_id)
+      .filter(Boolean)));
+    if (agentIds.length === 0) return [];
     const { data, error } = await client
       .from('users')
       .select('id,full_name,phone')
+      .in('id', agentIds)
       .eq('user_category', 'brand_ambassador')
       .order('full_name');
     fail(error, 'Impossible de charger les Brand Ambassadors');
@@ -1187,7 +1200,7 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
   const safeActivityDate = clampMerchantActivityDate(activityDate);
   const [team, bas, activity, campaignPos] = await Promise.all([
     getMerchantMonitoring(run.id, safeActivityDate),
-    getMerchantBAs(),
+    getMerchantBAs(run.campaign_id),
     getRunActivityData(run.id),
     getCampaignPos(run.campaign_id),
   ]);
@@ -1451,7 +1464,7 @@ export async function updateMerchantFundRequestStatus(id: string, status: Mercha
 export async function getMerchantPosControl(run: CampaignRun): Promise<MerchantPosControlItem[]> {
   const [campaign, bas, activity] = await Promise.all([
     getMerchantCampaign(),
-    getMerchantBAs(),
+    getMerchantBAs(run.campaign_id),
     getRunActivityData(run.id),
   ]);
   if (!campaign) return [];
@@ -1533,7 +1546,7 @@ export async function getMerchantSupervisorReport(run: CampaignRun, kind: Mercha
       ? (addCalendarDays(today, -6) < MERCHANT_CAMPAIGN_START ? MERCHANT_CAMPAIGN_START : addCalendarDays(today, -6))
       : MERCHANT_CAMPAIGN_START;
   const endsOn = today;
-  const [bas, activity, campaignPos] = await Promise.all([getMerchantBAs(), getRunActivityData(run.id), getCampaignPos(run.campaign_id)]);
+  const [bas, activity, campaignPos] = await Promise.all([getMerchantBAs(run.campaign_id), getRunActivityData(run.id), getCampaignPos(run.campaign_id)]);
   const inRange = (value: string) => value >= startsOn && value <= endsOn;
   const visits = activity.visits.filter((item) => inRange(item.activity_date));
   const transactions = activity.transactions.filter((item) => inRange(item.occurred_at.slice(0, 10)));
