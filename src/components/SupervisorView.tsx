@@ -162,23 +162,20 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   
 
   const teamData = globalScope
-    ? getAdminMasterList(selectedDate, true)
+    ? getAdminMasterList(selectedDate, true, campaignCode)
     : getSupervisorLiveView(currentUser.id, selectedDate, campaignCode);
   const allCheckins = getCheckins();
   const allReports = getReports();
   const allUsers = getUsers();
-  const supervisorAssignments = getSupervisorAgentCampaignAssignments().filter((assignment) => assignment.isActive && (assignment.campaignCode === campaignCode || assignment.campaignId === campaignCode));
-  const hasDetailedAssignment = (agentId: string) => supervisorAssignments.some((assignment) => assignment.agentId === agentId);
-  const isAssignedToCurrentSupervisor = (user: User) => hasDetailedAssignment(user.id)
-    ? supervisorAssignments.some((assignment) => assignment.agentId === user.id && assignment.supervisorId === currentUser.id)
-    : user.supervisorId === currentUser.id;
-  const isPrivilegeHostess = (user: User) => user.role === 'agent'
-    && user.userCategory === 'hostess';
-  // Les Hôtesses désaffectées restent disponibles pour une nouvelle affectation,
-  // mais n’entrent jamais dans la population du monitoring et des statistiques.
-  const supervisedAgents = globalScope
-    ? allUsers.filter(isPrivilegeHostess)
-    : allUsers.filter((user) => isPrivilegeHostess(user) && isAssignedToCurrentSupervisor(user));
+  const supervisorAssignments = getSupervisorAgentCampaignAssignments().filter((assignment) => (
+    assignment.isActive
+    && (assignment.campaignCode === campaignCode || assignment.campaignId === campaignCode)
+    && (globalScope || assignment.supervisorId === currentUser.id)
+  ));
+  const campaignAgentIds = new Set(supervisorAssignments.map((assignment) => assignment.agentId));
+  // La population de l’accueil, du monitoring et des archives est celle de la
+  // campagne active, jamais la catégorie globale BA/hôtesse de l’utilisateur.
+  const supervisedAgents = allUsers.filter((user) => user.role === 'agent' && campaignAgentIds.has(user.id));
   const teamAgentIds = teamData.map((agent) => agent.id);
   // Le monitoring du jour peut être vide avant le premier pointage, mais cela
   // ne doit jamais masquer l'historique. Les archives doivent être limitées à

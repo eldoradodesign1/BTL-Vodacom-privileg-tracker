@@ -1409,7 +1409,7 @@ function isActivePrivilegeHostess(user: User, shops: Shop[]): boolean {
     && shops.some((shop) => shop.id === user.permanentShopId);
 }
 
-export function getAdminMasterList(dateISO?: string, onlyAssigned = false): AgentMasterStatus[] {
+export function getAdminMasterList(dateISO?: string, onlyAssigned = false, campaignCode?: string): AgentMasterStatus[] {
   const users = getUsers();
   const checkins = getCheckins();
   const reports = getReports();
@@ -1417,9 +1417,19 @@ export function getAdminMasterList(dateISO?: string, onlyAssigned = false): Agen
   const shops = getShops();
   const targetDate = dateISO || toISO(new Date());
 
-  const agents = onlyAssigned
-    ? users.filter((user) => isActivePrivilegeHostess(user, shops))
+  const campaignAssignments = campaignCode
+    ? getSupervisorAgentCampaignAssignments().filter((assignment) => (
+      assignment.isActive
+      && (assignment.campaignCode === campaignCode || assignment.campaignId === campaignCode)
+    ))
+    : [];
+  const campaignAgentIds = new Set(campaignAssignments.map((assignment) => assignment.agentId));
+  const campaignScopedUsers = campaignCode
+    ? users.filter((user) => user.role === 'agent' && campaignAgentIds.has(user.id))
     : users.filter((user) => user.role === 'agent' && user.userCategory === 'hostess');
+  const agents = onlyAssigned
+    ? campaignScopedUsers.filter((user) => campaignCode ? true : isActivePrivilegeHostess(user, shops))
+    : campaignScopedUsers;
 
   return agents.map(agent => {
     const hasIn = checkins.some(c => (c.agent_id === agent.id || c.agent_id === agent.name || isMatchAgent(c.agent_id, agent)) && toISO(c.timestamp) === targetDate && c.type === 'IN');
@@ -1463,15 +1473,14 @@ export function getSupervisorLiveView(supervisorId: string, dateISO?: string, ca
   const leads = getLeads();
   const shops = getShops();
 
-  const supervisorAssignments = getSupervisorAgentCampaignAssignments().filter((assignment) => assignment.isActive && (assignment.campaignCode === campaignCode || assignment.campaignId === campaignCode));
-  const hasDetailedAssignmentForAgent = (agentId: string) => supervisorAssignments.some((assignment) => assignment.agentId === agentId);
-  const isAssignedToSupervisorForCampaign = (user: User) => {
-    if (hasDetailedAssignmentForAgent(user.id)) return supervisorAssignments.some((assignment) => assignment.agentId === user.id && assignment.supervisorId === supervisorId);
-    return user.supervisorId === supervisorId;
-  };
-  const supervisedHostesses = users.filter((user) => isAssignedToSupervisorForCampaign(user) && user.role === 'agent' && user.userCategory === 'hostess');
-  const myAgents = supervisedHostesses.filter((user) => {
-    if (isActivePrivilegeHostess(user, shops)) return true;
+  const supervisorAssignments = getSupervisorAgentCampaignAssignments().filter((assignment) => (
+    assignment.isActive
+    && (assignment.campaignCode === campaignCode || assignment.campaignId === campaignCode)
+    && assignment.supervisorId === supervisorId
+  ));
+  const supervisedAgentIds = new Set(supervisorAssignments.map((assignment) => assignment.agentId));
+  const supervisedAgents = users.filter((user) => user.role === 'agent' && supervisedAgentIds.has(user.id));
+  const myAgents = supervisedAgents.filter((user) => {
     return checkins.some((checkin) => isMatchAgent(checkin.agent_id, user) && checkin.type === 'IN' && toISO(checkin.timestamp) === targetDate)
       || reports.some((report) => isMatchAgent(report.agent_id, user) && toISO(report.date) === targetDate)
       || leads.some((lead) => isMatchAgent(lead.agent_id, user) && toISO(lead.timestamp) === targetDate);
