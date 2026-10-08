@@ -1,20 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Camera, CheckCircle2, ChevronRight, CircleAlert, FileCheck2, GraduationCap, MapPin, PlusCircle, RefreshCw, ShieldCheck, UsersRound, X } from 'lucide-react';
-import type { Campaign, User, YouthContactReport, YouthDailyAssignment, YouthDailyAttendance, YouthRegion, YouthSubscriberType, YouthUniversity } from '../types';
+import { CalendarDays, Camera, CheckCircle2, ChevronRight, CircleAlert, FileCheck2, GraduationCap, MapPin, PlusCircle, RefreshCw, UsersRound, X } from 'lucide-react';
+import type { Campaign, User, YouthContactReport, YouthDailyAttendance, YouthRegion, YouthSubscriberType } from '../types';
 import { runInBackground } from '../utils/backgroundOperations';
 import {
   closeYouthAttendance,
   addYouthContact,
   getYouthContacts,
   getYouthAgents,
-  getYouthAssignment,
   getYouthAttendance,
   getYouthAttendanceHistory,
   getYouthCampaign,
   getYouthEvidenceUrl,
-  getYouthUniversities,
   recordYouthCheckin,
-  saveYouthAssignment,
   uploadYouthEvidence,
   youthTodayIso,
 } from '../utils/youthCampaign';
@@ -70,15 +67,10 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
   const isOperator = currentUser.role !== 'agent';
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('today');
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [universities, setUniversities] = useState<YouthUniversity[]>([]);
-  const [assignment, setAssignment] = useState<YouthDailyAssignment | null>(null);
   const [attendance, setAttendance] = useState<YouthDailyAttendance | null>(null);
   const [history, setHistory] = useState<YouthDailyAttendance[]>([]);
   const [contacts, setContacts] = useState<YouthContactReport[]>([]);
   const [team, setTeam] = useState<User[]>([]);
-  const [selectedUniversityId, setSelectedUniversityId] = useState('');
-  const [selectedAgentId, setSelectedAgentId] = useState('');
-  const [operatorUniversityId, setOperatorUniversityId] = useState('');
   const [closingComment, setClosingComment] = useState('');
   const [checkinPending, setCheckinPending] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -102,22 +94,15 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
     try {
       const currentCampaign = await getYouthCampaign();
       if (!currentCampaign) throw new Error('La campagne Youth F2F est introuvable.');
-      const [nextUniversities, nextAssignment, nextAttendance, nextTeam, nextContacts] = await Promise.all([
-        getYouthUniversities(currentCampaign.id),
-        currentUser.role === 'agent' ? getYouthAssignment(currentUser.id, currentCampaign.id, today) : Promise.resolve(null),
+      const [nextAttendance, nextTeam, nextContacts] = await Promise.all([
         currentUser.role === 'agent' ? getYouthAttendance(currentUser.id, currentCampaign.id, today) : Promise.resolve(null),
         isOperator ? getYouthAgents(currentUser.role === 'supervisor' ? currentUser.id : undefined) : Promise.resolve([]),
         currentUser.role === 'agent' ? getYouthContacts(currentUser.id, currentCampaign.id, today) : Promise.resolve([]),
       ]);
       setCampaign(currentCampaign);
-      setUniversities(nextUniversities);
-      setAssignment(nextAssignment);
       setAttendance(nextAttendance);
       setTeam(nextTeam);
       setContacts(nextContacts);
-      setSelectedUniversityId(nextAssignment?.university_id || nextUniversities[0]?.id || '');
-      setOperatorUniversityId(nextUniversities[0]?.id || '');
-      setSelectedAgentId((previous) => previous || nextTeam[0]?.id || '');
       setClosingComment(nextAttendance?.closing_comment || '');
       if (nextAttendance?.checkin_photo_path) {
         void getYouthEvidenceUrl(nextAttendance.checkin_photo_path).then(setPhotoUrl).catch(() => setPhotoUrl(''));
@@ -148,7 +133,6 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
 
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinPending;
   const isClosed = Boolean(attendance?.checkout_at);
-  const selectedUniversity = universities.find((university) => university.id === selectedUniversityId) || assignment?.university || null;
   const youthActions = [['activation_bundle', 'Activation Bundles (50U)'], ['mpesa_account', 'Ouverture compte M-Pesa'], ['mpesa_app', 'Téléchargement application M-Pesa'], ['f2f_optin', 'Optin F2F'], ['none', 'Aucun']] as const;
   const resetContactForm = () => { setContactName(''); setContactPhone(''); setSubscriberType(''); setContactActions([]); };
   const saveContact = async (event: React.FormEvent) => {
@@ -162,56 +146,8 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Enregistrement du contact impossible.'); } finally { setContactSaving(false); }
   };
 
-  const handleAssignment = (agentId = currentUser.id, universityId = selectedUniversityId) => {
-    if (!campaign || !universityId || !agentId) {
-      setError('Sélectionnez un agent et une université avant de valider.');
-      return;
-    }
-    const university = universities.find((item) => item.id === universityId);
-    if (!university) return;
-    setError('');
-    setNotice(agentId === currentUser.id ? 'Université enregistrée localement. Synchronisation en arrière-plan…' : 'Affectation lancée en arrière-plan.');
-    if (agentId === currentUser.id) {
-      setAssignment((current) => ({
-        id: current?.id || `local-youth-${today}`,
-        campaign_id: campaign.id,
-        ba_id: currentUser.id,
-        university_id: university.id,
-        activity_date: today,
-        status: 'in_progress',
-        assigned_by: currentUser.id,
-        university,
-      }));
-    }
-    runInBackground('Université Youth F2F', () => saveYouthAssignment({
-      campaignId: campaign.id,
-      baId: agentId,
-      universityId,
-      activityDate: today,
-      assignedBy: currentUser.id,
-    }), {
-      queued: 'Affectation en cours de synchronisation.',
-      success: 'Université du jour synchronisée.',
-      onSuccess: (next) => {
-        if (agentId === currentUser.id) {
-          setAssignment(next);
-          setSelectedUniversityId(next.university_id);
-        }
-        setNotice(agentId === currentUser.id ? 'Université du jour synchronisée.' : 'Affectation de l’agent synchronisée.');
-      },
-      onError: (caught) => {
-        setError(caught.message);
-        if (agentId === currentUser.id) void refresh(false);
-      },
-    });
-  };
-
   const handleCheckin = (file: File) => {
     if (!campaign) return;
-    if (!assignment || assignment.id.startsWith('local-')) {
-      setError('Validez d’abord l’université du jour, puis attendez sa confirmation avant de pointer.');
-      return;
-    }
     if (isClosed) {
       setError('Cette journée est déjà clôturée. Consultez vos archives.');
       return;
@@ -226,7 +162,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
       const path = await uploadYouthEvidence(`${currentUser.id}/${today}/checkin-${Date.now()}.jpg`, file);
       const nextAttendance = await recordYouthCheckin({
         campaignId: campaign.id,
-        assignmentId: assignment.id,
+        assignmentId: null,
         baId: currentUser.id,
         activityDate: today,
         checkinAt: new Date().toISOString(),
@@ -294,7 +230,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
             <div className="min-w-0">
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/80">Youth F2F · Force de frappe</p>
               <h1 className="mt-1 text-xl font-black tracking-tight text-white sm:text-2xl">Espace opérationnel</h1>
-              <p className="mt-2 text-[12px] font-medium leading-relaxed text-slate-300">{isOperator ? 'Pilotez les affectations d’université et suivez les activités terrain.' : `Bonjour ${currentUser.name.split(' ')[0]}. Choisissez votre université, pointez puis clôturez votre activité du jour.`}</p>
+              <p className="mt-2 text-[12px] font-medium leading-relaxed text-slate-300">{isOperator ? 'Suivez les agents affectés et les activités terrain.' : `Bonjour ${currentUser.name.split(' ')[0]}. Pointez, renseignez vos contacts puis clôturez votre activité du jour.`}</p>
             </div>
           </div>
           <button type="button" onClick={() => void refresh(false)} className="shrink-0 rounded-xl border border-white/10 bg-white/[0.06] p-2 text-cyan-100 transition hover:bg-white/10" title="Actualiser Youth F2F"><RefreshCw size={16} /></button>
@@ -316,26 +252,21 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
         </section>
       ) : isOperator ? (
         <section className="glass-card p-4 sm:p-5">
-          <div className="mb-4 flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-violet-200/15 bg-violet-300/10 text-violet-200"><ShieldCheck size={19}/></span><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-violet-100">Pilotage terrain</p><h2 className="mt-1 text-sm font-black text-white">Affectation quotidienne d’université</h2><p className="mt-1 text-[11px] leading-relaxed text-gray-400">Les affectations sont immédiatement utilisables par les agents pour le pointage photo/GPS et la clôture du jour.</p></div></div>
-          <div className="grid gap-3 sm:grid-cols-2"><div><label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-gray-400">Agent Youth</label><select value={selectedAgentId} onChange={(event) => setSelectedAgentId(event.target.value)} className="app-input w-full rounded-2xl px-3 py-3 text-sm">{team.map((agent) => <option key={agent.id} value={agent.id}>{agent.name}</option>)}</select></div><div><label className="mb-1.5 block text-[10px] font-black uppercase tracking-[0.12em] text-gray-400">Université</label><select value={operatorUniversityId} onChange={(event) => setOperatorUniversityId(event.target.value)} className="app-input w-full rounded-2xl px-3 py-3 text-sm">{universities.map((university) => <option key={university.id} value={university.id}>{university.name} · {university.commune}</option>)}</select></div></div>
-          <button type="button" disabled={!selectedAgentId || !operatorUniversityId} onClick={() => handleAssignment(selectedAgentId, operatorUniversityId)} className="btn-neon mt-3 w-full disabled:cursor-not-allowed disabled:opacity-45">Valider l’affectation du jour</button>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">{universities.map((university) => <div key={university.id} className="rounded-2xl border border-white/10 bg-black/10 p-3"><p className="text-[10px] font-black text-cyan-100">{university.name}</p><p className="mt-1 text-[10px] leading-relaxed text-gray-500">{university.address || university.commune || 'Adresse à compléter'}</p></div>)}</div>
-          {team.length === 0 && <p className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-400/[0.06] p-3 text-xs font-semibold text-amber-100">Aucun agent Youth F2F n’est encore rattaché à ce superviseur.</p>}
+          <div className="mb-4 flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-violet-200/15 bg-violet-300/10 text-violet-200"><UsersRound size={19}/></span><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-violet-100">Suivi Youth F2F</p><h2 className="mt-1 text-sm font-black text-white">Agents affectés à la campagne</h2><p className="mt-1 text-[11px] leading-relaxed text-gray-400">Le pointage et les contacts sont désormais enregistrés directement, sans affectation d’université.</p></div></div>
+          {team.length === 0 ? <p className="rounded-2xl border border-amber-300/20 bg-amber-400/[0.06] p-3 text-xs font-semibold text-amber-100">Aucun agent Youth F2F n’est encore rattaché à ce périmètre.</p> : <div className="space-y-2">{team.map((agent) => <div key={agent.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/10 p-3"><span><b className="block text-xs text-white">{agent.name}</b><span className="text-[10px] text-gray-500">{agent.phone}</span></span><span className="rounded-full bg-cyan-400/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100">BA Youth</span></div>)}</div>}
         </section>
       ) : (
         <>
           <section className="glass-card p-4 sm:p-5">
-            <div className="mb-3 flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200">Université du jour</p><h2 className="mt-1 text-sm font-black text-white">{assignment?.university?.name || 'Choisissez votre site de sensibilisation'}</h2><p className="mt-1 text-[11px] text-gray-400">{readableDate(today)}</p></div><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-200/15 bg-cyan-300/10 text-cyan-100"><MapPin size={18}/></span></div>
-            <select value={selectedUniversityId} disabled={isCheckedIn || isClosed} onChange={(event) => setSelectedUniversityId(event.target.value)} className="app-input w-full rounded-2xl px-3 py-3 text-sm disabled:cursor-not-allowed disabled:opacity-55">{universities.map((university) => <option key={university.id} value={university.id}>{university.name} · {university.commune}</option>)}</select>
-            {selectedUniversity?.address && <p className="mt-2 rounded-xl border border-white/[0.08] bg-black/10 px-3 py-2 text-[10px] font-semibold leading-relaxed text-gray-400">{selectedUniversity.address}</p>}
-            {!isCheckedIn && <button type="button" disabled={!selectedUniversityId} onClick={() => handleAssignment()} className="mt-3 w-full rounded-2xl border border-cyan-300/35 bg-cyan-400/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-45">Valider l’université du jour</button>}
+            <div className="mb-3 flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200">Mission du jour</p><h2 className="mt-1 text-sm font-black text-white">Sensibilisation Youth F2F</h2><p className="mt-1 text-[11px] text-gray-400">{readableDate(today)} · Choisissez la région dans chaque fiche contact.</p></div><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-200/15 bg-cyan-300/10 text-cyan-100"><MapPin size={18}/></span></div>
+            <p className="rounded-xl border border-white/[0.08] bg-black/10 px-3 py-2 text-[10px] font-semibold leading-relaxed text-gray-400">Aucun site ou université n’est requis pour ouvrir la journée. Le GPS et la photo du pointage restent enregistrés.</p>
           </section>
 
-          {!isCheckedIn && <section className="glass-card p-5 text-center"><Camera className="mx-auto text-cyan-200" size={24}/><h2 className="mt-2 text-sm font-black text-white">Pointage du matin</h2><p className="mx-auto mt-1 max-w-sm text-[11px] leading-relaxed text-gray-400">Prenez une photo sur votre lieu de sensibilisation. La localisation et l’horodatage sont enregistrés avec le pointage.</p><label className={`btn-neon mt-4 flex cursor-pointer items-center justify-center gap-2 ${!assignment || assignment.id.startsWith('local-') ? 'pointer-events-none opacity-45' : ''}`}><Camera size={16}/><span>Prendre ma photo de pointage</span><input type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleCheckin(file); event.currentTarget.value = ''; }} /></label>{(!assignment || assignment.id.startsWith('local-')) && <p className="mt-2 text-[10px] font-bold text-amber-200">Validez d’abord l’université sélectionnée.</p>}</section>}
+          {!isCheckedIn && <section className="glass-card p-5 text-center"><Camera className="mx-auto text-cyan-200" size={24}/><h2 className="mt-2 text-sm font-black text-white">Pointage du matin</h2><p className="mx-auto mt-1 max-w-sm text-[11px] leading-relaxed text-gray-400">Prenez une photo sur votre lieu de sensibilisation. La localisation et l’horodatage sont enregistrés avec le pointage.</p><label className="btn-neon mt-4 flex cursor-pointer items-center justify-center gap-2"><Camera size={16}/><span>Prendre ma photo de pointage</span><input type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleCheckin(file); event.currentTarget.value = ''; }} /></label></section>}
 
-          {isCheckedIn && <section className="glass-card overflow-hidden p-4 sm:p-5"><div className="flex items-start gap-3"><button type="button" onClick={() => setPreviewUrl(photoUrl || localPhotoUrl)} className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100">{(photoUrl || localPhotoUrl) ? <img src={photoUrl || localPhotoUrl} alt="Pointage Youth F2F" className="h-full w-full object-cover"/> : <Camera size={22}/>}</button><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-200">Pointage validé</p><h2 className="mt-1 text-sm font-black text-white">{assignment?.university?.name || 'Université de sensibilisation'}</h2><p className="mt-1 text-[10px] text-gray-400">{attendance?.checkin_at ? new Date(attendance.checkin_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'Synchronisation en cours'} · Photo et GPS associés</p></div></div>{locationUrl(attendance?.checkin_latitude, attendance?.checkin_longitude) && <iframe title="Localisation du pointage Youth F2F" src={locationUrl(attendance?.checkin_latitude, attendance?.checkin_longitude)} className="mt-4 h-56 w-full rounded-2xl border border-white/10" loading="lazy"/>}</section>}
+          {isCheckedIn && <section className="glass-card overflow-hidden p-4 sm:p-5"><div className="flex items-start gap-3"><button type="button" onClick={() => setPreviewUrl(photoUrl || localPhotoUrl)} className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100">{(photoUrl || localPhotoUrl) ? <img src={photoUrl || localPhotoUrl} alt="Pointage Youth F2F" className="h-full w-full object-cover"/> : <Camera size={22}/>}</button><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-emerald-200">Pointage validé</p><h2 className="mt-1 text-sm font-black text-white">Sensibilisation Youth F2F</h2><p className="mt-1 text-[10px] text-gray-400">{attendance?.checkin_at ? new Date(attendance.checkin_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'Synchronisation en cours'} · Photo et GPS associés</p></div></div>{locationUrl(attendance?.checkin_latitude, attendance?.checkin_longitude) && <iframe title="Localisation du pointage Youth F2F" src={locationUrl(attendance?.checkin_latitude, attendance?.checkin_longitude)} className="mt-4 h-56 w-full rounded-2xl border border-white/10" loading="lazy"/>}</section>}
 
-          {isCheckedIn && !isClosed && <section className="glass-card overflow-hidden p-4 sm:p-5"><div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-200"><UsersRound size={19}/></span><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">Reporting terrain</p><h2 className="mt-1 text-sm font-black text-white">Contacts sensibilisés · {contacts.length}</h2><p className="mt-1 text-[11px] leading-relaxed text-gray-400">Saisissez chaque contact selon le formulaire Vodacom, sans inventer de localisation.</p></div></div><button type="button" onClick={() => { setError(''); setIsContactOpen(true); }} className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/35 bg-cyan-400/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-cyan-100 transition hover:bg-cyan-400/20"><PlusCircle size={16}/> Ajouter un contact</button>{contacts.length > 0 && <div className="mt-3 space-y-2">{contacts.slice(0, 4).map((item) => <div key={item.id} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2"><span><b className="block text-[11px] text-white">{item.subscriber_name}</b><span className="text-[9px] text-gray-500">{item.subscriber_phone} · {item.actions.length} action{item.actions.length > 1 ? 's' : ''}</span></span><span className="text-[9px] font-black uppercase text-cyan-200">{item.region.replace('_', ' ')}</span></div>)}</div>}</section>}
+          {isCheckedIn && !isClosed && <section className="glass-card overflow-hidden p-4 sm:p-5"><div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-200"><UsersRound size={19}/></span><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100">Reporting terrain</p><h2 className="mt-1 text-sm font-black text-white">Contacts sensibilisés · {contacts.length}</h2><p className="mt-1 text-[11px] leading-relaxed text-gray-400">Saisissez chaque contact selon le formulaire Youth F2F, avec la région réellement renseignée.</p></div></div><button type="button" onClick={() => { setError(''); setIsContactOpen(true); }} className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-300/35 bg-cyan-400/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-cyan-100 transition hover:bg-cyan-400/20"><PlusCircle size={16}/> Ajouter un contact</button>{contacts.length > 0 && <div className="mt-3 space-y-2">{contacts.slice(0, 4).map((item) => <div key={item.id} className="flex items-center justify-between rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2"><span><b className="block text-[11px] text-white">{item.subscriber_name}</b><span className="text-[9px] text-gray-500">{item.subscriber_phone} · {item.actions.length} action{item.actions.length > 1 ? 's' : ''}</span></span><span className="text-[9px] font-black uppercase text-cyan-200">{item.region.replace('_', ' ')}</span></div>)}</div>}</section>}
 
           {isCheckedIn && !isClosed && <section className="glass-card p-4 sm:p-5"><div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-amber-300/20 bg-amber-400/10 text-amber-200"><FileCheck2 size={19}/></span><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-100">Rapport de clôture</p><h2 className="mt-1 text-sm font-black text-white">Clôturer votre journée</h2><p className="mt-1 text-[11px] leading-relaxed text-gray-400">Décrivez brièvement la sensibilisation réalisée. Le commentaire est requis pour clôturer.</p></div></div><textarea value={closingComment} onChange={(event) => setClosingComment(event.target.value)} rows={4} placeholder="Ex. Sensibilisation menée auprès des étudiants ; retours et incidents éventuels…" className="app-input mt-4 w-full resize-none rounded-2xl px-3 py-3 text-sm"/><button type="button" onClick={handleClose} className="mt-3 w-full rounded-2xl border border-amber-300/35 bg-amber-400/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-amber-100 transition hover:bg-amber-400/20">Clôturer ma journée</button></section>}
 
