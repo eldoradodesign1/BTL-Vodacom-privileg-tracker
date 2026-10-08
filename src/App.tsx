@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { User, Shop, AgentMasterStatus, UserRole, Campaign, CampaignContext, CampaignPause } from './types';
 import {
-  getUsers, getShops, getLeads, getCheckins, getReports, getNotifications, markNotifsAsRead, clearNotifications, toISO, getUnreadChatCount, markChatAsRead, runScheduledDailyReminders, getSyncPendingCount, getTodayCheckinPhoto, saveUsers, saveShops, saveLeads, refreshCheckinsFromSupabase, refreshReportsFromSupabase, refreshUsersFromSupabase, refreshLeadsFromSupabase, refreshSupervisorAgentCampaignAssignmentsFromSupabase, flushOfflineOutbox,
+  getUsers, getShops, getLeads, getCheckins, getReports, getNotifications, markNotifsAsRead, clearNotifications, toISO, getUnreadChatCount, markChatAsRead, runScheduledDailyReminders, getSyncPendingCount, getTodayCheckinPhoto, saveUsers, saveShops, saveLeads, refreshCheckinsFromSupabase, refreshReportsFromSupabase, refreshUsersFromSupabase, refreshLeadsFromSupabase, refreshSupervisorAgentCampaignAssignmentsFromSupabase, flushOfflineOutbox, isMatchAgent,
 } from './utils/storage';
 import { fetchUsersFromSupabase, fetchShopsFromSupabase, fetchLeadsFromSupabase, isSupabaseConfigured } from './utils/supabase';
 import { getActiveCampaignRuns, getCampaignPauses, getCampaigns, getCampaignsForUser, getDailyAttendance, getMerchantCampaign, getMerchantEvidencePublicUrl, getMerchantFundRequests, invalidateMerchantCache, isCampaignPausedOn } from './utils/merchantCampaign';
@@ -105,12 +105,12 @@ export default function App() {
 
   const setThemeMode = (nextTheme: ThemeMode) => setTheme(nextTheme);
   const setCampaignContext = (campaign: CampaignContext) => { managerCampaignRef.current = campaign; setActiveCampaign(campaign); localStorage.setItem('btl_active_campaign', campaign); setActiveTab('home'); };
-  const campaignSubject = simulatedUserId ? users.find((user) => user.id === simulatedUserId) || null : currentUser;
+  const campaignSubject = simulatedUserId ? users.find((user) => user.id === simulatedUserId) || null : users.find((user) => user.id === currentUser.id) || currentUser;
   const campaignSubjectId = campaignSubject?.id || null;
   // Le filtrage des campagnes ne s'applique qu'à un véritable agent.
   // Un superviseur/admin simulé doit conserver le même accès global qu'un
   // superviseur/admin connecté directement.
-  const campaignSubjectRole = simulatedUserId ? (simulatedRole || campaignSubject?.role) : currentUser?.role;
+  const campaignSubjectRole = simulatedUserId ? (simulatedRole || campaignSubject?.role) : campaignSubject?.role;
   useEffect(() => {
     const isManager = ['admin','super_admin','supervisor','sub_admin'].includes(campaignSubjectRole || '');
     if (!isManager) {
@@ -247,7 +247,7 @@ export default function App() {
   if (!currentUser) return <LoginScreen onLoginSuccess={(u, campaign) => { setCurrentUser(u); setMasterUser(u); if (campaign) setCampaignContext(campaign); }} />;
 
   const realMasterUser = masterUser || currentUser;
-  let baseUser = currentUser;
+  let baseUser = users.find((user) => user.id === currentUser.id) || currentUser;
   if (simulatedUserId) { const foundU = users.find((user) => user.id === simulatedUserId); if (foundU) baseUser = foundU; }
   const effectiveRole = simulatedRole || baseUser.role;
   const effectiveUser: User = { ...baseUser, role: effectiveRole };
@@ -288,9 +288,9 @@ export default function App() {
   const todayStr = toISO(new Date());
   const allCheckins = getCheckins();
   const allLeads = getLeads();
-  const todayCheckin = allCheckins.find((c) => c.agent_id === effectiveUser.id && toISO(c.timestamp) === todayStr && c.type === 'IN') || null;
-  const todayLeads = allLeads.filter((l) => l.agent_id === effectiveUser.id && toISO(l.timestamp) === todayStr);
-  const agentReports = getReports().filter((r) => r.agent_id === effectiveUser.id);
+  const todayCheckin = allCheckins.find((c) => isMatchAgent(c.agent_id, effectiveUser) && toISO(c.timestamp) === todayStr && c.type === 'IN') || null;
+  const todayLeads = allLeads.filter((l) => isMatchAgent(l.agent_id, effectiveUser) && toISO(l.timestamp) === todayStr);
+  const agentReports = getReports().filter((r) => isMatchAgent(r.agent_id, effectiveUser) || isMatchAgent(r.agent_name, effectiveUser));
   const notifications = getNotifications(effectiveUser.id);
   const todayCheckinPhoto = getTodayCheckinPhoto(effectiveUser.id);
   const selectedAgentTodayLeads = selectedAgentForTodayClients ? getLeads().filter((l) => l.agent_id === selectedAgentForTodayClients.id && toISO(l.timestamp) === todayStr) : [];
@@ -316,7 +316,7 @@ export default function App() {
     {isShopModalOpen && <Suspense fallback={null}><ShopModal isOpen onClose={() => setIsShopModalOpen(false)} onSuccess={refreshData} /></Suspense>}
     {isPasswordModalOpen && <Suspense fallback={null}><PasswordModal isOpen currentUser={effectiveUser} onClose={() => setIsPasswordModalOpen(false)} /></Suspense>}
     {pdfModalUrl && <Suspense fallback={null}><PdfViewerModal isOpen pdfUrl={pdfModalUrl} onClose={() => setPdfModalUrl(null)} /></Suspense>}
-    {selectedAgentForProfile && <Suspense fallback={null}><AgentProfileModal isOpen agent={selectedAgentForProfile} agentReports={getReports().filter((r) => r.agent_id === selectedAgentForProfile.id || r.agent_id === selectedAgentForProfile.name || r.agent_name === selectedAgentForProfile.name)} todayLeads={getLeads().filter((l) => l.agent_id === selectedAgentForProfile.id && toISO(l.timestamp) === todayStr)} shops={shops} onClose={() => setSelectedAgentForProfile(null)} onOpenPdf={(url) => setPdfModalUrl(url)} onAssignmentChanged={refreshData} onCompileAgent={() => { setSelectedAgentForProfile(null); setActiveTab('admin'); }} /></Suspense>}
+    {selectedAgentForProfile && <Suspense fallback={null}><AgentProfileModal isOpen agent={selectedAgentForProfile} agentReports={getReports().filter((r) => isMatchAgent(r.agent_id, selectedAgentForProfile) || isMatchAgent(r.agent_name, selectedAgentForProfile))} todayLeads={getLeads().filter((l) => isMatchAgent(l.agent_id, selectedAgentForProfile) && toISO(l.timestamp) === todayStr)} shops={shops} onClose={() => setSelectedAgentForProfile(null)} onOpenPdf={(url) => setPdfModalUrl(url)} onAssignmentChanged={refreshData} onCompileAgent={() => { setSelectedAgentForProfile(null); setActiveTab('admin'); }} /></Suspense>}
     {selectedAgentForTodayClients && <Suspense fallback={null}><TodayClientsModal isOpen agent={selectedAgentForTodayClients} dayLeads={selectedAgentTodayLeads} onClose={() => setSelectedAgentForTodayClients(null)} /></Suspense>}
     {selectedLocationAgent && <Suspense fallback={null}><LocationModal isOpen agent={selectedLocationAgent} onClose={() => setSelectedLocationAgent(null)} /></Suspense>}
     {isSystemConfigurationOpen && <Suspense fallback={null}><SystemConfigurationModal isOpen currentUser={realMasterUser} onClose={() => setIsSystemConfigurationOpen(false)} onRefreshData={() => { void refreshData(); }} /></Suspense>}

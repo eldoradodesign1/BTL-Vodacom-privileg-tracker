@@ -1362,7 +1362,7 @@ export function getUnreadChatCount(userId: string): number {
   return msgs.filter(m => !m.deleted && m.sender_id !== userId && !(m.read_by || []).includes(userId)).length;
 }
 
-export function isMatchAgent(recordAgent: string | undefined, user: User | undefined): boolean {
+export function isMatchAgent(recordAgent: string | undefined, user: Pick<User, 'id' | 'name'> | undefined): boolean {
   if (!recordAgent || !user) return false;
 
   const r = String(recordAgent || '').trim().toLowerCase();

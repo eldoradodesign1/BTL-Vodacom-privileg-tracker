@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AgentMasterStatus, DailyReport, Lead, Shop } from '../../types';
-import { getLeads, getCheckins, resolveStoredPhotoUrl, toISO, updateUserShopAssignment } from '../../utils/storage';
+import { getLeads, getCheckins, resolveStoredPhotoUrl, toISO, updateUserShopAssignment, isMatchAgent } from '../../utils/storage';
 import { buildAgentCompilationPayload } from '../../utils/agentCompilation';
 import { Phone, FileSpreadsheet, X, Eye, Camera, CheckCircle2, Clock3, UserCheck } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
@@ -55,9 +55,7 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
 
   const latestPhoto = useMemo(() => {
     const today = toISO(new Date());
-    const checkins = getCheckins().filter((checkin) => (
-      checkin.agent_id === agent.id || checkin.agent_id === agent.name
-    ));
+    const checkins = getCheckins().filter((checkin) => isMatchAgent(checkin.agent_id, { id: agent.id, name: agent.name }));
 
     const selectedDateReport = agentReports.find((report) => report.date === selectedClientsDate);
     const selectedDateCheckin = checkins.find((checkin) => (
@@ -107,7 +105,7 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
   }, [agentReports]);
 
   const allAgentLeads = useMemo(() => {
-    return getLeads().filter((lead) => lead.agent_id === agent.id || lead.agent_id === agent.name);
+    return getLeads().filter((lead) => isMatchAgent(lead.agent_id, { id: agent.id, name: agent.name }));
   }, [agent.id, agent.name, agentReports]);
 
   const detailLeads = useMemo(() => {
