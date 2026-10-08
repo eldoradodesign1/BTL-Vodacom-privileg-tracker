@@ -257,3 +257,68 @@ export async function uploadYouthEvidence(relativePath: string, file: Blob): Pro
 export async function getYouthEvidenceUrl(path?: string | null): Promise<string> {
   return getMerchantEvidencePublicUrl(path);
 }
+
+export interface YouthOperatorAgent {
+  user: User;
+  attendance: YouthDailyAttendance | null;
+  contacts: YouthContactReport[];
+}
+
+export async function getYouthOperatorAgents(campaignId: string, activityDate: string, supervisorId?: string): Promise<YouthOperatorAgent[]> {
+  const client = getYouthClient();
+  const { data: assignmentRows, error: assignmentError } = await client.from('user_campaign_assignments').select('user_id').eq('campaign_id', campaignId).eq('is_active', true).limit(1000);
+  fail(assignmentError, 'Impossible de charger les affectations Youth F2F');
+  const agentIds = Array.from(new Set((assignmentRows || []).map((row: { user_id: string }) => row.user_id).filter(Boolean)));
+  if (agentIds.length === 0) return [];
+  let usersQuery = client.from('users').select('id,phone,full_name,role,password_hash,supervisor_id,permanent_shop_id,user_category,created_at,last_login').in('id', agentIds).eq('role', 'agent').eq('user_category', 'brand_ambassador').order('full_name');
+  if (supervisorId) usersQuery = usersQuery.eq('supervisor_id', supervisorId);
+  const [{ data: usersRows, error: usersError }, { data: attendanceRows, error: attendanceError }, { data: contactRows, error: contactsError }] = await Promise.all([
+    usersQuery,
+    client.from('youth_daily_attendance').select('*').eq('campaign_id', campaignId).eq('activity_date', activityDate).in('ba_id', agentIds),
+    client.from('youth_contact_reports').select('*').eq('campaign_id', campaignId).eq('activity_date', activityDate).in('ba_id', agentIds).limit(5000),
+  ]);
+  fail(usersError, 'Impossible de charger les BA Youth F2F');
+  fail(attendanceError, 'Impossible de charger les pointages Youth F2F');
+  if (contactsError?.code !== 'PGRST205') fail(contactsError, 'Impossible de charger les contacts Youth F2F');
+  const attendanceByAgent = new Map(((attendanceRows || []) as YouthDailyAttendance[]).map((row) => [row.ba_id, row]));
+  const contactsByAgent = new Map<string, YouthContactReport[]>();
+  ((contactsError?.code === 'PGRST205' ? [] : (contactRows || [])) as YouthContactReport[]).forEach((row) => contactsByAgent.set(row.ba_id, [...(contactsByAgent.get(row.ba_id) || []), row]));
+  return ((usersRows || []) as any[]).map((row) => ({
+    user: { id: row.id, phone: row.phone, name: row.full_name, role: row.role, password: row.password_hash, supervisorId: row.supervisor_id, permanentShopId: row.permanent_shop_id, userCategory: row.user_category, created_at: row.created_at, last_login: row.last_login } as User,
+    attendance: attendanceByAgent.get(row.id) || null,
+    contacts: contactsByAgent.get(row.id) || [],
+  }));
+}
+
+export async function getYouthOperatorArchive(campaignId: string, startDate: string, endDate: string, supervisorId?: string): Promise<YouthOperatorAgent[]> {
+  const client = getYouthClient();
+  const { data: assignmentRows, error: assignmentError } = await client.from('user_campaign_assignments').select('user_id').eq('campaign_id', campaignId).eq('is_active', true).limit(1000);
+  fail(assignmentError, 'Impossible de charger les affectations Youth F2F');
+  const ids = Array.from(new Set((assignmentRows || []).map((row: { user_id: string }) => row.user_id).filter(Boolean)));
+  if (!ids.length) return [];
+  const [{ data: usersRows, error: usersError }, { data: attendanceRows, error: attendanceError }, { data: contactRows, error: contactsError }] = await Promise.all([
+    client.from('users').select('id,phone,full_name,role,password_hash,supervisor_id,permanent_shop_id,user_category,created_at,last_login').in('id', ids).eq('role', 'agent').eq('user_category', 'brand_ambassador').order('full_name'),
+    client.from('youth_daily_attendance').select('*').eq('campaign_id', campaignId).gte('activity_date', startDate).lte('activity_date', endDate).in('ba_id', ids).order('activity_date', { ascending: false }),
+    client.from('youth_contact_reports').select('*').eq('campaign_id', campaignId).gte('activity_date', startDate).lte('activity_date', endDate).in('ba_id', ids).limit(10000),
+  ]);
+  fail(usersError, 'Impossible de charger les BA Youth F2F');
+  fail(attendanceError, 'Impossible de charger les archives Youth F2F');
+  if (contactsError?.code !== 'PGRST205') fail(contactsError, 'Impossible de charger les contacts Youth F2F');
+  const allowed = supervisorId ? new Set((await getYouthAgents(supervisorId)).map((user) => user.id)) : null;
+  const attendanceByAgent = new Map<string, YouthDailyAttendance[]>();
+  ((attendanceRows || []) as YouthDailyAttendance[]).forEach((row) => attendanceByAgent.set(row.ba_id, [...(attendanceByAgent.get(row.ba_id) || []), row]));
+  const contactsByAgent = new Map<string, YouthContactReport[]>();
+  ((contactsError?.code === 'PGRST205' ? [] : (contactRows || [])) as YouthContactReport[]).forEach((row) => contactsByAgent.set(row.ba_id, [...(contactsByAgent.get(row.ba_id) || []), row]));
+  return ((usersRows || []) as any[]).filter((row) => !allowed || allowed.has(row.id)).map((row) => ({
+    user: { id: row.id, phone: row.phone, name: row.full_name, role: row.role, password: row.password_hash, supervisorId: row.supervisor_id, permanentShopId: row.permanent_shop_id, userCategory: row.user_category, created_at: row.created_at, last_login: row.last_login } as User,
+    attendance: attendanceByAgent.get(row.id)?.[0] || null,
+    contacts: contactsByAgent.get(row.id) || [],
+  }));
+}
+
+export async function saveYouthTargets(campaignId: string, targets: { dailyClients: number; dailyTransactions: number }): Promise<Campaign> {
+  const client = getYouthClient();
+  const { data, error } = await client.from('campaigns').update({ daily_pos_target: Math.max(0, Math.round(targets.dailyClients)), transactions_per_pos_target: Math.max(0, Math.round(targets.dailyTransactions)) }).eq('id', campaignId).select('*').single();
+  fail(error, 'Impossible d’enregistrer les targets Youth F2F');
+  return data as Campaign;
+}

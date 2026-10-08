@@ -75,6 +75,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     );
   }
   if (youthContext) {
+    const management = userRole === 'admin' || userRole === 'super_admin' || userRole === 'supervisor' || userRole === 'sub_admin';
+    if (management) {
+      const tabs = [
+        ['home', 'Accueil', Home],
+        ['tab2', 'Monitoring', Users],
+        ['tab3', 'Archives', FolderOpen],
+        ['chat', 'Chat', MessageSquare],
+        ['admin', 'Gestion', Settings],
+      ] as const;
+      return <nav className="app-bottom-nav fixed bottom-4 left-4 right-4 h-20 backdrop-blur-xl border rounded-3xl z-40 flex items-center justify-around px-2">
+        {tabs.map(([tab, label, Icon]) => <button key={tab} onClick={() => onTabChange(tab)} data-active={activeTab === tab} className={`app-tab flex-1 flex flex-col items-center justify-center space-y-1 transition-all ${activeTab === tab ? 'text-red-500' : 'text-gray-500 hover:text-gray-300'}`}><Icon className={`w-6 h-6 transition-transform ${activeTab === tab ? '-translate-y-1 scale-110' : ''}`} /><span className="text-[9px] font-black uppercase tracking-wider">{label}</span>{activeTab === tab && <div className="w-1.5 h-1.5 bg-red-500 rounded-full" style={{ boxShadow: '0 0 8px var(--theme-accent)' }} />}</button>)}
+      </nav>;
+    }
     return (
       <nav className="app-bottom-nav fixed bottom-4 left-4 right-4 h-20 backdrop-blur-xl border rounded-3xl z-40 flex items-center justify-around px-2">
         <button

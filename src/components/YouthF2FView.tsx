@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Camera, CheckCircle2, ChevronRight, CircleAlert, FileCheck2, GraduationCap, MapPin, PlusCircle, RefreshCw, UsersRound, X } from 'lucide-react';
+import { CalendarDays, Camera, CheckCircle2, ChevronRight, CircleAlert, FileCheck2, GraduationCap, MapPin, PauseCircle, PlusCircle, RefreshCw, UsersRound, X } from 'lucide-react';
 import type { Campaign, User, YouthContactReport, YouthDailyAttendance, YouthRegion, YouthSubscriberType } from '../types';
 import { runInBackground } from '../utils/backgroundOperations';
 import {
@@ -18,6 +18,8 @@ import {
 
 interface YouthF2FViewProps {
   currentUser: User;
+  campaignPaused?: boolean;
+  pauseReason?: string;
 }
 
 type Geo = { latitude: number; longitude: number; accuracy: number };
@@ -62,7 +64,7 @@ const ModalShell: React.FC<{ title: string; onClose: () => void; children: React
   </div>
 );
 
-export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
+export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, campaignPaused = false, pauseReason = '' }) => {
   const today = useMemo(() => youthTodayIso(), []);
   const isOperator = currentUser.role !== 'agent';
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>('today');
@@ -255,6 +257,8 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser }) => {
           <div className="mb-4 flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-violet-200/15 bg-violet-300/10 text-violet-200"><UsersRound size={19}/></span><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-violet-100">Suivi Youth F2F</p><h2 className="mt-1 text-sm font-black text-white">Agents affectés à la campagne</h2><p className="mt-1 text-[11px] leading-relaxed text-gray-400">Le pointage et les contacts sont désormais enregistrés directement, sans affectation d’université.</p></div></div>
           {team.length === 0 ? <p className="rounded-2xl border border-amber-300/20 bg-amber-400/[0.06] p-3 text-xs font-semibold text-amber-100">Aucun agent Youth F2F n’est encore rattaché à ce périmètre.</p> : <div className="space-y-2">{team.map((agent) => <div key={agent.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/10 p-3"><span><b className="block text-xs text-white">{agent.name}</b><span className="text-[10px] text-gray-500">{agent.phone}</span></span><span className="rounded-full bg-cyan-400/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100">BA Youth</span></div>)}</div>}
         </section>
+      ) : campaignPaused ? (
+        <section className="glass-card border border-amber-300/30 bg-amber-400/[0.07] p-5 text-center"><PauseCircle className="mx-auto text-amber-200" size={25}/><h2 className="mt-2 text-sm font-black text-white">Campagne Youth F2F en pause</h2><p className="mt-2 text-[11px] leading-relaxed text-gray-300">Les saisies terrain et les rappels sont temporairement suspendus. Vos archives restent consultables.</p>{pauseReason && <p className="mt-2 text-xs font-bold text-amber-100">{pauseReason}</p>}</section>
       ) : (
         <>
           <section className="glass-card p-4 sm:p-5">
