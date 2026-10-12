@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Shop, AgentMasterStatus, User } from '../types';
-import { getAdminMasterList, getCheckins, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl, saveTargetDefinition } from '../utils/storage';
+import { getAdminMasterList, getCheckins, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl, saveTargetDefinition, getSupervisorAgentCampaignAssignments } from '../utils/storage';
 import { getCampaignAssignmentsOverview, getCampaignPauses, getCampaigns, type CampaignAssignmentOverview } from '../utils/merchantCampaign';
 import { TabType } from './BottomNav';
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
@@ -199,6 +199,20 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const hostessList = masterList
     .filter((agent) => activeHostessIds.has(agent.id))
     .sort((a, b) => a.name.localeCompare(b.name));
+  const privilegeSupervisorAssignments = getSupervisorAgentCampaignAssignments().filter((assignment) => (
+    assignment.isActive && (assignment.campaignCode === 'vodacom-privilege' || assignment.campaignId === 'vodacom-privilege')
+  ));
+  const privilegeAssignedAgents = allUsers.filter((user) => user.role === 'agent' && user.userCategory === 'hostess');
+  const reportsForSupervisor = (supervisorId: string) => {
+    const assignedIds = new Set(privilegeSupervisorAssignments.filter((assignment) => assignment.supervisorId === supervisorId).map((assignment) => assignment.agentId));
+    const assignedNames = new Set(privilegeAssignedAgents.filter((agent) => assignedIds.has(agent.id)).map((agent) => agent.name.trim().toLowerCase()));
+    const legacyIds = new Set(privilegeAssignedAgents.filter((agent) => agent.supervisorId === supervisorId).map((agent) => agent.id));
+    return allReports.filter((report) => (
+      assignedIds.has(report.agent_id)
+      || legacyIds.has(report.agent_id)
+      || assignedNames.has((report.agent_name || '').trim().toLowerCase())
+    ));
+  };
   const supervisorsById = supervisors.reduce<Record<string, string>>((acc, sup) => {
     acc[sup.id] = sup.name;
     return acc;
@@ -478,13 +492,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
   const handleCompileSupervisor = (supervisor: User) => {
     const assignedAgentIds = new Set(
-      hostessList
-        .filter((agent) => usersById[agent.id]?.supervisorId === supervisor.id)
-        .map((agent) => agent.id)
+      privilegeSupervisorAssignments
+        .filter((assignment) => assignment.supervisorId === supervisor.id)
+        .map((assignment) => assignment.agentId)
     );
-
-    const selectedReports = allReports
-      .filter((report) => assignedAgentIds.has(report.agent_id))
+    privilegeAssignedAgents
+      .filter((agent) => agent.supervisorId === supervisor.id)
+      .forEach((agent) => assignedAgentIds.add(agent.id));
+    const selectedReports = reportsForSupervisor(supervisor.id)
       .sort((a, b) => a.date.localeCompare(b.date));
 
     const rows = selectedReports.map((report) => ({

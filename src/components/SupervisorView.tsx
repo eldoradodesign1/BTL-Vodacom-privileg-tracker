@@ -183,10 +183,11 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   // date sélectionnée.
   const supervisedAgentIds = supervisedAgents.map((agent) => agent.id);
   const supervisedAgentNames = new Set(supervisedAgents.map((agent) => agent.name.trim().toLowerCase()));
-  const teamReports = allReports.filter((report) => (
-    supervisedAgentIds.includes(report.agent_id)
-    || supervisedAgentNames.has((report.agent_name || '').trim().toLowerCase())
-  ));
+  const reportBelongsToSupervisedAgent = (agentId: string, agentName?: string | null) => (
+    supervisedAgentIds.includes(agentId)
+    || supervisedAgentNames.has((agentName || '').trim().toLowerCase())
+  );
+  const teamReports = allReports.filter((report) => reportBelongsToSupervisedAgent(report.agent_id, report.agent_name));
   const reportDateList = [...new Set(teamReports.map((r) => r.date))].sort();
   const consolidationMinDate = reportDateList[0] || '2026-07-01';
   const consolidationMaxDate = (reportDateList.length > 0 && reportDateList[reportDateList.length - 1] > todayIso)
@@ -348,7 +349,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
   const periodReports = allReports.filter(
     r =>
-      teamAgentIds.includes(r.agent_id) &&
+      reportBelongsToSupervisedAgent(r.agent_id, r.agent_name) &&
       r.date >= reportsStartDate &&
       r.date <= reportsEndDate
   );
@@ -357,15 +358,15 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   const leadDate = toISO(l.timestamp);
 
   return (
-    teamAgentIds.includes(l.agent_id) &&
+    reportBelongsToSupervisedAgent(l.agent_id, allUsers.find((user) => user.id === l.agent_id)?.name || l.agent_id) &&
     leadDate >= reportsStartDate &&
     leadDate <= reportsEndDate
   );
 });
 
   const periodTeam = supervisedAgents.map(agent => {
-    const agentReports = periodReports.filter(r => r.agent_id === agent.id);
-    const agentLeads = periodLeads.filter(l => l.agent_id === agent.id);
+    const agentReports = periodReports.filter((r) => r.agent_id === agent.id || r.agent_name.trim().toLowerCase() === agent.name.trim().toLowerCase());
+    const agentLeads = periodLeads.filter((l) => l.agent_id === agent.id || allUsers.find((user) => user.id === l.agent_id)?.name.trim().toLowerCase() === agent.name.trim().toLowerCase());
 
     const priv = agentLeads.filter(l =>
       String(l.action_type).includes('Privil')
@@ -396,9 +397,9 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
   });
 
   const reports = periodTeam.map(agent => {
-    const agentLeads = periodLeads.filter(l => l.agent_id === agent.id);
+    const agentLeads = periodLeads.filter((l) => l.agent_id === agent.id || allUsers.find((user) => user.id === l.agent_id)?.name.trim().toLowerCase() === agent.name.trim().toLowerCase());
     const agentReports = periodReports
-      .filter(r => r.agent_id === agent.id)
+      .filter((r) => r.agent_id === agent.id || r.agent_name.trim().toLowerCase() === agent.name.trim().toLowerCase())
       .sort((a, b) => a.date.localeCompare(b.date));
 
     const firstReport = agentReports[0];
@@ -525,7 +526,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
       groups: [
         {
           supervisor: currentUser.name,
-          agentCount: teamAgentIds.length,
+          agentCount: supervisedAgentIds.length,
           totalLeads: totals.privilege + totals.roaming + totals.bundles,
           totalPrivilege: totals.privilege,
           totalRoaming: totals.roaming,
