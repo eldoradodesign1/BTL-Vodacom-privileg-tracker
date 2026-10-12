@@ -1039,7 +1039,23 @@ export async function refreshReportsFromSupabase(): Promise<void> {
   if (!isSupabaseConfigured()) return;
 
   const reports = await fetchReportsFromSupabase();
-  saveReports(reports);
+  // La lecture distante est volontairement légère. Conserver les preuves déjà
+  // présentes localement évite de dégrader les fiches déjà ouvertes.
+  const cachedById = new Map(getReports().map((report) => [String(report.id), report]));
+  saveReports(reports.map((report) => {
+    const cached = cachedById.get(String(report.id));
+    if (!cached) return report;
+    return {
+      ...report,
+      pdf_url: cached.pdf_url || report.pdf_url,
+      photos: cached.photos?.length ? cached.photos : report.photos,
+      pointage_photo: cached.pointage_photo || report.pointage_photo,
+      drive_pdf_url: cached.drive_pdf_url || report.drive_pdf_url,
+      report_photos_drive_urls: cached.report_photos_drive_urls?.length
+        ? cached.report_photos_drive_urls
+        : report.report_photos_drive_urls
+    };
+  }));
 }
 
 export async function refreshLeadsFromSupabase(): Promise<void> {

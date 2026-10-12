@@ -349,16 +349,34 @@ export async function fetchReportsFromSupabase(): Promise<DailyReport[]> {
     throw new Error('Supabase is not configured.');
   }
 
-  const { data, error } = await client
-    .from('daily_reports')
-    .select('*')
-    .order('date', { ascending: false });
+  // Certaines anciennes lignes contiennent des preuves très lourdes. Un
+  // select('*') peut donc expirer avant même que les rapports n'arrivent dans
+  // le cache local, ce qui vide les compilations. Les listes et compilations
+  // utilisent uniquement les métadonnées ci-dessous; les preuves lourdes ne
+  // doivent pas bloquer la synchronisation de l'historique.
+  const fields = [
+    'id', 'date', 'agent_id', 'agent_name', 'shop_id', 'shop_name',
+    'priv', 'roam', 'bund', 'amount', 'comment',
+    'arrival_time', 'departure_time', 'maps_in', 'maps_out'
+  ].join(',');
+  const pageSize = 100;
+  const rows: any[] = [];
 
-  if (error) {
-    throw error;
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await client
+      .from('daily_reports')
+      .select(fields)
+      .order('date', { ascending: false })
+      .order('id', { ascending: true })
+      .range(offset, offset + pageSize - 1);
+
+    if (error) throw error;
+    const page = data || [];
+    rows.push(...page);
+    if (page.length < pageSize) break;
   }
 
-  return (data || []).map((r: any) => ({
+  return rows.map((r: any) => ({
     id: r.id,
     date: r.date,
     agent_id: r.agent_id,
@@ -370,14 +388,13 @@ export async function fetchReportsFromSupabase(): Promise<DailyReport[]> {
     bund: r.bund,
     amount: r.amount,
     comment: r.comment,
-    pdf_url: r.pdf_url,
-    photos: r.photos || [],
     arrival_time: r.arrival_time,
     departure_time: r.departure_time,
-    pointage_photo: r.pointage_photo,
     maps_in: r.maps_in,
     maps_out: r.maps_out,
-    drive_pdf_url: r.drive_pdf_url,
-    report_photos_drive_urls: r.report_photos_drive_urls || []
+    drive_pdf_url: '',
+    report_photos_drive_urls: [],
+    photos: [],
+    pointage_photo: ''
   })) as DailyReport[];
 }
