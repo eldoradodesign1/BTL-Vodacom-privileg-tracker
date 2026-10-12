@@ -173,6 +173,19 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     && (globalScope || assignment.supervisorId === currentUser.id)
   ));
   const campaignAgentIds = new Set(supervisorAssignments.map((assignment) => assignment.agentId));
+  // Repli de compatibilité pour les sessions dont le cache des affectations
+  // multi-superviseurs n'est pas encore arrivé : les anciennes affectations
+  // Privilège restent une source valide pour la compilation historique.
+  if (!globalScope && campaignCode === 'vodacom-privilege') {
+    allUsers
+      .filter((user) => user.role === 'agent' && user.userCategory === 'hostess' && user.supervisorId === currentUser.id)
+      .forEach((user) => campaignAgentIds.add(user.id));
+  }
+  if (globalScope && campaignCode === 'vodacom-privilege' && campaignAgentIds.size === 0) {
+    allUsers
+      .filter((user) => user.role === 'agent' && user.userCategory === 'hostess')
+      .forEach((user) => campaignAgentIds.add(user.id));
+  }
   // La population de l’accueil, du monitoring et des archives est celle de la
   // campagne active, jamais la catégorie globale BA/hôtesse de l’utilisateur.
   const supervisedAgents = allUsers.filter((user) => user.role === 'agent' && campaignAgentIds.has(user.id));
