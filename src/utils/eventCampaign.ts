@@ -13,6 +13,11 @@ export const FOUNDATION_FORAGE_DATE = '2026-10-02';
 export const FOUNDATION_FORAGE_ARRIVAL_DEADLINE = '09:00';
 export const FOUNDATION_FORAGE_DEPARTURE_TIME = '15:00';
 
+export const LONG_SERVICE_AWARD_CODE = 'long-service-award-2026';
+export const LONG_SERVICE_AWARD_DATE = '2026-10-19';
+export const LONG_SERVICE_AWARD_ARRIVAL_DEADLINE = '12:00';
+export const LONG_SERVICE_AWARD_DEPARTURE_TIME = '17:00';
+
 export interface EventConfig {
   code: string;
   date: string;
@@ -28,6 +33,14 @@ export function getEventConfig(campaignOrCode?: Campaign | string | null): Event
       date: FOUNDATION_FORAGE_DATE,
       arrivalDeadline: FOUNDATION_FORAGE_ARRIVAL_DEADLINE,
       departureTime: FOUNDATION_FORAGE_DEPARTURE_TIME,
+    };
+  }
+  if (code === LONG_SERVICE_AWARD_CODE) {
+    return {
+      code: LONG_SERVICE_AWARD_CODE,
+      date: LONG_SERVICE_AWARD_DATE,
+      arrivalDeadline: LONG_SERVICE_AWARD_ARRIVAL_DEADLINE,
+      departureTime: LONG_SERVICE_AWARD_DEPARTURE_TIME,
     };
   }
   return {
