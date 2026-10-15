@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Camera, CheckCircle2, CircleAlert, ChevronDown, FileText, MapPin, PlusCircle, RefreshCw, Search, Trophy, UsersRound, X, Zap } from 'lucide-react';
+import { Camera, CheckCircle2, CircleAlert, ChevronDown, FileText, MapPin, PlusCircle, RefreshCw, Search, Star, Trophy, UsersRound, X, Zap } from 'lucide-react';
 import type { User } from '../types';
 import { runInBackground } from '../utils/backgroundOperations';
 import { DateIconPicker } from './DateIconPicker';
+import { MikiliFeedback } from './MikiliFeedback';
 import {
   addMikiliClient,
   closeMikiliAttendance,
@@ -95,6 +96,8 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
   const [transactionDone, setTransactionDone] = useState<boolean | null>(null);
   const [transactionType, setTransactionType] = useState<MikiliTransactionType>('na');
   const [transactionReference, setTransactionReference] = useState('');
+  const [clientComment, setClientComment] = useState('');
+  const [satisfactionRating, setSatisfactionRating] = useState<number | null>(null);
   const [locationOpen, setLocationOpen] = useState(false);
 
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinPending;
@@ -198,7 +201,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
   };
 
   const resetClientForm = () => {
-    setClientName(''); setClientPhone(''); setLocationId(''); setLocationRegion(''); setExistingUser(''); setPresentedService(''); setTransactionDone(null); setTransactionType('na'); setTransactionReference('');
+    setClientName(''); setClientPhone(''); setLocationId(''); setLocationRegion(''); setExistingUser(''); setPresentedService(''); setTransactionDone(null); setTransactionType('na'); setTransactionReference(''); setClientComment(''); setSatisfactionRating(null);
   };
 
   const visibleLocations = useMemo(() => locationRegion ? locations.filter((item) => item.region === locationRegion && item.name !== 'NA') : [], [locations, locationRegion]);
@@ -231,7 +234,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
     if (transactionDone && !transactionType) return setError('Précisez le type de transaction.');
     setSaving(true); setError('');
     try {
-      const next = await addMikiliClient({ campaign_id: campaignId, attendance_id: attendance.id, agent_id: currentUser.id, activity_date: today, location_id: locationId, client_name: clientName.trim(), client_phone: normalizedPhone, existing_mikili_user: existingUser, presented_service: presentedService, transaction_done: transactionDone, transaction_type: transactionDone ? transactionType : 'na', transaction_reference: transactionDone ? transactionReference : null });
+      const next = await addMikiliClient({ campaign_id: campaignId, attendance_id: attendance.id, agent_id: currentUser.id, activity_date: today, location_id: locationId, client_name: clientName.trim(), client_phone: normalizedPhone, existing_mikili_user: existingUser, presented_service: presentedService, transaction_done: transactionDone, transaction_type: transactionDone ? transactionType : 'na', transaction_reference: transactionDone ? transactionReference : null, client_comment: clientComment, satisfaction_rating: satisfactionRating });
       setTodayClients((current) => [next, ...current]);
       setIsClientOpen(false); resetClientForm(); setNotice('Client M-Pesa Mikili enregistré.');
     } catch (caught) {
@@ -347,13 +350,14 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
               <span className={item.transaction_done ? 'rounded-full bg-emerald-500/15 px-2 py-1 text-[8px] font-black uppercase text-emerald-200' : 'rounded-full bg-white/8 px-2 py-1 text-[8px] font-black uppercase text-gray-400'}>{item.transaction_done ? 'Transaction' : 'Sensibilisé'}</span>
             </div>
             <div className="relative mt-3 flex flex-wrap gap-1.5"><span className="rounded-full bg-white/[0.05] px-2 py-1 text-[8px] font-bold text-gray-400">{mikiliDisplayExisting(item.existing_mikili_user)}</span><span className="rounded-full bg-white/[0.05] px-2 py-1 text-[8px] font-bold text-gray-400">{mikiliDisplayService(item.presented_service)}</span>{item.transaction_done && <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-[8px] font-bold text-emerald-200">{mikiliDisplayTransaction(item.transaction_type)}</span>}</div>
+            <MikiliFeedback comment={item.client_comment} rating={item.satisfaction_rating} />
           </article>
         ))}
       </section>}
 
       {activeTab === 'tab3' && <section className="space-y-3">
         <div className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-fuchsia-500/[0.12] to-transparent p-5"><p className="text-[9px] font-black uppercase tracking-[0.2em] text-fuchsia-200">Mémoire terrain</p><h2 className="mt-1 text-2xl font-black text-white">Archives</h2><p className="mt-1 text-[10px] font-semibold text-gray-500">Vos interactions précédentes.</p></div>
-        {history.length === 0 ? <div className="glass-card p-8 text-center"><FileText size={28} className="mx-auto text-gray-600" /><p className="mt-3 text-xs font-bold text-gray-500">Aucune trace pour le moment.</p></div> : history.map((item) => <article key={item.id} className="rounded-[1.7rem] border border-white/8 bg-white/[0.035] p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="text-sm font-black text-white">{item.client_name}</h3><p className="mt-1 text-[9px] font-semibold text-gray-500">{item.activity_date} · {item.location?.name || 'Lieu non renseigné'}</p></div><span className="rounded-full bg-white/5 px-2 py-1 text-[8px] font-black uppercase text-gray-400">{item.transaction_done ? 'Transaction' : 'Sensibilisation'}</span></div><p className="mt-3 text-[10px] text-gray-500">{item.client_phone} · {mikiliDisplayService(item.presented_service)}</p></article>)}
+        {history.length === 0 ? <div className="glass-card p-8 text-center"><FileText size={28} className="mx-auto text-gray-600" /><p className="mt-3 text-xs font-bold text-gray-500">Aucune trace pour le moment.</p></div> : history.map((item) => <article key={item.id} className="rounded-[1.7rem] border border-white/8 bg-white/[0.035] p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="text-sm font-black text-white">{item.client_name}</h3><p className="mt-1 text-[9px] font-semibold text-gray-500">{item.activity_date} · {item.location?.name || 'Lieu non renseigné'}</p></div><span className="rounded-full bg-white/5 px-2 py-1 text-[8px] font-black uppercase text-gray-400">{item.transaction_done ? 'Transaction' : 'Sensibilisation'}</span></div><p className="mt-3 text-[10px] text-gray-500">{item.client_phone} · {mikiliDisplayService(item.presented_service)}</p><MikiliFeedback comment={item.client_comment} rating={item.satisfaction_rating} /></article>)}
       </section>}
 
       {isClientOpen && <ModalShell title="Nouveau contact" onClose={() => !saving && setIsClientOpen(false)}><form onSubmit={saveClient} className="space-y-5">
@@ -368,6 +372,17 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
           {transactionDone && <div className="rounded-2xl border border-emerald-400/10 bg-black/15 p-3"><p className="mb-2 text-[8px] font-black uppercase tracking-widest text-gray-600">Type</p><div className="grid grid-cols-2 gap-2">{([['send','Envoi'],['receive','Réception']] as const).map(([value,label]) => { const checked = transactionType === value || transactionType === 'both'; return <button key={value} type="button" role="checkbox" aria-checked={checked} onClick={() => toggleTransactionType(value)} className={checked ? 'rounded-xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2.5 text-[9px] font-black text-emerald-100' : 'rounded-xl border border-white/8 bg-white/[0.02] px-3 py-2.5 text-[9px] font-black text-gray-500'}>{checked ? '✓ ' : ''}{label}</button>; })}</div></div>}
         </div>
         {transactionDone && <div><label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Référence</label><input className={FIELD} value={transactionReference} onChange={(e) => setTransactionReference(e.target.value)} placeholder="Référence de transaction" /></div>}
+        <div className="space-y-3 rounded-[1.7rem] border border-white/8 bg-black/15 p-4">
+          <div><label htmlFor="mikili-client-comment" className="text-[9px] font-black uppercase tracking-wider text-gray-400">Commentaire <span className="font-semibold normal-case text-gray-600">· facultatif</span></label><textarea id="mikili-client-comment" className={FIELD + ' min-h-20 resize-y'} value={clientComment} onChange={(e) => setClientComment(e.target.value)} maxLength={500} placeholder="Remarque ou retour du client…" /><p className="mt-1 text-right text-[8px] text-gray-600">{clientComment.length}/500</p></div>
+          <fieldset>
+            <legend className="text-[9px] font-black uppercase tracking-wider text-gray-400">Satisfaction du client <span className="font-semibold normal-case text-gray-600">· 1 à 5 étoiles · facultatif</span></legend>
+            <p className="mt-1 text-[8px] text-gray-600">Demandez au client de choisir une note.</p>
+            <div className="mt-2 flex items-center gap-1" role="radiogroup" aria-label="Note de satisfaction du client">
+              {[1, 2, 3, 4, 5].map((rating) => <button key={rating} type="button" role="radio" aria-checked={satisfactionRating === rating} aria-label={`${rating} étoile${rating > 1 ? 's' : ''}`} onClick={() => setSatisfactionRating(rating)} className={satisfactionRating !== null && rating <= satisfactionRating ? 'rounded-xl p-2 text-amber-300 transition hover:bg-amber-400/10' : 'rounded-xl p-2 text-gray-600 transition hover:bg-white/5 hover:text-amber-200'}><Star size={22} fill={satisfactionRating !== null && rating <= satisfactionRating ? 'currentColor' : 'none'} /></button>)}
+              <span className="ml-2 text-[9px] font-bold text-gray-400">{satisfactionRating === null ? 'Pas encore noté' : `${satisfactionRating}/5`}</span>
+            </div>
+          </fieldset>
+        </div>
         <button type="submit" disabled={saving} className="group flex w-full items-center justify-center gap-2 rounded-[1.5rem] bg-red-500 px-4 py-4 text-xs font-black uppercase tracking-wide text-white shadow-xl shadow-red-500/20 transition hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50"><CheckCircle2 size={18} />{saving ? 'Enregistrement…' : 'C’est parti !'}</button>
       </form></ModalShell>}
 

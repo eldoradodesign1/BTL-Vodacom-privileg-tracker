@@ -21,6 +21,7 @@ import {
 } from '../utils/mpesaMikili';
 import { DateIconPicker } from './DateIconPicker';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
+import { MikiliFeedback } from './MikiliFeedback';
 import { getLocationEmbedUrl } from '../utils/location';
 import { getMerchantEvidencePublicUrl } from '../utils/merchantCampaign';
 
@@ -453,7 +454,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
                   <div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-black uppercase tracking-[.2em] text-gray-400">Détail clients</p><DateIconPicker value={profileDate} onChange={setProfileDate} /></div>
                   <div className="mb-2 flex items-center justify-between text-[8px] font-black uppercase text-gray-500"><span>{dayLabel(profileDate)}</span><span className="text-emerald-200">{selectedDayClients.length} client(s) · {selectedDayClients.filter((x)=>x.transaction_done).length} transaction(s)</span></div>
                   <div className="max-h-32 space-y-1.5 overflow-y-auto pr-1 custom-scrollbar">
-                    {selectedDayClients.map((client) => <div key={client.id} className="flex items-center justify-between gap-2 rounded-xl border border-white/10 bg-black/20 px-2.5 py-2"><div className="min-w-0"><b className="block truncate text-[9px] text-white">{client.client_name}</b><span className="text-[8px] text-gray-500">{client.client_phone}</span></div><span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[7px] font-black uppercase text-emerald-200">{client.transaction_done ? 'Transaction' : 'Sensibilisé'}</span></div>)}
+                    {selectedDayClients.map((client) => <div key={client.id} className="rounded-xl border border-white/10 bg-black/20 px-2.5 py-2"><div className="flex items-center justify-between gap-2"><div className="min-w-0"><b className="block truncate text-[9px] text-white">{client.client_name}</b><span className="text-[8px] text-gray-500">{client.client_phone}</span></div><span className="shrink-0 rounded-full bg-emerald-500/10 px-2 py-1 text-[7px] font-black uppercase text-emerald-200">{client.transaction_done ? 'Transaction' : 'Sensibilisé'}</span></div><MikiliFeedback compact comment={client.client_comment} rating={client.satisfaction_rating} /></div>)}
                     {!selectedDayClients.length && <p className="py-4 text-center text-[9px] italic text-gray-500">Aucun client enregistré ce jour.</p>}
                   </div>
                 </div>

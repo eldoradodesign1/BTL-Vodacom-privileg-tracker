@@ -51,6 +51,8 @@ export interface MikiliClient {
   transaction_done: boolean;
   transaction_type: MikiliTransactionType;
   transaction_reference?: string | null;
+  client_comment?: string | null;
+  satisfaction_rating?: number | null;
   created_at: string;
   updated_at: string;
   location?: MikiliLocation;
@@ -215,6 +217,8 @@ export async function addMikiliClient(input: Omit<MikiliClient, 'id' | 'created_
     transaction_done: input.transaction_done,
     transaction_type: input.transaction_done ? input.transaction_type : 'na',
     transaction_reference: input.transaction_done ? input.transaction_reference?.trim() || null : null,
+    client_comment: input.client_comment?.trim() || null,
+    satisfaction_rating: input.satisfaction_rating ?? null,
   }).select('*, location:campaign_locations(*)').single();
   fail(error, 'Impossible d’enregistrer le client M-Pesa Mikili');
   return data as MikiliClient;
