@@ -107,7 +107,11 @@ export default function App() {
 
   const setThemeMode = (nextTheme: ThemeMode) => setTheme(nextTheme);
   const setCampaignContext = (campaign: CampaignContext) => { managerCampaignRef.current = campaign; setActiveCampaign(campaign); localStorage.setItem('btl_active_campaign', campaign); setActiveTab('home'); };
-  const campaignSubject = simulatedUserId ? users.find((user) => user.id === simulatedUserId) || null : users.find((user) => user.id === currentUser.id) || currentUser;
+  const campaignSubject = simulatedUserId
+    ? users.find((user) => user.id === simulatedUserId) || null
+    : currentUser
+      ? users.find((user) => user.id === currentUser.id) || currentUser
+      : null;
   const campaignSubjectId = campaignSubject?.id || null;
   // Le filtrage des campagnes ne s'applique qu'à un véritable agent.
   // Un superviseur/admin simulé doit conserver le même accès global qu'un
