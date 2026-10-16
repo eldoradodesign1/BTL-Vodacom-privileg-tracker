@@ -29,8 +29,8 @@ interface YouthF2FViewProps {
 
 type Geo = { latitude: number; longitude: number; accuracy: number };
 
-const YOUTH_ACTIONS = [['activation_bundle', 'Activation Bundles (50U)'], ['mpesa_account', 'Ouverture compte M-Pesa'], ['mpesa_app', 'Téléchargement application M-Pesa'], ['f2f_optin', 'Optin F2F'], ['none', 'Aucun']] as const;
-const YOUTH_ACTION_LABELS = Object.fromEntries(YOUTH_ACTIONS) as Record<string, string>;
+const YOUTH_ACTIONS = [['activation_bundle', 'Activation Bundles (50U)'], ['mpesa_account', 'Ouverture compte M-Pesa'], ['mpesa_app', 'Téléchargement application M-Pesa'], ['f2f_optin', 'Optin F2F'], ['other', 'Autre']] as const;
+const YOUTH_ACTION_LABELS = { ...Object.fromEntries(YOUTH_ACTIONS), none: 'Aucun' } as Record<string, string>;
 const YOUTH_SUBSCRIBER_TYPE_LABELS: Record<YouthSubscriberType, string> = {
   new_connection: 'Nouvel abonné (connexion)',
   existing_mpesa_no_app: 'Abonné M-Pesa sans application',
@@ -284,23 +284,16 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
 
           <div className="flex shrink-0 flex-col items-end gap-2">
             <button type="button" onClick={() => void refresh(false)} className="rounded-xl border border-white/10 bg-white/[0.06] p-2 text-cyan-100 transition hover:bg-white/10" title="Actualiser Youth F2F" aria-label="Actualiser Youth F2F"><RefreshCw size={16} /></button>
-            {activeTab === 'home' && !isOperator && !campaignPaused && (isCheckedIn ? (
-              <button type="button" onClick={() => (photoUrl || localPhotoUrl) && setPreviewUrl(photoUrl || localPhotoUrl)} disabled={!(photoUrl || localPhotoUrl)} style={{ transform: 'rotate(-3deg)' }} className="relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-cyan-200/25 bg-slate-950/70 text-cyan-100 shadow-xl disabled:cursor-default">
-                {(photoUrl || localPhotoUrl) ? <img src={photoUrl || localPhotoUrl} alt="Photo de pointage Youth F2F" className="h-full w-full object-cover" /> : <Camera size={24} />}
-                <span className="absolute bottom-0 inset-x-0 bg-black/65 px-1 py-1 text-center text-[9px] font-bold text-white">Photo de pointage</span>
+            {activeTab === 'home' && !isOperator && !campaignPaused && isCheckedIn && (
+              <button type="button" onClick={() => (photoUrl || localPhotoUrl) && setPreviewUrl(photoUrl || localPhotoUrl)} disabled={!(photoUrl || localPhotoUrl)} style={{ transform: 'rotate(-3deg)' }} className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-cyan-200/25 bg-slate-950/70 text-cyan-100 shadow-xl disabled:cursor-default">
+                {(photoUrl || localPhotoUrl) ? <img src={photoUrl || localPhotoUrl} alt="Pointage" className="h-full w-full object-cover" /> : <Camera size={24} />}
               </button>
-            ) : (
-              <label style={{ transform: 'rotate(-3deg)' }} className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl border border-cyan-300/40 bg-slate-950/65 p-2 text-center text-[10px] font-bold text-cyan-100 shadow-xl">
-                <Camera size={24} /><span>Photo de pointage</span>
-                <input type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleCheckin(file); event.currentTarget.value = ''; }} />
-              </label>
-            ))}
+            )}
           </div>
         </div>
 
         {activeTab === 'home' && !isOperator && !campaignPaused && (
           <div className="relative mt-5 border-t border-white/10 pt-4">
-            <div className="flex items-center justify-between"><p className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-200">Podium Youth F2F · Aujourd’hui</p><Trophy size={18} className="text-amber-200" /></div>
             {podiumLoading ? <p className="py-5 text-center text-xs text-gray-400">Mise à jour du podium…</p> : (
               <div className="mt-4 grid grid-cols-3 items-end gap-2">
                 {([2, 0, 1] as const).map((rankIndex) => {
@@ -309,14 +302,14 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
                     <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white">{entry ? entry.name.trim().split(/\s+/).slice(0, 2).map((name) => name[0] || '').join('').toUpperCase() : <UsersRound size={18} />}</div>
                     <p className="mt-2 truncate text-[10px] font-black text-white" title={entry?.name || 'Place libre'}>{entry?.name || 'Place libre'}</p>
                     <p className="mt-0.5 text-[9px] text-slate-300">{entry?.contacts || 0} contacts</p>
-                    <div className={rankIndex === 0 ? 'mt-2 flex h-20 items-center justify-center rounded-t-xl border border-amber-300/25 bg-amber-400/20 text-xl font-black text-amber-200' : rankIndex === 1 ? 'mt-2 flex h-14 items-center justify-center rounded-t-xl border border-slate-300/20 bg-slate-300/15 text-lg font-black text-slate-200' : 'mt-2 flex h-10 items-center justify-center rounded-t-xl border border-orange-300/20 bg-orange-400/15 text-lg font-black text-orange-200'}>{rankIndex + 1}</div>
+                    <div className={rankIndex === 0 ? 'mt-2 flex h-20 items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-400/20 text-xl font-black text-amber-200' : rankIndex === 1 ? 'mt-2 flex h-14 items-center justify-center rounded-2xl border border-slate-300/20 bg-slate-300/15 text-lg font-black text-slate-200' : 'mt-2 flex h-10 items-center justify-center rounded-2xl border border-orange-300/20 bg-orange-400/15 text-lg font-black text-orange-200'}>{rankIndex + 1}</div>
                   </div>;
                 })}
               </div>
             )}
             {myPodiumEntry && !rankedPodium.some((entry) => entry.baId === currentUser.id) && <p className="mt-3 text-center text-[10px] text-slate-400">{myPodiumEntry.rank ? 'Votre rang : #' + myPodiumEntry.rank + ' · ' + myPodiumEntry.contacts + ' contact(s)' : 'Vous : 0 contact enregistré aujourd’hui.'}</p>}
           </div>
-        )
+        )}
       </div>
 
       {campaignPaused && activeTab === 'home' && !isOperator && <section className="glass-card border border-amber-300/30 bg-amber-400/[0.07] p-5 text-center"><PauseCircle className="mx-auto text-amber-200" size={25}/><h2 className="mt-2 text-sm font-black text-white">Campagne Youth F2F en pause</h2><p className="mt-2 text-[11px] leading-relaxed text-gray-300">Les nouvelles saisies terrain sont temporairement suspendues. Vos clients et archives restent consultables.</p>{pauseReason && <p className="mt-2 text-xs font-bold text-amber-100">{pauseReason}</p>}</section>}
@@ -337,19 +330,26 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
 
 
       {activeTab === 'home' && !isOperator && !campaignPaused && (
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            <button type="button" disabled={!isCheckedIn || isClosed} onClick={() => { setError(''); setIsContactOpen(true); }} className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-3xl border border-cyan-300/25 bg-cyan-400/10 p-3 text-center text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-45">
-              <PlusCircle size={38} strokeWidth={1.5} /><span className="text-xs font-black">Nouveau contact</span><span className="text-[9px] text-slate-400">{contacts.length} contact(s) aujourd’hui</span>
-            </button>
-            <button type="button" disabled={!isCheckedIn || isClosed} onClick={() => setIsClosingOpen(true)} className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-3xl border border-amber-300/25 bg-amber-400/10 p-3 text-center text-amber-100 transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-45">
-              <FileCheck2 size={38} strokeWidth={1.5} /><span className="text-xs font-black">Rapport de clôture</span><span className="text-[9px] text-slate-400">{isClosed ? 'Journée clôturée' : 'Clôturer la journée'}</span>
-            </button>
+        !isCheckedIn ? (
+          <label className="btn-neon flex w-full cursor-pointer items-center justify-center gap-3 rounded-3xl px-5 py-5 text-center text-base font-black shadow-xl">
+            <Camera size={22} />
+            <span>Démarrer la journée</span>
+            <input type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleCheckin(file); event.currentTarget.value = ''; }} />
+          </label>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" disabled={isClosed} onClick={() => { setError(''); setIsContactOpen(true); }} className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-3xl border border-cyan-300/25 bg-cyan-400/10 p-3 text-center text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-45">
+                <PlusCircle size={38} strokeWidth={1.5} /><span className="text-xs font-black">Nouveau contact</span><span className="text-[9px] text-slate-400">{contacts.length} contact(s) aujourd’hui</span>
+              </button>
+              <button type="button" disabled={isClosed} onClick={() => setIsClosingOpen(true)} className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-3xl border border-amber-300/25 bg-amber-400/10 p-3 text-center text-amber-100 transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-45">
+                <FileCheck2 size={38} strokeWidth={1.5} /><span className="text-xs font-black">Rapport de clôture</span><span className="text-[9px] text-slate-400">{isClosed ? 'Journée clôturée' : 'Clôturer la journée'}</span>
+              </button>
+            </div>
+            {isClosed && <p className="text-center text-[11px] font-bold text-emerald-200">Journée clôturée · Rapport et GPS archivés</p>}
           </div>
-          {isClosed && <p className="text-center text-[11px] font-bold text-emerald-200">Journée clôturée · Rapport et GPS archivés</p>}
-          {!isCheckedIn && <p className="text-center text-[11px] text-slate-400">Prends d’abord ta photo de pointage pour activer ces deux actions.</p>}
-        </>
-      )
+        )
+      )}
 
       {isOperator && <section className="glass-card p-4 sm:p-5"><div className="mb-4 flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-violet-200/15 bg-violet-300/10 text-violet-200"><UsersRound size={19}/></span><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-violet-100">Suivi Youth F2F</p><h2 className="mt-1 text-sm font-black text-white">Agents affectés à la campagne</h2></div></div>{team.length === 0 ? <p className="rounded-2xl border border-amber-300/20 bg-amber-400/[0.06] p-3 text-xs font-semibold text-amber-100">Aucun agent Youth F2F n’est encore rattaché à ce périmètre.</p> : <div className="space-y-2">{team.map((agent) => <div key={agent.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/10 p-3"><span><b className="block text-xs text-white">{agent.name}</b><span className="text-[10px] text-gray-500">{agent.phone}</span></span><span className="rounded-full bg-cyan-400/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100">BA Youth</span></div>)}</div>}</section>}
 
@@ -362,7 +362,32 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
           <button type="button" onClick={handleClose} className="w-full rounded-2xl border border-amber-300/35 bg-amber-400/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-amber-100 transition hover:bg-amber-400/20">Clôturer ma journée</button>
         </div>
       </ModalShell>
-      {isContactOpen && <ModalShell title="Nouveau contact Youth" onClose={() => !contactSaving && setIsContactOpen(false)}><form onSubmit={saveContact} className="space-y-4"><div><label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Nom de l’abonné *</label><input value={contactName} onChange={(event) => setContactName(event.target.value)} className="app-input mt-1 w-full rounded-2xl px-3 py-3 text-sm" placeholder="Nom complet"/></div><div><label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Numéro de l’abonné *</label><input value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} inputMode="tel" maxLength={13} className="app-input mt-1 w-full rounded-2xl px-3 py-3 text-sm" placeholder="08XXXXXXXXX ou +243…"/></div><div><label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Région *</label><select value={contactRegion} onChange={(event) => setContactRegion(event.target.value as YouthRegion)} className="app-input mt-1 w-full rounded-2xl px-3 py-3 text-sm">{(['Bandundu','Equateur','Kongo_Central','Kinshasa','Province_Orientale','H_Lualaba','H_Katanga','Kasai_Occidental','Kasai_Oriental','Maniema','Nord_Kivu','Sud_Kivu'] as YouthRegion[]).map((region) => <option key={region} value={region}>{region.replaceAll('_', ' ')}</option>)}</select></div><div><label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Type d’abonné *</label><div className="mt-2 space-y-2">{([['new_connection','Nouvel abonné (connexion)'],['existing_mpesa_no_app','Abonné existant avec M-Pesa, sans application'],['existing_no_mpesa_no_app','Abonné existant sans M-Pesa et sans application']] as const).map(([value,label]) => <button type="button" key={value} onClick={() => setSubscriberType(value)} className={`w-full rounded-xl border px-3 py-2.5 text-left text-[10px] font-bold ${subscriberType === value ? 'border-cyan-300/50 bg-cyan-400/15 text-cyan-100' : 'border-white/10 bg-white/[0.03] text-gray-400'}`}>{label}</button>)}</div></div><div><label className="text-[9px] font-black uppercase tracking-wider text-gray-500">Actions prises *</label><div className="mt-2 grid grid-cols-2 gap-2">{youthActions.map(([value,label]) => { const selected = contactActions.includes(value); return <button type="button" key={value} onClick={() => setContactActions((current) => value === 'none' ? (selected ? [] : ['none']) : current.includes(value) ? current.filter((item) => item !== value) : [...current.filter((item) => item !== 'none'), value])} className={`rounded-xl border px-2 py-2.5 text-[9px] font-bold ${selected ? 'border-cyan-300/50 bg-cyan-400/15 text-cyan-100' : 'border-white/10 bg-white/[0.03] text-gray-500'}`}>{selected ? '✓ ' : ''}{label}</button>; })}</div></div><button type="submit" disabled={contactSaving} className="w-full rounded-2xl bg-cyan-500 px-4 py-3 text-[10px] font-black uppercase tracking-widest text-white disabled:opacity-50">{contactSaving ? 'Enregistrement…' : 'Enregistrer le contact'}</button></form></ModalShell>}
+      {isContactOpen && <ModalShell title="Nouveau contact Youth" onClose={() => !contactSaving && setIsContactOpen(false)}>
+        <form onSubmit={saveContact} className="space-y-5">
+          <input aria-label="Nom de l’abonné" value={contactName} onChange={(event) => setContactName(event.target.value)} className="app-input w-full rounded-2xl px-4 py-3 text-sm" placeholder="Nom de l’abonné" />
+          <div className="grid grid-cols-2 gap-3">
+            <input aria-label="Numéro de téléphone" value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} inputMode="tel" maxLength={13} className="app-input min-w-0 w-full rounded-2xl px-3 py-3 text-sm" placeholder="Numéro de téléphone" />
+            <select aria-label="Région" value={contactRegion} onChange={(event) => setContactRegion(event.target.value as YouthRegion)} className="app-input min-w-0 w-full rounded-2xl px-3 py-3 text-sm">{(['Bandundu','Equateur','Kongo_Central','Kinshasa','Province_Orientale','H_Lualaba','H_Katanga','Kasai_Occidental','Kasai_Oriental','Maniema','Nord_Kivu','Sud_Kivu'] as YouthRegion[]).map((region) => <option key={region} value={region}>{region.replaceAll('_', ' ')}</option>)}</select>
+          </div>
+          <div>
+            <p className="mb-3 text-[11px] font-black text-white">Type d’abonné</p>
+            <div className="grid grid-cols-3 gap-2">
+              {([['existing_no_mpesa_no_app','Sans M-Pesa, sans appli'],['existing_mpesa_no_app','M-Pesa sans appli'],['new_connection','Nouvel abonné']] as const).map(([value,label]) => <button type="button" key={value} onClick={() => setSubscriberType(value)} aria-pressed={subscriberType === value} style={{ minHeight: 84 }} className={`flex min-w-0 items-center justify-center rounded-2xl border px-2 py-3 text-center text-[10px] font-bold leading-relaxed transition ${subscriberType === value ? 'border-cyan-300/50 bg-cyan-400/15 text-cyan-100' : 'border-white/10 bg-white/[0.03] text-gray-300'}`}>{label}</button>)}
+            </div>
+          </div>
+          <div>
+            <p className="mb-3 text-[11px] font-black text-white">Actions prises</p>
+            <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
+              {youthActions.map(([value,label]) => {
+                const selected = contactActions.includes(value);
+                const shortLabel = ({ activation_bundle: 'Activation bundle', mpesa_account: 'Ouverture compte M-Pesa', mpesa_app: 'Téléchargement appli M-Pesa', f2f_optin: 'Opt-in F2F', other: 'Autre' } as Record<string, string>)[value] || label;
+                return <button type="button" key={value} aria-pressed={selected} onClick={() => setContactActions((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current.filter((item) => item !== 'none'), value])} style={{ minHeight: 78, overflowWrap: 'anywhere' }} className={`flex min-w-0 items-center justify-center rounded-2xl border px-1 py-2 text-center text-[9px] font-bold leading-snug transition ${selected ? 'border-cyan-300/50 bg-cyan-400/15 text-cyan-100' : 'border-white/10 bg-white/[0.03] text-gray-300'}`}>{shortLabel}</button>;
+              })}
+            </div>
+          </div>
+          <button type="submit" disabled={contactSaving} className="btn-neon w-full rounded-2xl px-4 py-4 text-sm font-black disabled:opacity-50">{contactSaving ? 'Enregistrement…' : 'Enregistrer le contact'}</button>
+        </form>
+      </ModalShell>
     </section>
   );
 };
