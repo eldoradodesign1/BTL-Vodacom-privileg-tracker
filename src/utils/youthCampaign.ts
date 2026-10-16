@@ -186,6 +186,44 @@ export async function getYouthContacts(baId: string, campaignId: string, activit
   return (data || []) as YouthContactReport[];
 }
 
+export interface YouthPodiumEntry {
+  baId: string;
+  name: string;
+  contacts: number;
+  rank: number | null;
+}
+
+export async function getYouthPodium(campaignId: string, activityDate: string, currentUserId: string, currentUserName: string): Promise<YouthPodiumEntry[]> {
+  const client = getYouthClient();
+  const { data: reportRows, error: reportsError } = await client
+    .from('youth_contact_reports')
+    .select('ba_id')
+    .eq('campaign_id', campaignId)
+    .eq('activity_date', activityDate)
+    .limit(5000);
+  if (reportsError?.code !== 'PGRST205') fail(reportsError, 'Impossible de charger le podium Youth F2F');
+
+  const counts = new Map<string, number>();
+  ((reportsError?.code === 'PGRST205' ? [] : reportRows) || []).forEach((row: { ba_id: string }) => {
+    counts.set(row.ba_id, (counts.get(row.ba_id) || 0) + 1);
+  });
+  const agentIds = Array.from(new Set([...counts.keys(), currentUserId].filter(Boolean)));
+  const names = new Map<string, string>([[currentUserId, currentUserName]]);
+  if (agentIds.length > 0) {
+    const { data: agentRows, error: agentsError } = await client
+      .from('users')
+      .select('id,full_name')
+      .in('id', agentIds);
+    fail(agentsError, 'Impossible de charger les noms du podium Youth F2F');
+    ((agentRows || []) as Array<{ id: string; full_name: string }>).forEach((row) => names.set(row.id, row.full_name));
+  }
+
+  return agentIds
+    .map((baId) => ({ baId, name: names.get(baId) || 'Agent Youth', contacts: counts.get(baId) || 0 }))
+    .sort((a, b) => b.contacts - a.contacts || a.name.localeCompare(b.name, 'fr'))
+    .map((entry, index) => ({ ...entry, rank: entry.contacts > 0 ? index + 1 : null }));
+}
+
 export async function addYouthContact(input: {
   campaignId: string;
   attendanceId?: string | null;

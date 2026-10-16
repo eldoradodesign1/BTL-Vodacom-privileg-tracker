@@ -80,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
   const visibleCampaigns = campaignOptions || [
     { key: 'vodacom-privilege' as const, label: 'Vodacom Privilège', note: 'Hôtesses' },
     { key: 'merchant-educational' as const, label: 'Merchant Education', note: 'Brand Ambassadors' },
-    { key: 'youth-f2f' as const, label: 'Youth F2F', note: 'Sensibilisation universitaire' },
+    { key: 'youth-f2f' as const, label: 'Youth F2F', note: 'Sensibilisation terrain' },
     { key: 'mpesa-mikili' as const, label: 'M-Pesa Mikili', note: 'Brand Ambassador · M-Pesa' },
   ];
   const syncState: 'ok' | 'progress' | 'late' = (() => {

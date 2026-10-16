@@ -985,7 +985,7 @@ export function resolveStoredPhotoUrl(raw: string | undefined | null): string | 
   if (!raw) return null;
   const value = raw.trim();
   if (!value) return null;
-  if (value.startsWith('data:image') || value.startsWith('http://') || value.startsWith('https://')) {
+  if (value.startsWith('data:image') || value.startsWith('blob:') || value.startsWith('http://') || value.startsWith('https://')) {
     return value;
   }
   if (value.includes('drive.google.com') || value.includes('googleusercontent.com')) {
