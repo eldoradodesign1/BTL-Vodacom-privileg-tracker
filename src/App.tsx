@@ -56,6 +56,7 @@ function campaignCodeToContext(code?: string | null): CampaignContext {
   if (normalized === 'vodacom-supplier-forum' || normalized === 'vodacom-supplier-forum-sept-2026' || normalized === 'supplier-forum') return 'vodacom-supplier-forum';
   if (normalized === 'vodacom-fondation-inauguration-forage-2026' || normalized === 'vodacom-foundation-forage' || normalized === 'foundation-forage') return 'vodacom-foundation-forage';
   if (normalized === 'long-service-award-2026' || normalized === 'long-service-award') return 'long-service-award';
+  if (normalized === 'formation-kadea-ia') return 'formation-kadea-ia';
   return 'vodacom-privilege';
 }
 function campaignContextMatches(campaign: Campaign, context: CampaignContext): boolean { return campaignCodeToContext(campaign.code) === context; }
@@ -68,7 +69,7 @@ export default function App() {
   const [eventCampaign, setEventCampaign] = useState<Campaign | null>(null);
   const [theme, setTheme] = useState<ThemeMode>(() => { try { const saved = localStorage.getItem('vodacom_theme') as ThemeMode | null; const allowed: ThemeMode[] = ['anthracite', 'rubis', 'silver', 'diamond', 'sapphire', 'ambre']; return saved && allowed.includes(saved) ? saved : 'anthracite'; } catch { return 'anthracite'; } });
   const [activeTab, setActiveTab] = useState<TabType>('home');
-  const [activeCampaign, setActiveCampaign] = useState<CampaignContext>(() => { try { const saved = localStorage.getItem('btl_active_campaign'); if (saved === 'merchant-educational' || saved === 'youth-f2f' || saved === 'mpesa-mikili' || saved === 'vodacom-supplier-forum' || saved === 'vodacom-foundation-forage' || saved === 'long-service-award') return saved; return 'vodacom-privilege'; } catch { return 'vodacom-privilege'; } });
+  const [activeCampaign, setActiveCampaign] = useState<CampaignContext>(() => { try { const saved = localStorage.getItem('btl_active_campaign'); if (saved === 'merchant-educational' || saved === 'youth-f2f' || saved === 'mpesa-mikili' || saved === 'vodacom-supplier-forum' || saved === 'vodacom-foundation-forage' || saved === 'long-service-award' || saved === 'formation-kadea-ia') return saved; return 'vodacom-privilege'; } catch { return 'vodacom-privilege'; } });
   const managerCampaignRef = useRef<CampaignContext | null>(null);
   const [homeTabPressCount, setHomeTabPressCount] = useState(0);
   const [users, setUsers] = useState<User[]>(() => getUsers());
@@ -129,14 +130,14 @@ export default function App() {
       return;
     }
     const stored = localStorage.getItem('btl_active_campaign');
-    if (stored === 'vodacom-privilege' || stored === 'merchant-educational' || stored === 'youth-f2f' || stored === 'mpesa-mikili' || stored === 'vodacom-supplier-forum' || stored === 'vodacom-foundation-forage' || stored === 'long-service-award') {
+    if (stored === 'vodacom-privilege' || stored === 'merchant-educational' || stored === 'youth-f2f' || stored === 'mpesa-mikili' || stored === 'vodacom-supplier-forum' || stored === 'vodacom-foundation-forage' || stored === 'long-service-award' || stored === 'formation-kadea-ia') {
       if (managerCampaignRef.current === null) managerCampaignRef.current = stored;
       if (activeCampaign !== managerCampaignRef.current) {
         setActiveCampaign(managerCampaignRef.current);
       }
     }
   }, [campaignSubjectRole, simulatedUserId, activeCampaign]);
-  useEffect(() => { let cancelled = false; const eventCodes: Partial<Record<CampaignContext, string>> = { 'vodacom-supplier-forum': 'vodacom-supplier-forum-sept-2026', 'vodacom-foundation-forage': 'vodacom-fondation-inauguration-forage-2026', 'long-service-award': 'long-service-award-2026' }; const code = eventCodes[activeCampaign]; if (!code) { setEventCampaign(null); return; } void getEventCampaign(code).then((campaign) => { if (!cancelled) setEventCampaign(campaign); }).catch(() => { if (!cancelled) setEventCampaign(null); }); return () => { cancelled = true; }; }, [activeCampaign, dataRevision]);
+  useEffect(() => { let cancelled = false; const eventCodes: Partial<Record<CampaignContext, string>> = { 'vodacom-supplier-forum': 'vodacom-supplier-forum-sept-2026', 'vodacom-foundation-forage': 'vodacom-fondation-inauguration-forage-2026', 'long-service-award': 'long-service-award-2026', 'formation-kadea-ia': 'formation-kadea-ia' }; const code = eventCodes[activeCampaign]; if (!code) { setEventCampaign(null); return; } void getEventCampaign(code).then((campaign) => { if (!cancelled) setEventCampaign(campaign); }).catch(() => { if (!cancelled) setEventCampaign(null); }); return () => { cancelled = true; }; }, [activeCampaign, dataRevision]);
 
   useEffect(() => {
     if (!campaignSubjectId || campaignSubjectRole !== 'agent') { setAgentCampaigns([]); setActiveCampaignPause(null); return; }
@@ -272,6 +273,7 @@ export default function App() {
     { key: 'vodacom-supplier-forum' as const, label: 'Supplier Forum', note: 'Event · Pointage uniquement' },
     { key: 'vodacom-foundation-forage' as const, label: 'Vodacom Fondation · Inauguration Forage', note: 'Event · Pointage uniquement' },
     { key: 'long-service-award' as const, label: 'Long Service Award', note: 'Event · Pointage uniquement' },
+    { key: 'formation-kadea-ia' as const, label: 'Formation Kadea - IA', note: 'Event · 20 et 23 octobre' },
   ];
   const allCampaignOptions = [
     { key: 'vodacom-privilege' as const, label: 'Vodacom Privilège', note: 'Hôtesses' },
@@ -281,6 +283,7 @@ export default function App() {
     { key: 'vodacom-supplier-forum' as const, label: 'Supplier Forum', note: 'Event · Pointage uniquement' },
     { key: 'vodacom-foundation-forage' as const, label: 'Vodacom Fondation · Inauguration Forage', note: 'Event · Pointage uniquement' },
     { key: 'long-service-award' as const, label: 'Long Service Award', note: 'Event · Pointage uniquement' },
+    { key: 'formation-kadea-ia' as const, label: 'Formation Kadea - IA', note: 'Event · 20 et 23 octobre' },
   ];
   const agentCampaignOptions = agentCampaigns.map((campaign) => ({
         key: campaignCodeToContext(campaign.code),
@@ -295,7 +298,7 @@ export default function App() {
       })).filter((campaign, index, list) => list.findIndex((item) => item.key === campaign.key) === index);
   const inferredAgentMerchant = effectiveRole === 'agent' && effectiveUser.userCategory === 'brand_ambassador';
   const isMikiliContext = activeCampaign === 'mpesa-mikili';
-  const isSupplierForumContext = activeCampaign === 'vodacom-supplier-forum' || activeCampaign === 'vodacom-foundation-forage' || activeCampaign === 'long-service-award';
+  const isSupplierForumContext = activeCampaign === 'vodacom-supplier-forum' || activeCampaign === 'vodacom-foundation-forage' || activeCampaign === 'long-service-award' || activeCampaign === 'formation-kadea-ia';
   const isYouthContext = !isMikiliContext && !isSupplierForumContext && (effectiveRole === 'agent' ? (agentCampaignOptions.length > 0 && activeCampaign === 'youth-f2f') : activeCampaign === 'youth-f2f');
   const isMerchantContext = !isMikiliContext && !isYouthContext && !isSupplierForumContext && (effectiveRole === 'agent' ? (agentCampaignOptions.length > 0 ? activeCampaign === 'merchant-educational' : inferredAgentMerchant) : activeCampaign === 'merchant-educational');
   const campaignIsPaused = effectiveRole === 'agent' && Boolean(activeCampaignPause);
