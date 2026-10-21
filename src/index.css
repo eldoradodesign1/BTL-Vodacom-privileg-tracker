@@ -876,6 +876,58 @@ body.theme-ambre {
   box-shadow: var(--shadow-floating);
 }
 
+.bottom-nav-action-slot {
+  position: relative;
+  display: flex;
+  width: 4.75rem;
+  flex: 0 0 4.75rem;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+}
+
+.bottom-nav-primary-action {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  height: 3.65rem;
+  width: 3.65rem;
+  align-items: center;
+  justify-content: center;
+  border: 5px solid rgba(9, 13, 22, 0.92);
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-accent) 72%, #fff) 0%, var(--theme-accent) 58%, color-mix(in srgb, var(--theme-accent) 72%, #101827) 100%);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.16) inset, 0 10px 22px var(--theme-accent-glow), 0 8px 20px rgba(0,0,0,0.42);
+  transform: translateY(-1rem);
+  transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
+}
+
+.bottom-nav-primary-action::after {
+  content: '';
+  position: absolute;
+  inset: -0.35rem;
+  border: 1px solid rgba(var(--theme-accent-rgb), 0.28);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.bottom-nav-primary-action:hover:not(:disabled) {
+  filter: brightness(1.08) saturate(1.08);
+  transform: translateY(-1.12rem) scale(1.04);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.2) inset, 0 13px 28px var(--theme-accent-glow), 0 10px 22px rgba(0,0,0,0.45);
+}
+
+.bottom-nav-primary-action:active:not(:disabled) {
+  transform: translateY(-0.94rem) scale(0.97);
+}
+
+.bottom-nav-primary-action:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.7);
+  opacity: 0.45;
+}
+
 .app-icon-button {
   background: rgba(255, 255, 255, 0.075) !important;
   border-color: rgba(255, 255, 255, 0.16) !important;
@@ -996,6 +1048,17 @@ body.theme-ambre {
     bottom: 0.8rem !important;
     height: 4.8rem !important;
     border-radius: 1.5rem !important;
+  }
+
+  .bottom-nav-action-slot {
+    width: 4.2rem;
+    flex-basis: 4.2rem;
+  }
+
+  .bottom-nav-primary-action {
+    height: 3.35rem;
+    width: 3.35rem;
+    border-width: 4px;
   }
 }
 
