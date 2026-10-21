@@ -338,17 +338,17 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
           </label>
         ) : (
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-3">
-              <button type="button" disabled={isClosed} onClick={() => { setError(''); setIsContactOpen(true); }} className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-3xl border border-cyan-300/25 bg-cyan-400/10 p-3 text-center text-cyan-100 transition hover:bg-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-45">
-                <PlusCircle size={38} strokeWidth={1.5} /><span className="text-xs font-black">Nouveau contact</span><span className="text-[9px] text-slate-400">{contacts.length} contact(s) aujourd’hui</span>
-              </button>
-              <button type="button" disabled={isClosed} onClick={() => setIsClosingOpen(true)} className="flex min-h-32 flex-col items-center justify-center gap-3 rounded-3xl border border-amber-300/25 bg-amber-400/10 p-3 text-center text-amber-100 transition hover:bg-amber-400/20 disabled:cursor-not-allowed disabled:opacity-45">
-                <FileCheck2 size={38} strokeWidth={1.5} /><span className="text-xs font-black">Rapport de clôture</span><span className="text-[9px] text-slate-400">{isClosed ? 'Journée clôturée' : 'Clôturer la journée'}</span>
-              </button>
-            </div>
-            {isClosed && <p className="text-center text-[11px] font-bold text-emerald-200">Journée clôturée · Rapport et GPS archivés</p>}
+            <button type="button" onClick={() => setIsClosingOpen(true)} disabled={isClosed} className="btn-neon flex w-full items-center justify-center gap-3 rounded-3xl px-5 py-5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50">
+              <FileCheck2 size={21}/>{isClosed ? 'Journée clôturée' : 'Clôturer'}
+            </button>
+            {isClosed && <p className="text-center text-[11px] font-bold text-emerald-200">Rapport et GPS archivés</p>}
           </div>
         )
+      )}
+      {isCheckedIn && !isClosed && !campaignPaused && activeTab === 'home' && (
+        <button type="button" aria-label="Nouveau contact" title="Nouveau contact" onClick={() => { setError(''); setIsContactOpen(true); }} style={{position:'fixed',left:'50%',bottom:'5.5rem',transform:'translateX(-50%)',zIndex:45,width:72,height:72,borderRadius:'50%',background:'linear-gradient(140deg,#172334,#0b101b)',border:'2px solid rgba(125,211,252,.6)',boxShadow:'0 12px 35px rgba(0,0,0,.55)'}} className="flex items-center justify-center text-cyan-100 transition active:scale-95">
+          <PlusCircle size={39} strokeWidth={1.8}/>
+        </button>
       )}
 
       {isOperator && <section className="glass-card p-4 sm:p-5"><div className="mb-4 flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-violet-200/15 bg-violet-300/10 text-violet-200"><UsersRound size={19}/></span><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-violet-100">Suivi Youth F2F</p><h2 className="mt-1 text-sm font-black text-white">Agents affectés à la campagne</h2></div></div>{team.length === 0 ? <p className="rounded-2xl border border-amber-300/20 bg-amber-400/[0.06] p-3 text-xs font-semibold text-amber-100">Aucun agent Youth F2F n’est encore rattaché à ce périmètre.</p> : <div className="space-y-2">{team.map((agent) => <div key={agent.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/10 p-3"><span><b className="block text-xs text-white">{agent.name}</b><span className="text-[10px] text-gray-500">{agent.phone}</span></span><span className="rounded-full bg-cyan-400/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100">BA Youth</span></div>)}</div>}</section>}
