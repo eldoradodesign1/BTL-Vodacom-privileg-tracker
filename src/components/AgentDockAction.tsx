@@ -21,7 +21,9 @@ export const AgentDockAction: React.FC<AgentDockActionProps> = ({ label, onClick
   const handlePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
     // Certains webviews mobiles annulent le click synthétique lorsque le bouton
     // dépasse visuellement du dock. Le pointerdown, lui, est bien délivré.
-    if (disabled || (event.pointerType !== 'touch' && event.pointerType !== 'pen')) return;
+    // Cela arrive aussi avec certains navigateurs embarqués qui annoncent une
+    // souris : tout appui principal est donc traité de façon identique.
+    if (disabled || event.button !== 0) return;
     lastTouchActivation.current = performance.now();
     onClick();
   };
