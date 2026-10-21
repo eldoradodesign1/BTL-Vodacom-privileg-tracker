@@ -462,7 +462,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
         </section>
       )}
 
-      {showPodium && (
+      {showPodium && !(checkinDone || checkinDoneLocal) && (
         <div className={`rank-card-podium animate-pop ${podiumTier ? `podium-${podiumTier}` : 'podium-neutral'}`} style={podiumTier ? { ['--podium-watermark' as string]: `url('/Trophees/Trophee_${podiumTier === 'gold' ? 'Gold' : (podiumTier === 'silver' ? 'Silver' : 'Bronze')}.webp')` } : undefined}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -482,6 +482,16 @@ export const AgentView: React.FC<AgentViewProps> = ({
           </div>
         </div>
       )}
+
+      {(checkinDone || checkinDoneLocal) && <section className="glass-card border border-amber-300/20 p-4" aria-label="Classement du jour">
+        <div className="grid grid-cols-3 items-end gap-2">{([2,0,1] as const).map((rankIndex) => { const entry = globalActivityRanking[rankIndex]; return <div key={rankIndex} className="min-w-0 text-center">
+          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white">{entry ? entry.name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase() : <Users size={18}/>}</div>
+          <p className="mt-2 truncate text-[10px] font-black text-white" title={entry?.name||'Place libre'}>{entry?.name||'Place libre'}</p>
+          <p className="mt-0.5 text-[9px] text-gray-400">{entry ? entry.total+' clients' : '0 client'}</p>
+          <div className={rankIndex===0?'mt-2 flex h-20 items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-400/20 text-xl font-black text-amber-200':rankIndex===1?'mt-2 flex h-14 items-center justify-center rounded-2xl border border-slate-300/20 bg-slate-300/15 text-lg font-black text-slate-200':'mt-2 flex h-10 items-center justify-center rounded-2xl border border-orange-300/20 bg-orange-400/15 text-lg font-black text-orange-200'}>{rankIndex+1}</div>
+        </div>;})}</div>
+        {myTodayTotal>0 && myTodayRank>3 && <p className="mt-3 text-center text-[10px] text-gray-400">Votre rang : #{myTodayRank}</p>}
+      </section>}
 
       {!(checkinDone || checkinDoneLocal) && !campaignPaused && (
         <div className="glass-card text-center p-6 border border-white/10">
@@ -529,7 +539,8 @@ export const AgentView: React.FC<AgentViewProps> = ({
         </div>
       )}
 
-      {/* Quick Action Grid */}
+      {/* Avant le pointage, conserver l'interface existante. */}
+      {!(checkinDone || checkinDoneLocal) && (
       <div className="grid grid-cols-2 gap-4">
         <button
           onClick={onOpenLeadModal}
@@ -561,6 +572,10 @@ export const AgentView: React.FC<AgentViewProps> = ({
           <span className="text-[9px] text-gray-400 font-semibold">PDF & Synthèse</span>
         </button>
       </div>
+
+      )}
+      {(checkinDone || checkinDoneLocal) && <button type="button" onClick={onOpenReportModal} disabled={reportDone || campaignPaused} className="btn-neon btn-red flex w-full items-center justify-center gap-3 rounded-3xl px-5 py-5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50"><FileText size={21}/>{reportDone ? 'Journée clôturée' : 'Clôturer'}</button>}
+      {(checkinDone || checkinDoneLocal) && !reportDone && !campaignPaused && <button type="button" aria-label="Nouveau client" title="Nouveau client" onClick={onOpenLeadModal} style={{position:'fixed',left:'50%',bottom:'5.5rem',transform:'translateX(-50%)',zIndex:45,width:72,height:72,borderRadius:'50%',background:'linear-gradient(140deg,#281015,#120d12)',border:'2px solid rgba(251,113,133,.65)',boxShadow:'0 12px 35px rgba(0,0,0,.55)'}} className="flex items-center justify-center text-red-100 transition active:scale-95"><UserPlus size={39} strokeWidth={1.8}/></button>}
 
       <div className="glass-card p-4 border border-white/10">
         <div className="flex items-center justify-between">
