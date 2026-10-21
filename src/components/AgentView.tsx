@@ -437,27 +437,6 @@ export const AgentView: React.FC<AgentViewProps> = ({
     );
   }
 
-  // La page de démarrage est isolée: aucune logique post-pointage n'est remplacée.
-  if (activeTab === 'home' && !(checkinDone || checkinDoneLocal)) return (
-    <section className="agent-before-checkin agent-home-surface space-y-4 pb-6">
-      <h1 className="pt-5 text-center text-lg font-black uppercase tracking-[0.08em] text-white">Vodacom Privilège</h1>
-      <div className="px-5 pt-2"><div className="agent-podium-grid mt-4 grid grid-cols-3 items-end gap-2">{([2, 0, 1] as const).map((rankIndex) => { const entry = globalActivityRanking[rankIndex]; return <div key={rankIndex} className="min-w-0 text-center">
-  <div className="agent-podium-avatar mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white">{entry ? entry.name.trim().split(/\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase() : <Users size={18}/>}</div>
-  <p className="mt-2 truncate text-[10px] font-black text-white" title={entry?.name || 'Place libre'}>{entry?.name || 'Place libre'}</p>
-  <p className="mt-0.5 text-[9px] text-gray-400">{entry ? entry.total + ' clients' : '0 client'}</p>
-  <div className={rankIndex === 0 ? 'mt-2 flex h-20 items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-400/20 text-xl font-black text-amber-200' : rankIndex === 1 ? 'mt-2 flex h-14 items-center justify-center rounded-2xl border border-slate-300/20 bg-slate-300/15 text-lg font-black text-slate-200' : 'mt-2 flex h-10 items-center justify-center rounded-2xl border border-orange-300/20 bg-orange-400/15 text-lg font-black text-orange-200'}>{rankIndex + 1}</div>
-</div>;})}</div></div>
-      <div className="flex justify-center py-6" style={{minHeight:'min(43vh,380px)'}}>
-        <label onClick={campaignPaused ? undefined : handleCaptureClick} aria-label="Démarrer la journée" title="Démarrer la journée" className={`agent-start-power flex cursor-pointer flex-col items-center justify-center gap-3 text-center text-white ${campaignPaused ? 'opacity-45 pointer-events-none' : ''}`} style={{width:'min(65vw,250px)',aspectRatio:'1',borderRadius:'50%',background:'radial-gradient(circle at 35% 25%, rgba(105,28,51,.95),rgba(35,10,27,.98) 55%,#0e101b 100%)',border:'3px solid var(--theme-accent)',boxShadow:'0 0 0 9px rgba(251,113,133,.09),0 20px 55px rgba(0,0,0,.65),inset 0 2px 18px rgba(255,255,255,.12)'}}>
-          <svg viewBox="0 0 24 24" width="100" height="100" fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/><path d="M12 2v10"/></svg><span className="text-xs font-black uppercase tracking-widest">Démarrer la journée</span>
-          <input type="file" accept="image/*" capture="user" className="hidden" disabled={campaignPaused} onChange={handleCameraChange}/>
-        </label>
-      </div>
-      {campaignPaused && <p className="text-center text-xs font-bold text-amber-200">Campagne en pause. Pointage indisponible.</p>}
-      {feedback.primaryText && <p className="text-center text-[11px] text-gray-300">{feedback.primaryText}</p>}
-    </section>
-  );
-
   // RENDER TAB 1: HOME DASHBOARD
   return (
     <div className="agent-home-surface space-y-5 animate-pop pb-8">
