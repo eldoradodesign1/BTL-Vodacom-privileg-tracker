@@ -1334,3 +1334,26 @@ body.theme-diamond .agent-home-surface .agent-closure-action { background: rgba(
 @media (prefers-reduced-motion: reduce) {
   .agent-dock-action, .app-tab.dock-tab, .agent-closure-action { transition: none; }
 }
+
+/* Agent pre-pointage: même accueil épuré pour toutes les campagnes. */
+body:has(.agent-before-checkin) nav.app-bottom-nav.agent-dock,
+body:has(.agent-before-checkin) .agent-dock-action { display: none !important; }
+.agent-before-checkin .agent-start-power {
+  animation: agent-start-gentle-pulse 3s ease-in-out infinite;
+  transform-origin: center;
+}
+.agent-before-checkin .agent-podium-avatar { animation: agent-avatar-soft-bounce 3s ease-in-out infinite; }
+.agent-before-checkin .agent-podium-grid > div:nth-child(2) .agent-podium-avatar { animation-delay: .3s; }
+.agent-before-checkin .agent-podium-grid > div:nth-child(3) .agent-podium-avatar { animation-delay: .6s; }
+@keyframes agent-start-gentle-pulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.045); filter: brightness(1.13); }
+}
+@keyframes agent-avatar-soft-bounce {
+  0%, 100% { transform: translateY(0); }
+  38% { transform: translateY(-6px); }
+  62% { transform: translateY(-2px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-before-checkin .agent-start-power, .agent-before-checkin .agent-podium-avatar { animation: none; }
+}
