@@ -14,6 +14,8 @@ const toCampaignContext = (campaign?: Campaign | null): CampaignContext => {
   if (code === 'mpesa-mikili' || code === 'm-pesa-mikili' || code === 'mpesa-mikili-campaign') return 'mpesa-mikili';
   if (code === 'vodacom-supplier-forum' || code === 'vodacom-supplier-forum-sept-2026' || code === 'supplier-forum') return 'vodacom-supplier-forum';
   if (code === 'vodacom-fondation-inauguration-forage-2026' || code === 'vodacom-foundation-forage' || code === 'foundation-forage') return 'vodacom-foundation-forage';
+  if (code === 'long-service-award-2026' || code === 'long-service-award') return 'long-service-award';
+  if (code === 'formation-kadea-ia') return 'formation-kadea-ia';
   return campaign?.campaign_type === 'brand_ambassador' || code === 'merchant-educational' || code === 'merchant-educational-campaign'
     ? 'merchant-educational'
     : 'vodacom-privilege';
