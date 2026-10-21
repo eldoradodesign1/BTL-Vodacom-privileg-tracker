@@ -17,6 +17,45 @@
     <div id="root"></div>
     <script>
       (() => {
+        // Si le bundle ne monte pas, proposer une récupération sans toucher aux données métier.
+        window.setTimeout(() => {
+          const root = document.getElementById('root');
+          if (!root || root.childElementCount > 0) return;
+          const notice = document.createElement('div');
+          notice.setAttribute('role', 'alert');
+          notice.style.cssText = 'position:fixed;z-index:9999;inset:20% 12px auto;border:1px solid #fb7185;border-radius:18px;padding:22px;background:#17151d;color:white;font:14px/1.5 sans-serif;text-align:center;box-shadow:0 12px 30px #0007';
+          const heading = document.createElement('strong');
+          heading.textContent = 'Impossible de charger l’interface';
+          const detail = document.createElement('p');
+          detail.textContent = 'Le réseau ou une ancienne version en cache peut bloquer le démarrage. Tes données locales restent conservées.';
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.textContent = 'Rafraîchir l’application';
+          button.style.cssText = 'margin-top:10px;padding:13px 20px;border:0;border-radius:12px;background:#fb7185;color:#181015;font-weight:800;cursor:pointer';
+          button.addEventListener('click', async () => {
+            button.disabled = true;
+            button.textContent = 'Actualisation…';
+            try {
+              if ('caches' in window) {
+                const names = await caches.keys();
+                await Promise.all(names.filter((name) => name.startsWith('btl-tracker-')).map((name) => caches.delete(name)));
+              }
+              if ('serviceWorker' in navigator) {
+                const reg = await navigator.serviceWorker.getRegistration();
+                if (reg) await reg.update();
+              }
+            } catch (_) { /* Une absence de cache ne doit jamais bloquer l'actualisation. */ }
+            const target = new URL(window.location.href);
+            target.searchParams.set('btl_recovery', String(Date.now()));
+            window.location.replace(target.href);
+          });
+          notice.append(heading, detail, button);
+          root.append(notice);
+        }, 10000);
+      })();
+    </script>
+    <script>
+      (() => {
         const USERS_KEY = 'vodacom_users_v6';
         const CURRENT_USER_KEY = 'vodacom_user';
         const seedUsers = [
@@ -89,10 +128,13 @@
           });
         };
 
+        let loginOverrideAttempts = 0;
         const installLoginOverride = () => {
+          // Les agents connectés ne doivent pas rechercher un formulaire indéfiniment.
+          try { if (localStorage.getItem(CURRENT_USER_KEY)) return; } catch (_) {}
           const form = document.querySelector('form');
           if (!form) {
-            setTimeout(installLoginOverride, 150);
+            if (++loginOverrideAttempts < 40) setTimeout(installLoginOverride, 200);
             return;
           }
 
