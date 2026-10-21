@@ -292,9 +292,18 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
           </div>
         </section>
 
-        {podium.length > 0 && <section className="glass-card overflow-hidden p-4">
+        {!isCheckedIn && podium.length > 0 && <section className="glass-card overflow-hidden p-4">
           <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-amber-200/80">Podium du jour</p><h2 className="mt-1 text-lg font-black text-white">Votre course Mikili</h2></div><Trophy size={21} className="text-amber-200" /></div>
           <div className="mt-3 grid grid-cols-3 gap-2">{[0,1,2].map((index) => { const entry = podium[index]; const colors = ['border-amber-300/35 bg-amber-400/[0.12] text-amber-100','border-slate-200/25 bg-slate-200/[0.08] text-slate-100','border-orange-300/25 bg-orange-500/[0.08] text-orange-100']; return <div key={entry?.userId || index} className={`min-h-24 rounded-2xl border p-3 ${colors[index]}`}><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-black/15 text-[10px] font-black">{index+1}</span><b className="mt-2 block truncate text-[10px]">{entry?.name?.split(' ')[0] || '—'}</b><span className="mt-1 block text-[9px] font-bold opacity-80">{entry ? entry.transactions + ' Tx · ' + entry.clients + ' clients' : 'À saisir'}</span></div>; })}</div>
+        </section>}
+
+        {isCheckedIn && <section className="glass-card border border-amber-300/20 p-4" aria-label="Classement du jour">
+          <div className="grid grid-cols-3 items-end gap-2">{([2,0,1] as const).map((rankIndex) => { const entry = podium[rankIndex]; return <div key={rankIndex} className="min-w-0 text-center">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white">{entry ? entry.name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase() : <UsersRound size={18}/>}</div>
+            <p className="mt-2 truncate text-[10px] font-black text-white" title={entry?.name||'Place libre'}>{entry?.name||'Place libre'}</p>
+            <p className="mt-0.5 text-[9px] text-gray-400">{entry ? entry.clients+' clients · '+entry.transactions+' Tx' : '0 client'}</p>
+            <div className={rankIndex===0?'mt-2 flex h-20 items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-400/20 text-xl font-black text-amber-200':rankIndex===1?'mt-2 flex h-14 items-center justify-center rounded-2xl border border-slate-300/20 bg-slate-300/15 text-lg font-black text-slate-200':'mt-2 flex h-10 items-center justify-center rounded-2xl border border-orange-300/20 bg-orange-400/15 text-lg font-black text-orange-200'}>{rankIndex+1}</div>
+          </div>;})}</div>
         </section>}
 
         <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-black/20 p-4">
@@ -310,9 +319,9 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
 
         {!isCheckedIn && !isClosed && <section className="glass-card border border-red-300/25 bg-red-500/[0.08] p-4"><div className="flex items-center gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-300/25 bg-red-500/15 text-red-100"><Camera size={20}/></span><div><p className="text-[9px] font-black uppercase tracking-[0.18em] text-red-200">Début de journée</p><h2 className="mt-1 text-sm font-black text-white">Pointage du matin</h2><p className="mt-1 text-[10px] leading-relaxed text-gray-400">Prenez une photo sur votre lieu d’activité. La photo, l’heure et la position seront enregistrées.</p></div></div><button type="button" onClick={() => checkinInputRef.current?.click()} disabled={checkinPending} className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-red-300/35 bg-red-500/15 px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-red-100 transition hover:bg-red-500/25 disabled:opacity-45"><Camera size={16}/>{checkinPending ? 'Synchronisation…' : 'Prendre ma photo de pointage'}</button><input ref={checkinInputRef} type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleCheckin(file); event.currentTarget.value = ''; }}/></section>}
 
-        {isCheckedIn && <section className="glass-card flex items-center gap-3 border border-emerald-300/20 bg-emerald-500/[0.07] p-4"><CheckCircle2 className="shrink-0 text-emerald-300" size={20}/><div><p className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-200">Pointage confirmé</p><p className="mt-1 text-[11px] font-semibold text-gray-300">Les saisies de clients sont maintenant ouvertes.</p></div></section>}
+        {isCheckedIn && <button type="button" onClick={() => { setError(''); setIsReportOpen(true); }} disabled={isClosed} className="btn-neon flex w-full items-center justify-center gap-3 rounded-[1.8rem] px-5 py-5 text-base font-black disabled:opacity-40"><FileText size={22}/>{isClosed ? 'Journée clôturée' : 'Clôturer'}</button>}
 
-        <section className="grid grid-cols-2 gap-3">
+        {!isCheckedIn &&         <section className="grid grid-cols-2 gap-3">
           <button type="button" onClick={() => { setError(''); setIsClientOpen(true); }} disabled={!isCheckedIn || isClosed} className="group relative min-h-24 overflow-hidden rounded-[1.8rem] border border-red-300/25 bg-red-500/[0.16] p-4 text-left transition hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-35">
             <PlusCircle size={20} className="text-red-200 transition group-hover:rotate-90" />
             <b className="mt-5 block text-[11px] font-black uppercase tracking-wide text-white">Enregistrer</b>
@@ -323,7 +332,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
             <b className="mt-5 block text-[11px] font-black uppercase tracking-wide text-white">{isClosed ? 'Clôturé' : 'Clôturer'}</b>
             <span className="mt-1 block text-[8px] font-bold uppercase tracking-wider text-emerald-100/70">Bilan + fin de journée</span>
           </button>
-        </section>
+        </section>}
 
 
       </>}
@@ -359,6 +368,8 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
         <div className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-fuchsia-500/[0.12] to-transparent p-5"><p className="text-[9px] font-black uppercase tracking-[0.2em] text-fuchsia-200">Mémoire terrain</p><h2 className="mt-1 text-2xl font-black text-white">Archives</h2><p className="mt-1 text-[10px] font-semibold text-gray-500">Vos interactions précédentes.</p></div>
         {history.length === 0 ? <div className="glass-card p-8 text-center"><FileText size={28} className="mx-auto text-gray-600" /><p className="mt-3 text-xs font-bold text-gray-500">Aucune trace pour le moment.</p></div> : history.map((item) => <article key={item.id} className="rounded-[1.7rem] border border-white/8 bg-white/[0.035] p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="text-sm font-black text-white">{item.client_name}</h3><p className="mt-1 text-[9px] font-semibold text-gray-500">{item.activity_date} · {item.location?.name || 'Lieu non renseigné'}</p></div><span className="rounded-full bg-white/5 px-2 py-1 text-[8px] font-black uppercase text-gray-400">{item.transaction_done ? 'Transaction' : 'Sensibilisation'}</span></div><p className="mt-3 text-[10px] text-gray-500">{item.client_phone} · {mikiliDisplayService(item.presented_service)}</p><MikiliFeedback comment={item.client_comment} rating={item.satisfaction_rating} /></article>)}
       </section>}
+
+      {activeTab === 'home' && isCheckedIn && !isClosed && <button type="button" aria-label="Nouveau client" title="Nouveau client" onClick={() => { setError(''); setIsClientOpen(true); }} style={{position:'fixed',left:'50%',bottom:'5.5rem',transform:'translateX(-50%)',zIndex:45,width:72,height:72,borderRadius:'50%',background:'linear-gradient(140deg,#27151e,#130e15)',border:'2px solid rgba(251,113,133,.65)',boxShadow:'0 12px 35px rgba(0,0,0,.55)'}} className="flex items-center justify-center text-red-100 transition active:scale-95"><PlusCircle size={39} strokeWidth={1.8}/></button>}
 
       {isClientOpen && <ModalShell title="Nouveau contact" onClose={() => !saving && setIsClientOpen(false)}><form onSubmit={saveClient} className="space-y-5">
         <div className="rounded-[1.7rem] border border-red-300/15 bg-red-500/[0.06] p-4"><p className="text-[9px] font-black uppercase tracking-[0.18em] text-red-200">Nouvelle interaction</p><p className="mt-1 text-xs font-semibold text-gray-400">Quelques gestes, et c’est enregistré.</p></div>
