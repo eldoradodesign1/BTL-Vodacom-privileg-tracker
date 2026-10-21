@@ -74,3 +74,6 @@ body:has(.event-checkin-only) .agent-dock-action { display:none!important; }
   .agent-before-checkin .btl-podium-avatar,
   .youth-before-checkin .youth-start-pulse {animation:none!important}
 }
+
+/* Deux commandes d'événement lisibles sur un petit écran. */
+.event-checkin-only .btl-power-button {width:min(48vw,190px)!important;height:min(48vw,190px)!important;max-width:190px;max-height:190px;}
