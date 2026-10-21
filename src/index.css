@@ -1188,3 +1188,149 @@ body.theme-diamond .app-header .text-gray-400 {
 @media (prefers-reduced-motion: reduce) {
   .animate-toast-in { animation: none; }
 }
+
+/* Agent dock — une vraie découpe transparente, pas un cercle posé sur la barre. */
+.app-bottom-nav.agent-dock {
+  --dock-surface: rgba(28, 30, 38, 0.97);
+  --dock-ink: #a8abb8;
+  --dock-notch: 40px;
+  position: fixed;
+  z-index: 40;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: max(12px, env(safe-area-inset-bottom)) !important;
+  width: auto;
+  max-width: 672px;
+  height: 76px !important;
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  padding: 8px;
+  border: 0 !important;
+  border-radius: 26px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  isolation: isolate;
+}
+.agent-dock::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: inherit;
+  background: linear-gradient(145deg, rgba(255,255,255,0.055), transparent 68%), var(--dock-surface);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset;
+}
+.agent-dock:has(.agent-dock-action)::before {
+  /* Centre de l'encoche à 9px sous le bord supérieur. */
+  -webkit-mask-image: radial-gradient(circle at 50% 9px, transparent var(--dock-notch), #000 calc(var(--dock-notch) + 1px));
+  mask-image: radial-gradient(circle at 50% 9px, transparent var(--dock-notch), #000 calc(var(--dock-notch) + 1px));
+}
+.dock-tab-group {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+}
+.dock-action-slot { display: none; }
+.agent-dock:has(.agent-dock-action) .dock-action-slot {
+  display: block;
+  position: relative;
+  align-self: stretch;
+  width: 84px;
+  flex: 0 0 84px;
+}
+.app-tab.dock-tab {
+  min-width: 0;
+  min-height: 52px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 6px;
+  padding: 5px 1px;
+  color: var(--dock-ink);
+  border-radius: 14px;
+  background: transparent !important;
+  transition: color 150ms ease, transform 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.app-tab.dock-tab::after { display: none; }
+.app-tab.dock-tab[data-active='true'] { color: var(--theme-accent) !important; }
+.dock-tab-icon { position: relative; display: inline-flex; }
+.dock-tab[data-active='true'] .dock-tab-icon { filter: drop-shadow(0 2px 5px rgba(var(--theme-accent-rgb), 0.18)); }
+.dock-tab-label { font-size: 9px; font-weight: 700; line-height: 1.1; text-align: center; letter-spacing: 0.01em; }
+.dock-tab:active { transform: scale(0.95); }
+.dock-chat-badge {
+  position: absolute;
+  top: -5px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 20px;
+  padding: 1px 4px;
+  color: white;
+  background: var(--theme-accent);
+  font-size: 9px;
+  font-weight: 800;
+  text-align: center;
+}
+.agent-dock-action {
+  position: absolute;
+  left: 50%;
+  top: -31px;
+  transform: translateX(-50%);
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff !important;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--theme-accent) 76%, #ffb2bf), var(--theme-accent) 72%);
+  box-shadow: 0 2px 3px rgba(255,255,255,0.16) inset, 0 8px 20px rgba(var(--theme-accent-rgb),0.22);
+  transition: transform 160ms cubic-bezier(0.23,1,0.32,1), opacity 160ms ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.agent-dock-action:active:not(:disabled) { transform: translateX(-50%) scale(0.94); }
+.agent-dock-action:disabled { opacity: 0.45; cursor: not-allowed; }
+.agent-dock-action:focus-visible, .dock-tab:focus-visible { outline: 2px solid var(--theme-accent); outline-offset: 4px; }
+
+/* Les écrans agent gardent leurs données et leurs nouveaux podiums. */
+.agent-home-surface > .glass-card,
+.agent-home-surface > section:not(.space-y-3),
+.agent-home-surface > div.glass-card {
+  border-radius: 24px !important;
+  border-color: rgba(255,255,255,0.10) !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.13), 0 1px 0 rgba(255,255,255,0.05) inset !important;
+}
+.agent-home-surface .agent-closure-action {
+  min-height: 56px;
+  padding: 16px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.055);
+  color: var(--theme-text-100, #f1f3f8);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
+  font-size: 13px;
+  font-weight: 700;
+  transition: transform 160ms ease, background 160ms ease;
+}
+.agent-closure-action svg { color: var(--theme-accent); }
+.agent-closure-action:active:not(:disabled) { transform: scale(0.985); }
+body.theme-diamond .app-bottom-nav.agent-dock { --dock-surface: rgba(244,244,248,0.98); --dock-ink: #687080; }
+body.theme-diamond .agent-dock::before { border-color: rgba(90,100,120,0.15); }
+body.theme-diamond .agent-home-surface .agent-closure-action { background: rgba(255,255,255,0.65); border-color: rgba(90,100,120,0.16); color: #28303a; }
+@media (max-width: 359px) {
+  .agent-dock:has(.agent-dock-action) .dock-action-slot { width: 76px; flex-basis: 76px; }
+  .dock-tab-label { font-size: 8px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .agent-dock-action, .app-tab.dock-tab, .agent-closure-action { transition: none; }
+}

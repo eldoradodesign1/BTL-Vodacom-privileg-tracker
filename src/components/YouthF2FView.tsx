@@ -1,3 +1,4 @@
+import { AgentDockAction } from './AgentDockAction';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Camera, CheckCircle2, CircleAlert, FileCheck2, GraduationCap, MapPin, Medal, PauseCircle, PlusCircle, RefreshCw, Search, Trophy, UsersRound, X } from 'lucide-react';
 import type { Campaign, User, YouthContactReport, YouthDailyAttendance, YouthRegion, YouthSubscriberType } from '../types';
@@ -269,7 +270,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
   if (loading) return <div className="glass-card p-6 text-center text-[11px] font-black uppercase tracking-[0.16em] text-gray-300">Chargement de Youth F2F…</div>;
 
   return (
-    <section className="animate-fade-in space-y-4 pb-4">
+    <section className={`animate-fade-in space-y-4 pb-4 ${activeTab === 'home' ? 'agent-home-surface' : ''}`}>
       <div className="glass-card relative overflow-hidden border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(8,47,73,0.66),rgba(18,24,39,0.74),rgba(30,41,59,0.62))] p-5 sm:p-6">
         <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-cyan-300/10 blur-3xl" />
         <div className="relative flex items-start justify-between gap-4">
@@ -285,7 +286,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
           <div className="flex shrink-0 flex-col items-end gap-2">
             <button type="button" onClick={() => void refresh(false)} className="rounded-xl border border-white/10 bg-white/[0.06] p-2 text-cyan-100 transition hover:bg-white/10" title="Actualiser Youth F2F" aria-label="Actualiser Youth F2F"><RefreshCw size={16} /></button>
             {activeTab === 'home' && !isOperator && !campaignPaused && isCheckedIn && (
-              <button type="button" onClick={() => (photoUrl || localPhotoUrl) && setPreviewUrl(photoUrl || localPhotoUrl)} disabled={!(photoUrl || localPhotoUrl)} style={{ transform: 'rotate(-3deg)' }} className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-cyan-200/25 bg-slate-950/70 text-cyan-100 shadow-xl disabled:cursor-default">
+              <button type="button" onClick={() => (photoUrl || localPhotoUrl) && setPreviewUrl(photoUrl || localPhotoUrl)} disabled={!(photoUrl || localPhotoUrl)} className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-cyan-200/25 bg-slate-950/70 text-cyan-100 shadow-lg disabled:cursor-default">
                 {(photoUrl || localPhotoUrl) ? <img src={photoUrl || localPhotoUrl} alt="Pointage" className="h-full w-full object-cover" /> : <Camera size={24} />}
               </button>
             )}
@@ -338,7 +339,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
           </label>
         ) : (
           <div className="space-y-3">
-            <button type="button" onClick={() => setIsClosingOpen(true)} disabled={isClosed} className="btn-neon flex w-full items-center justify-center gap-3 rounded-3xl px-5 py-5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="button" onClick={() => setIsClosingOpen(true)} disabled={isClosed} className="agent-closure-action flex w-full items-center justify-center gap-3 rounded-3xl px-5 py-5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50">
               <FileCheck2 size={21}/>{isClosed ? 'Journée clôturée' : 'Clôturer'}
             </button>
             {isClosed && <p className="text-center text-[11px] font-bold text-emerald-200">Rapport et GPS archivés</p>}
@@ -346,9 +347,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
         )
       )}
       {isCheckedIn && !isClosed && !campaignPaused && activeTab === 'home' && (
-        <button type="button" aria-label="Nouveau contact" title="Nouveau contact" onClick={() => { setError(''); setIsContactOpen(true); }} style={{position:'fixed',left:'50%',bottom:'5.5rem',transform:'translateX(-50%)',zIndex:45,width:72,height:72,borderRadius:'50%',background:'linear-gradient(140deg,#172334,#0b101b)',border:'2px solid rgba(125,211,252,.6)',boxShadow:'0 12px 35px rgba(0,0,0,.55)'}} className="flex items-center justify-center text-cyan-100 transition active:scale-95">
-          <PlusCircle size={39} strokeWidth={1.8}/>
-        </button>
+        <AgentDockAction label="Nouveau contact" onClick={() => { setError(''); setIsContactOpen(true); }} />
       )}
 
       {isOperator && <section className="glass-card p-4 sm:p-5"><div className="mb-4 flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-violet-200/15 bg-violet-300/10 text-violet-200"><UsersRound size={19}/></span><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-violet-100">Suivi Youth F2F</p><h2 className="mt-1 text-sm font-black text-white">Agents affectés à la campagne</h2></div></div>{team.length === 0 ? <p className="rounded-2xl border border-amber-300/20 bg-amber-400/[0.06] p-3 text-xs font-semibold text-amber-100">Aucun agent Youth F2F n’est encore rattaché à ce périmètre.</p> : <div className="space-y-2">{team.map((agent) => <div key={agent.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/10 p-3"><span><b className="block text-xs text-white">{agent.name}</b><span className="text-[10px] text-gray-500">{agent.phone}</span></span><span className="rounded-full bg-cyan-400/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100">BA Youth</span></div>)}</div>}</section>}
@@ -361,7 +360,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
           <textarea value={closingComment} onChange={(event) => setClosingComment(event.target.value)} rows={5} placeholder="Ex. Sensibilisation menée auprès du public ; retours et incidents éventuels…" className="app-input w-full resize-none rounded-2xl px-3 py-3 text-sm" />
           <button type="button" onClick={handleClose} className="w-full rounded-2xl border border-amber-300/35 bg-amber-400/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-amber-100 transition hover:bg-amber-400/20">Clôturer ma journée</button>
         </div>
-      </ModalShell>
+      </ModalShell>}
       {isContactOpen && <ModalShell title="Nouveau contact Youth" onClose={() => !contactSaving && setIsContactOpen(false)}>
         <form onSubmit={saveContact} className="space-y-5">
           <input aria-label="Nom de l’abonné" value={contactName} onChange={(event) => setContactName(event.target.value)} className="app-input w-full rounded-2xl px-4 py-3 text-sm" placeholder="Nom de l’abonné" />
@@ -387,7 +386,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
           </div>
           <button type="submit" disabled={contactSaving} className="btn-neon w-full rounded-2xl px-4 py-4 text-sm font-black disabled:opacity-50">{contactSaving ? 'Enregistrement…' : 'Enregistrer le contact'}</button>
         </form>
-      </ModalShell>
+      </ModalShell>}
     </section>
   );
 };

@@ -1,3 +1,4 @@
+import { AgentDockAction } from './AgentDockAction';
 import React, { useState, useEffect } from 'react';
 import { User, Shop, Lead, Checkin, DailyReport } from '../types';
 import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSyncPendingCount, isMatchAgent, toISO, getUsers, resolveStoredPhotoUrl } from '../utils/storage';
@@ -439,7 +440,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
 
   // RENDER TAB 1: HOME DASHBOARD
   return (
-    <div className="space-y-6 animate-pop pb-32">
+    <div className="agent-home-surface space-y-5 animate-pop pb-8">
       {/* Welcome Banner */}
       <div className="flex justify-between items-start">
         <div>
@@ -574,8 +575,8 @@ export const AgentView: React.FC<AgentViewProps> = ({
       </div>
 
       )}
-      {(checkinDone || checkinDoneLocal) && <button type="button" onClick={onOpenReportModal} disabled={reportDone || campaignPaused} className="btn-neon btn-red flex w-full items-center justify-center gap-3 rounded-3xl px-5 py-5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50"><FileText size={21}/>{reportDone ? 'Journée clôturée' : 'Clôturer'}</button>}
-      {(checkinDone || checkinDoneLocal) && !reportDone && !campaignPaused && <button type="button" aria-label="Nouveau client" title="Nouveau client" onClick={onOpenLeadModal} style={{position:'fixed',left:'50%',bottom:'5.5rem',transform:'translateX(-50%)',zIndex:45,width:72,height:72,borderRadius:'50%',background:'linear-gradient(140deg,#281015,#120d12)',border:'2px solid rgba(251,113,133,.65)',boxShadow:'0 12px 35px rgba(0,0,0,.55)'}} className="flex items-center justify-center text-red-100 transition active:scale-95"><UserPlus size={39} strokeWidth={1.8}/></button>}
+      {(checkinDone || checkinDoneLocal) && <button type="button" onClick={onOpenReportModal} disabled={reportDone || campaignPaused} className="agent-closure-action flex w-full items-center justify-center gap-3 rounded-3xl px-5 py-5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50"><FileText size={21}/>{reportDone ? 'Journée clôturée' : 'Clôturer'}</button>}
+      {(checkinDone || checkinDoneLocal) && !reportDone && !campaignPaused && <AgentDockAction label="Nouveau client" onClick={onOpenLeadModal} />}
 
       <div className="glass-card p-4 border border-white/10">
         <div className="flex items-center justify-between">

@@ -1,3 +1,4 @@
+import { AgentDockAction } from './AgentDockAction';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, CheckCircle2, CircleAlert, ChevronDown, FileText, MapPin, PlusCircle, RefreshCw, Search, Star, Trophy, UsersRound, X, Zap } from 'lucide-react';
 import type { User } from '../types';
@@ -271,7 +272,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
   if (loading) return <div className="glass-card p-6 text-center text-xs font-black uppercase tracking-widest text-gray-400">Chargement de votre journée M-Pesa Mikili…</div>;
 
   return (
-    <div className="space-y-4 pb-6">
+    <div className={`space-y-4 pb-6 ${activeTab === 'home' ? 'agent-home-surface' : ''}`}>
       {error && <div className="glass-card border border-red-400/30 bg-red-500/[0.08] p-3 text-xs font-bold text-red-100"><CircleAlert size={16} className="mr-2 inline" />{error}</div>}
       {notice && <div className="glass-card border border-emerald-300/25 bg-emerald-500/[0.07] p-3 text-xs font-bold text-emerald-100"><CheckCircle2 size={16} className="mr-2 inline" />{notice}</div>}
 
@@ -319,7 +320,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
 
         {!isCheckedIn && !isClosed && <section className="glass-card border border-red-300/25 bg-red-500/[0.08] p-4"><div className="flex items-center gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-red-300/25 bg-red-500/15 text-red-100"><Camera size={20}/></span><div><p className="text-[9px] font-black uppercase tracking-[0.18em] text-red-200">Début de journée</p><h2 className="mt-1 text-sm font-black text-white">Pointage du matin</h2><p className="mt-1 text-[10px] leading-relaxed text-gray-400">Prenez une photo sur votre lieu d’activité. La photo, l’heure et la position seront enregistrées.</p></div></div><button type="button" onClick={() => checkinInputRef.current?.click()} disabled={checkinPending} className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-red-300/35 bg-red-500/15 px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-red-100 transition hover:bg-red-500/25 disabled:opacity-45"><Camera size={16}/>{checkinPending ? 'Synchronisation…' : 'Prendre ma photo de pointage'}</button><input ref={checkinInputRef} type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleCheckin(file); event.currentTarget.value = ''; }}/></section>}
 
-        {isCheckedIn && <button type="button" onClick={() => { setError(''); setIsReportOpen(true); }} disabled={isClosed} className="btn-neon flex w-full items-center justify-center gap-3 rounded-[1.8rem] px-5 py-5 text-base font-black disabled:opacity-40"><FileText size={22}/>{isClosed ? 'Journée clôturée' : 'Clôturer'}</button>}
+        {isCheckedIn && <button type="button" onClick={() => { setError(''); setIsReportOpen(true); }} disabled={isClosed} className="agent-closure-action flex w-full items-center justify-center gap-3 rounded-[1.8rem] px-5 py-5 text-base font-black disabled:opacity-40"><FileText size={22}/>{isClosed ? 'Journée clôturée' : 'Clôturer'}</button>}
 
         {!isCheckedIn && <section className="grid grid-cols-2 gap-3">
           <button type="button" onClick={() => { setError(''); setIsClientOpen(true); }} disabled={!isCheckedIn || isClosed} className="group relative min-h-24 overflow-hidden rounded-[1.8rem] border border-red-300/25 bg-red-500/[0.16] p-4 text-left transition hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-35">
@@ -369,7 +370,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
         {history.length === 0 ? <div className="glass-card p-8 text-center"><FileText size={28} className="mx-auto text-gray-600" /><p className="mt-3 text-xs font-bold text-gray-500">Aucune trace pour le moment.</p></div> : history.map((item) => <article key={item.id} className="rounded-[1.7rem] border border-white/8 bg-white/[0.035] p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="text-sm font-black text-white">{item.client_name}</h3><p className="mt-1 text-[9px] font-semibold text-gray-500">{item.activity_date} · {item.location?.name || 'Lieu non renseigné'}</p></div><span className="rounded-full bg-white/5 px-2 py-1 text-[8px] font-black uppercase text-gray-400">{item.transaction_done ? 'Transaction' : 'Sensibilisation'}</span></div><p className="mt-3 text-[10px] text-gray-500">{item.client_phone} · {mikiliDisplayService(item.presented_service)}</p><MikiliFeedback comment={item.client_comment} rating={item.satisfaction_rating} /></article>)}
       </section>}
 
-      {activeTab === 'home' && isCheckedIn && !isClosed && <button type="button" aria-label="Nouveau client" title="Nouveau client" onClick={() => { setError(''); setIsClientOpen(true); }} style={{position:'fixed',left:'50%',bottom:'5.5rem',transform:'translateX(-50%)',zIndex:45,width:72,height:72,borderRadius:'50%',background:'linear-gradient(140deg,#27151e,#130e15)',border:'2px solid rgba(251,113,133,.65)',boxShadow:'0 12px 35px rgba(0,0,0,.55)'}} className="flex items-center justify-center text-red-100 transition active:scale-95"><PlusCircle size={39} strokeWidth={1.8}/></button>}
+      {activeTab === 'home' && isCheckedIn && !isClosed && <AgentDockAction label="Nouveau client" onClick={() => { setError(''); setIsClientOpen(true); }} />}
 
       {isClientOpen && <ModalShell title="Nouveau contact" onClose={() => !saving && setIsClientOpen(false)}><form onSubmit={saveClient} className="space-y-5">
         <div className="rounded-[1.7rem] border border-red-300/15 bg-red-500/[0.06] p-4"><p className="text-[9px] font-black uppercase tracking-[0.18em] text-red-200">Nouvelle interaction</p><p className="mt-1 text-xs font-semibold text-gray-400">Quelques gestes, et c’est enregistré.</p></div>
