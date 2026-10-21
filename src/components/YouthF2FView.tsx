@@ -282,9 +282,32 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
 
   return (
     <section className={`animate-fade-in space-y-4 pb-4 ${activeTab === 'home' ? 'agent-home-surface' : ''} ${isYouthPreCheckin ? 'youth-before-checkin' : ''}`}>
-      <style>{'body:has(.youth-before-checkin) nav.app-bottom-nav.agent-dock,body:has(.youth-before-checkin) .agent-dock-action{display:none!important}'}</style>
-      <div className="glass-card relative overflow-hidden border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(8,47,73,0.66),rgba(18,24,39,0.74),rgba(30,41,59,0.62))] p-5 sm:p-6">
-        <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-cyan-300/10 blur-3xl" />
+      <style>{`body:has(.youth-before-checkin) nav.app-bottom-nav.agent-dock,
+body:has(.youth-before-checkin) .agent-dock-action { display: none !important; }
+@keyframes youthStartGentlePulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.045); filter: brightness(1.13); }
+}
+@keyframes youthAvatarGentleBounce {
+  0%, 100% { transform: translateY(0); }
+  38% { transform: translateY(-6px); }
+  62% { transform: translateY(-2px); }
+}
+.youth-before-checkin .youth-start-pulse {
+  animation: youthStartGentlePulse 3s ease-in-out infinite;
+  transform-origin: center;
+}
+.youth-before-checkin .youth-avatar-bounce {
+  animation: youthAvatarGentleBounce 3s ease-in-out infinite;
+}
+.youth-before-checkin .youth-podium-grid > div:nth-child(2) .youth-avatar-bounce { animation-delay: .3s; }
+.youth-before-checkin .youth-podium-grid > div:nth-child(3) .youth-avatar-bounce { animation-delay: .6s; }
+@media (prefers-reduced-motion: reduce) {
+  .youth-before-checkin .youth-start-pulse,
+  .youth-before-checkin .youth-avatar-bounce { animation: none; }
+}`}</style>
+      <div className={isYouthPreCheckin ? "relative overflow-visible border-0 bg-transparent p-5 sm:p-6" : "glass-card relative overflow-hidden border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(8,47,73,0.66),rgba(18,24,39,0.74),rgba(30,41,59,0.62))] p-5 sm:p-6"}>
+        {!isYouthPreCheckin && <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-cyan-300/10 blur-3xl" />}
         <div className="relative flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-4">
             {!isYouthPreCheckin && <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-200/20 bg-cyan-300/10 text-cyan-100"><GraduationCap size={23} /></span>}
@@ -308,11 +331,11 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
         {activeTab === 'home' && !isOperator && !campaignPaused && (
           <div className={isYouthPreCheckin ? "relative mt-1 pt-1" : "relative mt-5 border-t border-white/10 pt-4"}>
             {podiumLoading ? <p className="py-5 text-center text-xs text-gray-400">Mise à jour du podium…</p> : (
-              <div className={isYouthPreCheckin ? "mt-2 grid grid-cols-3 items-end gap-2" : "mt-4 grid grid-cols-3 items-end gap-2"}>
+              <div className={isYouthPreCheckin ? "youth-podium-grid mt-2 grid grid-cols-3 items-end gap-2" : "mt-4 grid grid-cols-3 items-end gap-2"}>
                 {([2, 0, 1] as const).map((rankIndex) => {
                   const entry = rankedPodium[rankIndex];
                   return <div key={rankIndex} className="min-w-0 text-center">
-                    <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white">{entry ? entry.name.trim().split(/\s+/).slice(0, 2).map((name) => name[0] || '').join('').toUpperCase() : <UsersRound size={18} />}</div>
+                    <div className="youth-avatar-bounce mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white">{entry ? entry.name.trim().split(/\s+/).slice(0, 2).map((name) => name[0] || '').join('').toUpperCase() : <UsersRound size={18} />}</div>
                     <p className="mt-2 truncate text-[10px] font-black text-white" title={entry?.name || 'Place libre'}>{entry?.name || 'Place libre'}</p>
                     <p className="mt-0.5 text-[9px] text-slate-300">{entry?.contacts || 0} contacts</p>
                     <div className={rankIndex === 0 ? 'mt-2 flex h-20 items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-400/20 text-xl font-black text-amber-200' : rankIndex === 1 ? 'mt-2 flex h-14 items-center justify-center rounded-2xl border border-slate-300/20 bg-slate-300/15 text-lg font-black text-slate-200' : 'mt-2 flex h-10 items-center justify-center rounded-2xl border border-orange-300/20 bg-orange-400/15 text-lg font-black text-orange-200'}>{rankIndex + 1}</div>
@@ -345,7 +368,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
       {activeTab === 'home' && !isOperator && !campaignPaused && (
         !isCheckedIn ? (
           <div className="flex items-center justify-center py-6" style={{ minHeight: 'min(43vh, 380px)' }}>
-            <label className="flex cursor-pointer flex-col items-center justify-center gap-3 text-center text-white transition active:scale-95" style={{ width: 'min(65vw, 250px)', aspectRatio: '1', borderRadius: '50%', background: 'radial-gradient(circle at 35% 25%, rgba(105,28,51,.95), rgba(35,10,27,.98) 55%, #0e101b 100%)', border: '3px solid var(--theme-accent)', boxShadow: '0 0 0 9px rgba(251,113,133,.09), 0 20px 55px rgba(0,0,0,.65), inset 0 2px 18px rgba(255,255,255,.12)' }} title="Démarrer la journée" aria-label="Démarrer la journée">
+            <label className="youth-start-pulse flex cursor-pointer flex-col items-center justify-center gap-3 text-center text-white transition active:scale-95" style={{ width: 'min(65vw, 250px)', aspectRatio: '1', borderRadius: '50%', background: 'radial-gradient(circle at 35% 25%, rgba(105,28,51,.95), rgba(35,10,27,.98) 55%, #0e101b 100%)', border: '3px solid var(--theme-accent)', boxShadow: '0 0 0 9px rgba(251,113,133,.09), 0 20px 55px rgba(0,0,0,.65), inset 0 2px 18px rgba(255,255,255,.12)' }} title="Démarrer la journée" aria-label="Démarrer la journée">
               <svg viewBox="0 0 24 24" width="100" height="100" fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ filter: 'drop-shadow(0 0 14px rgba(251,113,133,.55))' }}>
                 <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
                 <path d="M12 2v10" />
