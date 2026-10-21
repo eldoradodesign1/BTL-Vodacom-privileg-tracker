@@ -172,7 +172,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
   useEffect(() => { if (activeTab === 'tab2') void loadClientHistory(); }, [activeTab, loadClientHistory]);
 
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinPending;
-  const isYouthPreCheckin = activeTab === 'home' && !isOperator && !isCheckedIn && !campaignPaused;
+  const isYouthPreCheckin = activeTab === 'home' && !isOperator && !isCheckedIn;
   const isClosed = Boolean(attendance?.checkout_at);
   useEffect(() => {
     if (!openContactRequested || loading) return;
@@ -328,7 +328,7 @@ body:has(.youth-before-checkin) .agent-dock-action { display: none !important; }
           </div>}
         </div>
 
-        {activeTab === 'home' && !isOperator && !campaignPaused && (
+        {activeTab === 'home' && !isOperator && (!campaignPaused || isYouthPreCheckin) && (
           <div className={isYouthPreCheckin ? "relative mt-1 pt-1" : "relative mt-5 border-t border-white/10 pt-4"}>
             {podiumLoading ? <p className="py-5 text-center text-xs text-gray-400">Mise à jour du podium…</p> : (
               <div className={isYouthPreCheckin ? "youth-podium-grid mt-2 grid grid-cols-3 items-end gap-2" : "mt-4 grid grid-cols-3 items-end gap-2"}>
@@ -348,7 +348,7 @@ body:has(.youth-before-checkin) .agent-dock-action { display: none !important; }
         )}
       </div>
 
-      {campaignPaused && activeTab === 'home' && !isOperator && <section className="glass-card border border-amber-300/30 bg-amber-400/[0.07] p-5 text-center"><PauseCircle className="mx-auto text-amber-200" size={25}/><h2 className="mt-2 text-sm font-black text-white">Campagne Youth F2F en pause</h2><p className="mt-2 text-[11px] leading-relaxed text-gray-300">Les nouvelles saisies terrain sont temporairement suspendues. Vos clients et archives restent consultables.</p>{pauseReason && <p className="mt-2 text-xs font-bold text-amber-100">{pauseReason}</p>}</section>}
+      {campaignPaused && activeTab === 'home' && !isOperator && !isYouthPreCheckin && <section className="glass-card border border-amber-300/30 bg-amber-400/[0.07] p-5 text-center"><PauseCircle className="mx-auto text-amber-200" size={25}/><h2 className="mt-2 text-sm font-black text-white">Campagne Youth F2F en pause</h2><p className="mt-2 text-[11px] leading-relaxed text-gray-300">Les nouvelles saisies terrain sont temporairement suspendues. Vos clients et archives restent consultables.</p>{pauseReason && <p className="mt-2 text-xs font-bold text-amber-100">{pauseReason}</p>}</section>}
       {error && <div className="flex gap-2 rounded-2xl border border-red-400/40 bg-red-950/35 p-3 text-xs font-semibold text-red-200"><CircleAlert className="mt-0.5 shrink-0" size={16}/><span>{error}</span></div>}
       {notice && <div className="flex gap-2 rounded-2xl border border-emerald-400/35 bg-emerald-950/30 p-3 text-xs font-semibold text-emerald-100"><CheckCircle2 className="mt-0.5 shrink-0" size={16}/><span>{notice}</span></div>}
 
@@ -365,16 +365,16 @@ body:has(.youth-before-checkin) .agent-dock-action { display: none !important; }
       </section>}
 
 
-      {activeTab === 'home' && !isOperator && !campaignPaused && (
+      {activeTab === 'home' && !isOperator && (!campaignPaused || isYouthPreCheckin) && (
         !isCheckedIn ? (
           <div className="flex items-center justify-center py-6" style={{ minHeight: 'min(43vh, 380px)' }}>
-            <label className="youth-start-pulse flex cursor-pointer flex-col items-center justify-center gap-3 text-center text-white transition active:scale-95" style={{ width: 'min(65vw, 250px)', aspectRatio: '1', borderRadius: '50%', background: 'radial-gradient(circle at 35% 25%, rgba(105,28,51,.95), rgba(35,10,27,.98) 55%, #0e101b 100%)', border: '3px solid var(--theme-accent)', boxShadow: '0 0 0 9px rgba(251,113,133,.09), 0 20px 55px rgba(0,0,0,.65), inset 0 2px 18px rgba(255,255,255,.12)' }} title="Démarrer la journée" aria-label="Démarrer la journée">
+            <label className={`youth-start-pulse flex flex-col items-center justify-center gap-3 text-center text-white transition ${campaignPaused ? 'cursor-not-allowed' : 'cursor-pointer active:scale-95'}`} style={{ width: 'min(65vw, 250px)', aspectRatio: '1', borderRadius: '50%', background: 'radial-gradient(circle at 35% 25%, rgba(105,28,51,.95), rgba(35,10,27,.98) 55%, #0e101b 100%)', border: '3px solid var(--theme-accent)', boxShadow: '0 0 0 9px rgba(251,113,133,.09), 0 20px 55px rgba(0,0,0,.65), inset 0 2px 18px rgba(255,255,255,.12)' }} title="Démarrer la journée" aria-label="Démarrer la journée">
               <svg viewBox="0 0 24 24" width="100" height="100" fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ filter: 'drop-shadow(0 0 14px rgba(251,113,133,.55))' }}>
                 <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
                 <path d="M12 2v10" />
               </svg>
               <span className="text-xs font-black uppercase tracking-widest">Démarrer la journée</span>
-              <input type="file" accept="image/*" capture="user" className="hidden" disabled={checkinPending} onChange={(event) => { const file = event.target.files?.[0]; if (file) handleCheckin(file); event.currentTarget.value = ''; }} />
+              <input type="file" accept="image/*" capture="user" className="hidden" disabled={checkinPending || campaignPaused} onChange={(event) => { const file = event.target.files?.[0]; if (file) handleCheckin(file); event.currentTarget.value = ''; }} />
             </label>
           </div>
         ) : (
