@@ -18,15 +18,26 @@ export const LONG_SERVICE_AWARD_DATE = '2026-10-19';
 export const LONG_SERVICE_AWARD_ARRIVAL_DEADLINE = '12:00';
 export const LONG_SERVICE_AWARD_DEPARTURE_TIME = '17:00';
 
+export const KADEA_IA_CODE = 'formation-kadea-ia';
+export const KADEA_IA_DATES = ['2026-10-20', '2026-10-23'] as const;
+
 export interface EventConfig {
   code: string;
   date: string;
   arrivalDeadline: string;
   departureTime: string;
+  dates?: string[];
 }
 
-export function getEventConfig(campaignOrCode?: Campaign | string | null): EventConfig {
+export function getEventConfig(campaignOrCode?: Campaign | string | null, today = supplierForumDate()): EventConfig {
   const code = typeof campaignOrCode === 'string' ? campaignOrCode : campaignOrCode?.code;
+  if (code === KADEA_IA_CODE) {
+    const campaign = typeof campaignOrCode === 'string' ? null : campaignOrCode;
+    // Deux jours distincts (pas tous les jours compris entre les deux dates).
+    const dates = [...new Set([campaign?.starts_on || KADEA_IA_DATES[0], campaign?.ends_on || KADEA_IA_DATES[1]])].sort();
+    const date = dates.includes(today) ? today : (dates.find((day) => day >= today) || dates[dates.length - 1]);
+    return { code, date, dates, arrivalDeadline: '09:00', departureTime: '17:00' };
+  }
   if (code === FOUNDATION_FORAGE_CODE) {
     return {
       code: FOUNDATION_FORAGE_CODE,
