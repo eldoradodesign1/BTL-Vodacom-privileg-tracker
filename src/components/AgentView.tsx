@@ -67,16 +67,19 @@ export const AgentView: React.FC<AgentViewProps> = ({
   const allUsers = getUsers();
   const sameTeamAgents = allUsers.filter(u => u.role === 'agent' && u.supervisorId === currentUser.supervisorId);
   const allAgents = allUsers.filter(u => u.role === 'agent');
+  // getLeads() trie les contacts : on ne le rappelle pas à chaque agent.
+  const rankingLeads = getLeads();
+  const todayRankingLeads = rankingLeads.filter(lead => toISO(lead.timestamp) === todayStr);
   const activityRanking = sameTeamAgents
     .map(agent => {
-      const total = getLeads().filter(l => (l.agent_id === agent.id || l.agent_id === agent.name || isMatchAgent(l.agent_id, agent)) && toISO(l.timestamp) === todayStr).length;
+      const total = todayRankingLeads.filter(l => l.agent_id === agent.id || l.agent_id === agent.name || isMatchAgent(l.agent_id, agent)).length;
       return { ...agent, total };
     })
     .filter(agent => agent.total > 0)
     .sort((a, b) => b.total - a.total);
   const globalActivityRanking = allAgents
     .map(agent => {
-      const total = getLeads().filter(l => (l.agent_id === agent.id || l.agent_id === agent.name || isMatchAgent(l.agent_id, agent)) && toISO(l.timestamp) === todayStr).length;
+      const total = todayRankingLeads.filter(l => l.agent_id === agent.id || l.agent_id === agent.name || isMatchAgent(l.agent_id, agent)).length;
       return { ...agent, total };
     })
     .filter(agent => agent.total > 0)
@@ -95,7 +98,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
     }));
 
   // All history leads registered by this agent
-  const allAgentLeads = getLeads().filter(l => 
+  const allAgentLeads = rankingLeads.filter(l => 
     l.agent_id === currentUser.id || 
     l.agent_id === currentUser.name || 
     isMatchAgent(l.agent_id, currentUser)
