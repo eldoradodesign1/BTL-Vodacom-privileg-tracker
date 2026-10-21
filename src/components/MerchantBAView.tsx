@@ -1,4 +1,3 @@
-import { AgentDockAction } from './AgentDockAction';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Banknote, Camera, CheckCircle2, FileCheck2, MapPin, Medal, PlusCircle, Trophy, UsersRound } from 'lucide-react';
 import type { BADailyAttendance, BAPosVisit, BATransaction, CampaignRun, PointOfSale, User } from '../types';
@@ -323,8 +322,6 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
         <button type="button" onClick={openReportFlow} disabled={isClosed} className="agent-closure-action flex w-full items-center justify-center gap-3 rounded-3xl px-5 py-5 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50"><FileCheck2 size={21}/>{isClosed ? 'Journée clôturée' : 'Clôturer'}</button>
         <button type="button" onClick={() => setIsFundRequestOpen(true)} disabled={!hasMfs || isClosed} className={`glass-card group flex min-h-24 items-center justify-center gap-3 p-4 text-left transition-all ${!hasMfs || isClosed ? 'cursor-not-allowed opacity-60' : 'hover:border-emerald-300/45 active:scale-[0.98]'}`}><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-200 transition-transform group-hover:scale-110"><Banknote size={22}/></div><span><b className="block text-xs font-black uppercase text-white">Demande de fonds</b><span className="mt-1 block text-[9px] font-semibold text-gray-400">POS, MFS et BA préremplis</span></span></button>
       </section>}
-      {isCheckedIn && !isClosed && !campaignPaused && <AgentDockAction label="Nouvelle transaction" onClick={openTransactionFlow} disabled={!hasMfs} title={hasMfs ? 'Nouvelle transaction' : 'Confirme le MFS pour enregistrer une transaction'} />}
-
       {isClosed && <section className="glass-card border border-emerald-500/25 p-4 text-center"><CheckCircle2 className="mx-auto text-emerald-400"/><b className="mt-2 block">Journée clôturée</b><p className="mt-1 text-xs text-gray-400">{transactions.length} transactions enregistrées pour {visitedCount} POS visités. Retrouvez le rapport dans vos archives.</p></section>}
       <MerchantFundRequestModal isOpen={isFundRequestOpen} currentUser={currentUser} run={run} positions={positions} visits={posVisits} mfsName={mfsName} onClose={() => setIsFundRequestOpen(false)} onSubmitted={() => setSuccess('Demande de fonds envoyée à votre superviseur.')} />
       <MerchantClosingReportModal isOpen={isClosingReportOpen} isSaving={saving} posCount={visitedCount} transactionCount={transactions.length} posTarget={posTarget} transactionsPerPosTarget={transactionsPerPosTarget} inactivePosCount={inactivePosCount} onClose={() => setIsClosingReportOpen(false)} onSubmit={closeDay} />

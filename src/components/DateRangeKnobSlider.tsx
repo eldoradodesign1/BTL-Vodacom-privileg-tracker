@@ -406,7 +406,7 @@ export const DateRangeKnobSlider: React.FC<DateRangeKnobSliderProps> = ({
     : 'transition-[left,transform] duration-200 ease-out';
 
   return (
-    <div ref={rootRef} className="relative rounded-2xl border border-white/10 bg-black/50 p-3 select-none">
+    <div ref={rootRef} data-swipe-ignore className="relative rounded-2xl border border-white/10 bg-black/50 p-3 select-none">
       {/* Top action row: Start date button, Today quick-pick, End date button */}
       <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 text-[10px] font-black uppercase">
         <button

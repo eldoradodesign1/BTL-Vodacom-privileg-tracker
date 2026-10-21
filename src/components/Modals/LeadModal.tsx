@@ -10,6 +10,7 @@ interface LeadModalProps {
   activeShopId: string;
   onClose: () => void;
   onSuccess: () => void;
+  campaignPaused?: boolean;
 }
 
 export const LeadModal: React.FC<LeadModalProps> = ({
@@ -17,14 +18,16 @@ export const LeadModal: React.FC<LeadModalProps> = ({
   currentUser,
   activeShopId,
   onClose,
-  onSuccess
+  onSuccess,
+  campaignPaused = false
 }) => {
   const [clientName, setClientName] = useState('');
   const [msisdn, setMsisdn] = useState('');
   const [actionType, setActionType] = useState<'Opt-in Privilège' | 'Opt-in Roaming' | 'Activation Bundle'>('Opt-in Privilège');
   const [phoneError, setPhoneError] = useState('');
   const [submitError, setSubmitError] = useState('');
-  const { reportDone } = checkDailyStatus(currentUser.id, toISO(new Date()));
+  const { checkinDone, reportDone } = checkDailyStatus(currentUser.id, toISO(new Date()));
+  const entryAllowed = checkinDone && !reportDone && !campaignPaused;
 
   if (!isOpen) return null;
 
@@ -42,6 +45,8 @@ export const LeadModal: React.FC<LeadModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (campaignPaused) { setSubmitError('La campagne est actuellement en pause.'); return; }
+    if (!checkinDone) { setSubmitError('Validez d’abord votre pointage d’arrivée avant d’enregistrer un client.'); return; }
     if (reportDone) {
       setSubmitError('Session clôturée: le rapport du jour est déjà envoyé, nouvelle saisie client bloquée.');
       return;
@@ -96,9 +101,9 @@ export const LeadModal: React.FC<LeadModalProps> = ({
           <p className="text-xs text-gray-400 font-semibold mt-1">Enregistrement d'activation en direct</p>
         </div>
 
-        {reportDone && (
+        {!entryAllowed && (
           <div className="mb-4 p-3 rounded-2xl border border-amber-500/40 bg-amber-950/35 text-amber-200 text-[11px] font-black uppercase">
-            Session déjà clôturée aujourd'hui. Nouvelle saisie client désactivée.
+            {campaignPaused ? 'Campagne en pause. Nouvelle saisie client désactivée.' : reportDone ? "Session déjà clôturée aujourd'hui. Nouvelle saisie client désactivée." : "Validez d’abord votre pointage d’arrivée."}
           </div>
         )}
 
@@ -114,7 +119,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
               }}
               placeholder="Ex: Jean-Marc Bukasa"
               required
-              disabled={reportDone}
+              disabled={!entryAllowed}
               className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-red-500"
             />
           </div>
@@ -130,7 +135,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
               onChange={(e) => handlePhoneChange(e.target.value)}
               placeholder="Ex: 0818889900"
               required
-              disabled={reportDone}
+              disabled={!entryAllowed}
               className={`w-full bg-white/5 border rounded-2xl px-4 py-3 text-white text-sm font-mono font-bold focus:outline-none transition-all ${
                 phoneError ? 'border-red-500 bg-red-950/20' : 'border-white/10 focus:border-red-500'
               }`}
@@ -148,7 +153,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
             <select
               value={actionType}
               onChange={(e) => setActionType(e.target.value as any)}
-              disabled={reportDone}
+              disabled={!entryAllowed}
               className="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm font-semibold focus:outline-none focus:border-red-500"
             >
               <option value="Opt-in Privilège">Opt-in Privilège VIP</option>
@@ -166,7 +171,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
 
           <button
             type="submit"
-            disabled={!!phoneError || reportDone}
+            disabled={!!phoneError || !entryAllowed}
             className="btn-neon btn-red w-full mt-6"
           >
             <UserCheck className="w-4 h-4" />

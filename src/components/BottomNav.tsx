@@ -4,28 +4,36 @@ import { Home, Users, FolderOpen, MapPinned, MessageSquare, Settings, type Lucid
 
 export type TabType = 'home' | 'tab2' | 'pos' | 'tab3' | 'chat' | 'admin';
 
-interface BottomNavProps {
+export interface BottomNavContext {
   userRole: UserRole;
-  activeTab: TabType;
-  unreadChatCount?: number;
-  onTabChange: (tab: TabType) => void;
   merchantContext?: boolean;
   youthContext?: boolean;
   mikiliContext?: boolean;
   eventContext?: boolean;
 }
 
-type NavItem = { tab: TabType; label: string; icon: LucideIcon };
+interface BottomNavProps extends BottomNavContext {
+  activeTab: TabType;
+  unreadChatCount?: number;
+  onTabChange: (tab: TabType) => void;
+}
 
-export const BottomNav: React.FC<BottomNavProps> = ({
-  userRole, activeTab, unreadChatCount = 0, onTabChange,
-  merchantContext = false, youthContext = false, mikiliContext = false, eventContext = false,
-}) => {
+export type NavItem = { tab: TabType; label: string; icon: LucideIcon };
+export type TabSwipeDirection = 'previous' | 'next';
+
+export function getBottomNavTabs({
+  userRole,
+  merchantContext = false,
+  eventContext = false,
+}: BottomNavContext): NavItem[] {
   const management = ['admin', 'super_admin', 'supervisor', 'sub_admin'].includes(userRole);
-  const tabs: NavItem[] = eventContext ? [
-    { tab: 'home', label: 'Accueil', icon: Home },
-    ...(management ? [{ tab: 'admin' as const, label: 'Gestion', icon: Settings }] : []),
-  ] : [
+  if (eventContext) {
+    return [
+      { tab: 'home', label: 'Accueil', icon: Home },
+      ...(management ? [{ tab: 'admin' as const, label: 'Gestion', icon: Settings }] : []),
+    ];
+  }
+  return [
     { tab: 'home', label: 'Accueil', icon: Home },
     { tab: 'tab2', label: management ? 'Monitoring' : merchantContext ? 'Mes Transactions' : 'Mes Clients', icon: Users },
     ...(merchantContext && userRole === 'agent' ? [{ tab: 'pos' as const, label: 'Mes POS', icon: MapPinned }] : []),
@@ -33,6 +41,19 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     { tab: 'chat', label: 'Chat', icon: MessageSquare },
     ...(management ? [{ tab: 'admin' as const, label: 'Gestion', icon: Settings }] : []),
   ];
+}
+
+export function getAdjacentTab(tabs: readonly NavItem[], activeTab: TabType, direction: TabSwipeDirection): TabType | null {
+  const index = tabs.findIndex((item) => item.tab === activeTab);
+  const nextIndex = index + (direction === 'next' ? 1 : -1);
+  return index >= 0 && nextIndex >= 0 && nextIndex < tabs.length ? tabs[nextIndex].tab : null;
+}
+
+export const BottomNav: React.FC<BottomNavProps> = ({
+  userRole, activeTab, unreadChatCount = 0, onTabChange,
+  merchantContext = false, youthContext = false, mikiliContext = false, eventContext = false,
+}) => {
+  const tabs = getBottomNavTabs({ userRole, merchantContext, youthContext, mikiliContext, eventContext });
   // Deux groupes symétriques laissent le + exactement au centre,
   // y compris dans Merchant qui garde son cinquième menu « Mes POS ».
   const split = Math.min(2, tabs.length);

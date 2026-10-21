@@ -1,4 +1,3 @@
-import { AgentDockAction } from './AgentDockAction';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, Camera, CheckCircle2, CircleAlert, FileCheck2, GraduationCap, MapPin, Medal, PauseCircle, PlusCircle, RefreshCw, Search, Trophy, UsersRound, X } from 'lucide-react';
 import type { Campaign, User, YouthContactReport, YouthDailyAttendance, YouthRegion, YouthSubscriberType } from '../types';
@@ -26,6 +25,8 @@ interface YouthF2FViewProps {
   campaignPaused?: boolean;
   pauseReason?: string;
   onCheckinPhotoChange?: (photoUrl: string) => void;
+  openContactRequested?: boolean;
+  onContactRequestHandled?: () => void;
 }
 
 type Geo = { latitude: number; longitude: number; accuracy: number };
@@ -72,7 +73,7 @@ const ModalShell: React.FC<{ title: string; onClose: () => void; children: React
   </div>
 );
 
-export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeTab, campaignPaused = false, pauseReason = '', onCheckinPhotoChange }) => {
+export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeTab, campaignPaused = false, pauseReason = '', onCheckinPhotoChange, openContactRequested = false, onContactRequestHandled }) => {
   const today = useMemo(() => youthTodayIso(), []);
   const isOperator = currentUser.role !== 'agent';
   const [campaign, setCampaign] = useState<Campaign | null>(null);
@@ -172,6 +173,15 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
 
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinPending;
   const isClosed = Boolean(attendance?.checkout_at);
+  useEffect(() => {
+    if (!openContactRequested || loading) return;
+    onContactRequestHandled?.();
+    setError('');
+    if (campaignPaused) { setError('La campagne Youth F2F est actuellement en pause.'); return; }
+    if (!isCheckedIn) { setError('Validez d’abord votre pointage avant d’enregistrer un contact.'); return; }
+    if (isClosed) { setError('Cette journée est déjà clôturée. Consultez vos archives.'); return; }
+    setIsContactOpen(true);
+  }, [campaignPaused, isCheckedIn, isClosed, loading, onContactRequestHandled, openContactRequested]);
   const youthActions = YOUTH_ACTIONS;
   const filteredClientHistory = useMemo(() => {
     const query = clientSearch.trim().toLocaleLowerCase('fr');
@@ -346,10 +356,6 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
           </div>
         )
       )}
-      {isCheckedIn && !isClosed && !campaignPaused && activeTab === 'home' && (
-        <AgentDockAction label="Nouveau contact" onClick={() => { setError(''); setIsContactOpen(true); }} />
-      )}
-
       {isOperator && <section className="glass-card p-4 sm:p-5"><div className="mb-4 flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-violet-200/15 bg-violet-300/10 text-violet-200"><UsersRound size={19}/></span><div><p className="text-[10px] font-black uppercase tracking-[0.14em] text-violet-100">Suivi Youth F2F</p><h2 className="mt-1 text-sm font-black text-white">Agents affectés à la campagne</h2></div></div>{team.length === 0 ? <p className="rounded-2xl border border-amber-300/20 bg-amber-400/[0.06] p-3 text-xs font-semibold text-amber-100">Aucun agent Youth F2F n’est encore rattaché à ce périmètre.</p> : <div className="space-y-2">{team.map((agent) => <div key={agent.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/10 p-3"><span><b className="block text-xs text-white">{agent.name}</b><span className="text-[10px] text-gray-500">{agent.phone}</span></span><span className="rounded-full bg-cyan-400/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100">BA Youth</span></div>)}</div>}</section>}
 
       {previewUrl && <ModalShell title="Photo de pointage" onClose={() => setPreviewUrl('')}><img src={previewUrl} alt="Photo de pointage Youth F2F" className="w-full rounded-2xl border border-white/10 object-contain"/></ModalShell>}

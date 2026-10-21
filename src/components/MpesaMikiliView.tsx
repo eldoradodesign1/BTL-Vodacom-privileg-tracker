@@ -1,4 +1,3 @@
-import { AgentDockAction } from './AgentDockAction';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Camera, CheckCircle2, CircleAlert, ChevronDown, FileText, MapPin, PlusCircle, RefreshCw, Search, Star, Trophy, UsersRound, X, Zap } from 'lucide-react';
 import type { User } from '../types';
@@ -61,9 +60,11 @@ const FIELD = 'mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3.5
 export interface MpesaMikiliViewProps {
   currentUser: User;
   activeTab: 'home' | 'tab2' | 'tab3' | 'chat' | 'pos' | 'admin';
+  openClientRequested?: boolean;
+  onClientRequestHandled?: () => void;
 }
 
-export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, activeTab }) => {
+export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, activeTab, openClientRequested = false, onClientRequestHandled }) => {
   const [today, setToday] = useState(() => mikiliTodayIso());
   const [campaignId, setCampaignId] = useState('');
   const [locations, setLocations] = useState<MikiliLocation[]>([]);
@@ -103,6 +104,14 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
 
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinPending;
   const isClosed = Boolean(attendance?.checkout_at);
+  useEffect(() => {
+    if (!openClientRequested || loading) return;
+    onClientRequestHandled?.();
+    setError('');
+    if (!isCheckedIn) { setError('Validez d’abord votre pointage du matin avant d’enregistrer un client.'); return; }
+    if (isClosed) { setError('Cette journée est déjà clôturée. Consultez vos archives.'); return; }
+    setIsClientOpen(true);
+  }, [isCheckedIn, isClosed, loading, onClientRequestHandled, openClientRequested]);
   const mikiliRegions = ['Kinshasa', 'Kongo-Central', 'Haut-Katanga'] as const;
   const refresh = useCallback(async (showLoader = true) => {
     if (showLoader) setLoading(true);
@@ -369,8 +378,6 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
         <div className="rounded-[2rem] border border-white/10 bg-gradient-to-br from-fuchsia-500/[0.12] to-transparent p-5"><p className="text-[9px] font-black uppercase tracking-[0.2em] text-fuchsia-200">Mémoire terrain</p><h2 className="mt-1 text-2xl font-black text-white">Archives</h2><p className="mt-1 text-[10px] font-semibold text-gray-500">Vos interactions précédentes.</p></div>
         {history.length === 0 ? <div className="glass-card p-8 text-center"><FileText size={28} className="mx-auto text-gray-600" /><p className="mt-3 text-xs font-bold text-gray-500">Aucune trace pour le moment.</p></div> : history.map((item) => <article key={item.id} className="rounded-[1.7rem] border border-white/8 bg-white/[0.035] p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="text-sm font-black text-white">{item.client_name}</h3><p className="mt-1 text-[9px] font-semibold text-gray-500">{item.activity_date} · {item.location?.name || 'Lieu non renseigné'}</p></div><span className="rounded-full bg-white/5 px-2 py-1 text-[8px] font-black uppercase text-gray-400">{item.transaction_done ? 'Transaction' : 'Sensibilisation'}</span></div><p className="mt-3 text-[10px] text-gray-500">{item.client_phone} · {mikiliDisplayService(item.presented_service)}</p><MikiliFeedback comment={item.client_comment} rating={item.satisfaction_rating} /></article>)}
       </section>}
-
-      {activeTab === 'home' && isCheckedIn && !isClosed && <AgentDockAction label="Nouveau client" onClick={() => { setError(''); setIsClientOpen(true); }} />}
 
       {isClientOpen && <ModalShell title="Nouveau contact" onClose={() => !saving && setIsClientOpen(false)}><form onSubmit={saveClient} className="space-y-5">
         <div className="rounded-[1.7rem] border border-red-300/15 bg-red-500/[0.06] p-4"><p className="text-[9px] font-black uppercase tracking-[0.18em] text-red-200">Nouvelle interaction</p><p className="mt-1 text-xs font-semibold text-gray-400">Quelques gestes, et c’est enregistré.</p></div>
