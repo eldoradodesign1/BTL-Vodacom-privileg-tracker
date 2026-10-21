@@ -1,4 +1,4 @@
-import { StrictMode } from 'react';
+import { Component, StrictMode, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import { loadSharedRuntimeConfig } from './utils/appConfig';
@@ -66,9 +66,46 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+class AppRenderBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
+  state = { crashed: false };
+
+  static getDerivedStateFromError() {
+    return { crashed: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('BTL Tracker: erreur de rendu interceptée.', error);
+  }
+
+  render() {
+    if (!this.state.crashed) return this.props.children;
+    return (
+      <main role="alert" style={{
+        minHeight: '100dvh', padding: '22vh 22px 30px', textAlign: 'center',
+        color: '#fff', fontFamily: 'system-ui, sans-serif',
+      }}>
+        <h1 style={{ fontSize: '20px', fontWeight: 800 }}>Erreur d'affichage</h1>
+        <p style={{ margin: '16px auto', maxWidth: '340px', lineHeight: 1.5 }}>
+          L'interface a rencontré une erreur. Tes données restent conservées.
+        </p>
+        <button type="button" style={{
+          background: '#fb7185', border: 0, borderRadius: '14px',
+          padding: '14px 24px', fontWeight: 800, color: '#180e13',
+        }} onClick={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.set('recovery', String(Date.now()));
+          window.location.replace(url.href);
+        }}>Rafraîchir l'application</button>
+      </main>
+    );
+  }
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <AppRenderBoundary>
+      <App />
+    </AppRenderBoundary>
   </StrictMode>,
 );
 
