@@ -172,6 +172,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
   useEffect(() => { if (activeTab === 'tab2') void loadClientHistory(); }, [activeTab, loadClientHistory]);
 
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinPending;
+  const isYouthPreCheckin = activeTab === 'home' && !isOperator && !isCheckedIn && !campaignPaused;
   const isClosed = Boolean(attendance?.checkout_at);
   useEffect(() => {
     if (!openContactRequested || loading) return;
@@ -280,33 +281,34 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
   if (loading) return <div className="glass-card p-6 text-center text-[11px] font-black uppercase tracking-[0.16em] text-gray-300">Chargement de Youth F2F…</div>;
 
   return (
-    <section className={`animate-fade-in space-y-4 pb-4 ${activeTab === 'home' ? 'agent-home-surface' : ''}`}>
+    <section className={`animate-fade-in space-y-4 pb-4 ${activeTab === 'home' ? 'agent-home-surface' : ''} ${isYouthPreCheckin ? 'youth-before-checkin' : ''}`}>
+      <style>{'body:has(.youth-before-checkin) nav.app-bottom-nav.agent-dock,body:has(.youth-before-checkin) .agent-dock-action{display:none!important}'}</style>
       <div className="glass-card relative overflow-hidden border border-cyan-300/20 bg-[linear-gradient(135deg,rgba(8,47,73,0.66),rgba(18,24,39,0.74),rgba(30,41,59,0.62))] p-5 sm:p-6">
         <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-cyan-300/10 blur-3xl" />
         <div className="relative flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-4">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-200/20 bg-cyan-300/10 text-cyan-100"><GraduationCap size={23} /></span>
+            {!isYouthPreCheckin && <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-cyan-200/20 bg-cyan-300/10 text-cyan-100"><GraduationCap size={23} /></span>}
             <div className="min-w-0">
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/80">Youth F2F · Force de frappe</p>
-              <h1 className="mt-1 text-xl font-black tracking-tight text-white sm:text-2xl">{isOperator ? 'Espace opérationnel' : `Bonjour, ${currentUser.name.split(' ')[0]}`}</h1>
-              <p className="mt-2 text-[12px] font-medium leading-relaxed text-slate-300">{readableDate(today)} · Suivi de votre activité terrain.</p>
+              <p className={isYouthPreCheckin ? "text-lg font-black uppercase tracking-[0.08em] text-cyan-100" : "text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200/80"}>Youth F2F · Force de frappe</p>
+              {!isYouthPreCheckin && <h1 className="mt-1 text-xl font-black tracking-tight text-white sm:text-2xl">{isOperator ? 'Espace opérationnel' : `Bonjour, ${currentUser.name.split(' ')[0]}`}</h1>}
+              {!isYouthPreCheckin && <p className="mt-2 text-[12px] font-medium leading-relaxed text-slate-300">{readableDate(today)} · Suivi de votre activité terrain.</p>}
             </div>
           </div>
 
-          <div className="flex shrink-0 flex-col items-end gap-2">
+          {!isYouthPreCheckin && <div className="flex shrink-0 flex-col items-end gap-2">
             <button type="button" onClick={() => void refresh(false)} className="rounded-xl border border-white/10 bg-white/[0.06] p-2 text-cyan-100 transition hover:bg-white/10" title="Actualiser Youth F2F" aria-label="Actualiser Youth F2F"><RefreshCw size={16} /></button>
             {activeTab === 'home' && !isOperator && !campaignPaused && isCheckedIn && (
               <button type="button" onClick={() => (photoUrl || localPhotoUrl) && setPreviewUrl(photoUrl || localPhotoUrl)} disabled={!(photoUrl || localPhotoUrl)} className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-cyan-200/25 bg-slate-950/70 text-cyan-100 shadow-lg disabled:cursor-default">
                 {(photoUrl || localPhotoUrl) ? <img src={photoUrl || localPhotoUrl} alt="Pointage" className="h-full w-full object-cover" /> : <Camera size={24} />}
               </button>
             )}
-          </div>
+          </div>}
         </div>
 
         {activeTab === 'home' && !isOperator && !campaignPaused && (
-          <div className="relative mt-5 border-t border-white/10 pt-4">
+          <div className={isYouthPreCheckin ? "relative mt-1 pt-1" : "relative mt-5 border-t border-white/10 pt-4"}>
             {podiumLoading ? <p className="py-5 text-center text-xs text-gray-400">Mise à jour du podium…</p> : (
-              <div className="mt-4 grid grid-cols-3 items-end gap-2">
+              <div className={isYouthPreCheckin ? "mt-2 grid grid-cols-3 items-end gap-2" : "mt-4 grid grid-cols-3 items-end gap-2"}>
                 {([2, 0, 1] as const).map((rankIndex) => {
                   const entry = rankedPodium[rankIndex];
                   return <div key={rankIndex} className="min-w-0 text-center">
@@ -342,11 +344,16 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
 
       {activeTab === 'home' && !isOperator && !campaignPaused && (
         !isCheckedIn ? (
-          <label className="btn-neon flex w-full cursor-pointer items-center justify-center gap-3 rounded-3xl px-5 py-5 text-center text-base font-black shadow-xl">
-            <Camera size={22} />
-            <span>Démarrer la journée</span>
-            <input type="file" accept="image/*" capture="user" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) handleCheckin(file); event.currentTarget.value = ''; }} />
-          </label>
+          <div className="flex items-center justify-center py-6" style={{ minHeight: 'min(43vh, 380px)' }}>
+            <label className="flex cursor-pointer flex-col items-center justify-center gap-3 text-center text-white transition active:scale-95" style={{ width: 'min(65vw, 250px)', aspectRatio: '1', borderRadius: '50%', background: 'radial-gradient(circle at 35% 25%, rgba(105,28,51,.95), rgba(35,10,27,.98) 55%, #0e101b 100%)', border: '3px solid var(--theme-accent)', boxShadow: '0 0 0 9px rgba(251,113,133,.09), 0 20px 55px rgba(0,0,0,.65), inset 0 2px 18px rgba(255,255,255,.12)' }} title="Démarrer la journée" aria-label="Démarrer la journée">
+              <svg viewBox="0 0 24 24" width="100" height="100" fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ filter: 'drop-shadow(0 0 14px rgba(251,113,133,.55))' }}>
+                <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
+                <path d="M12 2v10" />
+              </svg>
+              <span className="text-xs font-black uppercase tracking-widest">Démarrer la journée</span>
+              <input type="file" accept="image/*" capture="user" className="hidden" disabled={checkinPending} onChange={(event) => { const file = event.target.files?.[0]; if (file) handleCheckin(file); event.currentTarget.value = ''; }} />
+            </label>
+          </div>
         ) : (
           <div className="space-y-3">
             <button type="button" onClick={() => setIsClosingOpen(true)} disabled={isClosed} className="agent-closure-action flex w-full items-center justify-center gap-3 rounded-3xl px-5 py-5 text-sm font-black transition disabled:cursor-not-allowed disabled:opacity-50">
