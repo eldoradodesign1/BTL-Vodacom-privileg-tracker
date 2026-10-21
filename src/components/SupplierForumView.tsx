@@ -36,22 +36,25 @@ export const SupplierForumView: React.FC<Props> = ({ currentUser, campaign, onRe
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [photoKind, setPhotoKind] = useState<'arrival' | 'departure' | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [selectedEventDate, setSelectedEventDate] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const eventConfig = getEventConfig(campaign);
   const today = supplierForumDate();
-  const isEventDay = today === eventConfig.date;
-  const formattedEventDate = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Africa/Kinshasa' }).format(new Date(`${eventConfig.date}T12:00:00+01:00`));
+  const activeDate = isManager && eventConfig.dates?.includes(selectedEventDate) ? selectedEventDate : eventConfig.date;
+  const isEventDay = today === activeDate;
+  const formattedEventDate = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Africa/Kinshasa' }).format(new Date(`${activeDate}T12:00:00+01:00`));
 
   const refresh = async () => {
     if (!campaign) return;
     setLoading(true);
     try {
-      if (isManager) setTeam(await getEventTeam(campaign.id, eventConfig.date));
-      else setAttendance(await getEventAttendance(campaign.id, currentUser.id, eventConfig.date));
+      if (isManager) setTeam(await getEventTeam(campaign.id, activeDate));
+      else setAttendance(await getEventAttendance(campaign.id, currentUser.id, activeDate));
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Impossible de charger l’Event.'); }
     finally { setLoading(false); }
   };
-  useEffect(() => { void refresh(); }, [campaign?.id, currentUser.id, isManager]);
+  useEffect(() => { void refresh(); }, [campaign?.id, currentUser.id, isManager, activeDate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,7 +70,7 @@ export const SupplierForumView: React.FC<Props> = ({ currentUser, campaign, onRe
     setSaving(true); setError(''); setNotice('');
     try {
       const photo = await compress(file); const geo = await locate(); const at = new Date().toISOString();
-      if (photoKind === 'arrival') { setAttendance(await saveEventArrival({ eventId: campaign.id, agentId: currentUser.id, date: eventConfig.date, at, ...geo, photo })); setNotice(`Arrivée enregistrée à ${kinshasaNow()}.`); }
+      if (photoKind === 'arrival') { setAttendance(await saveEventArrival({ eventId: campaign.id, agentId: currentUser.id, date: activeDate, at, ...geo, photo })); setNotice(`Arrivée enregistrée à ${kinshasaNow()}.`); }
       else if (attendance) { setAttendance(await saveEventDeparture({ attendanceId: attendance.id, at, ...geo, photo })); setNotice(`Départ enregistré à ${kinshasaNow()}.`); }
       onRefreshData?.();
     } catch (caught) { setError(caught instanceof Error ? caught.message : 'Enregistrement impossible.'); }
@@ -77,6 +80,12 @@ export const SupplierForumView: React.FC<Props> = ({ currentUser, campaign, onRe
   if (!campaign) return <section className="glass-card p-6 text-center text-sm text-red-200">L’Event n’est pas disponible.</section>;
 
   if (isManager) return <section className="space-y-4">
+    {eventConfig.dates && eventConfig.dates.length > 1 && <div className="glass-card p-4">
+      <label htmlFor="event-date-select" className="block text-xs font-black uppercase text-cyan-100">Journée de pointage</label>
+      <select id="event-date-select" className="app-input mt-2 w-full rounded-xl p-3" value={activeDate} onChange={(event) => setSelectedEventDate(event.target.value)}>
+        {eventConfig.dates.map((day) => <option key={day} value={day}>{new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Africa/Kinshasa' }).format(new Date(`${day}T12:00:00+01:00`))}</option>)}
+      </select>
+    </div>}
     <div className="glass-card p-5"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-black uppercase tracking-[0.18em] text-cyan-200">Event · {formattedEventDate}</p><h1 className="mt-2 text-xl font-black text-white">{campaign.name}</h1><p className="mt-1 text-xs text-gray-400">Pointages arrivée {eventConfig.arrivalDeadline} · départ {eventConfig.departureTime}</p></div><ShieldCheck className="h-8 w-8 text-cyan-300" /></div></div>
     <div className="glass-card p-4"><div className="mb-3 flex items-center justify-between"><div><h2 className="text-xs font-black uppercase tracking-widest text-white">Suivi des hôtesses</h2><p className="mt-1 text-[10px] text-gray-500">Cliquez sur un nom pour ouvrir sa fiche de pointage.</p></div><span className="rounded-full border border-cyan-300/25 px-2 py-1 text-[10px] font-black text-cyan-200">{team.length}</span></div>
       {loading ? <p className="text-xs text-gray-400">Chargement…</p> : team.map((entry) => { const row = entry.attendance; return <button key={entry.user.id} type="button" onClick={() => setSelectedHostess(entry)} className="mb-2 flex w-full items-center justify-between rounded-2xl border border-white/10 bg-black/15 px-3 py-3 text-left transition hover:border-cyan-300/35 hover:bg-cyan-400/[0.06]"><span className="min-w-0"><b className="block truncate text-xs font-bold text-white">{entry.user.full_name || entry.user.name}</b><span className="mt-1 flex items-center gap-1 text-[10px] text-gray-500"><Clock3 size={11}/>Arrivée : {formatPointageTime(row?.checkin_at)} · Départ : {formatPointageTime(row?.checkout_at)}</span></span><span className={`ml-3 shrink-0 text-[10px] font-black uppercase ${row?.status === 'closed' ? 'text-emerald-300' : row?.checkin_at ? 'text-cyan-300' : 'text-gray-500'}`}>{row?.status === 'closed' ? 'Départ pointé' : row?.checkin_at ? 'Arrivée pointée' : 'En attente'}</span></button>; })}
