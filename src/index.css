@@ -1412,3 +1412,37 @@ body:has(.event-checkin-only) .agent-dock-action { display:none!important; }
 
 /* Deux commandes d'événement lisibles sur un petit écran. */
 .event-checkin-only .btl-power-button {width:min(48vw,190px)!important;height:min(48vw,190px)!important;max-width:190px;max-height:190px;}
+
+
+/* Interrupteur événementiel unique : repos gris cliquable, marche lumineuse, arrêt verrouillé. */
+.event-checkin-only .btl-power-button {
+  width:min(65vw,250px)!important;
+  height:min(65vw,250px)!important;
+  max-width:250px!important;
+  max-height:250px!important;
+  aspect-ratio:1/1!important;
+  border-radius:50%!important;
+}
+.event-checkin-only .btl-power-button--standby {
+  animation:none!important;
+  color:#a6a2aa!important;
+  border-color:#6b6873!important;
+  background:radial-gradient(circle at 35% 25%,#343039,#18141c 75%)!important;
+  box-shadow:0 0 0 8px rgba(130,127,143,.07),0 12px 32px rgba(0,0,0,.4)!important;
+  opacity:.92;
+  cursor:pointer!important;
+}
+.event-checkin-only .btl-power-button--ready {
+  border-color:#fda4af!important;
+  box-shadow:0 0 0 9px rgba(251,113,133,.14),0 0 35px rgba(251,113,133,.28)!important;
+}
+@media (hover:hover) and (pointer:fine) {
+  .event-checkin-only .btl-power-button--standby:hover {
+    transform:scale(1.045);
+    filter:brightness(1.2);
+    box-shadow:0 0 0 10px rgba(156,163,175,.15),0 0 28px rgba(156,163,175,.26)!important;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .event-checkin-only .btl-power-button--standby { transition:none!important; }
+}
