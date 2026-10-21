@@ -35,7 +35,7 @@ export const AgentDockAction: React.FC<AgentDockActionProps> = ({ label, onClick
 
     button.addEventListener('pointerdown', handleNativePointerDown);
     return () => button.removeEventListener('pointerdown', handleNativePointerDown);
-  }, [disabled, onClick]);
+  }, [disabled, onClick, target]);
 
   const handleClick = () => {
     // Le navigateur peut encore émettre un click après le pointerdown tactile.
