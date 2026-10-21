@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserRole } from '../types';
-import { Home, Users, FolderOpen, MapPinned, MessageSquare, Settings, Plus } from 'lucide-react';
+import { Home, Users, FolderOpen, MapPinned, MessageSquare, Settings } from 'lucide-react';
 
 export type TabType = 'home' | 'tab2' | 'pos' | 'tab3' | 'chat' | 'admin';
 
@@ -13,7 +13,6 @@ interface BottomNavProps {
   youthContext?: boolean;
   mikiliContext?: boolean;
   eventContext?: boolean;
-  primaryAction?: { label: string; onClick: () => void; disabled?: boolean };
 }
 
 export const BottomNav: React.FC<BottomNavProps> = ({
@@ -24,8 +23,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   merchantContext = false,
   youthContext = false,
   mikiliContext = false,
-  eventContext = false,
-  primaryAction
+  eventContext = false
 }) => {
   const getTab2Label = () => {
     if (userRole === 'admin' || userRole === 'super_admin' || userRole === 'supervisor' || userRole === 'sub_admin') return 'Monitoring';
@@ -141,21 +139,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({
           <div className="w-1.5 h-1.5 bg-red-500 rounded-full" style={{ boxShadow: '0 0 8px var(--theme-accent)' }} />
         )}
       </button>
-
-      {primaryAction && userRole === 'agent' && (
-        <div className="bottom-nav-action-slot" aria-label={primaryAction.label}>
-          <button
-            type="button"
-            onClick={primaryAction.onClick}
-            disabled={primaryAction.disabled}
-            className="bottom-nav-primary-action"
-            aria-label={primaryAction.label}
-            title={primaryAction.label}
-          >
-            <Plus size={27} strokeWidth={2.4} />
-          </button>
-        </div>
-      )}
 
       {merchantContext && userRole === 'agent' && (
         <button
