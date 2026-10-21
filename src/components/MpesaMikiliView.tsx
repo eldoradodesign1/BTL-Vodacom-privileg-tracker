@@ -321,7 +321,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
 
         {isCheckedIn && <button type="button" onClick={() => { setError(''); setIsReportOpen(true); }} disabled={isClosed} className="btn-neon flex w-full items-center justify-center gap-3 rounded-[1.8rem] px-5 py-5 text-base font-black disabled:opacity-40"><FileText size={22}/>{isClosed ? 'Journée clôturée' : 'Clôturer'}</button>}
 
-        {!isCheckedIn &&         <section className="grid grid-cols-2 gap-3">
+        {!isCheckedIn && <section className="grid grid-cols-2 gap-3">
           <button type="button" onClick={() => { setError(''); setIsClientOpen(true); }} disabled={!isCheckedIn || isClosed} className="group relative min-h-24 overflow-hidden rounded-[1.8rem] border border-red-300/25 bg-red-500/[0.16] p-4 text-left transition hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-35">
             <PlusCircle size={20} className="text-red-200 transition group-hover:rotate-90" />
             <b className="mt-5 block text-[11px] font-black uppercase tracking-wide text-white">Enregistrer</b>
