@@ -1,0 +1,13 @@
+/* Lisibilité terrain : plancher typographique */
+
+.text-\[7px\]:not(.btl-keep-small),
+.text-\[8px\]:not(.btl-keep-small),
+.text-\[9px\]:not(.btl-keep-small) {
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.text-\[10px\]:not(.btl-keep-small) {
+  font-size: 12px;
+  line-height: 1.35;
+}

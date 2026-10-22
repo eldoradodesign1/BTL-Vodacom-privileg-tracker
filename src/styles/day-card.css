@@ -1,0 +1,66 @@
+/* Carte « Ma journée » : une seule structure, six matières pilotées par les variables --m-* (voir themes.css). */
+
+.day-card {
+  position: relative;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 26px;
+  color: var(--m-text);
+  background: var(--m-surface);
+  border: 1px solid var(--m-edge);
+  box-shadow: 0 0 0 1px var(--m-edge-soft) inset, 0 1px 0 var(--m-highlight) inset, 0 14px 34px var(--m-glow);
+  -webkit-backdrop-filter: blur(var(--m-blur));
+  backdrop-filter: blur(var(--m-blur));
+}
+
+.day-card__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.day-card__title { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.01em; }
+
+.day-card__pill {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 4px 11px; border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  color: var(--m-muted); background: var(--m-pill);
+}
+.day-card__pill i { width: 8px; height: 8px; border-radius: 50%; background: var(--m-accent); box-shadow: 0 0 8px var(--m-accent); }
+.day-card__pill--paused i { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; }
+.day-card__pill--closed i { background: var(--m-muted); box-shadow: none; }
+
+.day-card__body { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 12px; align-items: stretch; }
+
+.day-card__gauge { position: relative; aspect-ratio: 1; max-height: 150px; justify-self: center; width: 100%; }
+.day-card__gauge svg { width: 100%; height: 100%; }
+.day-card__track, .day-card__fill { fill: none; stroke-width: 10; stroke-linecap: round; }
+.day-card__track { stroke: var(--m-track); }
+.day-card__fill { stroke: url(#dayCardGauge); filter: drop-shadow(0 0 6px var(--m-accent)); }
+.day-card__figure { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 14px; }
+.day-card__figure strong { font-size: 26px; font-weight: 700; line-height: 1; }
+.day-card__figure strong span { font-size: 17px; font-weight: 500; color: var(--m-muted); }
+.day-card__figure small { margin-top: 4px; font-size: 13px; color: var(--m-muted); }
+
+.day-card__tile {
+  display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 2px;
+  padding: 12px 14px; border-radius: 18px;
+  background: var(--m-tile); border: 1px solid var(--m-edge-soft);
+  color: var(--m-accent);
+}
+.day-card__tile strong { font-size: 26px; font-weight: 700; line-height: 1.1; color: var(--m-text); }
+.day-card__tile small { font-size: 13px; color: var(--m-muted); }
+
+.day-card__action {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 52px; border-radius: 18px;
+  font-size: 17px; font-weight: 600; color: var(--m-btn-ink);
+  background: var(--m-btn-bg); border: 1px solid var(--m-btn-edge);
+  box-shadow: 0 1px 0 var(--m-highlight) inset, 0 8px 22px var(--m-glow);
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+.day-card__action:active:not(:disabled) { transform: scale(0.98); filter: brightness(1.08); }
+.day-card__action:disabled { opacity: 0.5; cursor: not-allowed; }
+.day-card__action:focus-visible { outline: 2px solid var(--m-accent); outline-offset: 3px; }
+
+/* Appareils modestes : le flou est remplacé par un fond plus plein (coût GPU nul). */
+@media (max-width: 639px) and (hover: none) {
+  .day-card { -webkit-backdrop-filter: none; backdrop-filter: none; background: var(--m-surface-solid); }
+}

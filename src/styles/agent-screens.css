@@ -1,0 +1,171 @@
+/* Écrans agent : accueil avant pointage, bouton de démarrage, podiums */
+
+.agent-home-surface > .glass-card,
+.agent-home-surface > section:not(.space-y-3),
+.agent-home-surface > div.glass-card {
+  border-radius: 24px !important;
+  border-color: rgba(255,255,255,0.10) !important;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.13), 0 1px 0 rgba(255,255,255,0.05) inset !important;
+}
+
+.agent-home-surface .agent-closure-action {
+  min-height: 56px;
+  padding: 16px 20px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.055);
+  color: var(--theme-text-100, #f1f3f8);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
+  font-size: 13px;
+  font-weight: 700;
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.agent-closure-action svg {
+  color: var(--theme-accent);
+}
+
+.agent-closure-action:active:not(:disabled) {
+  transform: scale(0.985);
+}
+
+body:has(.agent-before-checkin) nav.app-bottom-nav.agent-dock,
+body:has(.agent-before-checkin) .agent-dock-action,
+body:has(.event-checkin-only) nav.app-bottom-nav.agent-dock,
+body:has(.event-checkin-only) .agent-dock-action {
+  display: none !important;
+}
+
+.agent-before-checkin .btl-power-button,
+.event-checkin-only .btl-power-button,
+.youth-before-checkin .youth-start-pulse {
+  box-sizing: border-box !important;
+  width: min(65vw,250px) !important;
+  height: min(65vw,250px) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: 250px;
+  max-height: 250px;
+  aspect-ratio: 1 / 1;
+  flex: none !important;
+  align-self: center;
+  border-radius: 50% !important;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  transition: box-shadow 220ms ease,filter 220ms ease,opacity 220ms ease;
+}
+
+.agent-before-checkin .btl-power-button--ready,
+.event-checkin-only .btl-power-button--ready {
+  animation: btlPowerBreath 3s ease-in-out infinite;
+}
+
+.agent-before-checkin .btl-podium-avatar {
+  animation: btlAvatarBounce 3s ease-in-out infinite;
+}
+
+.agent-before-checkin .btl-podium-grid > div:nth-child(2) .btl-podium-avatar {
+  animation-delay: .3s;
+}
+
+.agent-before-checkin .btl-podium-grid > div:nth-child(3) .btl-podium-avatar {
+  animation-delay: .6s;
+}
+
+.agent-before-checkin .btl-power-button--inactive,
+.event-checkin-only .btl-power-button--inactive,
+.youth-before-checkin .youth-start-pulse:has(input:disabled) {
+  animation: none !important;
+  background: radial-gradient(circle at 35% 25%,#34343d,#14151b 75%) !important;
+  border-color: #6b7280 !important;
+  box-shadow: 0 8px 20px rgba(0,0,0,.28) !important;
+  color: #9ca3af !important;
+  opacity: .64;
+  cursor: not-allowed !important;
+}
+
+@media (hover:hover) and (pointer:fine) {
+  .agent-before-checkin .btl-power-button--ready:hover,
+  .event-checkin-only .btl-power-button--ready:hover,
+  .youth-before-checkin .youth-start-pulse:not(:has(input:disabled)):hover {
+    animation-play-state: paused;
+    transform: scale(1.075);
+    filter: brightness(1.2);
+    box-shadow: 0 0 0 10px rgba(251,113,133,.14),0 0 42px rgba(251,113,133,.44),inset 0 2px 20px rgba(255,255,255,.17) !important;
+  }
+}
+
+.agent-before-checkin .btl-power-button--ready:active,
+.event-checkin-only .btl-power-button--ready:active,
+.youth-before-checkin .youth-start-pulse:not(:has(input:disabled)):active {
+  animation-play-state: paused;
+  transform: scale(.97);
+}
+
+.event-checkin-only .btl-power-button {
+  width: min(65vw,250px) !important;
+  height: min(65vw,250px) !important;
+  max-width: 250px !important;
+  max-height: 250px !important;
+  aspect-ratio: 1/1 !important;
+  border-radius: 50% !important;
+}
+
+.event-checkin-only .btl-power-button--standby {
+  animation: none !important;
+  color: #a6a2aa !important;
+  border-color: #6b6873 !important;
+  background: radial-gradient(circle at 35% 25%,#343039,#18141c 75%) !important;
+  box-shadow: 0 0 0 8px rgba(130,127,143,.07),0 12px 32px rgba(0,0,0,.4) !important;
+  opacity: .92;
+  cursor: pointer !important;
+}
+
+.event-checkin-only .btl-power-button--ready {
+  border-color: #fda4af !important;
+  box-shadow: 0 0 0 9px rgba(251,113,133,.14),0 0 35px rgba(251,113,133,.28) !important;
+}
+
+@media (hover:hover) and (pointer:fine) {
+  .event-checkin-only .btl-power-button--standby:hover {
+    transform: scale(1.045);
+    filter: brightness(1.2);
+    box-shadow: 0 0 0 10px rgba(156,163,175,.15),0 0 28px rgba(156,163,175,.26) !important;
+  }
+}
+
+.btl-start-hint {
+  max-width: 22rem;
+  margin-inline: auto;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(248, 250, 252, 0.82);
+}
+
+.btl-podium-empty {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  margin-inline: 1.25rem;
+  padding: .75rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(251, 191, 36, .25);
+  background: rgba(251, 191, 36, .07);
+  color: rgba(254, 243, 199, .95);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* Accueil agent : salutation lisible dans toutes les matières */
+.agent-greeting {
+  margin: 0;
+  padding: 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--theme-text-400);
+}
+
+.agent-greeting strong {
+  color: var(--theme-text-300);
+}

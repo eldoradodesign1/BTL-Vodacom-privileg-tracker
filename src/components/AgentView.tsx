@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Shop, Lead, Checkin, DailyReport } from '../types';
-import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSyncPendingCount, isMatchAgent, toISO, getUsers, resolveStoredPhotoUrl } from '../utils/storage';
+import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSyncPendingCount, isMatchAgent, toISO, getUsers, resolveStoredPhotoUrl, getEffectiveTargetsForDate } from '../utils/storage';
 import { TabType } from './BottomNav';
+import { DayCard } from './ui/DayCard';
 import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archive, Eye, Search, Filter, RefreshCw } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { buildPointageFeedback } from '../utils/pointageStatus';
@@ -472,19 +473,26 @@ export const AgentView: React.FC<AgentViewProps> = ({
   // RENDER TAB 1: HOME DASHBOARD
   return (
     <div className="agent-home-surface space-y-5 animate-pop pb-8">
-      {/* Welcome Banner */}
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-black text-white tracking-tight">
-            Bonjour,<br />
-            <span className="text-red-500">{currentUser.name}</span>
-          </h1>
-          <p className="text-xs font-semibold text-gray-400 mt-1 flex items-center space-x-1">
-            <MapPin className="w-3.5 h-3.5 text-red-500" />
-            <span>MISSION : <strong className="text-white">{shopName}</strong></span>
-          </p>
-        </div>
-      </div>
+      <p className="agent-greeting">Bonjour, <strong>{currentUser.name}</strong> · {shopName}</p>
+      {(() => {
+        const t = getEffectiveTargetsForDate(todayStr, activeShopId);
+        const dailyTarget = Math.max((t?.privilege || 0) + (t?.roaming || 0) + (t?.bundle || 0), 0) || 20;
+        const bundles = todayLeads.filter((lead) => lead.action_type === 'Activation Bundle').length;
+        return (
+          <DayCard
+            statusLabel={reportDone ? 'Clôturée' : campaignPaused ? 'En pause' : 'En cours'}
+            statusTone={reportDone ? 'closed' : campaignPaused ? 'paused' : 'live'}
+            value={myTodayTotal}
+            target={dailyTarget}
+            unitLabel="clients"
+            secondaryValue={bundles}
+            secondaryLabel="bundles"
+            actionLabel="Nouveau client"
+            onAction={onOpenLeadModal}
+            actionDisabled={campaignPaused || reportDone}
+          />
+        );
+      })()}
 
       {campaignPaused && (
         <section className="glass-card border border-amber-300/35 bg-amber-500/[0.08] p-4 text-left">
