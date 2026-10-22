@@ -25,13 +25,5 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
-    server: {
-      allowedHosts: ['.manus.computer'],
-      hmr: process.env.DISABLE_HMR !== 'true',
-      watch: process.env.DISABLE_HMR === 'true' ? null : {},
-    },
-    preview: {
-      allowedHosts: ['.manus.computer'],
-    },
   };
 });

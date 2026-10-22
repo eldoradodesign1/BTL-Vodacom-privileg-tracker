@@ -37,7 +37,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
     setMsisdn(filtered);
     setSubmitError('');
     if (filtered.trim().length > 0 && !isValidMsisdn(filtered)) {
-      setPhoneError('Numéro invalide. Format RDC Vodacom requis : 10 chiffres (ex: 0818889900, 082..., 089..., 099...)');
+      setPhoneError('Numéro invalide. Format RDC Vodacom requis : 10 chiffres (ex: 0810000002, 082..., 089..., 099...)');
     } else {
       setPhoneError('');
     }
@@ -54,7 +54,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
     if (!clientName.trim()) return;
 
     if (!isValidMsisdn(msisdn)) {
-      setPhoneError('Format MSISDN invalide. Entrez un numéro Vodacom RDC valide à 10 chiffres (ex: 0818889900, 0990000036).');
+      setPhoneError('Format MSISDN invalide. Entrez un numéro Vodacom RDC valide à 10 chiffres (ex: 0810000002, 0810000003).');
       return;
     }
 
@@ -133,7 +133,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
               type="tel"
               value={msisdn}
               onChange={(e) => handlePhoneChange(e.target.value)}
-              placeholder="Ex: 0818889900"
+              placeholder="Ex: 0810000002"
               required
               disabled={!entryAllowed}
               className={`w-full bg-white/5 border rounded-2xl px-4 py-3 text-white text-sm font-mono font-bold focus:outline-none transition-all ${

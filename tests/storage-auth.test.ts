@@ -1,23 +1,37 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { authenticate, purgeAndResetEverything, getUsers } from '../src/utils/storage';
+import { authenticate, getUsers, purgeAndResetEverything, saveUsers } from '../src/utils/storage';
+import type { User } from '../src/types';
 
-test('authenticate succeeds for seeded admin phone', () => {
+// Comptes fictifs propres aux tests : aucune donnée réelle n'est embarquée dans l'application.
+const fixtures: User[] = [
+  { id: 'test-agent', phone: '0810000001', name: 'Agent Fictif', role: 'agent', password: 'secret-agent', permanentShopId: null },
+  { id: 'test-sans-mdp', phone: '0810000002', name: 'Sans Mot De Passe', role: 'supervisor', permanentShopId: null },
+];
+
+test('aucun compte n\u2019est embarqué : la liste est vide après réinitialisation', () => {
   purgeAndResetEverything();
-  const result = authenticate('0816701000', '');
-  assert.equal(result.success, true);
-  assert.equal(result.user?.role, 'admin');
+  assert.deepEqual(getUsers(), []);
 });
 
-test('authenticate works for seeded supervisor phone', () => {
+test('authenticate accepte le mot de passe enregistré', () => {
   purgeAndResetEverything();
-  const result = authenticate('0812923941', '');
+  saveUsers(fixtures);
+  const result = authenticate('0810000001', 'secret-agent');
   assert.equal(result.success, true);
-  assert.equal(result.user?.role, 'supervisor');
+  assert.equal(result.user?.role, 'agent');
 });
 
-test('users remain available after initialization', () => {
+test('authenticate refuse un mauvais mot de passe', () => {
   purgeAndResetEverything();
-  const users = getUsers();
-  assert.ok(users.length > 0);
+  saveUsers(fixtures);
+  assert.equal(authenticate('0810000001', 'mauvais').success, false);
+});
+
+test('authenticate refuse un compte sans mot de passe, même avec les anciennes valeurs par défaut', () => {
+  purgeAndResetEverything();
+  saveUsers(fixtures);
+  assert.equal(authenticate('0810000002', 'test').success, false);
+  assert.equal(authenticate('0810000002', 'password').success, false);
+  assert.equal(authenticate('0810000002', '').success, false);
 });

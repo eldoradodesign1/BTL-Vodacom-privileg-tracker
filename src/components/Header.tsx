@@ -394,7 +394,7 @@ export const Header: React.FC<HeaderProps> = ({
               <UserRound className="w-5 h-5" />
             </button>
             {showThemeMenu && (
-              <div role="menu" style={{ backgroundColor: isDarkTheme ? 'rgb(12 14 20)' : '#ffffff' }} className={`app-popover absolute right-0 top-12 w-64 border rounded-2xl p-2 shadow-2xl z-50 ${
+              <div role="menu" className={`app-popover btl-solid-popover absolute right-0 top-12 w-64 border rounded-2xl p-2 shadow-2xl z-50 ${
                 isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
               }`}>
                 {onSetTheme && (

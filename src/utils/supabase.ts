@@ -170,40 +170,6 @@ export async function syncLocalDataToSupabase(payload: {
   };
 }
 
-export async function migrateLocalDataToSupabase(overrides?: Partial<SupabaseConfig>): Promise<MigrationSummary> {
-  const storageKeys = {
-    users: 'vodacom_users_v6',
-    shops: 'vodacom_shops_v6',
-    checkins: 'vodacom_checkins_v6',
-    leads: 'vodacom_leads_v6',
-    reports: 'vodacom_reports_v6',
-    notifications: 'vodacom_notifs_v6',
-    chatMessages: 'vodacom_chat_v6'
-  };
-
-  const readJson = <T,>(key: string): T[] => {
-    if (typeof window === 'undefined' || !window.localStorage) return [] as T[];
-    try {
-      const raw = window.localStorage.getItem(key);
-      if (!raw) return [] as T[];
-      const parsed = JSON.parse(raw);
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [] as T[];
-    }
-  };
-
-  return syncLocalDataToSupabase({
-    users: readJson<User>(storageKeys.users),
-    shops: readJson<Shop>(storageKeys.shops),
-    checkins: readJson<Checkin>(storageKeys.checkins),
-    leads: readJson<Lead>(storageKeys.leads),
-    reports: readJson<DailyReport>(storageKeys.reports),
-    notifications: readJson<NotificationItem>(storageKeys.notifications),
-    chatMessages: readJson<ChatMessage>(storageKeys.chatMessages)
-  }, overrides);
-}
-
 export async function uploadPhotoToSupabase(fileOrDataUrl: string, bucket: string, pathPrefix = 'checkins', overrides?: Partial<SupabaseConfig>): Promise<string> {
   const client = getSupabaseClient(overrides);
   if (!client) {

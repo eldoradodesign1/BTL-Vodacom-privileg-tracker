@@ -1,8 +1,8 @@
 /**
  * Phone Number Validation Utility for Vodacom RDC (DRC)
  * Valid formats:
- * - 10 digits starting with 08 or 09 (e.g., 0818889900, 0821000001, 0990000036)
- * - 12 digits starting with 2438 or 2439 (e.g., 243818889900, 243990000036)
+ * - 10 digits starting with 08 or 09 (e.g., 0810000002, 0810000001, 0810000003)
+ * - 12 digits starting with 2438 or 2439 (e.g., 243810000002, 243810000003)
  */
 
 export function cleanPhoneNumber(phone: string): string {

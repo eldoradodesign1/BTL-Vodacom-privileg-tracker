@@ -1459,3 +1459,6 @@ body:has(.event-checkin-only) .agent-dock-action { display:none!important; }
 
 .btl-start-hint { max-width: 22rem; margin-inline: auto; text-align: center; font-size: 13px; line-height: 1.4; color: rgba(248, 250, 252, 0.82); }
 .btl-podium-empty { display: flex; align-items: center; gap: .75rem; margin-inline: 1.25rem; padding: .75rem 1rem; border-radius: 1rem; border: 1px solid rgba(251, 191, 36, .25); background: rgba(251, 191, 36, .07); color: rgba(254, 243, 199, .95); font-size: 13px; line-height: 1.35; }
+
+/* Menu du compte : fond plein sur les thèmes sombres (lisible quel que soit le contenu derrière) */
+body:not(.theme-silver):not(.theme-diamond) .app-popover.btl-solid-popover { background: rgb(12, 14, 20) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }

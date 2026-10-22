@@ -1,5 +1,4 @@
 import { User, UserRole, Shop, Checkin, Lead, DailyReport, NotificationItem, ChatMessage, ShopTargets, AgentMasterStatus, SupervisorAgentCampaignAssignment } from '../types';
-import { INITIAL_USERS, INITIAL_CHECKINS, INITIAL_LEADS, INITIAL_REPORTS, INITIAL_NOTIFICATIONS, INITIAL_CHAT } from '../data/initialData';
 import type { PDFReportData } from './pdfGenerator';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
 import {
@@ -183,7 +182,7 @@ function pushNotification(userId: string, message: string, type: string): Notifi
     SHARED_CHAT_STORE.pushNotification(item);
   } catch {}
 
-  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
+  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], []);
   notifs.unshift(item);
   saveItem(STORAGE_KEYS.NOTIFS, notifs);
   maybeShowBrowserNotification(message);
@@ -234,67 +233,6 @@ function loadStoredArray<T>(key: string, legacyKeys: string[], fallback: T): T {
 
   saveItem(key, fallback);
   return fallback;
-}
-
-function mergeUsersWithSeedData(storedUsers: User[]): User[] {
-  const merged: User[] = [...INITIAL_USERS];
-  const indexById = new Map<string, number>();
-  const indexByPhone = new Map<string, number>();
-  const seedById = new Map(INITIAL_USERS.map((seed) => [seed.id, seed]));
-  const seedByPhone = new Map(INITIAL_USERS.map((seed) => [normalizePhoneMSISDN(seed.phone).toLowerCase(), seed]));
-
-  const indexUser = (user: User, index: number) => {
-    if (user.id) indexById.set(user.id, index);
-    const phoneKey = normalizePhoneMSISDN(user.phone).toLowerCase();
-    if (phoneKey) indexByPhone.set(phoneKey, index);
-  };
-
-  merged.forEach(indexUser);
-
-  (Array.isArray(storedUsers) ? storedUsers : []).forEach((candidate) => {
-    const candidatePhoneKey = normalizePhoneMSISDN(candidate.phone).toLowerCase();
-    // Les entrées initiales conservent parfois un MSISDN de démonstration. L'UUID
-    // Supabase est l'identité de référence et doit donc primer sur le téléphone.
-    const existingIndex = (candidate.id ? indexById.get(candidate.id) : undefined)
-      ?? (candidatePhoneKey ? indexByPhone.get(candidatePhoneKey) : undefined);
-
-    if (existingIndex === undefined) {
-      merged.push(candidate);
-      indexUser(candidate, merged.length - 1);
-      return;
-    }
-
-    const existing = merged[existingIndex];
-    const existingPhoneKey = normalizePhoneMSISDN(existing.phone).toLowerCase();
-    const seedUser = (candidate.id ? seedById.get(candidate.id) : undefined)
-      ?? (candidatePhoneKey ? seedByPhone.get(candidatePhoneKey) : undefined)
-      ?? (existing.id ? seedById.get(existing.id) : undefined)
-      ?? (existingPhoneKey ? seedByPhone.get(existingPhoneKey) : undefined);
-
-    const nextUser: User = {
-      ...existing,
-      ...candidate,
-      id: candidate.id || existing.id,
-      phone: candidate.phone || existing.phone,
-      name: candidate.name || existing.name,
-      role: seedUser?.role ?? (candidate.role || existing.role),
-      password: candidate.password ?? existing.password,
-      supervisorId: candidate.supervisorId ?? existing.supervisorId,
-      permanentShopId: Object.prototype.hasOwnProperty.call(candidate, 'permanentShopId')
-        ? candidate.permanentShopId
-        : existing.permanentShopId,
-      userCategory: candidate.userCategory ?? existing.userCategory,
-      authUserId: candidate.authUserId ?? existing.authUserId,
-      created_at: candidate.created_at || existing.created_at,
-      last_login: candidate.last_login || existing.last_login
-    };
-
-    merged[existingIndex] = nextUser;
-    if (existingPhoneKey && indexByPhone.get(existingPhoneKey) === existingIndex) indexByPhone.delete(existingPhoneKey);
-    indexUser(nextUser, existingIndex);
-  });
-
-  return merged;
 }
 
 function findSupervisorForAgent(agentId: string): User | undefined {
@@ -362,19 +300,6 @@ function checkinPhotoCacheKey(agentId: string, isoDate: string): string {
   return `${agentId}::${isoDate}`;
 }
 
-// Initialize seed data without wiping the user's persisted state on first load.
-(function initializeSeedData() {
-  try {
-    const existingUsers = loadItem<User[]>(STORAGE_KEYS.USERS, INITIAL_USERS);
-    if (!Array.isArray(existingUsers) || existingUsers.length === 0) {
-      saveItem(STORAGE_KEYS.USERS, INITIAL_USERS);
-    }
-
-  } catch (err) {
-    console.warn('Seed initialization exception:', err);
-  }
-})();
-
 export function purgeAndResetEverything(): void {
   try {
     pdfCache.clear();
@@ -387,7 +312,7 @@ export function purgeAndResetEverything(): void {
     saveItem(STORAGE_KEYS.CHECKINS, []);
     saveItem(STORAGE_KEYS.NOTIFS, []);
     saveItem(STORAGE_KEYS.CHAT, []);
-    saveItem(STORAGE_KEYS.USERS, INITIAL_USERS);
+    saveItem(STORAGE_KEYS.USERS, []);
     localStorage.removeItem(STORAGE_KEYS.SHOPS);
     localStorage.setItem('vodacom_purged_v6', 'true');
   } catch (e) {
@@ -549,18 +474,9 @@ export function toISO(dateVal?: Date | string): string {
 
 // --- USERS ---
 export function getUsers(): User[] {
-  const storedUsers = loadItem<User[]>(STORAGE_KEYS.USERS, INITIAL_USERS);
-  if (!Array.isArray(storedUsers) || storedUsers.length === 0) {
-    saveItem(STORAGE_KEYS.USERS, INITIAL_USERS);
-    return INITIAL_USERS;
-  }
-
-  const mergedUsers = mergeUsersWithSeedData(storedUsers);
-  const needsWrite = JSON.stringify(mergedUsers) !== JSON.stringify(storedUsers);
-  if (needsWrite) {
-    saveItem(STORAGE_KEYS.USERS, mergedUsers);
-  }
-  return mergedUsers;
+  // La table Supabase public.users est l'unique source de vérité : aucun compte de départ n'est embarqué.
+  const storedUsers = loadItem<User[]>(STORAGE_KEYS.USERS, []);
+  return Array.isArray(storedUsers) ? storedUsers : [];
 }
 
 export function saveUsers(users: User[]): void {
@@ -684,10 +600,6 @@ export function updateUserSupervisor(userId: string, supervisorId: string): bool
   return false;
 }
 
-export function getDefaultPasswordForRole(role: UserRole): string {
-  return role === 'supervisor' || role === 'sub_admin' || role === 'admin' || role === 'super_admin' ? 'test' : 'password';
-}
-
 function normalizeLoginToken(value: string): string {
   return value.trim().toLowerCase().replace(/[\s\-\.\+]/g, '');
 }
@@ -715,8 +627,8 @@ function doesProvidedPasswordMatch(user: User, providedRaw: string): boolean {
     return storedNormalized === providedNormalized;
   }
 
-  const defaultPass = getDefaultPasswordForRole(user.role);
-  return defaultPass.toLowerCase() === providedNormalized;
+  // Aucun mot de passe enregistré : la connexion est refusée (pas de valeur par défaut).
+  return false;
 }
 
 export function updateUserPassword(userId: string, oldPass: string, newPass: string): { success: boolean; message: string } {
@@ -777,8 +689,7 @@ export function authenticate(phone: string, password_hash: string): { success: b
   }
 
   const customPassword = (found.password || '').trim().toLowerCase();
-  const roleDefaultPassword = getDefaultPasswordForRole(found.role).toLowerCase();
-  const acceptedPasswords = customPassword ? [customPassword] : [roleDefaultPassword];
+  const acceptedPasswords = customPassword ? [customPassword] : [];
 
   if (!acceptedPasswords.some(candidate => candidate && candidate === provided)) {
     return { success: false, message: 'Mot de passe incorrect.' };
@@ -864,7 +775,7 @@ export function getEffectiveTargetsForDate(date: string, shopId?: string): ShopT
 
 // --- CHECKINS ---
 export function getCheckins(): Checkin[] {
-  return loadItem(STORAGE_KEYS.CHECKINS, INITIAL_CHECKINS)
+  return loadItem(STORAGE_KEYS.CHECKINS, [])
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
@@ -1023,7 +934,7 @@ export function getTodayCheckinPhoto(agentId: string): string | null {
 
 // --- LEADS ---
 export function getLeads(): Lead[] {
-  const items: Lead[] = loadItem(STORAGE_KEYS.LEADS, INITIAL_LEADS);
+  const items: Lead[] = loadItem(STORAGE_KEYS.LEADS, []);
   return items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 }
 
@@ -1287,25 +1198,25 @@ export async function getReportPreviewHtml(report: DailyReport): Promise<string>
 
 // --- NOTIFICATIONS ---
 export function getNotifications(userId: string): NotificationItem[] {
-  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
+  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], []);
   return notifs.filter(n => n.user_id === userId);
 }
 
 export function markNotifsAsRead(userId: string): void {
-  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
+  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], []);
   const updated = notifs.map(n => n.user_id === userId ? { ...n, is_read: true } : n);
   saveItem(STORAGE_KEYS.NOTIFS, updated);
 }
 
 export function clearNotifications(userId: string): void {
-  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], INITIAL_NOTIFICATIONS);
+  const notifs = loadStoredArray<NotificationItem[]>(STORAGE_KEYS.NOTIFS, ['vodacom_notifs', 'vodacom_notifs_v5', 'vodacom_notifs_v4'], []);
   const updated = notifs.filter(n => n.user_id !== userId);
   saveItem(STORAGE_KEYS.NOTIFS, updated);
 }
 
 // --- CHAT ---
 export async function getChatMessages(): Promise<ChatMessage[]> {
-  return loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT).filter(message => !message.deleted);
+  return loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], []).filter(message => !message.deleted);
 }
 
 export async function sendChatMessage(sender: User, message: string): Promise<ChatMessage> {
@@ -1363,7 +1274,7 @@ export async function deleteChatMessage(messageId: string, actor: User): Promise
 }
 
 export function markChatAsRead(userId: string): void {
-  const msgs = loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT);
+  const msgs = loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], []);
   const updated = msgs.map(m => {
     if (m.sender_id === userId || m.deleted) return m;
     const readBy = m.read_by || [];
@@ -1374,7 +1285,7 @@ export function markChatAsRead(userId: string): void {
 }
 
 export function getUnreadChatCount(userId: string): number {
-  const msgs = loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], INITIAL_CHAT);
+  const msgs = loadStoredArray<ChatMessage[]>(STORAGE_KEYS.CHAT, ['vodacom_chat', 'vodacom_chat_v5', 'vodacom_chat_v4'], []);
   return msgs.filter(m => !m.deleted && m.sender_id !== userId && !(m.read_by || []).includes(userId)).length;
 }
 
