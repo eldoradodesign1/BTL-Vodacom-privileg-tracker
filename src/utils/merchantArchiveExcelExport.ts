@@ -23,7 +23,7 @@ function formatTable(sheet: any, widths: number[]): void {
   header.height = 24;
   header.eachCell((cell: any) => {
     cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF083344' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B1E24' } };
     cell.alignment = { vertical: 'middle' };
   });
   for (let row = 2; row <= sheet.rowCount; row += 1) {
@@ -64,7 +64,7 @@ export async function exportMerchantArchiveExcel(
   summary.mergeCells('A1:C1');
   summary.getCell('A1').value = 'COMPILATION DES RAPPORTS · MERCHANT';
   summary.getCell('A1').font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 15 };
-  summary.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF083344' } };
+  summary.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1B1E24' } };
   summary.getCell('A1').alignment = { horizontal: 'center', vertical: 'middle' };
   summary.getRow(1).height = 30;
   summary.mergeCells('A2:C2');
@@ -85,7 +85,7 @@ export async function exportMerchantArchiveExcel(
     const row = summary.addRow([label, { formula }, source]);
     row.getCell(2).numFmt = format || '0';
     row.getCell(1).font = { bold: true, color: { argb: 'FF0F172A' } };
-    row.getCell(2).font = { bold: true, color: { argb: 'FF0F766E' }, size: 12 };
+    row.getCell(2).font = { bold: true, color: { argb: 'FFC8243F' }, size: 12 };
   });
   formatTable(summary, [34, 24, 24]);
   summary.views = [{ showGridLines: false }];

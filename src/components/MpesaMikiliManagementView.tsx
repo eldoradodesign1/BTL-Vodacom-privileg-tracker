@@ -37,7 +37,7 @@ const rankClasses = [
 ];
 
 const START_DATE = '2026-09-01';
-const CHART_COLORS = ['#ef4444', '#22c55e', '#f59e0b', '#38bdf8', '#a78bfa'];
+const CHART_COLORS = ['var(--m-accent)', '#34d399', '#fbbf24', '#38bdf8', '#a78bfa'];
 const dayLabel = (iso: string) => new Date(iso + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' });
 
 const PresencePanel: React.FC<{
@@ -252,14 +252,14 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
         </section>
         <section className="relative overflow-hidden rounded-[1.7rem] border border-white/10 bg-white/[0.025] px-4 py-3">
           <div className="flex items-stretch divide-x divide-white/10 overflow-x-auto">{([
-            { label: 'Présents', value: metrics.present, Icon: UsersRound, tone: 'text-cyan-100' },
+            { label: 'Présents', value: metrics.present, Icon: UsersRound, tone: 'text-red-300' },
             { label: 'Clients', value: metrics.clients, Icon: UsersRound, tone: 'text-white' },
             { label: 'Transactions', value: metrics.transactions, Icon: Zap, tone: 'text-emerald-200' },
             { label: 'Conversion', value: `${metrics.conversion}%`, Icon: BarChart3, tone: 'text-amber-100' },
           ] as Array<{ label: string; value: string | number; Icon: React.ElementType; tone: string }>).map(({ label, value, Icon: I, tone }) => <div key={label} className="min-w-[105px] flex-1 px-3 first:pl-0 last:pr-0"><div className="flex items-center gap-2"><I size={14} className={tone}/><span className="text-[8px] font-black uppercase tracking-[0.16em] text-gray-500">{label}</span></div><b className="mt-1 block text-2xl font-black text-white">{value}</b></div>)}</div>
         </section>
-        {isSupervisor && <section className="glass-card overflow-hidden p-3 border border-cyan-300/15">
-          <div className="flex items-center justify-between"><div><p className="text-[8px] font-black uppercase tracking-[0.2em] text-cyan-200/70">Performance équipe</p><h2 className="mt-1 text-lg font-black text-white">Indicateurs du jour</h2></div><span className="text-[8px] font-black uppercase text-cyan-100">{metrics.present}/{team.length} présents</span></div>
+        {isSupervisor && <section className="glass-card overflow-hidden p-3 border border-red-300/15">
+          <div className="flex items-center justify-between"><div><p className="text-[8px] font-black uppercase tracking-[0.2em] text-red-300/70">Performance équipe</p><h2 className="mt-1 text-lg font-black text-white">Indicateurs du jour</h2></div><span className="text-[8px] font-black uppercase text-red-300">{metrics.present}/{team.length} présents</span></div>
           <div className="mt-3 grid grid-cols-3 gap-2">
             {[
               { title: 'Clients / objectif', value: metrics.clients, target: targets.dailyClients * team.length, tone: '#38bdf8' },
@@ -281,17 +281,17 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
         </section>}
         <section className="grid grid-cols-2 gap-2">
           <div className="glass-card p-4"><p className="text-[8px] font-black uppercase tracking-[0.18em] text-gray-500">Conversion</p><b className="mt-2 block text-3xl font-black text-emerald-200">{metrics.conversion}%</b><div className="mt-3 h-1.5 rounded-full bg-white/[0.06]"><div className="h-full rounded-full bg-emerald-400" style={{width:metrics.conversion+'%'}}/></div></div>
-          <div className="glass-card p-4"><p className="text-[8px] font-black uppercase tracking-[0.18em] text-gray-500">Couverture</p><b className="mt-2 block text-3xl font-black text-cyan-100">{targets.dailyClients > 0 && team.length ? Math.min(100, Math.round(metrics.clients / (targets.dailyClients * team.length) * 100)) : 0}%</b><span className="mt-2 block text-[8px] font-bold text-gray-500">{metrics.clients} / {targets.dailyClients * team.length || 0} clients objectif</span></div>
+          <div className="glass-card p-4"><p className="text-[8px] font-black uppercase tracking-[0.18em] text-gray-500">Couverture</p><b className="mt-2 block text-3xl font-black text-red-300">{targets.dailyClients > 0 && team.length ? Math.min(100, Math.round(metrics.clients / (targets.dailyClients * team.length) * 100)) : 0}%</b><span className="mt-2 block text-[8px] font-bold text-gray-500">{metrics.clients} / {targets.dailyClients * team.length || 0} clients objectif</span></div>
         </section>
 
         {!isSupervisor && (        <section className="glass-card overflow-hidden p-4">
-          <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-200/80">Progression</p><h2 className="mt-1 text-lg font-black text-white">Le terrain depuis le 1er septembre</h2></div><ArrowUpRight size={20} className="text-cyan-200"/></div>
-          <div className="mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><LineChart data={chartData}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.07)"/><XAxis dataKey="label" tick={{fontSize:9,fill:'#6b7280'}} axisLine={false} tickLine={false}/><YAxis allowDecimals={false} tick={{fontSize:9,fill:'#6b7280'}} axisLine={false} tickLine={false}/><Tooltip contentStyle={{background:'#11141d',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,fontSize:11}}/><Line type="monotone" dataKey="clients" name="Clients" stroke="#ef4444" strokeWidth={3} dot={false}/><Line type="monotone" dataKey="transactions" name="Transactions" stroke="#22c55e" strokeWidth={3} dot={false}/></LineChart></ResponsiveContainer></div>
+          <div className="flex items-center justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-300/80">Progression</p><h2 className="mt-1 text-lg font-black text-white">Le terrain depuis le 1er septembre</h2></div><ArrowUpRight size={20} className="text-red-300"/></div>
+          <div className="mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><LineChart data={chartData}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.07)"/><XAxis dataKey="label" tick={{fontSize:9,fill:'#6b7280'}} axisLine={false} tickLine={false}/><YAxis allowDecimals={false} tick={{fontSize:9,fill:'#6b7280'}} axisLine={false} tickLine={false}/><Tooltip contentStyle={{background:'#11141d',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,fontSize:11}}/><Line type="monotone" dataKey="clients" name="Clients" stroke="var(--m-accent)" strokeWidth={3} dot={false}/><Line type="monotone" dataKey="transactions" name="Transactions" stroke="#22c55e" strokeWidth={3} dot={false}/></LineChart></ResponsiveContainer></div>
         </section>
 
     )}
     {!isSupervisor && <section className="glass-card overflow-hidden p-3">
-          <div className="flex items-center justify-between px-1"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-cyan-200/80">Indicateurs</p><h2 className="mt-1 text-lg font-black text-white">Lecture du terrain</h2></div><span className="text-[8px] font-black uppercase text-gray-500">{dayLabel(date)}</span></div>
+          <div className="flex items-center justify-between px-1"><div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-300/80">Indicateurs</p><h2 className="mt-1 text-lg font-black text-white">Lecture du terrain</h2></div><span className="text-[8px] font-black uppercase text-gray-500">{dayLabel(date)}</span></div>
           <div className="mt-3 grid grid-cols-3 gap-2">
             {[
               { title: 'Clients / objectif', done: metrics.clients, target: targets.dailyClients * team.length, tone: '#38bdf8' },
@@ -338,7 +338,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
                     <p className="mt-0.5 text-[10px] text-gray-500">{member.phone}</p>
                     <p className="mt-1 text-[9px] font-bold text-red-200">{member.locations.filter((item) => ['Kinshasa','Kongo-Central','Haut-Katanga'].includes(item)).join(' · ') || 'Lieu non renseigné'}</p>
                   </div>
-                  <span className={status === 'Clôturé' ? 'rounded-full border border-emerald-300/30 bg-emerald-500/10 px-2 py-1 text-[8px] font-black uppercase text-emerald-200' : status === 'En action' ? 'rounded-full border border-cyan-300/30 bg-cyan-500/10 px-2 py-1 text-[8px] font-black uppercase text-cyan-100' : 'rounded-full border border-red-300/20 bg-red-500/10 px-2 py-1 text-[8px] font-black uppercase text-red-200'}>{status}</span>
+                  <span className={status === 'Clôturé' ? 'rounded-full border border-emerald-300/30 bg-emerald-500/10 px-2 py-1 text-[8px] font-black uppercase text-emerald-200' : status === 'En action' ? 'rounded-full border border-red-300/30 bg-red-500/10 px-2 py-1 text-[8px] font-black uppercase text-red-300' : 'rounded-full border border-red-300/20 bg-red-500/10 px-2 py-1 text-[8px] font-black uppercase text-red-200'}>{status}</span>
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-2">
@@ -389,11 +389,11 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
             ['Transactions / jour', draftTargets.dailyTransactions, 'dailyTransactions', Zap],
           ].map(([label,value,key,Icon]) => { const I=Icon as React.ElementType; const field=key as keyof MikiliTargets; return <div key={String(key)} className="rounded-2xl border border-white/10 bg-white/[0.035] p-3"><div className="flex items-center gap-2"><I size={15} className="text-red-200"/><span className="text-[8px] font-black uppercase tracking-wider text-gray-500">{String(label)}</span></div><div className="mt-2 flex items-center justify-between gap-2"><button type="button" onClick={()=>setDraftTargets((prev)=>({...prev,[field]:Math.max(0,Number(value)-1)}))} className="h-9 w-9 rounded-xl border border-white/10 bg-black/20 text-lg font-black text-gray-300">−</button><b className="text-2xl font-black text-white">{Number(value)}</b><button type="button" onClick={()=>setDraftTargets((prev)=>({...prev,[field]:Number(value)+1}))} className="h-9 w-9 rounded-xl border border-red-300/20 bg-red-500/10 text-lg font-black text-red-100">+</button></div></div>; })}
         </div><button type="button" onClick={()=>void saveTargets()} disabled={savingTargets} className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-red-500 px-4 py-3 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-40"><CheckCircle2 size={15}/>{savingTargets?'Enregistrement…':'Enregistrer les targets'}</button></section>
-        <section className="glass-card p-4"><div className="flex items-center justify-between"><div><h2 className="font-black text-white">Population campagne</h2><p className="text-[9px] text-gray-500">{team.length} BA affectés sur le périmètre affiché.</p></div><UsersRound size={19} className="text-cyan-200"/></div><div className="mt-3 space-y-2">{regionSummary.length ? regionSummary.map(([region, stats]) => <div key={region} className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] p-3"><span className="text-[10px] font-black uppercase text-gray-300">{region}</span><span className="text-[9px] font-bold text-gray-500">{stats.clients} clients · {stats.transactions} Tx</span></div>) : <p className="rounded-2xl bg-white/[0.03] p-4 text-[10px] font-semibold text-gray-500">Les régions apparaîtront dès que les premières interactions terrain seront enregistrées.</p>}</div></section>
+        <section className="glass-card p-4"><div className="flex items-center justify-between"><div><h2 className="font-black text-white">Population campagne</h2><p className="text-[9px] text-gray-500">{team.length} BA affectés sur le périmètre affiché.</p></div><UsersRound size={19} className="text-red-300"/></div><div className="mt-3 space-y-2">{regionSummary.length ? regionSummary.map(([region, stats]) => <div key={region} className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/[0.03] p-3"><span className="text-[10px] font-black uppercase text-gray-300">{region}</span><span className="text-[9px] font-bold text-gray-500">{stats.clients} clients · {stats.transactions} Tx</span></div>) : <p className="rounded-2xl bg-white/[0.03] p-4 text-[10px] font-semibold text-gray-500">Les régions apparaîtront dès que les premières interactions terrain seront enregistrées.</p>}</div></section>
       </>}
       {agentModal && selectedAgent && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-3 backdrop-blur-md" onClick={closeAgentModal}>
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] border border-white/10 bg-[#0a1220]/95 p-4 shadow-2xl" onClick={(e)=>e.stopPropagation()}>
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[2rem] border border-white/10 bg-(--m-sheet)/95 p-4 shadow-2xl" onClick={(e)=>e.stopPropagation()}>
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div><p className="text-[8px] font-black uppercase tracking-[.2em] text-blue-200/70">M-Pesa Mikili · {agentModal === 'profile' ? 'Détail agent' : agentModal === 'presence' ? 'Registre de présence' : agentModal === 'location' ? 'Localisation' : 'Rapports'}</p><h2 className="mt-1 text-lg font-black text-white">{selectedAgent.name}</h2></div>
               <button type="button" onClick={closeAgentModal} className="h-9 w-9 rounded-xl border border-white/10 bg-white/5 text-gray-300">×</button>
@@ -419,8 +419,8 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
               const selectedAttendance = agentAttendance.find((x) => x.activity_date === profileDate);
               return <div className="mt-4 space-y-3">
                 <div className="flex flex-col items-center rounded-[1.7rem] border border-white/10 bg-white/[.025] px-4 py-4 text-center">
-                  <div className="mb-3 h-20 w-20 overflow-hidden rounded-[1.7rem] border-2 border-cyan-300/35 bg-cyan-500/10 shadow-[0_0_30px_rgba(34,211,238,.12)]">
-                    {profilePhotoUrl ? <img src={profilePhotoUrl} alt={selectedAgent.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-xl font-black text-cyan-100">{initials}</div>}
+                  <div className="mb-3 h-20 w-20 overflow-hidden rounded-[1.7rem] border-2 border-red-300/35 bg-red-500/10 shadow-[0_0_30px_rgba(34,211,238,.12)]">
+                    {profilePhotoUrl ? <img src={profilePhotoUrl} alt={selectedAgent.name} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center text-xl font-black text-red-300">{initials}</div>}
                   </div>
                   <h3 className="text-xl font-black uppercase tracking-wide text-white">{selectedAgent.name}</h3>
                   <p className="mt-1 text-[9px] font-black uppercase text-gray-500">{selectedAgent.phone} · {selectedAgent.locations.filter((x) => ['Kinshasa','Kongo-Central','Haut-Katanga'].includes(x)).join(' · ') || 'Région non renseignée'}</p>
@@ -436,7 +436,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-black uppercase tracking-[.2em] text-gray-400">Évolution quotidienne</p><span className="text-[9px] font-black uppercase text-cyan-200">Clients · Transactions</span></div>
+                  <div className="mb-2 flex items-center justify-between"><p className="text-[10px] font-black uppercase tracking-[.2em] text-gray-400">Évolution quotidienne</p><span className="text-[9px] font-black uppercase text-red-300">Clients · Transactions</span></div>
                   <div className="h-40">
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={evolution}>

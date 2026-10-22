@@ -59,7 +59,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
 
   const surface = isDiamondTheme
     ? 'border-slate-300/80 bg-white/90 text-slate-800 shadow-[0_10px_30px_rgba(100,116,139,.20)]'
-    : 'border-white/10 bg-[#080d19]/90 text-white shadow-[0_10px_35px_rgba(0,0,0,.42)]';
+    : 'border-white/10 bg-(--m-sheet)/90 text-white shadow-[0_10px_35px_rgba(0,0,0,.42)]';
   const muted = isDiamondTheme ? 'text-slate-500' : 'text-white/45';
   const chip = isDiamondTheme ? 'border-slate-300 bg-white/70' : 'border-white/10 bg-white/[0.04]';
   const activeChip = isDiamondTheme
@@ -137,8 +137,8 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
               aria-label={`Ouvrir la simulation · ${selectedUser.name}`}
               className={`group relative flex h-11 w-11 items-center justify-center rounded-2xl border backdrop-blur-2xl ${surface}`}
             >
-              <Shield size={17} className="text-cyan-200 transition-transform duration-300 group-hover:rotate-12"/>
-              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_10px_currentColor]"/>
+              <Shield size={17} className="text-red-300 transition-transform duration-300 group-hover:rotate-12"/>
+              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-red-300 shadow-[0_0_10px_currentColor]"/>
             </button>
           </motion.div>
         ) : (
@@ -153,11 +153,11 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
           >
             <div className="mx-auto flex min-h-11 max-w-6xl items-center gap-2 px-2.5 py-1.5 sm:px-4">
               <div className="flex min-w-0 items-center gap-2">
-                <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-cyan-300/20 bg-cyan-400/10 text-cyan-100">
-                  <Shield size={14}/><span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-cyan-300"/>
+                <div className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-red-300/20 bg-red-400/10 text-red-300">
+                  <Shield size={14}/><span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-red-300"/>
                 </div>
                 <div className="hidden min-w-0 sm:block">
-                  <p className="text-[8px] font-black uppercase tracking-[0.2em] text-cyan-200/80">Simulation Master</p>
+                  <p className="text-[8px] font-black uppercase tracking-[0.2em] text-red-300/80">Simulation Master</p>
                   <p className={`truncate text-[9px] font-bold ${muted}`}>Origine · {masterUser.name}</p>
                 </div>
               </div>

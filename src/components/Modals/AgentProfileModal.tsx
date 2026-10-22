@@ -280,13 +280,13 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
           <div className="h-32 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={evolutionData}>
-                <XAxis dataKey="label" stroke="#71717a" fontSize={9} />
-                <YAxis stroke="#71717a" fontSize={9} />
+                <XAxis dataKey="label" stroke="var(--m-muted)" fontSize={9} />
+                <YAxis stroke="var(--m-muted)" fontSize={9} />
                 <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '10px', fontSize: '11px' }} />
                 <Line
                   type="monotone"
                   dataKey="value"
-                  stroke="#f43f5e"
+                  stroke="var(--m-accent)"
                   strokeWidth={2.5}
                   dot={(dotProps: any) => {
                     const { cx, cy, payload } = dotProps;
@@ -295,8 +295,8 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
                         cx={cx}
                         cy={cy}
                         r={4}
-                        fill="#f43f5e"
-                        stroke="#ffffff"
+                        fill="var(--m-accent)"
+                        stroke="var(--m-text)"
                         strokeWidth={1}
                         style={{ cursor: 'pointer' }}
                         onClick={() => {
@@ -312,8 +312,8 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
                         cx={cx}
                         cy={cy}
                         r={6}
-                        fill="#fb7185"
-                        stroke="#ffffff"
+                        fill="var(--m-accent)"
+                        stroke="var(--m-text)"
                         strokeWidth={2}
                         style={{ cursor: 'pointer' }}
                         onClick={() => {

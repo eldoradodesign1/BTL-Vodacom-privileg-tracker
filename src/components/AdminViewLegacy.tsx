@@ -48,10 +48,10 @@ const StyledPicker: React.FC<{
         <ChevronRight className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`} />
       </button>
       {open && (
-        <div role="listbox" className="absolute inset-x-0 top-full z-40 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/15 bg-[#171b27]/95 p-1 shadow-2xl backdrop-blur-xl">
-          <button type="button" role="option" aria-selected={!value} onClick={() => { onChange(''); setOpen(false); }} className={`w-full rounded-lg px-3 py-2 text-left text-xs font-bold ${!value ? 'bg-cyan-400/20 text-cyan-100' : 'text-gray-300 hover:bg-white/10'}`}>{placeholder}</button>
+        <div role="listbox" className="absolute inset-x-0 top-full z-40 mt-1 max-h-48 overflow-y-auto rounded-xl border border-white/15 bg-(--m-sheet)/95 p-1 shadow-2xl backdrop-blur-xl">
+          <button type="button" role="option" aria-selected={!value} onClick={() => { onChange(''); setOpen(false); }} className={`w-full rounded-lg px-3 py-2 text-left text-xs font-bold ${!value ? 'bg-red-400/20 text-red-300' : 'text-gray-300 hover:bg-white/10'}`}>{placeholder}</button>
           {options.map((option) => (
-            <button key={option.value} type="button" role="option" aria-selected={value === option.value} onClick={() => { onChange(option.value); setOpen(false); }} className={`w-full rounded-lg px-3 py-2 text-left text-xs font-bold ${value === option.value ? 'bg-cyan-400/20 text-cyan-100' : 'text-gray-300 hover:bg-white/10'}`}>
+            <button key={option.value} type="button" role="option" aria-selected={value === option.value} onClick={() => { onChange(option.value); setOpen(false); }} className={`w-full rounded-lg px-3 py-2 text-left text-xs font-bold ${value === option.value ? 'bg-red-400/20 text-red-300' : 'text-gray-300 hover:bg-white/10'}`}>
               {option.label}
             </button>
           ))}
@@ -1340,7 +1340,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div className="relative overflow-hidden glass-card p-5 border border-white/10 rounded-[26px] shadow-[0_20px_45px_rgba(0,0,0,0.35)]">
             <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-rose-500/12 blur-3xl" />
             <div className="pointer-events-none absolute left-1/3 -bottom-16 h-36 w-36 rounded-full bg-amber-400/12 blur-3xl" />
-            <div className="pointer-events-none absolute -left-14 top-10 h-28 w-28 rounded-full bg-sky-400/10 blur-3xl" />
+            <div className="pointer-events-none absolute -left-14 top-10 h-28 w-28 rounded-full bg-red-400/10 blur-3xl" />
             <h3 className="text-xs font-black uppercase text-red-400 tracking-[0.16em] mb-3 text-center">
               Répartition des Activations
             </h3>
@@ -1398,7 +1398,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <div className="z-10 w-10 shrink-0 border-r border-white/10 bg-black/20">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={rollingLineData} margin={{ left: 0, right: 0 }}>
-                      <YAxis stroke="#a1a1aa" fontSize={10} tickLine={false} axisLine={false} width={34} />
+                      <YAxis stroke="var(--m-muted)" fontSize={10} tickLine={false} axisLine={false} width={34} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -1416,7 +1416,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     </filter>
                   </defs>
                   <CartesianGrid strokeDasharray="4 5" stroke="rgba(161,161,170,0.22)" vertical={false} />
-                  <XAxis dataKey="date" stroke="#a1a1aa" fontSize={10} tickLine={false} axisLine={false} interval={2} />
+                  <XAxis dataKey="date" stroke="var(--m-muted)" fontSize={10} tickLine={false} axisLine={false} interval={2} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#09090b', borderColor: '#3f3f46', borderRadius: '14px', fontSize: '12px', boxShadow: '0 12px 25px rgba(0,0,0,0.35)' }}
                     itemStyle={{ color: '#ffffff', fontWeight: 'bold' }}
@@ -1425,7 +1425,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   <Line
                     type="monotone"
                     dataKey="value"
-                    stroke="#fb7185"
+                    stroke="var(--m-accent)"
                     strokeWidth={3.5}
                     filter="url(#lineGlow)"
                     dot={{ fill: '#fb7185', r: 4, stroke: '#fff', strokeWidth: 1.5 }}
@@ -1530,7 +1530,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <ChevronRight className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${shopPickerOpen ? 'rotate-90' : ''}`} />
               </button>
               {shopPickerOpen && (
-                <div role="listbox" className="absolute inset-x-0 top-full z-30 mt-2 max-h-56 overflow-y-auto rounded-2xl border border-white/15 bg-[#171b27]/95 p-1 shadow-2xl backdrop-blur-xl">
+                <div role="listbox" className="absolute inset-x-0 top-full z-30 mt-2 max-h-56 overflow-y-auto rounded-2xl border border-white/15 bg-(--m-sheet)/95 p-1 shadow-2xl backdrop-blur-xl">
                   <button
                     type="button"
                     role="option"
@@ -1547,7 +1547,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       role="option"
                       aria-selected={shopAssignmentModal.selectedShopId === shop.id}
                       onClick={() => { setShopAssignmentModal((prev) => prev ? { ...prev, selectedShopId: shop.id } : prev); setShopPickerOpen(false); }}
-                      className={`w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold transition-colors ${shopAssignmentModal.selectedShopId === shop.id ? 'bg-cyan-400/20 text-cyan-100' : 'text-gray-300 hover:bg-white/10'}`}
+                      className={`w-full rounded-xl px-3 py-2.5 text-left text-xs font-bold transition-colors ${shopAssignmentModal.selectedShopId === shop.id ? 'bg-red-400/20 text-red-300' : 'text-gray-300 hover:bg-white/10'}`}
                     >
                       {shop.name} · {shop.city}
                     </button>

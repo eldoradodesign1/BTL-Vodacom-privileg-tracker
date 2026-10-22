@@ -97,7 +97,7 @@ function buildEvolutionSvg(targetValues: number[], activationValues: number[]): 
       <svg width="100%" height="100" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" style="display:block; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
         <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#cbd5e1" stroke-width="1" />
         ${targetPoints ? `<polyline fill="none" stroke="#2563eb" stroke-width="2.2" stroke-dasharray="4 3" points="${targetPoints}" />` : ''}
-        ${activationPoints ? `<polyline fill="none" stroke="#dc2626" stroke-width="3" points="${activationPoints}" />` : ''}
+        ${activationPoints ? `<polyline fill="none" stroke="#c8243f" stroke-width="3" points="${activationPoints}" />` : ''}
       </svg>
       <div style="font-size:10px; color:#e2e8f0; margin-top:4px; display:flex; gap:10px; flex-wrap:wrap;">
         <span>🎯 Targets journaliers: <b>${targetLast}</b></span>
@@ -162,10 +162,10 @@ export function buildAgentReportHtml(d: PDFReportData): string {
   const gpsInUrl = makeGpsLink(d.mapsIn);
   const gpsOutUrl = makeGpsLink(d.mapsOut);
   const gpsInHtml = gpsInUrl
-    ? `<a href="${gpsInUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:6px; font-size:9px; color:#E60000; font-weight:bold; text-decoration:none; border:1px solid #E60000; padding:4px 10px; border-radius:6px; background:#fff;">📍 Vérifier GPS (Carte)</a>`
+    ? `<a href="${gpsInUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:6px; font-size:9px; color:#c8243f; font-weight:bold; text-decoration:none; border:1px solid #c8243f; padding:4px 10px; border-radius:6px; background:#fff;">📍 Vérifier GPS (Carte)</a>`
     : `<span style="display:inline-block; margin-top:6px; font-size:9px; color:#999; font-weight:bold; border:1px solid #ddd; padding:4px 10px; border-radius:6px; background:#fafafa;">Coordonnées non disponibles</span>`;
   const gpsOutHtml = gpsOutUrl
-    ? `<a href="${gpsOutUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:6px; font-size:9px; color:#E60000; font-weight:bold; text-decoration:none; border:1px solid #E60000; padding:4px 10px; border-radius:6px; background:#fff;">📍 Vérifier GPS (Carte)</a>`
+    ? `<a href="${gpsOutUrl}" target="_blank" rel="noopener noreferrer" style="display:inline-block; margin-top:6px; font-size:9px; color:#c8243f; font-weight:bold; text-decoration:none; border:1px solid #c8243f; padding:4px 10px; border-radius:6px; background:#fff;">📍 Vérifier GPS (Carte)</a>`
     : `<span style="display:inline-block; margin-top:6px; font-size:9px; color:#999; font-weight:bold; border:1px solid #ddd; padding:4px 10px; border-radius:6px; background:#fafafa;">Coordonnées non disponibles</span>`;
 
   const photosHtml = d.photos && d.photos.length > 1
@@ -187,7 +187,7 @@ export function buildAgentReportHtml(d: PDFReportData): string {
       <table style="width:100%; border-collapse:collapse;">
         <tr>
           <td style="width:90px; vertical-align:top;">
-            <div style="width:80px; height:80px; border-radius:16px; border:3px solid #ef4444; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#0b1220;">
+            <div style="width:80px; height:80px; border-radius:16px; border:3px solid #c8243f; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#0b1220;">
               ${profilePhoto
                 ? `<img src="${profilePhoto}" style="max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; object-position:center; display:block;">`
                 : `<span style="font-size:10px; font-weight:900; color:#cbd5e1; text-transform:uppercase; text-align:center;">Photo non disponible</span>`}
@@ -234,7 +234,7 @@ export function buildAgentReportHtml(d: PDFReportData): string {
           <div style="background:#ffffff; border:1px solid #e5e7eb; padding:12px; border-radius:14px;">
             <div style="font-size:10px; font-weight:800; color:#475569; text-transform:uppercase; margin-bottom:8px; letter-spacing:0.7px;">📊 Répartition & performance</div>
             <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:6px;">
-              ${buildDonutSvg(d.totalPrivilege, Math.max(d.targets.privilege, 1), '#dc2626', '#fee2e2', 'Privilège')}
+              ${buildDonutSvg(d.totalPrivilege, Math.max(d.targets.privilege, 1), '#c8243f', '#fee2e2', 'Privilège')}
               ${buildDonutSvg(d.totalRoaming, Math.max(d.targets.roaming, 1), '#d97706', '#fef3c7', 'Roaming')}
               ${buildDonutSvg(d.totalBundles, Math.max(d.targets.bundle, 1), '#2563eb', '#dbeafe', 'Bundles')}
             </div>
@@ -247,7 +247,7 @@ export function buildAgentReportHtml(d: PDFReportData): string {
     <div style="font-size:10px; font-weight:800; color:#6b7280; text-transform:uppercase; margin-top:15px; margin-bottom:10px; border-bottom:1px solid #e5e7eb; padding-bottom:5px; letter-spacing:1px;">Liste détaillée des numéros & activations (${safeLeads.length})</div>
     <table style="width:100%; border-collapse:collapse; margin-top:6px; border:1px solid #eee;">
       <thead>
-        <tr style="background:#1a1a1a; color:white; font-size:9px; text-transform:uppercase;">
+        <tr style="background:#1b1e24; color:white; font-size:9px; text-transform:uppercase;">
           <th style="padding:6px; text-align:left;">Heure</th>
           <th style="padding:6px; text-align:left;">Client</th>
           <th style="padding:6px; text-align:left;">N° MSISDN</th>
@@ -259,7 +259,7 @@ export function buildAgentReportHtml(d: PDFReportData): string {
           <tr style="border-bottom:1px solid #eee; font-size:10px; background:${i % 2 === 0 ? '#fff' : '#fcfcfc'};">
             <td style="padding:6px;">${escapeHtml(l.timestamp || '00:00')}</td>
             <td style="padding:6px;"><b>${escapeHtml(l.client_name)}</b></td>
-            <td style="padding:6px; font-family:monospace; font-weight:bold; color:#E60000;">${escapeHtml(l.msisdn)}</td>
+            <td style="padding:6px; font-family:monospace; font-weight:bold; color:#c8243f;">${escapeHtml(l.msisdn)}</td>
             <td style="padding:6px; text-align:right; font-weight:bold; color:#333;">${escapeHtml(l.action_type)}</td>
           </tr>
         `).join('') : `
@@ -386,7 +386,7 @@ function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
   `;
 
   const cover = `
-    <div style="background:linear-gradient(140deg,#111827 0%,#312e81 48%,#991b1b 100%); border-radius:24px; padding:24px; color:#fff; margin-bottom:18px;">
+    <div style="background:linear-gradient(140deg,#111827 0%,#312e81 48%,#8c1a30 100%); border-radius:24px; padding:24px; color:#fff; margin-bottom:18px;">
       <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#c4b5fd; font-weight:800;">Rapport de supervision</div>
       <div style="font-size:28px; font-weight:900; margin-top:6px;">${escapeHtml(d.supName)}</div>
       <div style="font-size:12px; color:#e2e8f0; margin-top:5px;">Période: <b>${escapeHtml(d.date)}</b></div>
@@ -414,12 +414,12 @@ function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
             <div style="font-size:13px; font-weight:900; text-transform:uppercase; color:#111827;">${escapeHtml(a.name)}</div>
             <div style="font-size:10px; color:#64748b; font-weight:700; text-transform:uppercase;">${escapeHtml(a.shop)}</div>
           </div>
-          <span style="font-size:9px; font-weight:900; padding:4px 9px; border-radius:999px; border:1px solid ${a.status === 'Clôturé' ? '#86efac' : (a.status === 'Présent' ? '#93c5fd' : '#fecaca')}; color:${a.status === 'Clôturé' ? '#166534' : (a.status === 'Présent' ? '#1e3a8a' : '#991b1b')}; background:${a.status === 'Clôturé' ? '#f0fdf4' : (a.status === 'Présent' ? '#eff6ff' : '#fef2f2')};">${escapeHtml(badge)}</span>
+          <span style="font-size:9px; font-weight:900; padding:4px 9px; border-radius:999px; border:1px solid ${a.status === 'Clôturé' ? '#86efac' : (a.status === 'Présent' ? '#93c5fd' : '#fecaca')}; color:${a.status === 'Clôturé' ? '#166534' : (a.status === 'Présent' ? '#1e3a8a' : '#8c1a30')}; background:${a.status === 'Clôturé' ? '#f0fdf4' : (a.status === 'Présent' ? '#eff6ff' : '#fef2f2')};">${escapeHtml(badge)}</span>
         </div>
         <div style="display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:8px;">
           <div style="border:1px solid #fee2e2; border-radius:10px; background:#fff5f5; padding:8px; text-align:center;">
             <div style="font-size:8px; text-transform:uppercase; color:#7f1d1d; font-weight:800;">Privilège</div>
-            <div style="font-size:16px; font-weight:900; color:#991b1b; line-height:1.1;">${a.stats.priv}</div>
+            <div style="font-size:16px; font-weight:900; color:#8c1a30; line-height:1.1;">${a.stats.priv}</div>
           </div>
           <div style="border:1px solid #fde68a; border-radius:10px; background:#fffbeb; padding:8px; text-align:center;">
             <div style="font-size:8px; text-transform:uppercase; color:#78350f; font-weight:800;">Roaming</div>
@@ -493,7 +493,7 @@ function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
       return `
         <div style="display:flex; flex-direction:column; align-items:center; gap:8px; min-width:46px;">
           <div style="height:${chartHeight}px; display:flex; align-items:flex-end; gap:3px;">
-            ${bar(agent.stats.priv, '#dc2626')}
+            ${bar(agent.stats.priv, '#c8243f')}
             ${bar(agent.stats.roam, '#d97706')}
             ${bar(agent.stats.bund, '#2563eb')}
           </div>
@@ -510,7 +510,7 @@ function buildSupervisorReportPages(d: PDFSupervisorData): string[] {
         <div style="display:flex; align-items:flex-start; gap:12px; margin-top:8px;">
           <div style="flex:1; min-width:0;">
             <div style="display:flex; align-items:center; gap:10px; font-size:9px; color:#334155; font-weight:800;">
-              <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; border-radius:2px; background:#dc2626;"></span>Privilège</span>
+              <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; border-radius:2px; background:#c8243f;"></span>Privilège</span>
               <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; border-radius:2px; background:#d97706;"></span>Roaming</span>
               <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:8px; height:8px; border-radius:2px; background:#2563eb;"></span>Bundle</span>
               <span style="margin-left:auto; font-size:9px; color:#64748b;">Max: ${maxValue}</span>
@@ -587,7 +587,7 @@ function buildAdminBatchReportPages(d: PDFAdminBatchData): string[] {
   const periodEnd = periodMatch?.[2] || rows[rows.length - 1]?.date || periodStart;
 
   const cover = `
-    <div style="background:linear-gradient(135deg,#111827 0%,#1d4ed8 46%,#dc2626 100%); color:#fff; border-radius:24px; padding:24px; margin-bottom:18px;">
+    <div style="background:linear-gradient(135deg,#111827 0%,#1d4ed8 46%,#c8243f 100%); color:#fff; border-radius:24px; padding:24px; margin-bottom:18px;">
       <div style="font-size:10px; text-transform:uppercase; letter-spacing:1px; color:#dbeafe; font-weight:800;">Compilation de période</div>
       <div style="font-size:34px; font-weight:900; margin-top:6px;">Rapport compilé</div>
       <div style="font-size:12px; color:#e2e8f0; margin-top:8px;">Période du <b>${escapeHtml(formatLongDate(periodStart))}</b> au <b>${escapeHtml(formatLongDate(periodEnd))}</b></div>
@@ -597,7 +597,7 @@ function buildAdminBatchReportPages(d: PDFAdminBatchData): string[] {
   const summaryCards = `
     <table style="width:100%; border-spacing:10px; margin-left:-10px; margin-bottom:10px;">
       <tr>
-        <td style="width:25%;"><div style="background:#fff5f5; border:1px solid #fecaca; border-radius:14px; text-align:center; padding:14px;"><div style="font-size:9px; color:#991b1b; text-transform:uppercase; font-weight:800;">Privilège</div><div style="font-size:24px; font-weight:900; color:#7f1d1d; margin-top:3px;">${totals.privilege}</div></div></td>
+        <td style="width:25%;"><div style="background:#fff5f5; border:1px solid #fecaca; border-radius:14px; text-align:center; padding:14px;"><div style="font-size:9px; color:#8c1a30; text-transform:uppercase; font-weight:800;">Privilège</div><div style="font-size:24px; font-weight:900; color:#7f1d1d; margin-top:3px;">${totals.privilege}</div></div></td>
         <td style="width:25%;"><div style="background:#fffbeb; border:1px solid #fde68a; border-radius:14px; text-align:center; padding:14px;"><div style="font-size:9px; color:#92400e; text-transform:uppercase; font-weight:800;">Roaming</div><div style="font-size:24px; font-weight:900; color:#78350f; margin-top:3px;">${totals.roaming}</div></div></td>
         <td style="width:25%;"><div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:14px; text-align:center; padding:14px;"><div style="font-size:9px; color:#1e3a8a; text-transform:uppercase; font-weight:800;">Bundles</div><div style="font-size:24px; font-weight:900; color:#1d4ed8; margin-top:3px;">${totals.bundles}</div></div></td>
         <td style="width:25%;"><div style="background:#0f172a; border:1px solid #334155; border-radius:14px; text-align:center; padding:14px;"><div style="font-size:9px; color:#cbd5e1; text-transform:uppercase; font-weight:800;">Total rapports</div><div style="font-size:24px; font-weight:900; color:#ffffff; margin-top:3px;">${rows.length}</div></div></td>
@@ -625,7 +625,7 @@ function buildAdminBatchReportPages(d: PDFAdminBatchData): string[] {
           <tr style="border-bottom:1px solid #e5e7eb; font-size:10px; background:${idx % 2 === 0 ? '#ffffff' : '#f8fafc'};">
             <td style="padding:8px;">${escapeHtml(r.date)}</td>
             <td style="padding:8px;"><b>${escapeHtml(r.agent)}</b></td>
-            <td style="padding:8px; text-align:center; color:#991b1b; font-weight:800;">${r.priv}</td>
+            <td style="padding:8px; text-align:center; color:#8c1a30; font-weight:800;">${r.priv}</td>
             <td style="padding:8px; text-align:center; color:#92400e; font-weight:800;">${r.roam}</td>
             <td style="padding:8px; text-align:center; color:#1e3a8a; font-weight:800;">${r.bund}</td>
             <td style="padding:8px; text-align:center; color:#0f172a; font-weight:900;">${total}</td>

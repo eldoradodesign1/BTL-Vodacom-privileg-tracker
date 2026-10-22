@@ -48,7 +48,7 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
   return <div className="space-y-4 pb-4">
     <section className="glass-card relative overflow-hidden p-4 sm:p-5">
       <div className="merchant-chart-glow pointer-events-none absolute -right-14 -top-12 h-48 w-48 rounded-full bg-fuchsia-400/[0.10] blur-3xl"/>
-      <div className="merchant-chart-glow pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-cyan-400/[0.08] blur-3xl"/>
+      <div className="merchant-chart-glow pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-red-400/[0.08] blur-3xl"/>
       <div className="relative flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200/80">Pilotage Merchant</p>
@@ -63,8 +63,8 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
           <b className="mt-1 block text-xl font-black text-white">{summary.targets.campaign_pos_target}</b>
           <span className="text-[9px] font-bold text-gray-400">POS configurés</span>
         </button>
-        <div className="rounded-2xl border border-cyan-300/25 bg-cyan-500/[0.08] p-3">
-          <span className="flex items-center justify-center gap-1 text-[9px] font-black uppercase text-cyan-100"><UsersRound size={12}/> Équipe active</span>
+        <div className="rounded-2xl border border-red-300/25 bg-red-500/[0.08] p-3">
+          <span className="flex items-center justify-center gap-1 text-[9px] font-black uppercase text-red-300"><UsersRound size={12}/> Équipe active</span>
           <b className="mt-1 block text-xl font-black text-white">{summary.activeBas}/{summary.teamSize}</b>
           <span className="text-[9px] font-bold text-gray-400">BA pointés</span>
         </div>
@@ -74,7 +74,7 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
           <span className="text-[9px] font-bold text-gray-400">{summary.visitedToday} POS visités</span>
         </div>
       </div>
-      {onOpenFundRequests && <button type="button" onClick={onOpenFundRequests} className="relative mt-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/25 bg-emerald-500/[0.07] px-3.5 py-3 text-left transition hover:bg-emerald-500/[0.12]"><span className="flex items-center gap-2"><Banknote className="text-emerald-200" size={17}/><span><b className="block text-[10px] font-black uppercase tracking-wide text-emerald-100">Demandes de fonds</b><span className="mt-0.5 block text-[9px] font-semibold text-gray-400">Ouvrir le registre et traiter les demandes BA.</span></span></span><span className={`relative rounded-xl border px-3 py-1.5 text-[10px] font-black ${pendingFundRequestCount ? 'border-amber-300/40 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-white/[0.04] text-gray-400'}`}>{pendingFundRequestCount || '0'}{pendingFundRequestCount > 0 && <i className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-[#10131b] bg-amber-400 animate-pulse"/>}</span></button>}
+      {onOpenFundRequests && <button type="button" onClick={onOpenFundRequests} className="relative mt-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/25 bg-emerald-500/[0.07] px-3.5 py-3 text-left transition hover:bg-emerald-500/[0.12]"><span className="flex items-center gap-2"><Banknote className="text-emerald-200" size={17}/><span><b className="block text-[10px] font-black uppercase tracking-wide text-emerald-100">Demandes de fonds</b><span className="mt-0.5 block text-[9px] font-semibold text-gray-400">Ouvrir le registre et traiter les demandes BA.</span></span></span><span className={`relative rounded-xl border px-3 py-1.5 text-[10px] font-black ${pendingFundRequestCount ? 'border-amber-300/40 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-white/[0.04] text-gray-400'}`}>{pendingFundRequestCount || '0'}{pendingFundRequestCount > 0 && <i className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-(--m-edge-soft) bg-amber-400 animate-pulse"/>}</span></button>}
     </section>
 
     {podiumSlot}
@@ -89,9 +89,9 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
         <div className="flex justify-center gap-2 text-[9px] font-black uppercase">{summary.donut.map((item) => <span key={item.name} className="flex items-center gap-1 rounded-lg bg-white/[0.04] px-2 py-1 text-gray-300"><i className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }}/>{item.name} {item.value}</span>)}</div>
       </article>
       <article className="glass-card relative overflow-hidden p-4">
-        <div className="merchant-chart-glow pointer-events-none absolute -left-10 -bottom-12 h-32 w-32 rounded-full bg-cyan-400/[0.10] blur-3xl"/>
-        <div className="relative"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">Histogramme de cadence</p><h2 className="mt-1 text-sm font-black">POS réalisés par BA</h2><p className="mt-1 text-[10px] text-gray-400">Barre cyan : réalisé · barre mauve : objectif journalier.</p></div>
-        <div className="relative mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary.byBa} margin={{ top: 10, right: 4, left: -22, bottom: 8 }}><CartesianGrid stroke="#ffffff15" vertical={false}/><XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false}/><YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} allowDecimals={false} axisLine={false} tickLine={false}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Bar dataKey="pos" name="POS réalisés" fill="#38bdf8" radius={[7,7,0,0]} isAnimationActive={false}/><Bar dataKey="target" name="Objectif" fill="#a78bfa" radius={[7,7,0,0]} isAnimationActive={false}/></BarChart></ResponsiveContainer></div>
+        <div className="merchant-chart-glow pointer-events-none absolute -left-10 -bottom-12 h-32 w-32 rounded-full bg-red-400/[0.10] blur-3xl"/>
+        <div className="relative"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-red-300">Histogramme de cadence</p><h2 className="mt-1 text-sm font-black">POS réalisés par BA</h2><p className="mt-1 text-[10px] text-gray-400">Barre cyan : réalisé · barre mauve : objectif journalier.</p></div>
+        <div className="relative mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary.byBa} margin={{ top: 10, right: 4, left: -22, bottom: 8 }}><CartesianGrid stroke="var(--m-edge-soft)" vertical={false}/><XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false}/><YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} allowDecimals={false} axisLine={false} tickLine={false}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Bar dataKey="pos" name="POS réalisés" fill="#38bdf8" radius={[7,7,0,0]} isAnimationActive={false}/><Bar dataKey="target" name="Objectif" fill="#a78bfa" radius={[7,7,0,0]} isAnimationActive={false}/></BarChart></ResponsiveContainer></div>
       </article>
     </section>
 
@@ -100,12 +100,12 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
       <div className="relative flex items-center gap-2"><TrendingUp className="text-emerald-200" size={18}/><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">Courbe de progression</p><h2 className="mt-1 text-sm font-black">POS visités · 30 derniers jours</h2></div></div>
       <div className="relative mt-3 h-64 overflow-hidden rounded-2xl border border-white/10 bg-black/10">
         <div className="flex h-full min-w-0">
-          <div className="z-10 w-12 shrink-0 border-r border-white/10 bg-[#0b1020]/85">
+          <div className="z-10 w-12 shrink-0 border-r border-white/10 bg-(--m-sheet)/85">
             <ResponsiveContainer width="100%" height="100%"><LineChart data={summary.timeline} margin={{ top: 12, right: 0, left: 0, bottom: 3 }}><YAxis domain={[0, 'auto']} tick={{ fill: '#9ca3af', fontSize: 10 }} allowDecimals={false} axisLine={false} tickLine={false} width={40}/></LineChart></ResponsiveContainer>
           </div>
           <div className="min-w-0 flex-1 overflow-x-auto custom-scrollbar">
             <div className="h-full" style={{ minWidth: `${Math.max(720, summary.timeline.length * 46)}px` }}>
-              <ResponsiveContainer width="100%" height="100%"><LineChart data={summary.timeline} margin={{ top: 12, right: 18, left: 8, bottom: 3 }}><CartesianGrid stroke="#ffffff12" vertical={false}/><XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false} interval={summary.timeline.length > 15 ? 2 : 0}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Legend wrapperStyle={{ fontSize: '10px' }}/><Line type="monotone" dataKey="visits" name="POS visités" stroke="#34d399" strokeWidth={3} dot={{ r: 3, fill: '#34d399' }} activeDot={{ r: 6 }} isAnimationActive={false}/><Line type="monotone" dataKey="target" name="Objectif actif" stroke="#fbbf24" strokeWidth={2} strokeDasharray="6 5" dot={false} isAnimationActive={false}/></LineChart></ResponsiveContainer>
+              <ResponsiveContainer width="100%" height="100%"><LineChart data={summary.timeline} margin={{ top: 12, right: 18, left: 8, bottom: 3 }}><CartesianGrid stroke="var(--m-edge-soft)" vertical={false}/><XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false} interval={summary.timeline.length > 15 ? 2 : 0}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Legend wrapperStyle={{ fontSize: '10px' }}/><Line type="monotone" dataKey="visits" name="POS visités" stroke="#34d399" strokeWidth={3} dot={{ r: 3, fill: '#34d399' }} activeDot={{ r: 6 }} isAnimationActive={false}/><Line type="monotone" dataKey="target" name="Objectif actif" stroke="#fbbf24" strokeWidth={2} strokeDasharray="6 5" dot={false} isAnimationActive={false}/></LineChart></ResponsiveContainer>
             </div>
           </div>
         </div>

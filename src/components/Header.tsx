@@ -4,6 +4,7 @@ import { User, NotificationItem, CampaignContext } from '../types';
 import { Bell, LogOut, Shield, RefreshCw, UserRound, Camera, X, BriefcaseBusiness, Banknote, Volume2, VolumeX } from 'lucide-react';
 import { addCheckin, getShopById, resolveStoredPhotoUrl } from '../utils/storage';
 import { armFundRequestAlertAudio, getNotificationsMuted, setNotificationsMuted } from '../utils/fundRequestAlert';
+import { publicUrl } from '../utils/assets';
 
 export type ThemeMode = 'anthracite' | 'rubis' | 'silver' | 'diamond' | 'sapphire' | 'ambre';
 
@@ -75,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
   const topbarOverlay = theme === 'diamond'
     ? 'linear-gradient(100deg, rgba(255,255,255,0.96), rgba(246,244,241,0.84), rgba(255,255,255,0.90))'
     : 'linear-gradient(100deg, rgba(5,7,12,0.68), rgba(10,14,22,0.34), rgba(8,10,17,0.56))';
-  const topbarStyle = { backgroundImage: `${topbarOverlay}, url(/topbar-backgrounds/${theme}-gem.jpg)`, backgroundSize: 'cover', backgroundPosition: 'center' };
+  const topbarStyle = { backgroundImage: `${topbarOverlay}, url(${publicUrl(`topbar-backgrounds/${theme}-gem.jpg`)})`, backgroundSize: 'cover', backgroundPosition: 'center' };
   const isDarkTheme = theme === 'anthracite' || theme === 'rubis' || theme === 'silver' || theme === 'diamond' || theme === 'sapphire' || theme === 'ambre';
   const visibleCampaigns = campaignOptions || [
     { key: 'vodacom-privilege' as const, label: 'Vodacom Privilège', note: 'Hôtesses' },
@@ -217,7 +218,7 @@ export const Header: React.FC<HeaderProps> = ({
             }
           }}
           disabled={isPointagePending || !allowCheckin}
-          className={`relative w-11 h-11 bg-red-600 rounded-2xl flex items-center justify-center font-black text-white text-base shadow-lg shadow-red-600/30 overflow-hidden shrink-0 border border-white/20 transition-transform ${photoSrc ? 'cursor-zoom-in hover:scale-[1.03]' : user.role === 'agent' ? 'cursor-pointer hover:scale-[1.03]' : 'cursor-default'} ${isPointagePending ? 'opacity-75' : ''}`}
+          className={`relative w-[3.25rem] h-12 bg-red-600 rounded-2xl flex items-center justify-center font-black text-white text-base shadow-lg shadow-red-600/30 overflow-hidden shrink-0 border border-white/20 transition-transform ${photoSrc ? 'cursor-zoom-in hover:scale-[1.03]' : user.role === 'agent' ? 'cursor-pointer hover:scale-[1.03]' : 'cursor-default'} ${isPointagePending ? 'opacity-75' : ''}`}
           aria-label={photoSrc ? 'Ouvrir la photo de pointage en plein écran' : (allowCheckin ? 'Check-in en attente' : checkinUnavailableLabel)}
         >
           {photoSrc ? (
@@ -394,7 +395,7 @@ export const Header: React.FC<HeaderProps> = ({
               <UserRound className="w-5 h-5" />
             </button>
             {showThemeMenu && (
-              <div role="menu" className={`app-popover btl-solid-popover absolute right-0 top-12 w-64 border rounded-2xl p-2 shadow-2xl z-50 ${
+              <div role="menu" className={`app-popover absolute right-0 top-12 w-64 border rounded-2xl p-2 shadow-2xl z-50 ${
                 isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
               }`}>
                 {onSetTheme && (

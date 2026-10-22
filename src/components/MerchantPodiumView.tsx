@@ -3,13 +3,14 @@ import { CalendarDays, FileText, LockKeyhole, MapPin, Medal, RefreshCw, Trophy, 
 import type { CampaignRun } from '../types';
 import { getActiveCampaignRuns, getMerchantCampaign, getMerchantPodium, merchantTodayIso, type MerchantPodiumEntry } from '../utils/merchantCampaign';
 import { MerchantBAOperationsModal } from './Modals/MerchantBAOperationsModal';
+import { publicUrl } from '../utils/assets';
 const MerchantCompiledReportModal = lazy(() => import('./Modals/MerchantCompiledReportModal').then((module) => ({ default: module.MerchantCompiledReportModal })));
 
 type MerchantOperation = 'profile' | 'report' | 'location' | 'calendar';
 const medals = [
-  { key: 'gold', label: '1er', color: 'text-amber-200', border: 'border-amber-300/45 bg-amber-500/[0.12]', image: '/podium-trophies/gold-trophy.png' },
-  { key: 'silver', label: '2e', color: 'text-slate-100', border: 'border-slate-200/40 bg-slate-300/[0.09]', image: '/podium-trophies/silver-trophy.png' },
-  { key: 'bronze', label: '3e', color: 'text-orange-200', border: 'border-orange-400/40 bg-orange-500/[0.11]', image: '/podium-trophies/bronze-trophy.png' },
+  { key: 'gold', label: '1er', color: 'text-amber-200', border: 'border-amber-300/45 bg-amber-500/[0.12]', image: publicUrl('podium-trophies/gold-trophy.png') },
+  { key: 'silver', label: '2e', color: 'text-slate-100', border: 'border-slate-200/40 bg-slate-300/[0.09]', image: publicUrl('podium-trophies/silver-trophy.png') },
+  { key: 'bronze', label: '3e', color: 'text-orange-200', border: 'border-orange-400/40 bg-orange-500/[0.11]', image: publicUrl('podium-trophies/bronze-trophy.png') },
 ];
 
 export const MerchantPodiumView: React.FC = () => {
@@ -43,17 +44,17 @@ export const MerchantPodiumView: React.FC = () => {
 
   const leader = podium[0];
   const platinum = podium.find((entry) => entry.platinumStreak >= 5);
-  const actionButton = (entry: MerchantPodiumEntry, mode: MerchantOperation, label: string, Icon: React.ElementType, enabled = true) => <button type="button" title={label} disabled={!enabled} onClick={() => enabled && setOperation({ mode, entry })} className={`flex h-8 w-8 items-center justify-center rounded-xl border transition ${enabled ? 'border-white/10 bg-black/15 text-white/80 hover:border-cyan-200/40 hover:bg-cyan-400/10 hover:text-cyan-100' : 'cursor-not-allowed border-white/[0.05] text-gray-600'}`}><Icon size={14}/></button>;
+  const actionButton = (entry: MerchantPodiumEntry, mode: MerchantOperation, label: string, Icon: React.ElementType, enabled = true) => <button type="button" title={label} disabled={!enabled} onClick={() => enabled && setOperation({ mode, entry })} className={`flex h-8 w-8 items-center justify-center rounded-xl border transition ${enabled ? 'border-white/10 bg-black/15 text-white/80 hover:border-red-300/40 hover:bg-red-400/10 hover:text-red-300' : 'cursor-not-allowed border-white/[0.05] text-gray-600'}`}><Icon size={14}/></button>;
 
   return <div className="space-y-4 pb-4">
     <section className="glass-card relative overflow-hidden p-4 sm:p-5">
       <div className="pointer-events-none absolute -right-12 -top-14 h-48 w-48 rounded-full bg-amber-400/[0.12] blur-3xl"/>
       <div className="pointer-events-none absolute -left-14 bottom-0 h-40 w-40 rounded-full bg-slate-300/[0.08] blur-3xl"/>
-      <div className="relative flex items-center justify-between gap-3"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-100/80">Podium de performance</p><div className="flex gap-2"><button type="button" onClick={() => setIsCompiledReportOpen(true)} title="Ouvrir le rapport compilé du jour" className="rounded-2xl border border-cyan-300/30 bg-cyan-400/10 p-3 text-cyan-100 transition hover:bg-cyan-400/20"><FileText size={17}/></button><button type="button" onClick={() => void load()} title="Actualiser le podium" className="rounded-2xl border border-white/10 bg-white/5 p-3 text-gray-200 transition hover:bg-white/10"><RefreshCw size={17}/></button></div></div>
+      <div className="relative flex items-center justify-between gap-3"><p className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-100/80">Podium de performance</p><div className="flex gap-2"><button type="button" onClick={() => setIsCompiledReportOpen(true)} title="Ouvrir le rapport compilé du jour" className="rounded-2xl border border-red-300/30 bg-red-400/10 p-3 text-red-300 transition hover:bg-red-400/20"><FileText size={17}/></button><button type="button" onClick={() => void load()} title="Actualiser le podium" className="rounded-2xl border border-white/10 bg-white/5 p-3 text-gray-200 transition hover:bg-white/10"><RefreshCw size={17}/></button></div></div>
       <div className="relative mt-4 space-y-3">
 
     {error && <div className="rounded-2xl border border-rose-400/40 bg-rose-950/45 p-3 text-xs font-bold text-rose-100">{error}</div>}
-    {platinum && <section className="glass-card relative overflow-hidden border border-slate-200/40 bg-[radial-gradient(circle_at_85%_0%,rgba(255,255,255,0.35),transparent_38%),linear-gradient(135deg,rgba(192,192,192,0.18),rgba(104,112,122,0.22))] p-4"><img src="/podium-trophies/platinum-trophy.png" alt="" className="pointer-events-none absolute -right-7 -bottom-12 h-44 w-44 rotate-[-16deg] object-contain opacity-25"/><div className="relative flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-100/55 bg-white/15 text-slate-100"><Trophy size={23}/></div><div><p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-100">Coupe platine</p><h2 className="mt-0.5 text-sm font-black text-white">{platinum.activity.ba.name} domine depuis {platinum.platinumStreak} journées</h2><p className="mt-0.5 text-[10px] text-slate-200">Distinction automatique dès cinq premières places consécutives.</p></div></div></section>}
+    {platinum && <section className="glass-card relative overflow-hidden border border-slate-200/40 bg-[radial-gradient(circle_at_85%_0%,rgba(255,255,255,0.35),transparent_38%),linear-gradient(135deg,rgba(192,192,192,0.18),rgba(104,112,122,0.22))] p-4"><img src={publicUrl('podium-trophies/platinum-trophy.png')} alt="" className="pointer-events-none absolute -right-7 -bottom-12 h-44 w-44 rotate-[-16deg] object-contain opacity-25"/><div className="relative flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-100/55 bg-white/15 text-slate-100"><Trophy size={23}/></div><div><p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-100">Coupe platine</p><h2 className="mt-0.5 text-sm font-black text-white">{platinum.activity.ba.name} domine depuis {platinum.platinumStreak} journées</h2><p className="mt-0.5 text-[10px] text-slate-200">Distinction automatique dès cinq premières places consécutives.</p></div></div></section>}
 
       {podium.map((entry, index) => {
         const medal = medals[index];

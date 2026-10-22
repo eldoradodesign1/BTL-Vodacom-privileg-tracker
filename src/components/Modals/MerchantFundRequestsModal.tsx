@@ -20,7 +20,7 @@ const statusMeta = (status: MerchantFundRequest['status']) => status === 'approv
   : status === 'rejected'
     ? { label: 'Rejetée', className: 'bg-rose-500/15 text-rose-100 border-rose-300/25' }
     : status === 'reviewed'
-      ? { label: 'Consultée', className: 'bg-cyan-500/15 text-cyan-100 border-cyan-300/25' }
+      ? { label: 'Consultée', className: 'bg-red-500/15 text-red-300 border-red-300/25' }
       : status === 'cancelled'
         ? { label: 'Annulée', className: 'bg-white/10 text-gray-300 border-white/10' }
         : { label: 'Nouvelle', className: 'bg-amber-500/15 text-amber-100 border-amber-300/25' };

@@ -119,12 +119,10 @@
   65% {transform:translateY(-2px)}
 }
 
-@media (prefers-reduced-motion:reduce) {
-  .agent-before-checkin .btl-power-button--ready,
-  .event-checkin-only .btl-power-button--ready,
-  .agent-before-checkin .btl-podium-avatar,
-  .youth-before-checkin .youth-start-pulse {
-    animation: none !important;
+@media (prefers-reduced-motion: reduce) {
+  .btl-power-button--ready,
+  .agent-before-checkin .btl-podium-avatar {
+    animation: none;
   }
 }
 

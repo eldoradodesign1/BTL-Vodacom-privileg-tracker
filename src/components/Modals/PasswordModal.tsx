@@ -126,7 +126,7 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUse
     ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
     : permissionFeedback?.kind === 'error'
       ? 'bg-red-950/50 border-red-500/40 text-red-300'
-      : 'bg-cyan-950/50 border-cyan-400/30 text-cyan-100';
+      : 'bg-red-600/50 border-red-400/30 text-red-300';
 
   if (!isOpen) return null;
 
@@ -149,9 +149,9 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUse
 
         <section className="text-left rounded-[1.45rem] border border-white/10 bg-black/15 p-3.5 mb-5" aria-label="Autorisations de l’appareil">
           <div className="flex items-center gap-2 mb-3 px-1">
-            <ShieldCheck className="w-4 h-4 text-cyan-300" />
+            <ShieldCheck className="w-4 h-4 text-red-300" />
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-100">Autorisations de l’appareil</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-red-300">Autorisations de l’appareil</p>
               <p className="text-[10px] text-gray-400 mt-0.5">Relancez la demande après un refus.</p>
             </div>
           </div>
@@ -160,11 +160,11 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUse
               type="button"
               onClick={requestCameraPermission}
               disabled={requesting !== null}
-              className="rounded-2xl border border-cyan-300/25 bg-cyan-400/10 p-3 text-left transition-all hover:bg-cyan-400/15 active:scale-[0.98] disabled:opacity-60"
+              className="rounded-2xl border border-red-300/25 bg-red-400/10 p-3 text-left transition-all hover:bg-red-400/15 active:scale-[0.98] disabled:opacity-60"
             >
               <span className="flex items-center justify-between gap-2">
-                <Camera className="w-4 h-4 text-cyan-200" />
-                {requesting === 'camera' && <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-100" />}
+                <Camera className="w-4 h-4 text-red-300" />
+                {requesting === 'camera' && <Loader2 className="w-3.5 h-3.5 animate-spin text-red-300" />}
               </span>
               <span className="block mt-2 text-[11px] font-black uppercase tracking-wide text-white">Autoriser caméra</span>
             </button>

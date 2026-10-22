@@ -7,6 +7,7 @@ import { Trophy, MapPin, Camera, CheckCircle2, UserPlus, FileText, Users, Archiv
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from 'recharts';
 import { buildPointageFeedback } from '../utils/pointageStatus';
 import { DateIconPicker } from './DateIconPicker';
+import { publicUrl } from '../utils/assets';
 
 interface AgentViewProps {
   currentUser: User;
@@ -457,7 +458,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
       <div className="btl-podium-empty" role="status"><Trophy className="h-5 w-5 shrink-0 text-amber-300" aria-hidden="true"/><span>Classement du jour : personne n’a encore enregistré de client. Soyez le premier&nbsp;!</span></div>
       )}
       <div className="flex justify-center py-6" style={{minHeight:'min(43vh,380px)'}}>
-        <button type="button" disabled={campaignPaused || reportDone} onClick={() => { handleCaptureClick(); startInputRef.current?.click(); }} aria-label="Démarrer la journée : prendre la photo de pointage" title="Démarrer la journée" className={`btl-power-button ${campaignPaused || reportDone ? 'btl-power-button--inactive' : 'btl-power-button--ready'} flex flex-col items-center justify-center gap-3 text-center text-white ${campaignPaused || reportDone ? 'cursor-not-allowed' : 'cursor-pointer active:scale-95'}`} style={{width:'min(65vw,250px)',aspectRatio:'1',borderRadius:'50%',background:'radial-gradient(circle at 35% 25%, rgba(105,28,51,.95),rgba(35,10,27,.98) 55%,#0e101b 100%)',border:'3px solid var(--theme-accent)',boxShadow:'0 0 0 9px rgba(251,113,133,.09),0 20px 55px rgba(0,0,0,.65),inset 0 2px 18px rgba(255,255,255,.12)'}}>
+        <button type="button" disabled={campaignPaused || reportDone} onClick={() => { handleCaptureClick(); startInputRef.current?.click(); }} aria-label="Démarrer la journée : prendre la photo de pointage" title="Démarrer la journée" className={`btl-power-button ${campaignPaused || reportDone ? 'btl-power-button--inactive' : 'btl-power-button--ready'} flex flex-col items-center justify-center gap-3 text-center text-white ${campaignPaused || reportDone ? 'cursor-not-allowed' : 'cursor-pointer active:scale-95'}`} >
           <svg viewBox="0 0 24 24" width="100" height="100" fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/><path d="M12 2v10"/></svg><span className="text-sm font-black uppercase tracking-widest">Démarrer la journée</span>
         </button>
         <input ref={startInputRef} type="file" accept="image/*" capture="user" className="hidden" tabIndex={-1} disabled={campaignPaused || reportDone} onChange={handleCameraChange}/>
@@ -500,7 +501,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
       )}
 
       {showPodium && !(checkinDone || checkinDoneLocal) && (
-        <div className={`rank-card-podium animate-pop ${podiumTier ? `podium-${podiumTier}` : 'podium-neutral'}`} style={podiumTier ? { ['--podium-watermark' as string]: `url('/Trophees/Trophee_${podiumTier === 'gold' ? 'Gold' : (podiumTier === 'silver' ? 'Silver' : 'Bronze')}.webp')` } : undefined}>
+        <div className={`rank-card-podium animate-pop ${podiumTier ? `podium-${podiumTier}` : 'podium-neutral'}`} style={podiumTier ? { ['--podium-watermark' as string]: `url('${publicUrl(`Trophees/Trophee_${podiumTier === 'gold' ? 'Gold' : (podiumTier === 'silver' ? 'Silver' : 'Bronze')}.webp`)}')` } : undefined}>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center backdrop-blur-sm">
@@ -623,10 +624,10 @@ export const AgentView: React.FC<AgentViewProps> = ({
         <div className="mt-3 h-24 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={evolutionData}>
-              <XAxis dataKey="label" stroke="#71717a" fontSize={9} tickLine={false} axisLine={false} />
-              <YAxis stroke="#71717a" fontSize={9} tickLine={false} axisLine={false} />
+              <XAxis dataKey="label" stroke="var(--m-muted)" fontSize={9} tickLine={false} axisLine={false} />
+              <YAxis stroke="var(--m-muted)" fontSize={9} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '10px', fontSize: '11px' }} />
-              <Line type="monotone" dataKey="value" stroke="#f43f5e" strokeWidth={2.2} dot={{ r: 3, fill: '#f43f5e' }} />
+              <Line type="monotone" dataKey="value" stroke="var(--m-accent)" strokeWidth={2.2} dot={{ r: 3, fill: '#f43f5e' }} />
             </LineChart>
           </ResponsiveContainer>
         </div>

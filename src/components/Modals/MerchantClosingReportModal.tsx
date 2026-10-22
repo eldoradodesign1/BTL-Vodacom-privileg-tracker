@@ -62,7 +62,7 @@ export const MerchantClosingReportModal: React.FC<MerchantClosingReportModalProp
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 text-center"><b className="block text-xl font-black text-cyan-200">{posCount}<span className="text-sm text-cyan-100/55">/{posTarget}</span></b><span className="text-[9px] font-black uppercase text-gray-400">POS visités</span></div>
+          <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 text-center"><b className="block text-xl font-black text-red-300">{posCount}<span className="text-sm text-red-300/55">/{posTarget}</span></b><span className="text-[9px] font-black uppercase text-gray-400">POS visités</span></div>
           <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] p-3 text-center"><b className="block text-xl font-black text-amber-200">{transactionCount}<span className="text-sm text-amber-100/55">/{transactionTarget}</span></b><span className="text-[9px] font-black uppercase text-gray-400">Transactions</span></div>
         </div>
         {inactivePosCount > 0 && <p className="mt-3 rounded-xl border border-amber-300/25 bg-amber-500/[0.08] px-3 py-2 text-[10px] font-semibold text-amber-100">{inactivePosCount} POS non actif{inactivePosCount > 1 ? 's' : ''} : la cible transactionnelle est ajustée à {transactionTarget}.</p>}

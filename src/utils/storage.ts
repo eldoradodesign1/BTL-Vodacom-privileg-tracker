@@ -1,6 +1,7 @@
 import { User, UserRole, Shop, Checkin, Lead, DailyReport, NotificationItem, ChatMessage, ShopTargets, AgentMasterStatus, SupervisorAgentCampaignAssignment } from '../types';
 import type { PDFReportData } from './pdfGenerator';
 import { SHARED_CHAT_STORE } from '../sharedChatStore';
+import { publicUrl } from './assets';
 import {
   isSupabaseConfigured,
   syncLocalDataToSupabase,
@@ -148,7 +149,7 @@ function maybeShowBrowserNotification(message: string): void {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (window.Notification.permission !== 'granted') return;
   try {
-    new window.Notification('Vodacom Tracker', { body: message, icon: '/favicon.svg' });
+    new window.Notification('Vodacom Tracker', { body: message, icon: publicUrl('favicon.svg') });
   } catch {}
 }
 

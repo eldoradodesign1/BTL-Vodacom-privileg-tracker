@@ -17,8 +17,8 @@ export const MerchantMfsPicker: React.FC<MerchantMfsPickerProps> = ({ value, onC
   const inputRef = useRef<HTMLInputElement | null>(null);
   const palette = accent === 'emerald'
     ? 'border-emerald-300/30 bg-emerald-400/[0.07] text-emerald-100'
-    : 'border-cyan-300/30 bg-cyan-400/[0.07] text-cyan-100';
-  const softText = accent === 'emerald' ? 'text-emerald-200' : 'text-cyan-200';
+    : 'border-red-300/30 bg-red-400/[0.07] text-red-300';
+  const softText = accent === 'emerald' ? 'text-emerald-200' : 'text-red-300';
 
   const options = useMemo(() => {
     const byKey = new Map<string, string>();

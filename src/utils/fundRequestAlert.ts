@@ -1,3 +1,5 @@
+import { publicUrl } from './assets';
+
 export interface FundRequestAlertPayload {
   id: string;
   baName: string;
@@ -84,8 +86,8 @@ export async function showFundRequestSystemNotification(request: FundRequestAler
   const options: NotificationOptions = {
     body: `${request.baName} · $${request.amount.toLocaleString('fr-FR')} · ${request.posLabel}`,
     tag: `merchant-fund-${request.id}`,
-    icon: '/favicon.png',
-    badge: '/favicon.png',
+    icon: publicUrl('favicon-refined.png'),
+    badge: publicUrl('favicon-refined.png'),
     requireInteraction: true,
     silent: muted,
   };
