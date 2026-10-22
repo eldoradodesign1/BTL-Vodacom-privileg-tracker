@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, ArrowLeftRight } from 'lucide-react';
+import { ArrowLeftRight } from 'lucide-react';
 
 type StatusTone = 'live' | 'paused' | 'closed';
 
@@ -12,9 +12,6 @@ export interface DayCardProps {
   unitLabel: string;
   secondaryValue: number;
   secondaryLabel: string;
-  actionLabel: string;
-  onAction: () => void;
-  actionDisabled?: boolean;
 }
 
 // Jauge en arc de 240° (ouverte vers le bas) : lisible, légère, sans bibliothèque.
@@ -33,7 +30,7 @@ const arcPath = (cx: number, cy: number, r: number, from: number, to: number) =>
 
 export const DayCard: React.FC<DayCardProps> = ({
   title = 'Ma journée', statusLabel, statusTone = 'live', value, target, unitLabel,
-  secondaryValue, secondaryLabel, actionLabel, onAction, actionDisabled = false,
+  secondaryValue, secondaryLabel,
 }) => {
   const ratio = target > 0 ? Math.min(value / target, 1) : 0;
   const end = START + SWEEP * ratio;
@@ -66,9 +63,6 @@ export const DayCard: React.FC<DayCardProps> = ({
           <small>{secondaryLabel}</small>
         </div>
       </div>
-      <button type="button" className="day-card__action" onClick={onAction} disabled={actionDisabled}>
-        <Plus size={20} aria-hidden="true" />{actionLabel}
-      </button>
     </section>
   );
 };

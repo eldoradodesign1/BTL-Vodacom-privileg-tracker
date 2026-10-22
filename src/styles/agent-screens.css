@@ -4,25 +4,26 @@
 .agent-home-surface > section:not(.space-y-3),
 .agent-home-surface > div.glass-card {
   border-radius: 24px !important;
-  border-color: rgba(255,255,255,0.10) !important;
-  box-shadow: 0 8px 22px rgba(0,0,0,0.13), 0 1px 0 rgba(255,255,255,0.05) inset !important;
+  background: var(--m-surface) !important;
+  border-color: var(--m-edge-soft) !important;
+  box-shadow: 0 1px 0 var(--m-highlight) inset, 0 10px 26px var(--m-glow) !important;
 }
 
 .agent-home-surface .agent-closure-action {
   min-height: 56px;
   padding: 16px 20px;
   border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.055);
-  color: var(--theme-text-100, #f1f3f8);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset;
+  border: 1px solid var(--m-edge-soft);
+  background: var(--m-surface);
+  color: var(--m-text);
+  box-shadow: 0 1px 0 var(--m-highlight) inset;
   font-size: 13px;
   font-weight: 700;
   transition: transform 160ms ease, background 160ms ease;
 }
 
 .agent-closure-action svg {
-  color: var(--theme-accent);
+  color: var(--m-accent);
 }
 
 .agent-closure-action:active:not(:disabled) {

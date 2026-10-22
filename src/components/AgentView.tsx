@@ -487,9 +487,6 @@ export const AgentView: React.FC<AgentViewProps> = ({
             unitLabel="clients"
             secondaryValue={bundles}
             secondaryLabel="bundles"
-            actionLabel="Nouveau client"
-            onAction={onOpenLeadModal}
-            actionDisabled={campaignPaused || reportDone}
           />
         );
       })()}

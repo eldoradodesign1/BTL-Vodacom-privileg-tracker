@@ -130,6 +130,7 @@ body[data-theme="anthracite"] {
   --m-text: #f4f6fa; --m-muted: rgba(228,233,243,0.68);
   --m-accent: #f5f7fb; --m-accent-2: #9aa4b6; --m-track: rgba(255,255,255,0.14); --m-pill: rgba(255,255,255,0.10); --m-tile: rgba(255,255,255,0.06);
   --m-btn-bg: linear-gradient(180deg, rgba(255,255,255,0.26) 0%, rgba(255,255,255,0.08) 100%); --m-btn-edge: rgba(255,255,255,0.38); --m-btn-ink: #ffffff;
+  --m-dock: #1a1d23;
 }
 
 body[data-theme="rubis"] {
@@ -154,6 +155,7 @@ body[data-theme="rubis"] {
   --m-text: #fff4f6; --m-muted: rgba(255,214,222,0.74);
   --m-accent: #ff8aa3; --m-accent-2: #ff2e63; --m-track: rgba(255,255,255,0.13); --m-pill: rgba(255,90,120,0.16); --m-tile: rgba(255,80,110,0.10);
   --m-btn-bg: linear-gradient(180deg, rgba(255,80,110,0.62) 0%, rgba(150,15,45,0.62) 100%); --m-btn-edge: rgba(255,120,150,0.7); --m-btn-ink: #fff;
+  --m-dock: #2b0f19;
 }
 
 body[data-theme="silver"] {
@@ -178,6 +180,7 @@ body[data-theme="silver"] {
   --m-text: #f6f8fc; --m-muted: rgba(226,233,246,0.7);
   --m-accent: #ffffff; --m-accent-2: #aeb9cf; --m-track: rgba(255,255,255,0.15); --m-pill: rgba(255,255,255,0.11); --m-tile: rgba(255,255,255,0.07);
   --m-btn-bg: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(200,214,240,0.1) 100%); --m-btn-edge: rgba(240,246,255,0.5); --m-btn-ink: #ffffff;
+  --m-dock: #1d2535;
 }
 
 body[data-theme="diamond"] {
@@ -186,10 +189,10 @@ body[data-theme="diamond"] {
   --theme-text-300: rgba(43, 52, 62, 0.98);
   --theme-text-400: rgba(62, 72, 84, 0.9);
   --theme-text-500: rgba(88, 98, 112, 0.78);
-  --theme-accent: #64748b;
-  --theme-accent-rgb: 100, 116, 139;
-  --theme-accent-soft-rgb: 148, 163, 184;
-  --theme-accent-glow: rgba(100, 116, 139, 0.34);
+  --theme-accent: #1f6bff;
+  --theme-accent-rgb: 31, 107, 255;
+  --theme-accent-soft-rgb: 106, 168, 255;
+  --theme-accent-glow: rgba(31, 107, 255, 0.34);
   --voda-red: var(--theme-accent);
   --voda-red-glow: var(--theme-accent-glow);
   --surface-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.84) 0%, rgba(255, 255, 255, 0.62) 100%);
@@ -208,6 +211,7 @@ body[data-theme="diamond"] {
   --m-text: #1b2742; --m-muted: #5b6b8a;
   --m-accent: #1f6bff; --m-accent-2: #6aa8ff; --m-track: rgba(60,100,170,0.14); --m-pill: rgba(31,107,255,0.10); --m-tile: rgba(255,255,255,0.7);
   --m-btn-bg: linear-gradient(180deg, #5aa2ff 0%, #2f78ff 100%); --m-btn-edge: rgba(80,140,255,0.8); --m-btn-ink: #ffffff;
+  --m-dock: #f2f7ff;
 }
 
 body[data-theme="sapphire"] {
@@ -232,6 +236,7 @@ body[data-theme="sapphire"] {
   --m-text: #f3f8ff; --m-muted: rgba(205,225,255,0.74);
   --m-accent: #62d2ff; --m-accent-2: #2f6bff; --m-track: rgba(255,255,255,0.13); --m-pill: rgba(70,140,255,0.18); --m-tile: rgba(60,130,255,0.12);
   --m-btn-bg: linear-gradient(180deg, rgba(50,120,255,0.78) 0%, rgba(15,55,170,0.78) 100%); --m-btn-edge: rgba(110,170,255,0.8); --m-btn-ink: #fff;
+  --m-dock: #0b2152;
 }
 
 body[data-theme="ambre"] {
@@ -256,6 +261,7 @@ body[data-theme="ambre"] {
   --m-text: #3a2610; --m-muted: #8a6a3a;
   --m-accent: #f2a11c; --m-accent-2: #ffd36b; --m-track: rgba(120,80,20,0.14); --m-pill: rgba(240,165,40,0.16); --m-tile: rgba(255,255,255,0.65);
   --m-btn-bg: linear-gradient(180deg, #ffd36b 0%, #f2a11c 100%); --m-btn-edge: rgba(230,150,30,0.85); --m-btn-ink: #3a2610;
+  --m-dock: #fff0d2;
 }
 
 @media (max-width: 639px) {
@@ -343,40 +349,54 @@ body[data-theme="diamond"] .app-header .text-gray-400 {
   color: #64748b !important;
 }
 
-body[data-theme="diamond"] .app-bottom-nav.agent-dock {
-  --dock-surface: rgba(244,244,248,0.98);
-  --dock-ink: #687080;
-}
-
-body[data-theme="diamond"] .agent-dock::before {
-  border-color: rgba(90,100,120,0.15);
-}
-
-body[data-theme="diamond"] .agent-home-surface .agent-closure-action {
-  background: rgba(255,255,255,0.65);
-  border-color: rgba(90,100,120,0.16);
-  color: #28303a;
-}
-
 body:not([data-theme="silver"]):not([data-theme="diamond"]) .app-popover.btl-solid-popover {
   background: rgb(12, 14, 20) !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
-/* Diamond (thème clair) : textes teintés pensés pour fond sombre, rendus lisibles sur fond clair. */
+/* Matières claires (Diamond, Ambre) : dans les cartes de l'accueil agent, les textes pensés pour fond sombre
+   sont redirigés vers les jetons de la matière pour rester lisibles. */
+body[data-theme="diamond"] .agent-home-surface > section,
+body[data-theme="diamond"] .agent-home-surface > .glass-card,
+body[data-theme="diamond"] .agent-home-surface .agent-closure-action,
+body[data-theme="ambre"] .agent-home-surface > section,
+body[data-theme="ambre"] .agent-home-surface > .glass-card,
+body[data-theme="ambre"] .agent-home-surface .agent-closure-action {
+  --theme-text-300: var(--m-text);
+  --theme-text-400: var(--m-muted);
+  --theme-text-500: var(--m-muted);
+  color: var(--m-text);
+}
+
+body[data-theme="diamond"] .agent-home-surface .text-white,
+body[data-theme="ambre"] .agent-home-surface > section .text-white,
+body[data-theme="ambre"] .agent-home-surface > .glass-card .text-white {
+  color: var(--m-text);
+}
+
 body[data-theme="diamond"] .app-header .text-red-100 {
   color: var(--theme-text-300);
 }
 
-body[data-theme="diamond"] .agent-home-surface .text-amber-200 {
+body[data-theme="diamond"] .agent-home-surface .text-amber-200,
+body[data-theme="ambre"] .agent-home-surface .text-amber-200 {
   color: #92400e;
 }
 
-body[data-theme="diamond"] .agent-home-surface .text-orange-200 {
+body[data-theme="diamond"] .agent-home-surface .text-orange-200,
+body[data-theme="ambre"] .agent-home-surface .text-orange-200 {
   color: #9a3412;
 }
 
-body[data-theme="diamond"] .agent-home-surface .text-slate-200 {
+body[data-theme="diamond"] .agent-home-surface .text-slate-200,
+body[data-theme="ambre"] .agent-home-surface .text-slate-200 {
   color: #475569;
+}
+
+body[data-theme="diamond"] .agent-home-surface > section .rounded-full.bg-white\/10,
+body[data-theme="ambre"] .agent-home-surface > section .rounded-full.bg-white\/10 {
+  background: var(--m-tile);
+  border-color: var(--m-edge-soft);
+  color: var(--m-text);
 }

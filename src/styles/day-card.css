@@ -48,17 +48,6 @@
 .day-card__tile strong { font-size: 26px; font-weight: 700; line-height: 1.1; color: var(--m-text); }
 .day-card__tile small { font-size: 13px; color: var(--m-muted); }
 
-.day-card__action {
-  display: flex; align-items: center; justify-content: center; gap: 8px;
-  min-height: 52px; border-radius: 18px;
-  font-size: 17px; font-weight: 600; color: var(--m-btn-ink);
-  background: var(--m-btn-bg); border: 1px solid var(--m-btn-edge);
-  box-shadow: 0 1px 0 var(--m-highlight) inset, 0 8px 22px var(--m-glow);
-  transition: transform 0.12s ease, filter 0.12s ease;
-}
-.day-card__action:active:not(:disabled) { transform: scale(0.98); filter: brightness(1.08); }
-.day-card__action:disabled { opacity: 0.5; cursor: not-allowed; }
-.day-card__action:focus-visible { outline: 2px solid var(--m-accent); outline-offset: 3px; }
 
 /* Appareils modestes : le flou est remplacé par un fond plus plein (coût GPU nul). */
 @media (max-width: 639px) and (hover: none) {
