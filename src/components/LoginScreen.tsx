@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { ChevronRight, Lock, Phone, Trash2 } from 'lucide-react';
+import { ChevronRight, Eye, EyeOff, Lock, Phone, Trash2 } from 'lucide-react';
 import { User, Campaign, CampaignContext } from '../types';
-import { authenticate, purgeAndResetEverything, refreshUsersFromSupabase } from '../utils/storage';
+import { authenticate, getSyncPendingCount, purgeAndResetEverything, refreshUsersFromSupabase } from '../utils/storage';
 import { getCampaignsForUser } from '../utils/merchantCampaign';
 
 interface LoginScreenProps {
@@ -26,6 +26,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [pendingUser, setPendingUser] = useState<User | null>(null);
   const [availableCampaigns, setAvailableCampaigns] = useState<Campaign[]>([]);
   const [selectedCampaignId, setSelectedCampaignId] = useState('');
@@ -75,7 +76,8 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
     setError('');
 
     try {
-      await refreshUsersFromSupabase();
+      // Délai maximum : sur réseau lent, on bascule sur les comptes déjà en cache plutôt que de bloquer l'écran.
+      await Promise.race([refreshUsersFromSupabase(), new Promise<void>((resolve) => window.setTimeout(resolve, 4000))]);
       const result = authenticate(enteredPhone, enteredPassword);
       if (result.success && result.user) {
         await determineCampaign(result.user);
@@ -151,19 +153,22 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       <div className="login-panel w-full glass-card border relative z-10 animate-pop">
         <div className="text-center mb-8">
           <div className="brand-text text-3xl sm:text-4xl font-black tracking-tighter mb-1">BEYOND THE LINE</div>
-          <div className="login-eyebrow text-[10px] font-black uppercase">Deployment tracker · by Eldo</div>
+          <div className="login-eyebrow btl-keep-small text-[11px] font-black uppercase">Deployment tracker · by Eldo</div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center space-x-1">
+            <label htmlFor="phone" className="text-[10px] font-black uppercase tracking-wider text-gray-300 flex items-center space-x-1">
               <Phone className="w-3 h-3 text-red-500" />
               <span>Identifiant Réseau (MSISDN)</span>
             </label>
             <input
               id="phone"
               name="phone"
-              type="text"
+              type="tel"
+              inputMode="tel"
+              autoComplete="username"
+              autoCapitalize="none"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               onKeyDown={handleEnterSubmit}
@@ -174,20 +179,24 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 flex items-center space-x-1">
+            <label htmlFor="password" className="text-[10px] font-black uppercase tracking-wider text-gray-300 flex items-center space-x-1">
               <Lock className="w-3 h-3 text-red-500" />
               <span>Clé de Sécurité</span>
             </label>
+            <div className="relative">
             <input
               id="password"
               name="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="app-input w-full border rounded-2xl px-4 py-3.5 text-white text-sm font-semibold focus:outline-none transition-all placeholder:text-gray-600"
+              className="app-input w-full pr-14 border rounded-2xl px-4 py-3.5 text-white text-sm font-semibold focus:outline-none transition-all placeholder:text-gray-600"
             />
+            <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-gray-300 hover:text-white" aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'} aria-pressed={showPassword}>{showPassword ? <EyeOff className="h-5 w-5" aria-hidden="true" /> : <Eye className="h-5 w-5" aria-hidden="true" />}</button>
+          </div>
           </div>
 
           <div className="login-note rounded-2xl border px-4 py-3 text-[11px] font-semibold text-gray-400">
@@ -206,16 +215,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           </div>
         )}
 
-        <div className="mt-8 pt-4 border-t border-white/10 text-center">
+        <div className="mt-6 pt-3 border-t border-white/10 text-center">
           <button
             type="button"
             onClick={() => {
-              if (window.confirm('Vider complètement le cache et réinitialiser les données ?')) {
+              const pending = getSyncPendingCount();
+              const warning = pending > 0
+                ? `Attention : ${pending} saisie(s) ou pointage(s) ne sont pas encore envoyés et seront PERDUS. Reconnectez-vous au réseau et synchronisez avant de continuer.\n\nVider quand même le cache et réinitialiser les données ?`
+                : 'Vider complètement le cache et réinitialiser les données ?';
+              if (window.confirm(warning)) {
                 purgeAndResetEverything();
                 window.location.reload();
               }
             }}
-            className="inline-flex items-center space-x-1.5 text-[10px] font-bold text-gray-500 hover:text-red-400 transition-colors uppercase tracking-wider"
+            className="inline-flex min-h-[44px] items-center space-x-1.5 px-3 text-[12px] font-bold text-gray-400 hover:text-red-400 transition-colors uppercase tracking-wider"
           >
             <Trash2 className="w-3 h-3" />
             <span>Vider le cache système</span>

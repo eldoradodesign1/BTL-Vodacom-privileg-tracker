@@ -1446,3 +1446,16 @@ body:has(.event-checkin-only) .agent-dock-action { display:none!important; }
 @media (prefers-reduced-motion:reduce) {
   .event-checkin-only .btl-power-button--standby { transition:none!important; }
 }
+
+
+/* ── Lisibilité terrain (plein soleil, petits écrans) ─────────────────────
+   Plancher typographique : aucun texte utile sous 11 px. Les éléments qui
+   doivent rester compacts portent la classe .btl-keep-small. */
+.text-\[7px\]:not(.btl-keep-small),
+.text-\[8px\]:not(.btl-keep-small),
+.text-\[9px\]:not(.btl-keep-small) { font-size: 11px; line-height: 1.3; }
+.text-\[10px\]:not(.btl-keep-small) { font-size: 12px; line-height: 1.35; }
+.app-input::placeholder, input::placeholder, textarea::placeholder { color: rgba(226, 232, 240, 0.55); }
+
+.btl-start-hint { max-width: 22rem; margin-inline: auto; text-align: center; font-size: 13px; line-height: 1.4; color: rgba(248, 250, 252, 0.82); }
+.btl-podium-empty { display: flex; align-items: center; gap: .75rem; margin-inline: 1.25rem; padding: .75rem 1rem; border-radius: 1rem; border: 1px solid rgba(251, 191, 36, .25); background: rgba(251, 191, 36, .07); color: rgba(254, 243, 199, .95); font-size: 13px; line-height: 1.35; }

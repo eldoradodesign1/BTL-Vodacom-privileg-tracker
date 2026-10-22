@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { User, NotificationItem, CampaignContext } from '../types';
-import { Bell, LogOut, Shield, RefreshCw, Palette, Camera, X, BriefcaseBusiness, Banknote, Volume2, VolumeX } from 'lucide-react';
+import { Bell, LogOut, Shield, RefreshCw, UserRound, Camera, X, BriefcaseBusiness, Banknote, Volume2, VolumeX } from 'lucide-react';
 import { addCheckin, getShopById, resolveStoredPhotoUrl } from '../utils/storage';
 import { armFundRequestAlertAudio, getNotificationsMuted, setNotificationsMuted } from '../utils/fundRequestAlert';
 
@@ -232,7 +232,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
             />
           ) : (
-            <span className="px-1 text-[8px] font-black uppercase tracking-wide leading-[1.05] text-center">Check-in en attente</span>
+            <span className="btl-keep-small flex flex-col items-center gap-1 text-center leading-none"><Camera className="h-5 w-5" aria-hidden="true" /><span className="whitespace-nowrap text-[10px] font-black">Pointer</span></span>
           )}
           <span className={`status-dot absolute -bottom-0.5 -right-0.5 border-2 ${isDarkTheme ? 'border-black' : 'border-white'} ${online ? 'status-online' : 'status-offline'}`} />
         </button>
@@ -248,7 +248,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex flex-col min-w-0">
           <div className="flex items-center space-x-2">
               <span className="font-black text-sm sm:text-lg tracking-tight brand-text truncate">
-              BTL Deployment Tracker
+              <span className="hidden min-[420px]:inline">BTL Deployment Tracker</span><span className="min-[420px]:hidden">BTL Tracker</span>
             </span>
           </div>
             <span className={`text-xs sm:text-sm font-black mt-0.5 px-2.5 py-1 rounded-full inline-flex items-center gap-2 w-fit max-w-full truncate ${
@@ -296,53 +296,6 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           )}
 
-          {onSetTheme && (
-            <div className="relative">
-              <button
-                onClick={() => setShowThemeMenu(prev => !prev)}
-                className={`app-icon-button p-2 rounded-xl border transition-all ${
-                  isDarkTheme
-                    ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'
-                    : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
-                }`}
-                title="Theme"
-              >
-                <Palette className="w-4 h-4" />
-              </button>
-
-              {showThemeMenu && (
-                <div className={`app-popover absolute right-0 top-11 w-40 border rounded-2xl p-1.5 shadow-2xl z-50 ${
-                  isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
-                }`}>
-                  {[
-                    { key: 'anthracite', label: 'Anthracite' },
-                    { key: 'rubis', label: 'Rubis' },
-                    { key: 'silver', label: 'Silver' },
-                    { key: 'diamond', label: 'Diamond' },
-                    { key: 'sapphire', label: 'Sapphire' },
-                    { key: 'ambre', label: 'Ambre' }
-                  ].map(opt => (
-                    <button
-                      key={opt.key}
-                      onClick={() => {
-                        onSetTheme(opt.key as ThemeMode);
-                        setShowThemeMenu(false);
-      setShowCampaignMenu(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-xl text-xs font-black uppercase transition-all ${
-                        theme === opt.key
-                          ? 'bg-red-600 text-white'
-                          : (isDarkTheme ? 'hover:bg-white/10 text-gray-100' : 'hover:bg-zinc-100 text-zinc-700')
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Actualisation des données pour les comptes non super_admin */}
           {onRefreshData && (
             <button
@@ -353,19 +306,6 @@ export const Header: React.FC<HeaderProps> = ({
               <RefreshCw className="w-4 h-4" />
             </button>
           )}
-
-          {/* Security Password Change */}
-          <button
-            onClick={onOpenPasswordModal}
-            className={`app-icon-button p-2 rounded-xl border transition-all ${
-              isDarkTheme
-                ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-400 hover:text-white'
-                : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
-            }`}
-            title="Sécuriser mon accès"
-          >
-            <Shield className="w-4 h-4" />
-          </button>
 
           {/* Notifications Bell */}
           <div className="relative">
@@ -438,14 +378,72 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          {/* Logout */}
-          <button
-            onClick={onLogout}
-            className="w-10 h-10 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/30 rounded-xl transition-all flex items-center justify-center"
-            title="Quitter"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
+          {/* Menu compte : thème, sécurité, déconnexion (regroupés pour libérer la place du nom) */}
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => { setShowThemeMenu((prev) => !prev); setShowCampaignMenu(false); setShowNotifPanel(false); }}
+              className={`app-icon-button w-10 h-10 rounded-xl border flex items-center justify-center transition-all ${
+                isDarkTheme ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-200' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
+              }`}
+              aria-label="Menu du compte"
+              aria-haspopup="menu"
+              aria-expanded={showThemeMenu}
+              title="Menu du compte"
+            >
+              <UserRound className="w-5 h-5" />
+            </button>
+            {showThemeMenu && (
+              <div role="menu" style={{ backgroundColor: isDarkTheme ? 'rgb(12 14 20)' : '#ffffff' }} className={`app-popover absolute right-0 top-12 w-64 border rounded-2xl p-2 shadow-2xl z-50 ${
+                isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
+              }`}>
+                {onSetTheme && (
+                  <div className="px-2 pb-2 pt-1">
+                    <p className="mb-2 text-xs font-black uppercase tracking-wider text-gray-400">Thème</p>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[
+                        { key: 'anthracite', label: 'Anthracite' },
+                        { key: 'rubis', label: 'Rubis' },
+                        { key: 'silver', label: 'Silver' },
+                        { key: 'diamond', label: 'Diamond' },
+                        { key: 'sapphire', label: 'Sapphire' },
+                        { key: 'ambre', label: 'Ambre' }
+                      ].map((opt) => (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={theme === opt.key}
+                          onClick={() => { onSetTheme(opt.key as ThemeMode); setShowThemeMenu(false); }}
+                          className={`min-h-[40px] rounded-xl px-1 text-xs font-black transition-all ${
+                            theme === opt.key ? 'bg-red-600 text-white' : (isDarkTheme ? 'bg-white/5 hover:bg-white/10 text-gray-100' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setShowThemeMenu(false); onOpenPasswordModal(); }}
+                  className={`flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-bold transition-all ${isDarkTheme ? 'hover:bg-white/10' : 'hover:bg-zinc-100'}`}
+                >
+                  <Shield className="w-4 h-4" aria-hidden="true" /> Sécuriser mon accès
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => { setShowThemeMenu(false); onLogout(); }}
+                  className="mt-1 flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-red-400 transition-all hover:bg-red-600/15"
+                >
+                  <LogOut className="w-4 h-4" aria-hidden="true" /> Se déconnecter
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

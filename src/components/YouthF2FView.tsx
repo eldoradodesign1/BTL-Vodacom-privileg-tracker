@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, Camera, CheckCircle2, CircleAlert, FileCheck2, GraduationCap, MapPin, Medal, PauseCircle, PlusCircle, RefreshCw, Search, Trophy, UsersRound, X } from 'lucide-react';
 import type { Campaign, User, YouthContactReport, YouthDailyAttendance, YouthRegion, YouthSubscriberType } from '../types';
 import type { TabType } from './BottomNav';
@@ -61,14 +61,17 @@ function readableDate(date: string): string {
   return new Date(`${date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
-const ModalShell: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({ title, onClose, children }) => (
-  <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/75 p-0 backdrop-blur-md sm:items-center sm:p-4" onClick={onClose}>
+const ModalShell: React.FC<{ title: string; onClose: () => void; children: React.ReactNode; error?: string; dismissOnBackdrop?: boolean }> = ({ title, onClose, children, error, dismissOnBackdrop = true }) => (
+  <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/75 p-0 backdrop-blur-md sm:items-center sm:p-4" onClick={dismissOnBackdrop ? onClose : undefined} role="dialog" aria-modal="true" aria-label={title}>
     <div className="modal-sheet relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-white/15 bg-[#10131d]/95 shadow-2xl sm:rounded-3xl" onClick={(event) => event.stopPropagation()}>
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-[#10131d]/92 px-5 py-4 backdrop-blur-xl">
         <h2 className="text-sm font-black uppercase tracking-[0.12em] text-white">{title}</h2>
-        <button type="button" onClick={onClose} className="rounded-xl p-2 text-gray-300 transition hover:bg-white/10 hover:text-white" aria-label="Fermer"><X size={18} /></button>
+        <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-300 transition hover:bg-white/10 hover:text-white" aria-label="Fermer"><X size={20} /></button>
       </div>
-      <div className="overflow-y-auto p-5">{children}</div>
+      <div className="overflow-y-auto p-5">
+        {error && <div role="alert" className="mb-4 flex gap-2 rounded-2xl border border-red-400/50 bg-red-950/60 p-3 text-sm font-semibold text-red-100"><CircleAlert className="mt-0.5 shrink-0" size={18}/><span>{error}</span></div>}
+        {children}
+      </div>
     </div>
   </div>
 );
@@ -171,6 +174,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
   useEffect(() => { if (activeTab === 'tab3') void loadHistory(); }, [activeTab, loadHistory]);
   useEffect(() => { if (activeTab === 'tab2') void loadClientHistory(); }, [activeTab, loadClientHistory]);
 
+  const startInputRef = useRef<HTMLInputElement>(null);
   const isCheckedIn = Boolean(attendance?.checkin_at) || checkinPending;
   const isYouthPreCheckin = activeTab === 'home' && !isOperator && !isCheckedIn;
   const isClosed = Boolean(attendance?.checkout_at);
@@ -330,7 +334,9 @@ body:has(.youth-before-checkin) .agent-dock-action { display: none !important; }
 
         {activeTab === 'home' && !isOperator && (!campaignPaused || isYouthPreCheckin) && (
           <div className={isYouthPreCheckin ? "relative mt-1 pt-1" : "relative mt-5 border-t border-white/10 pt-4"}>
-            {podiumLoading ? <p className="py-5 text-center text-xs text-gray-400">Mise à jour du podium…</p> : (
+            {podiumLoading ? <p className="py-5 text-center text-xs text-gray-400">Mise à jour du podium…</p> : rankedPodium.length === 0 && isYouthPreCheckin ? (
+              <div className="btl-podium-empty mx-0 mt-2" role="status"><Trophy className="h-5 w-5 shrink-0 text-amber-300" aria-hidden="true"/><span>Classement du jour : aucun contact enregistré pour l’instant. Soyez le premier&nbsp;!</span></div>
+            ) : (
               <div className={isYouthPreCheckin ? "youth-podium-grid mt-2 grid grid-cols-3 items-end gap-2" : "mt-4 grid grid-cols-3 items-end gap-2"}>
                 {([2, 0, 1] as const).map((rankIndex) => {
                   const entry = rankedPodium[rankIndex];
@@ -368,14 +374,14 @@ body:has(.youth-before-checkin) .agent-dock-action { display: none !important; }
       {activeTab === 'home' && !isOperator && (!campaignPaused || isYouthPreCheckin) && (
         !isCheckedIn ? (
           <div className="flex items-center justify-center py-6" style={{ minHeight: 'min(43vh, 380px)' }}>
-            <label className={`youth-start-pulse flex flex-col items-center justify-center gap-3 text-center text-white transition ${campaignPaused ? 'cursor-not-allowed' : 'cursor-pointer active:scale-95'}`} style={{ width: 'min(65vw, 250px)', aspectRatio: '1', borderRadius: '50%', background: 'radial-gradient(circle at 35% 25%, rgba(105,28,51,.95), rgba(35,10,27,.98) 55%, #0e101b 100%)', border: '3px solid var(--theme-accent)', boxShadow: '0 0 0 9px rgba(251,113,133,.09), 0 20px 55px rgba(0,0,0,.65), inset 0 2px 18px rgba(255,255,255,.12)' }} title="Démarrer la journée" aria-label="Démarrer la journée">
+            <button type="button" disabled={checkinPending || campaignPaused} onClick={() => startInputRef.current?.click()} aria-label="Démarrer la journée : prendre la photo de pointage" className={`youth-start-pulse flex flex-col items-center justify-center gap-3 text-center text-white transition ${campaignPaused ? 'cursor-not-allowed' : 'cursor-pointer active:scale-95'}`} style={{ width: 'min(65vw, 250px)', aspectRatio: '1', borderRadius: '50%', background: 'radial-gradient(circle at 35% 25%, rgba(105,28,51,.95), rgba(35,10,27,.98) 55%, #0e101b 100%)', border: '3px solid var(--theme-accent)', boxShadow: '0 0 0 9px rgba(251,113,133,.09), 0 20px 55px rgba(0,0,0,.65), inset 0 2px 18px rgba(255,255,255,.12)' }} title="Démarrer la journée">
               <svg viewBox="0 0 24 24" width="100" height="100" fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ filter: 'drop-shadow(0 0 14px rgba(251,113,133,.55))' }}>
                 <path d="M18.4 6.6a9 9 0 1 1-12.8 0" />
                 <path d="M12 2v10" />
               </svg>
-              <span className="text-xs font-black uppercase tracking-widest">Démarrer la journée</span>
-              <input type="file" accept="image/*" capture="user" className="hidden" disabled={checkinPending || campaignPaused} onChange={(event) => { const file = event.target.files?.[0]; if (file) handleCheckin(file); event.currentTarget.value = ''; }} />
-            </label>
+              <span className="text-sm font-black uppercase tracking-widest">{checkinPending ? 'Envoi en cours…' : 'Démarrer la journée'}</span>
+            </button>
+            <input ref={startInputRef} type="file" accept="image/*" capture="user" className="hidden" tabIndex={-1} disabled={checkinPending || campaignPaused} onChange={(event) => { const file = event.target.files?.[0]; if (file) handleCheckin(file); event.currentTarget.value = ''; }} />
           </div>
         ) : (
           <div className="space-y-3">
@@ -390,14 +396,14 @@ body:has(.youth-before-checkin) .agent-dock-action { display: none !important; }
 
       {previewUrl && <ModalShell title="Photo de pointage" onClose={() => setPreviewUrl('')}><img src={previewUrl} alt="Photo de pointage Youth F2F" className="w-full rounded-2xl border border-white/10 object-contain"/></ModalShell>}
 
-      {isClosingOpen && !isClosed && <ModalShell title="Rapport de clôture Youth" onClose={() => setIsClosingOpen(false)}>
+      {isClosingOpen && !isClosed && <ModalShell title="Rapport de clôture Youth" error={error} dismissOnBackdrop={false} onClose={() => setIsClosingOpen(false)}>
         <div className="space-y-3">
           <p className="text-xs leading-relaxed text-gray-300">Décris brièvement la sensibilisation réalisée. Le commentaire est obligatoire pour clôturer.</p>
           <textarea value={closingComment} onChange={(event) => setClosingComment(event.target.value)} rows={5} placeholder="Ex. Sensibilisation menée auprès du public ; retours et incidents éventuels…" className="app-input w-full resize-none rounded-2xl px-3 py-3 text-sm" />
           <button type="button" onClick={handleClose} className="w-full rounded-2xl border border-amber-300/35 bg-amber-400/10 px-4 py-3 text-[10px] font-black uppercase tracking-[0.12em] text-amber-100 transition hover:bg-amber-400/20">Clôturer ma journée</button>
         </div>
       </ModalShell>}
-      {isContactOpen && <ModalShell title="Nouveau contact Youth" onClose={() => !contactSaving && setIsContactOpen(false)}>
+      {isContactOpen && <ModalShell title="Nouveau contact Youth" error={error} dismissOnBackdrop={false} onClose={() => !contactSaving && setIsContactOpen(false)}>
         <form onSubmit={saveContact} className="space-y-5">
           <input aria-label="Nom de l’abonné" value={contactName} onChange={(event) => setContactName(event.target.value)} className="app-input w-full rounded-2xl px-4 py-3 text-sm" placeholder="Nom de l’abonné" />
           <div className="grid grid-cols-2 gap-3">
@@ -412,11 +418,11 @@ body:has(.youth-before-checkin) .agent-dock-action { display: none !important; }
           </div>
           <div>
             <p className="mb-3 text-[11px] font-black text-white">Actions prises</p>
-            <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}>
+            <div className="grid gap-2" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
               {youthActions.map(([value,label]) => {
                 const selected = contactActions.includes(value);
                 const shortLabel = ({ activation_bundle: 'Activation bundle', mpesa_account: 'Ouverture compte M-Pesa', mpesa_app: 'Téléchargement appli M-Pesa', f2f_optin: 'Opt-in F2F', other: 'Autre' } as Record<string, string>)[value] || label;
-                return <button type="button" key={value} aria-pressed={selected} onClick={() => setContactActions((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current.filter((item) => item !== 'none'), value])} style={{ minHeight: 78, overflowWrap: 'anywhere' }} className={`flex min-w-0 items-center justify-center rounded-2xl border px-1 py-2 text-center text-[9px] font-bold leading-snug transition ${selected ? 'border-cyan-300/50 bg-cyan-400/15 text-cyan-100' : 'border-white/10 bg-white/[0.03] text-gray-300'}`}>{shortLabel}</button>;
+                return <button type="button" key={value} aria-pressed={selected} onClick={() => setContactActions((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current.filter((item) => item !== 'none'), value])} style={{ minHeight: 60, ...(value === youthActions[youthActions.length - 1][0] && youthActions.length % 2 === 1 ? { gridColumn: '1 / -1' } : {}) }} className={`flex min-w-0 items-center justify-center rounded-2xl border px-3 py-3 text-center text-[13px] font-bold leading-snug transition ${selected ? 'border-cyan-300/50 bg-cyan-400/15 text-cyan-100' : 'border-white/10 bg-white/[0.03] text-gray-300'}`}>{shortLabel}</button>;
               })}
             </div>
           </div>
