@@ -34,7 +34,7 @@ export const DateIconPicker: React.FC<DateIconPickerProps> = ({
   max,
   className = '',
   buttonClassName = 'h-10 w-10 rounded-xl bg-white/5 text-gray-200 hover:bg-white/10 border border-white/10',
-  labelClassName = 'text-[11px] font-black uppercase text-gray-200',
+  labelClassName = 'text-[0.6875rem] font-black uppercase text-gray-200',
   popoverAlign = 'right'
 }) => {
   const selectedDate = parseIsoDate(value);
@@ -163,7 +163,7 @@ export const DateIconPicker: React.FC<DateIconPickerProps> = ({
             >
               <ChevronLeft className="mx-auto h-4 w-4" />
             </button>
-            <span className="text-[11px] font-black uppercase text-white">{monthLabel}</span>
+            <span className="text-[0.6875rem] font-black uppercase text-white">{monthLabel}</span>
             <button
               type="button"
               onClick={() => setMonthCursor(new Date(monthCursor.getFullYear(), monthCursor.getMonth() + 1, 1))}
@@ -176,7 +176,7 @@ export const DateIconPicker: React.FC<DateIconPickerProps> = ({
 
           <div className="mb-1 grid grid-cols-7 gap-1">
             {['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'].map((label) => (
-              <div key={label} className="py-1 text-center text-[9px] font-black uppercase text-gray-500">{label}</div>
+              <div key={label} className="py-1 text-center text-[0.6875rem] font-black uppercase text-gray-500">{label}</div>
             ))}
           </div>
 
@@ -202,7 +202,7 @@ export const DateIconPicker: React.FC<DateIconPickerProps> = ({
                     onChange(iso);
                     setIsOpen(false);
                   }}
-                  className={`h-8 rounded-lg text-[10px] font-black transition-all ${selected
+                  className={`h-8 rounded-lg text-[0.75rem] font-black transition ${selected
                     ? 'bg-red-600 text-white'
                     : today
                       ? 'border border-amber-400/60 bg-amber-400/10 text-amber-300'

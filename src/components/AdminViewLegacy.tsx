@@ -11,6 +11,7 @@ import { SupervisorProfileModal, SupervisorHostessSummary } from './Modals/Super
 import { DateIconPicker } from './DateIconPicker';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 import { CampaignPauseControl } from './CampaignPauseControl';
+import { confirmAction } from '../utils/confirmDialog';
 
 interface AdminViewProps {
   currentUser: User;
@@ -464,7 +465,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     if (onRefreshData) onRefreshData();
   };
 
-  const handleDropHostessOnShop = (targetShopId: string, payload?: { agentId: string; fromShopId: string } | null) => {
+  const handleDropHostessOnShop = async (targetShopId: string, payload?: { agentId: string; fromShopId: string } | null) => {
     const source = payload || draggedHostess;
     if (!source) return;
 
@@ -479,9 +480,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const toShop = shops.find((s) => s.id === targetShopId);
     if (!agent || !toShop) return;
 
-    const confirmed = window.confirm(
-      `Confirmer l'affectation de ${agent.name} de ${fromShop?.name || 'shop actuel'} vers ${toShop.name} ?`
-    );
+    const confirmed = await confirmAction({ title: 'Affecter l’agent', message: `Confirmer l'affectation de ${agent.name} de ${fromShop?.name || 'shop actuel'} vers ${toShop.name} ?`, confirmLabel: 'Affecter' });
     if (!confirmed) return;
 
     updateUserShopAssignment(agentId, targetShopId);
@@ -588,7 +587,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10">
           <button
             onClick={() => setManageSection('hostess')}
-            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
+            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition ${
               manageSection === 'hostess' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -599,7 +598,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           </button>
           <button
             onClick={() => setManageSection('supervisors')}
-            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
+            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition ${
               manageSection === 'supervisors' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -610,7 +609,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           </button>
           <button
             onClick={() => setManageSection('shops')}
-            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
+            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition ${
               manageSection === 'shops' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -621,7 +620,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           </button>
           <button
             onClick={() => setManageSection('campaigns')}
-            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
+            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition ${
               manageSection === 'campaigns' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -632,7 +631,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           </button>
           <button
             onClick={() => setManageSection('targets')}
-            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition-all ${
+            className={`flex-1 py-2 rounded-xl text-xs font-black uppercase transition ${
               manageSection === 'targets' ? 'bg-red-600 text-white shadow-lg' : 'text-gray-400 hover:text-white'
             }`}
           >
@@ -650,7 +649,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           {manageSection === 'hostess' && (
             <div className="glass-card p-4 border border-white/10 space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-[11px] font-black uppercase tracking-wider text-amber-400">Hôtesses ({hostessList.length})</h2>
+                <h2 className="text-[0.6875rem] font-black uppercase tracking-wider text-amber-400">Hôtesses ({hostessList.length})</h2>
               </div>
 
               <div className="space-y-2">
@@ -662,20 +661,20 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   return (
                     <div key={agent.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
                       <div className="min-w-0">
-                        <p className="truncate text-[11px] font-black uppercase text-white">{agent.name}</p>
-                        <p className="truncate text-[9px] font-bold uppercase text-gray-400">
+                        <p className="truncate text-[0.6875rem] font-black uppercase text-white">{agent.name}</p>
+                        <p className="truncate text-[0.6875rem] font-bold uppercase text-gray-400">
                           {agent.shop} • SUP: {supervisorName}
                         </p>
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className={`px-2 py-1 rounded-xl text-[9px] font-black uppercase border ${statusBg}`}>
+                        <span className={`px-2 py-1 rounded-xl text-[0.6875rem] font-black uppercase border ${statusBg}`}>
                           {agent.status}
                         </span>
                         <button
                           type="button"
                           onClick={() => onOpenAgentProfile(agent)}
-                          className={`p-1.5 rounded-xl border transition-all ${statusBg} hover:opacity-90`}
+                          className={`p-1.5 rounded-xl border transition ${statusBg} hover:opacity-90`}
                           title={`Voir l'historique de ${agent.name}`}
                         >
                           <UserIcon className="w-3.5 h-3.5" />
@@ -691,21 +690,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
           {manageSection === 'supervisors' && (
             <div className="glass-card p-4 border border-white/10 space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="text-[11px] font-black uppercase tracking-wider text-amber-400">Superviseurs ({supervisorSummaries.length})</h2>
+                <h2 className="text-[0.6875rem] font-black uppercase tracking-wider text-amber-400">Superviseurs ({supervisorSummaries.length})</h2>
               </div>
 
               <div className="space-y-2">
                 {supervisorSummaries.map((item) => (
                   <div key={item.supervisor.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
                     <div className="min-w-0">
-                      <p className="truncate text-[11px] font-black uppercase text-white">{item.supervisor.name}</p>
-                      <p className="truncate text-[9px] font-bold uppercase text-gray-400">
+                      <p className="truncate text-[0.6875rem] font-black uppercase text-white">{item.supervisor.name}</p>
+                      <p className="truncate text-[0.6875rem] font-bold uppercase text-gray-400">
                         {item.assignedAgents.length} hôtesse(s)
                       </p>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="px-2 py-1 rounded-xl text-[9px] font-black uppercase border border-blue-500/40 bg-blue-500/20 text-blue-300">
+                      <span className="px-2 py-1 rounded-xl text-[0.6875rem] font-black uppercase border border-blue-500/40 bg-blue-500/20 text-blue-300">
                         {item.lastReportDate ? `Dernier ${item.lastReportDate}` : 'Aucun rapport'}
                       </span>
                       <button
@@ -733,19 +732,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                 <div className="space-y-2">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Sélectionner une hôtesse</label>
+                    <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1">Sélectionner une hôtesse</label>
                     <StyledPicker value={assignUser} placeholder="-- Choisir une hôtesse --" options={assignableHostesses.map((u) => ({ value: u.id, label: u.name }))} onChange={setAssignUser} />
                   </div>
 
                   {assignUser && (
                     <div className="grid grid-cols-2 gap-2 pt-1">
                       <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Affecter au Shop</label>
+                        <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1">Affecter au Shop</label>
                         <StyledPicker value={assignShop} placeholder="-- Conserver shop --" options={shops.map((shop) => ({ value: shop.id, label: `${shop.name} (${shop.city})` }))} onChange={setAssignShop} />
                       </div>
 
                       <div>
-                        <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Affecter au Superviseur</label>
+                        <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1">Affecter au Superviseur</label>
                         <StyledPicker value={assignSupervisor} placeholder="-- Conserver sup --" options={supervisors.map((sup) => ({ value: sup.id, label: sup.name }))} onChange={setAssignSupervisor} />
                       </div>
                     </div>
@@ -754,7 +753,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   {assignUser && (
                     <button
                       onClick={handleSaveAssignments}
-                      className="w-full mt-2 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase shadow-md transition-all"
+                      className="w-full mt-2 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase shadow-md transition"
                     >
                       Enregistrer l'affectation
                     </button>
@@ -772,7 +771,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   return (
                     <div
                       key={shop.id}
-                      className={`glass-card p-4 border space-y-3 transition-all ${
+                      className={`glass-card p-4 border space-y-3 transition ${
                         dragOverShopId === shop.id
                           ? 'border-amber-300 bg-amber-400/20 ring-2 ring-amber-300/60 shadow-[0_0_0_1px_rgba(252,211,77,0.45)]'
                           : draggedHostess
@@ -803,9 +802,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             <Store className="w-4 h-4 text-amber-400" />
                             <span>{shop.name}</span>
                           </h3>
-                          <p className="text-[10px] text-gray-400 font-semibold">{shop.city} • Type: {shop.type}</p>
+                          <p className="text-[0.75rem] text-gray-400 font-semibold">{shop.city} • Type: {shop.type}</p>
                         </div>
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 text-amber-300 rounded-xl text-[9px] font-black uppercase border border-amber-500/40">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 text-amber-300 rounded-xl text-[0.6875rem] font-black uppercase border border-amber-500/40">
                           <UserCheck className="w-3 h-3" />
                           <span>{assignedAgents.length}</span>
                         </span>
@@ -813,7 +812,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                       <div className="flex flex-wrap gap-1.5 pt-1">
                         {assignedAgents.length === 0 ? (
-                          <span className="text-[10px] text-gray-500 italic">Aucune hôtesse affectée à ce shop</span>
+                          <span className="text-[0.75rem] text-gray-500 italic">Aucune hôtesse affectée à ce shop</span>
                         ) : (
                           assignedAgents.map(ag => (
                             <span
@@ -832,7 +831,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 setDraggedHostess(null);
                                 setDragOverShopId(null);
                               }}
-                              className="cursor-grab active:cursor-grabbing text-[9px] font-black uppercase px-2.5 py-1 bg-white/5 text-gray-300 rounded-lg border border-white/10 flex items-center space-x-1"
+                              className="cursor-grab active:cursor-grabbing text-[0.6875rem] font-black uppercase px-2.5 py-1 bg-white/5 text-gray-300 rounded-lg border border-white/10 flex items-center space-x-1"
                               title="Glisser-déposer vers un autre shop"
                             >
                               <UserCheck className="w-3 h-3 text-emerald-400" />
@@ -854,16 +853,16 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-xs font-black uppercase tracking-wider text-violet-100">Affectations de campagnes</h2>
-                    <p className="mt-1 max-w-xl text-[10px] font-semibold leading-relaxed text-gray-400">Affectez un agent à Privilège, Merchant ou Youth F2F sans créer de doublon. Un agent BA peut appartenir à plusieurs campagnes ; une Hôtesse reste limitée à Privilège.</p>
+                    <p className="mt-1 max-w-xl text-[0.75rem] font-semibold leading-relaxed text-gray-400">Affectez un agent à Privilège, Merchant ou Youth F2F sans créer de doublon. Un agent BA peut appartenir à plusieurs campagnes ; une Hôtesse reste limitée à Privilège.</p>
                   </div>
-                  <button type="button" onClick={onOpenUserModal} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-violet-200/30 bg-violet-500/20 px-3 py-2 text-[10px] font-black uppercase text-violet-50 transition hover:bg-violet-500/35"><UserPlus className="h-3.5 w-3.5" /> Ajouter / affecter</button>
+                  <button type="button" onClick={onOpenUserModal} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-violet-200/30 bg-violet-500/20 px-3 py-2 text-[0.75rem] font-black uppercase text-violet-50 transition hover:bg-violet-500/35"><UserPlus className="h-3.5 w-3.5" /> Ajouter / affecter</button>
                 </div>
               </section>
               <section className="glass-card border border-white/10 p-4">
-                <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-[11px] font-black uppercase tracking-wider text-amber-300">Agents et campagnes actives</h2><span className="rounded-xl border border-white/10 bg-white/5 px-2 py-1 text-[10px] font-black text-gray-300">{new Set(campaignAssignments.map((item) => item.userId)).size} agents</span></div>
+                <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-[0.6875rem] font-black uppercase tracking-wider text-amber-300">Agents et campagnes actives</h2><span className="rounded-xl border border-white/10 bg-white/5 px-2 py-1 text-[0.75rem] font-black text-gray-300">{new Set(campaignAssignments.map((item) => item.userId)).size} agents</span></div>
                 {campaignAssignmentsLoading && <p className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center text-xs text-gray-400">Chargement des affectations…</p>}
                 {campaignAssignmentsError && <p className="rounded-2xl border border-amber-300/20 bg-amber-500/10 p-4 text-xs font-bold text-amber-100">{campaignAssignmentsError}</p>}
-                {!campaignAssignmentsLoading && !campaignAssignmentsError && <div className="space-y-2">{allUsers.filter((user) => user.role === 'agent').sort((a, b) => a.name.localeCompare(b.name, 'fr')).map((agent) => { const assignments = campaignAssignments.filter((item) => item.userId === agent.id); return <div key={agent.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-3"><div className="min-w-0"><b className="block truncate text-xs text-white">{agent.name}</b><span className="text-[10px] font-bold text-gray-500">{agent.phone} · {agent.userCategory === 'hostess' ? 'Hôtesse' : 'BA'}</span></div><div className="flex max-w-[58%] flex-wrap justify-end gap-1.5">{assignments.length ? assignments.map((item) => <span key={item.campaignId} className="rounded-lg border border-violet-300/25 bg-violet-500/10 px-2 py-1 text-[9px] font-black text-violet-100">{item.campaign?.name || item.campaignId}</span>) : <span className="rounded-lg border border-rose-300/25 bg-rose-500/10 px-2 py-1 text-[9px] font-black text-rose-100">Non affecté</span>}</div></div> })}</div>}
+                {!campaignAssignmentsLoading && !campaignAssignmentsError && <div className="space-y-2">{allUsers.filter((user) => user.role === 'agent').sort((a, b) => a.name.localeCompare(b.name, 'fr')).map((agent) => { const assignments = campaignAssignments.filter((item) => item.userId === agent.id); return <div key={agent.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-3"><div className="min-w-0"><b className="block truncate text-xs text-white">{agent.name}</b><span className="text-[0.75rem] font-bold text-gray-500">{agent.phone} · {agent.userCategory === 'hostess' ? 'Hôtesse' : 'BA'}</span></div><div className="flex max-w-[58%] flex-wrap justify-end gap-1.5">{assignments.length ? assignments.map((item) => <span key={item.campaignId} className="rounded-lg border border-violet-300/25 bg-violet-500/10 px-2 py-1 text-[0.6875rem] font-black text-violet-100">{item.campaign?.name || item.campaignId}</span>) : <span className="rounded-lg border border-rose-300/25 bg-rose-500/10 px-2 py-1 text-[0.6875rem] font-black text-rose-100">Non affecté</span>}</div></div> })}</div>}
               </section>
             </div>
           )}
@@ -873,84 +872,84 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <div className="glass-card border border-white/10 p-5 space-y-4">
               <div className="space-y-1 text-left">
                 <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Définir les targets</h2>
-                <p className="text-[10px] text-gray-400 font-semibold">Les cibles de privilège, roaming et bundle sont centralisées ici pour les superviseurs.</p>
+                <p className="text-[0.75rem] text-gray-400 font-semibold">Les cibles de privilège, roaming et bundle sont centralisées ici pour les superviseurs.</p>
               </div>
 
               <div className="space-y-3">
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Standard</p>
+                  <p className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Standard</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <label className="text-[9px] font-black uppercase text-gray-400">Privilège
+                    <label className="text-[0.6875rem] font-black uppercase text-gray-400">Privilège
                       <input
                         type="number"
                         min="0"
                         max="100"
                         value={targetPrivilegeStd}
                         onChange={(e) => setTargetPrivilegeStd(Math.max(0, Math.min(100, Number(e.target.value || 0))))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[0.6875rem] font-black text-white outline-none focus:border-red-400"
                       />
                     </label>
-                    <label className="text-[9px] font-black uppercase text-gray-400">Roaming
+                    <label className="text-[0.6875rem] font-black uppercase text-gray-400">Roaming
                       <input
                         type="number"
                         min="0"
                         max="50"
                         value={targetRoamingStd}
                         onChange={(e) => setTargetRoamingStd(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[0.6875rem] font-black text-white outline-none focus:border-red-400"
                       />
                     </label>
-                    <label className="text-[9px] font-black uppercase text-gray-400">Bundle
+                    <label className="text-[0.6875rem] font-black uppercase text-gray-400">Bundle
                       <input
                         type="number"
                         min="0"
                         max="50"
                         value={targetBundleStd}
                         onChange={(e) => setTargetBundleStd(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[0.6875rem] font-black text-white outline-none focus:border-red-400"
                       />
                     </label>
                   </div>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Aéroport</p>
+                  <p className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Aéroport</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <label className="text-[9px] font-black uppercase text-gray-400">Privilège
+                    <label className="text-[0.6875rem] font-black uppercase text-gray-400">Privilège
                       <input
                         type="number"
                         min="0"
                         max="100"
                         value={targetPrivilegeAir}
                         onChange={(e) => setTargetPrivilegeAir(Math.max(0, Math.min(100, Number(e.target.value || 0))))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[0.6875rem] font-black text-white outline-none focus:border-red-400"
                       />
                     </label>
-                    <label className="text-[9px] font-black uppercase text-gray-400">Roaming
+                    <label className="text-[0.6875rem] font-black uppercase text-gray-400">Roaming
                       <input
                         type="number"
                         min="0"
                         max="50"
                         value={targetRoamingAir}
                         onChange={(e) => setTargetRoamingAir(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[0.6875rem] font-black text-white outline-none focus:border-red-400"
                       />
                     </label>
-                    <label className="text-[9px] font-black uppercase text-gray-400">Bundle
+                    <label className="text-[0.6875rem] font-black uppercase text-gray-400">Bundle
                       <input
                         type="number"
                         min="0"
                         max="50"
                         value={targetBundleAir}
                         onChange={(e) => setTargetBundleAir(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[0.6875rem] font-black text-white outline-none focus:border-red-400"
                       />
                     </label>
                   </div>
                 </div>
               </div>
 
-                <button onClick={handleSaveTarget} className="w-full rounded-xl bg-red-600 px-3 py-2.5 text-[10px] font-black uppercase text-white">
+                <button onClick={handleSaveTarget} className="w-full rounded-xl bg-red-600 px-3 py-2.5 text-[0.75rem] font-black uppercase text-white">
                   Enregistrer les targets
                 </button>
               </div>
@@ -1025,7 +1024,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <button
                   key={option.key}
                   onClick={() => setStatusFilter(option.key as 'ALL' | 'Online' | 'Absent' | 'Clôturé')}
-                  className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase transition-all ${
+                  className={`px-3 py-2 rounded-xl border text-[0.75rem] font-black uppercase transition ${
                     isActive
                       ? 'bg-red-600 text-white border-red-500 shadow-lg'
                       : 'bg-black/60 text-gray-300 border-white/10 hover:border-red-500/40 hover:text-white'
@@ -1081,7 +1080,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               return (
                 <div
                   key={agent.id}
-                  className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition-all cursor-pointer"
+                  className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition cursor-pointer"
                   onClick={() => {
                     if (onOpenAgentProfile) {
                       onOpenAgentProfile(agent);
@@ -1094,7 +1093,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         <h3 className="text-xs font-black uppercase text-white">{agent.name}</h3>
                       </div>
 
-                      <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-nowrap gap-1 mt-1 whitespace-nowrap overflow-hidden">
+                      <p className="text-[0.6875rem] font-bold text-gray-400 uppercase flex items-center flex-nowrap gap-1 mt-1 whitespace-nowrap overflow-hidden">
                         <MapPin className="w-3 h-3 text-blue-400" />
                         <span className="truncate">{formatAgentLocationLine({ shop: agent.shop, status: agent.status, arrivalTime: agent.reportObj?.arrival_time, departureTime: agent.reportObj?.departure_time })}</span>
                         <button
@@ -1118,7 +1117,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             e.stopPropagation();
                             onOpenAgentProfile(agent);
                           }}
-                          className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0 flex items-center justify-center`}
+                          className={`p-1.5 ${statusBg} rounded-xl border transition shrink-0 flex items-center justify-center`}
                           title="Détail hotesse"
                         >
                           <UserIcon className="w-4 h-4" />
@@ -1131,14 +1130,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             e.stopPropagation();
                             onOpenPdfModal(`report-id:${agent.reportObj?.id}`);
                           }}
-                          className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0 flex items-center justify-center`}
+                          className={`p-1.5 ${statusBg} rounded-xl border transition shrink-0 flex items-center justify-center`}
                           title="Voir le rapport PDF"
                         >
                           <FileText className="w-4 h-4" />
                         </button>
                       ) : (
                         <span
-                          className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0 flex items-center justify-center opacity-75`}
+                          className={`p-1.5 ${statusBg} rounded-xl border transition shrink-0 flex items-center justify-center opacity-75`}
                           title="Pas de rapport"
                         >
                           <FileX2 className="w-4 h-4" />
@@ -1182,7 +1181,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                             setPresenceCalendarPosition({ top, left });
                             setPresenceCalendarAgentId(agent.id);
                           }}
-                          className={`p-1.5 rounded-xl border transition-all flex items-center justify-center ${statusBg}`}
+                          className={`p-1.5 rounded-xl border transition flex items-center justify-center ${statusBg}`}
                           title={`Registre de présence (7 jours): ${historyTitle}`}
                         >
                           <CalendarDays className="w-4 h-4" />
@@ -1236,7 +1235,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
                               <div className="grid grid-cols-7 gap-1 mb-1">
                                 {['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'].map((label) => (
-                                  <div key={label} className="text-center text-[10px] font-black uppercase text-gray-500 py-1">{label}</div>
+                                  <div key={label} className="text-center text-[0.75rem] font-black uppercase text-gray-500 py-1">{label}</div>
                                 ))}
                               </div>
 
@@ -1248,7 +1247,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                   return (
                                     <div
                                       key={cell.isoDate}
-                                      className={`h-9 rounded-lg border text-[11px] font-black flex items-center justify-center ${cell.inActivityPeriod ? getStatusCalendarCellClass(cell.dayStatus) : 'bg-white/5 text-gray-500 border-white/10'} ${cell.isToday ? 'ring-1 ring-amber-300/70' : ''}`}
+                                      className={`h-9 rounded-lg border text-[0.6875rem] font-black flex items-center justify-center ${cell.inActivityPeriod ? getStatusCalendarCellClass(cell.dayStatus) : 'bg-white/5 text-gray-500 border-white/10'} ${cell.isToday ? 'ring-1 ring-amber-300/70' : ''}`}
                                       title={cell.inActivityPeriod ? `${cell.isoDate}: ${cell.dayStatus}` : `${cell.isoDate}: hors période d'activité`}
                                     >
                                       {cell.dayNumber}
@@ -1257,7 +1256,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                 })}
                               </div>
 
-                              <div className="mt-3 flex items-center justify-center gap-3 text-[9px] font-black uppercase text-gray-300">
+                              <div className="mt-3 flex items-center justify-center gap-3 text-[0.6875rem] font-black uppercase text-gray-300">
                                 <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />Absent</span>
                                 <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-blue-400" />Présent</span>
                                 <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" />Clôturé</span>
@@ -1272,7 +1271,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   </div>
 
                   {agent.status !== 'Absent' && (
-                    <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
+                    <div className="grid grid-cols-3 gap-2 text-center text-[0.75rem] font-bold">
                       {[
                         { label: 'Privilège', value: agent.stats?.priv ?? 0, colorClass: 'text-red-500' },
                         { label: 'Roaming', value: agent.stats?.roam ?? 0, colorClass: 'text-amber-400' },
@@ -1290,7 +1289,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           }}
                           className={`bg-white/5 p-2 rounded-xl ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
                         >
-                          <span className="text-[8px] text-gray-400 uppercase block">{tile.label}</span>
+                          <span className="text-[0.6875rem] text-gray-400 uppercase block">{tile.label}</span>
                           <span className={`${tile.colorClass} text-xs`}>{tile.value}</span>
                         </button>
                       ))}
@@ -1310,14 +1309,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div
               onClick={() => setSubTab('leads')}
-              className="relative overflow-hidden bg-white/[0.128] text-white p-5 rounded-[28px] text-center shadow-[0_18px_38px_rgba(0,0,0,0.38)] border border-white/25 backdrop-blur-xl cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group"
+              className="relative overflow-hidden bg-white/[0.128] text-white p-5 rounded-[28px] text-center shadow-[0_18px_38px_rgba(0,0,0,0.38)] border border-white/25 backdrop-blur-xl cursor-pointer transition hover:scale-[1.02] active:scale-95 group"
               title="Cliquer pour voir tous les Leads / Rapport de Synthèse"
             >
               <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-rose-500/20 blur-2xl" />
               <div className="pointer-events-none absolute left-3 top-3 h-7 w-7 rounded-full border border-white/20" />
-              <span className="text-[9px] font-black uppercase tracking-wider text-gray-300 block group-hover:text-red-400">Total Activations</span>
+              <span className="text-[0.6875rem] font-black uppercase tracking-wider text-gray-300 block group-hover:text-red-400">Total Activations</span>
               <p className="text-3xl font-black text-red-400 drop-shadow-[0_0_14px_rgba(0,0,0,0.4)]">{totalActivations}</p>
-              <span className="text-[8px] font-bold text-gray-300 uppercase mt-1 block group-hover:underline">→ Voir la liste</span>
+              <span className="text-[0.6875rem] font-bold text-gray-300 uppercase mt-1 block group-hover:underline">→ Voir la liste</span>
             </div>
             <div
               onClick={() => {
@@ -1325,14 +1324,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 setManageSection('hostess');
                 if (onRequestTabChange) onRequestTabChange('admin');
               }}
-              className="relative overflow-hidden bg-white/[0.128] text-white p-5 rounded-[28px] text-center shadow-[0_18px_38px_rgba(0,0,0,0.38)] border border-white/25 backdrop-blur-xl cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group"
+              className="relative overflow-hidden bg-white/[0.128] text-white p-5 rounded-[28px] text-center shadow-[0_18px_38px_rgba(0,0,0,0.38)] border border-white/25 backdrop-blur-xl cursor-pointer transition hover:scale-[1.02] active:scale-95 group"
               title="Cliquer pour aller au Monitoring des hôtesses"
             >
               <div className="pointer-events-none absolute -left-10 -bottom-10 h-28 w-28 rounded-full bg-amber-400/18 blur-2xl" />
               <div className="pointer-events-none absolute right-3 top-3 h-7 w-7 rounded-full border border-white/20" />
-              <span className="text-[9px] font-black uppercase tracking-wider text-gray-300 block group-hover:text-white">Effectif Hôtesses</span>
+              <span className="text-[0.6875rem] font-black uppercase tracking-wider text-gray-300 block group-hover:text-white">Effectif Hôtesses</span>
               <p className="text-3xl font-black text-white drop-shadow-[0_0_12px_rgba(0,0,0,0.4)]">{hostessList.length}</p>
-              <span className="text-[8px] font-bold text-gray-300 uppercase mt-1 block group-hover:underline">→ Aller au Monitoring</span>
+              <span className="text-[0.6875rem] font-bold text-gray-300 uppercase mt-1 block group-hover:underline">→ Aller au Monitoring</span>
             </div>
           </div>
 
@@ -1378,7 +1377,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <div key={item.name} className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
                   <div className="flex items-center space-x-1">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-[10px] text-gray-300 font-black uppercase">{item.name}</span>
+                    <span className="text-[0.75rem] text-gray-300 font-black uppercase">{item.name}</span>
                   </div>
                   <span className="text-sm font-black text-white">{item.value}</span>
                 </div>
@@ -1398,7 +1397,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <div className="z-10 w-10 shrink-0 border-r border-white/10 bg-black/20">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={rollingLineData} margin={{ left: 0, right: 0 }}>
-                      <YAxis stroke="var(--m-muted)" fontSize={10} tickLine={false} axisLine={false} width={34} />
+                      <YAxis stroke="var(--m-muted)" fontSize={12} tickLine={false} axisLine={false} width={34} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -1416,7 +1415,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     </filter>
                   </defs>
                   <CartesianGrid strokeDasharray="4 5" stroke="rgba(161,161,170,0.22)" vertical={false} />
-                  <XAxis dataKey="date" stroke="var(--m-muted)" fontSize={10} tickLine={false} axisLine={false} interval={2} />
+                  <XAxis dataKey="date" stroke="var(--m-muted)" fontSize={12} tickLine={false} axisLine={false} interval={2} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#09090b', borderColor: '#3f3f46', borderRadius: '14px', fontSize: '12px', boxShadow: '0 12px 25px rgba(0,0,0,0.35)' }}
                     itemStyle={{ color: '#ffffff', fontWeight: 'bold' }}
@@ -1445,7 +1444,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       {subTab === 'leads' && (
         <div className="space-y-4">
           <div className="glass-card relative z-30 overflow-visible p-4 border border-white/10 space-y-3">
-            <p className="text-[10px] font-black uppercase text-gray-400">Filtre temporel des leads</p>
+            <p className="text-[0.75rem] font-black uppercase text-gray-400">Filtre temporel des leads</p>
 
             <div className="space-y-2">
               <DateRangeKnobSlider
@@ -1463,7 +1462,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
 
           <div className="glass-card relative z-10 p-3 border border-white/10 overflow-x-auto">
             <h2 className="text-xs font-black uppercase tracking-wider text-gray-400 mb-2">Tableau des Leads ({filteredLeads.length})</h2>
-            <table className="w-full text-left text-[10px] min-w-[760px]">
+            <table className="w-full text-left text-[0.75rem] min-w-[760px]">
               <thead>
                 <tr className="uppercase text-gray-400 border-b border-white/10">
                   <th className="py-2 pr-3">Date</th>
@@ -1503,7 +1502,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
           <div className="w-full max-w-md rounded-3xl border border-white/10 bg-zinc-950/95 p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500">Affectation du shop</p>
+                <p className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-red-500">Affectation du shop</p>
                 <h3 className="text-base font-black uppercase text-white">{shopAssignmentModal.agentName}</h3>
               </div>
               <button aria-label="Fermer"
@@ -1515,7 +1514,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               </button>
             </div>
 
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-2">Sélectionner un shop</label>
+            <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-2">Sélectionner un shop</label>
             <div className="relative">
               <button
                 type="button"
@@ -1560,14 +1559,14 @@ export const AdminView: React.FC<AdminViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShopAssignmentModal(null)}
-                className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-[10px] font-black uppercase text-gray-300"
+                className="flex-1 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5 text-[0.75rem] font-black uppercase text-gray-300"
               >
                 Annuler
               </button>
               <button
                 type="button"
                 onClick={saveShopAssignment}
-                className="flex-1 rounded-2xl bg-red-600 px-3 py-2.5 text-[10px] font-black uppercase text-white"
+                className="flex-1 rounded-2xl bg-red-600 px-3 py-2.5 text-[0.75rem] font-black uppercase text-white"
               >
                 Enregistrer
               </button>
@@ -1580,7 +1579,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         <div className="space-y-4 animate-pop">
           {/* Filter Bar */}
           <div className="glass-card p-4 border border-white/10 space-y-3">
-            <p className="text-[10px] font-black uppercase text-gray-400">Filtres de Consolidation Périodique</p>
+            <p className="text-[0.75rem] font-black uppercase text-gray-400">Filtres de Consolidation Périodique</p>
             <DateRangeKnobSlider
               minDate={consolidationMinDate}
               maxDate={consolidationMaxDate}
@@ -1624,35 +1623,35 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-black uppercase text-white">{rep.agent_name}</p>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase">{rep.shop_name} • {rep.date}</p>
+                    <p className="text-[0.6875rem] font-bold text-gray-400 uppercase">{rep.shop_name} • {rep.date}</p>
                   </div>
 
                   <button
                     onClick={() => onOpenPdfModal(`report-id:${rep.id}`)}
-                    className="h-9 w-9 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-xl border border-red-500/30 transition-all flex items-center justify-center shrink-0"
+                    className="h-9 w-9 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-xl border border-red-500/30 transition flex items-center justify-center shrink-0"
                     title="Ouvrir PDF"
                   >
                     <Eye className="w-4 h-4" />
                   </button>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
+                <div className="grid grid-cols-3 gap-2 text-center text-[0.75rem] font-bold">
                   <div className="bg-white/5 p-2 rounded-xl border border-white/10">
-                    <span className="text-[8px] text-gray-400 uppercase block">Privilège</span>
+                    <span className="text-[0.6875rem] text-gray-400 uppercase block">Privilège</span>
                     <span className="text-red-500 text-xs">{rep.priv}</span>
                   </div>
                   <div className="bg-white/5 p-2 rounded-xl border border-white/10">
-                    <span className="text-[8px] text-gray-400 uppercase block">Roaming</span>
+                    <span className="text-[0.6875rem] text-gray-400 uppercase block">Roaming</span>
                     <span className="text-amber-400 text-xs">{rep.roam}</span>
                   </div>
                   <div className="bg-white/5 p-2 rounded-xl border border-white/10">
-                    <span className="text-[8px] text-gray-400 uppercase block">Bundles</span>
+                    <span className="text-[0.6875rem] text-gray-400 uppercase block">Bundles</span>
                     <span className="text-blue-400 text-xs">{rep.bund}</span>
                   </div>
                 </div>
 
                 {rep.comment && (
-                  <p className="text-[10px] italic text-gray-300 border-l-2 border-red-500/40 pl-2">"{rep.comment}"</p>
+                  <p className="text-[0.75rem] italic text-gray-300 border-l-2 border-red-500/40 pl-2">"{rep.comment}"</p>
                 )}
               </div>
             ))}

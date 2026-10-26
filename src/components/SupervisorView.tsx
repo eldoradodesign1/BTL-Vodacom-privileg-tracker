@@ -17,6 +17,7 @@ import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 import { CampaignPauseControl } from './CampaignPauseControl';
 import { getCampaignPauses, getCampaigns } from '../utils/merchantCampaign';
 import { publicUrl } from '../utils/assets';
+import { confirmAction } from '../utils/confirmDialog';
 
 interface SupervisorViewProps {
   currentUser: User;
@@ -553,7 +554,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     onOpenPdfModal(`preview-admin-batch:${encodeURIComponent(JSON.stringify(payload))}`);
   };
 
-  const handleDropHostessOnShop = (targetShopId: string, payload?: { agentId: string; fromShopId: string } | null) => {
+  const handleDropHostessOnShop = async (targetShopId: string, payload?: { agentId: string; fromShopId: string } | null) => {
     const source = payload || draggedHostess;
     if (!source) return;
 
@@ -568,9 +569,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     const toShop = shops.find((s) => s.id === targetShopId);
     if (!agent || !toShop) return;
 
-    const confirmed = window.confirm(
-      `Confirmer l'affectation de ${agent.name} de ${fromShop?.name || 'shop actuel'} vers ${toShop.name} ?`
-    );
+    const confirmed = await confirmAction({ title: 'Affecter l’agent', message: `Confirmer l'affectation de ${agent.name} de ${fromShop?.name || 'shop actuel'} vers ${toShop.name} ?`, confirmLabel: 'Affecter' });
     if (!confirmed) return;
 
     updateUserShopAssignment(agentId, targetShopId);
@@ -640,7 +639,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
               <button
                 key={option.key}
                 onClick={() => setStatusFilter(option.key as 'ALL' | 'Online' | 'Absent' | 'Clôturé')}
-                className={`px-3 py-2 rounded-xl border text-[10px] font-black uppercase transition-all ${
+                className={`px-3 py-2 rounded-xl border text-[0.75rem] font-black uppercase transition ${
                   isActive
                     ? 'bg-red-600 text-white border-red-500 shadow-lg'
                     : 'bg-black/60 text-gray-300 border-white/10 hover:border-red-500/40 hover:text-white'
@@ -661,7 +660,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
             return (
               <div
                 key={item.id}
-                className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition-all cursor-pointer"
+                className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition cursor-pointer"
                 onClick={() => {
                   if (onOpenAgentProfile) {
                     onOpenAgentProfile({
@@ -682,7 +681,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                       <h3 className="text-xs font-black uppercase text-white">{item.name}</h3>
                     </div>
 
-                    <p className="text-[9px] font-bold text-gray-400 uppercase flex items-center flex-nowrap gap-1 mt-1 whitespace-nowrap overflow-hidden">
+                    <p className="text-[0.6875rem] font-bold text-gray-400 uppercase flex items-center flex-nowrap gap-1 mt-1 whitespace-nowrap overflow-hidden">
                       <MapPin className="w-3 h-3 text-blue-400" />
                       <span className="truncate">{formatAgentLocationLine({
                         shop: item.shop,
@@ -708,7 +707,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                             trend: [4, 7, 5, 12, 18, 14, totalLeads]
                           });
                         }}
-                        className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0 flex items-center justify-center`}
+                        className={`p-1.5 ${statusBg} rounded-xl border transition shrink-0 flex items-center justify-center`}
                         title="Détail hotesse"
                       >
                         <UserIcon className="w-4 h-4" />
@@ -721,14 +720,14 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                           e.stopPropagation();
                           onOpenPdfModal(`report-id:${item.reportObj!.id}`);
                         }}
-                        className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0 flex items-center justify-center`}
+                        className={`p-1.5 ${statusBg} rounded-xl border transition shrink-0 flex items-center justify-center`}
                         title="Voir le rapport PDF"
                       >
                         <FileText className="w-4 h-4" />
                       </button>
                     ) : (
                       <span
-                        className={`p-1.5 ${statusBg} rounded-xl border transition-all shrink-0 flex items-center justify-center opacity-75`}
+                        className={`p-1.5 ${statusBg} rounded-xl border transition shrink-0 flex items-center justify-center opacity-75`}
                         title="Pas de rapport"
                       >
                         <FileX2 className="w-4 h-4" />
@@ -781,7 +780,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                           setPresenceCalendarPosition({ top, left });
                           setPresenceCalendarAgentId(item.id);
                         }}
-                        className={`p-1.5 rounded-xl border transition-all flex items-center justify-center ${statusBg}`}
+                        className={`p-1.5 rounded-xl border transition flex items-center justify-center ${statusBg}`}
                         title="Registre de présence"
                       >
                         <CalendarDays className="w-4 h-4" />
@@ -791,7 +790,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                 </div>
 
                 {item.status !== 'Absent' && (
-                  <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
+                  <div className="grid grid-cols-3 gap-2 text-center text-[0.75rem] font-bold">
                     {[
                       { label: 'Privilège', value: item.stats.priv, colorClass: 'text-red-500' },
                       { label: 'Roaming', value: item.stats.roam, colorClass: 'text-amber-400' },
@@ -818,7 +817,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                         }}
                         className={`bg-white/5 p-2 rounded-xl ${(item.status === 'Présent' || item.status === 'Clôturé') ? 'cursor-pointer hover:bg-white/10' : 'cursor-default'}`}
                       >
-                        <span className="text-[8px] text-gray-400 uppercase block">{tile.label}</span>
+                        <span className="text-[0.6875rem] text-gray-400 uppercase block">{tile.label}</span>
                         <span className={`${tile.colorClass} text-xs`}>{tile.value}</span>
                       </button>
                     ))}
@@ -899,7 +898,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
                 <div className="grid grid-cols-7 gap-1 mb-1">
                   {['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'].map((label) => (
-                    <div key={label} className="text-center text-[10px] font-black uppercase text-gray-500 py-1">{label}</div>
+                    <div key={label} className="text-center text-[0.75rem] font-black uppercase text-gray-500 py-1">{label}</div>
                   ))}
                 </div>
 
@@ -909,7 +908,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                     return (
                       <div
                         key={cell.isoDate}
-                        className={`h-9 rounded-lg border text-[11px] font-black flex items-center justify-center ${cell.inActivityPeriod ? getStatusCalendarCellClass(cell.dayStatus) : 'bg-white/5 text-gray-500 border-white/10'} ${cell.isToday ? 'ring-1 ring-amber-300/70' : ''}`}
+                        className={`h-9 rounded-lg border text-[0.6875rem] font-black flex items-center justify-center ${cell.inActivityPeriod ? getStatusCalendarCellClass(cell.dayStatus) : 'bg-white/5 text-gray-500 border-white/10'} ${cell.isToday ? 'ring-1 ring-amber-300/70' : ''}`}
                         title={cell.inActivityPeriod ? `${cell.isoDate}: ${cell.dayStatus}` : `${cell.isoDate}: hors période d'activité`}
                       >
                         {cell.dayNumber}
@@ -918,7 +917,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   })}
                 </div>
 
-                <div className="mt-3 flex items-center justify-center gap-3 text-[9px] font-black uppercase text-gray-300">
+                <div className="mt-3 flex items-center justify-center gap-3 text-[0.6875rem] font-black uppercase text-gray-300">
                   <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-500" />Absent</span>
                   <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-blue-400" />Présent</span>
                   <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" />Clôturé</span>
@@ -938,7 +937,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
     return (
       <div className="space-y-4 animate-pop">
         <div className="glass-card p-4 border border-white/10 space-y-3">
-          <p className="text-[10px] font-black uppercase text-gray-400">Filtres de Consolidation Périodique</p>
+          <p className="text-[0.75rem] font-black uppercase text-gray-400">Filtres de Consolidation Périodique</p>
           <DateRangeKnobSlider
             minDate={consolidationMinDate}
             maxDate={consolidationMaxDate}
@@ -980,35 +979,35 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-xs font-black uppercase text-white">{rep.agent_name}</p>
-                  <p className="text-[9px] font-bold text-gray-400 uppercase">{rep.shop_name} • {rep.date}</p>
+                  <p className="text-[0.6875rem] font-bold text-gray-400 uppercase">{rep.shop_name} • {rep.date}</p>
                 </div>
 
                 <button
                   onClick={() => onOpenPdfModal(`report-id:${rep.id}`)}
-                  className="h-9 w-9 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-xl border border-red-500/30 transition-all flex items-center justify-center shrink-0"
+                  className="h-9 w-9 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-xl border border-red-500/30 transition flex items-center justify-center shrink-0"
                   title="Ouvrir PDF"
                 >
                   <Eye className="w-4 h-4" />
                 </button>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-bold">
+              <div className="grid grid-cols-3 gap-2 text-center text-[0.75rem] font-bold">
                 <div className="bg-white/5 p-2 rounded-xl border border-white/10">
-                  <span className="text-[8px] text-gray-400 uppercase block">Privilège</span>
+                  <span className="text-[0.6875rem] text-gray-400 uppercase block">Privilège</span>
                   <span className="text-red-500 text-xs">{rep.priv}</span>
                 </div>
                 <div className="bg-white/5 p-2 rounded-xl border border-white/10">
-                  <span className="text-[8px] text-gray-400 uppercase block">Roaming</span>
+                  <span className="text-[0.6875rem] text-gray-400 uppercase block">Roaming</span>
                   <span className="text-amber-400 text-xs">{rep.roam}</span>
                 </div>
                 <div className="bg-white/5 p-2 rounded-xl border border-white/10">
-                  <span className="text-[8px] text-gray-400 uppercase block">Bundles</span>
+                  <span className="text-[0.6875rem] text-gray-400 uppercase block">Bundles</span>
                   <span className="text-blue-400 text-xs">{rep.bund}</span>
                 </div>
               </div>
 
               {rep.comment && (
-                <p className="text-[10px] italic text-gray-300 border-l-2 border-red-500/40 pl-2">"{rep.comment}"</p>
+                <p className="text-[0.75rem] italic text-gray-300 border-l-2 border-red-500/40 pl-2">"{rep.comment}"</p>
               )}
             </div>
           ))}
@@ -1031,7 +1030,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
             </p>
           </div>
           {onOpenUserModal && (
-            <button type="button" onClick={onOpenUserModal} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2 text-[10px] font-black uppercase text-amber-100 transition hover:border-amber-200/50 hover:bg-amber-500/20">
+            <button type="button" onClick={onOpenUserModal} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-amber-300/25 bg-amber-500/10 px-3 py-2 text-[0.75rem] font-black uppercase text-amber-100 transition hover:border-amber-200/50 hover:bg-amber-500/20">
               <UserPlus size={14} /> Agent
             </button>
           )}
@@ -1047,7 +1046,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           >
             <div className="space-y-1 text-left">
               <h2 className="text-xs font-black uppercase tracking-wider text-amber-400">Définir les targets</h2>
-              <p className="text-[10px] text-gray-400 font-semibold">Les cibles de privilège, roaming et bundle sont centralisées ici pour les superviseurs.</p>
+              <p className="text-[0.75rem] text-gray-400 font-semibold">Les cibles de privilège, roaming et bundle sont centralisées ici pour les superviseurs.</p>
             </div>
             <ChevronDown className={`w-5 h-5 text-gray-300 transition-transform ${isTargetsCardOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -1056,79 +1055,79 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
             <>
               <div className="space-y-3">
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Standard</p>
+                  <p className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Standard</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <label className="text-[9px] font-black uppercase text-gray-400">Privilège
+                    <label className="text-[0.6875rem] font-black uppercase text-gray-400">Privilège
                       <input
                         type="number"
                         min="0"
                         max="100"
                         value={targetPrivilegeStd}
                         onChange={(e) => setTargetPrivilegeStd(Math.max(0, Math.min(100, Number(e.target.value || 0))))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[0.6875rem] font-black text-white outline-none focus:border-red-400"
                       />
                     </label>
-                    <label className="text-[9px] font-black uppercase text-gray-400">Roaming
+                    <label className="text-[0.6875rem] font-black uppercase text-gray-400">Roaming
                       <input
                         type="number"
                         min="0"
                         max="50"
                         value={targetRoamingStd}
                         onChange={(e) => setTargetRoamingStd(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[0.6875rem] font-black text-white outline-none focus:border-red-400"
                       />
                     </label>
-                    <label className="text-[9px] font-black uppercase text-gray-400">Bundle
+                    <label className="text-[0.6875rem] font-black uppercase text-gray-400">Bundle
                       <input
                         type="number"
                         min="0"
                         max="50"
                         value={targetBundleStd}
                         onChange={(e) => setTargetBundleStd(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[0.6875rem] font-black text-white outline-none focus:border-red-400"
                       />
                     </label>
                   </div>
                 </div>
 
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Aéroport</p>
+                  <p className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-gray-400 mb-2">Aéroport</p>
                   <div className="grid grid-cols-3 gap-2">
-                    <label className="text-[9px] font-black uppercase text-gray-400">Privilège
+                    <label className="text-[0.6875rem] font-black uppercase text-gray-400">Privilège
                       <input
                         type="number"
                         min="0"
                         max="100"
                         value={targetPrivilegeAir}
                         onChange={(e) => setTargetPrivilegeAir(Math.max(0, Math.min(100, Number(e.target.value || 0))))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[0.6875rem] font-black text-white outline-none focus:border-red-400"
                       />
                     </label>
-                    <label className="text-[9px] font-black uppercase text-gray-400">Roaming
+                    <label className="text-[0.6875rem] font-black uppercase text-gray-400">Roaming
                       <input
                         type="number"
                         min="0"
                         max="50"
                         value={targetRoamingAir}
                         onChange={(e) => setTargetRoamingAir(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[0.6875rem] font-black text-white outline-none focus:border-red-400"
                       />
                     </label>
-                    <label className="text-[9px] font-black uppercase text-gray-400">Bundle
+                    <label className="text-[0.6875rem] font-black uppercase text-gray-400">Bundle
                       <input
                         type="number"
                         min="0"
                         max="50"
                         value={targetBundleAir}
                         onChange={(e) => setTargetBundleAir(Math.max(0, Math.min(50, Number(e.target.value || 0))))}
-                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[11px] font-black text-white outline-none focus:border-red-400"
+                        className="mt-1 w-full rounded-xl border border-white/10 bg-black/50 px-2 py-1.5 text-center text-[0.6875rem] font-black text-white outline-none focus:border-red-400"
                       />
                     </label>
                   </div>
                 </div>
               </div>
 
-              <button onClick={handleSaveTarget} className="w-full rounded-xl bg-red-600 px-3 py-2.5 text-[10px] font-black uppercase text-white">
+              <button onClick={handleSaveTarget} className="w-full rounded-xl bg-red-600 px-3 py-2.5 text-[0.75rem] font-black uppercase text-white">
                 Enregistrer les targets
               </button>
             </>
@@ -1146,7 +1145,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
             return (
               <div
                 key={shop.id}
-                className={`glass-card p-4 border space-y-3 transition-all ${
+                className={`glass-card p-4 border space-y-3 transition ${
                   dragOverShopId === shop.id
                     ? 'border-amber-300 bg-amber-400/20 ring-2 ring-amber-300/60 shadow-[0_0_0_1px_rgba(252,211,77,0.45)]'
                     : draggedHostess
@@ -1177,9 +1176,9 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                       <Store className="w-4 h-4 text-amber-400" />
                       <span>{shop.name}</span>
                     </h3>
-                    <p className="text-[10px] text-gray-400 font-semibold">{shop.city} • Type: {shop.type}</p>
+                    <p className="text-[0.75rem] text-gray-400 font-semibold">{shop.city} • Type: {shop.type}</p>
                   </div>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 text-amber-300 rounded-xl text-[9px] font-black uppercase border border-amber-500/40">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/20 text-amber-300 rounded-xl text-[0.6875rem] font-black uppercase border border-amber-500/40">
                     <UserCheck className="w-3 h-3" />
                     <span>{assignedAgents.length}</span>
                   </span>
@@ -1188,7 +1187,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                 {/* Assigned Agents badges */}
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {assignedAgents.length === 0 ? (
-                    <span className="text-[10px] text-gray-500 italic">Aucune hôtesse affectée à ce shop</span>
+                    <span className="text-[0.75rem] text-gray-500 italic">Aucune hôtesse affectée à ce shop</span>
                   ) : (
                     assignedAgents.map(ag => (
                       <span
@@ -1207,7 +1206,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                           setDraggedHostess(null);
                           setDragOverShopId(null);
                         }}
-                        className="cursor-grab active:cursor-grabbing text-[9px] font-black uppercase px-2.5 py-1 bg-white/5 text-gray-300 rounded-lg border border-white/10 flex items-center space-x-1"
+                        className="cursor-grab active:cursor-grabbing text-[0.6875rem] font-black uppercase px-2.5 py-1 bg-white/5 text-gray-300 rounded-lg border border-white/10 flex items-center space-x-1"
                         title="Glisser-déposer vers un autre shop"
                       >
                         <UserCheck className="w-3 h-3 text-emerald-400" />
@@ -1230,7 +1229,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
           <div className="space-y-3">
             <div>
-              <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Sélectionner l'hôte/hôtesse</label>
+              <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1">Sélectionner l'hôte/hôtesse</label>
               <select aria-label="Sélectionner l'hôte/hôtesse"
                 value={assigningUserId || ''}
                 onChange={(e) => setAssigningUserId(e.target.value)}
@@ -1250,7 +1249,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
             {assigningUserId && (
               <div>
-                <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Sélectionner le nouveau Shop</label>
+                <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1">Sélectionner le nouveau Shop</label>
                 <select aria-label="Sélectionner le nouveau Shop"
                   value={assigningShopId}
                   onChange={(e) => setAssigningShopId(e.target.value)}
@@ -1264,7 +1263,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
                 <button
                   onClick={() => handleAssignShopSubmit(assigningUserId, assigningShopId)}
-                  className="w-full mt-3 py-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-xs font-black uppercase shadow-lg transition-all"
+                  className="w-full mt-3 py-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-xs font-black uppercase shadow-lg transition"
                 >
                   Valider l’affectation
                 </button>
@@ -1299,12 +1298,12 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   setHomeCalendarMonth(new Date(selectedHomeDate.getFullYear(), selectedHomeDate.getMonth(), 1));
                   setShowHomeCalendar((prev) => !prev);
                 }}
-                className="h-12 w-12 rounded-2xl border border-white/15 bg-black/60 text-white flex items-center justify-center shadow-lg hover:bg-white/10 transition-all"
+                className="h-12 w-12 rounded-2xl border border-white/15 bg-black/60 text-white flex items-center justify-center shadow-lg hover:bg-white/10 transition"
                 title="Choisir la date"
               >
                 <CalendarDays className="w-6 h-6 text-amber-300" />
               </button>
-              <span className="text-[10px] sm:text-xs font-black uppercase text-amber-200 tracking-wide">
+              <span className="text-[0.75rem] sm:text-xs font-black uppercase text-amber-200 tracking-wide">
                 {selectedDateLabel}
               </span>
             </div>
@@ -1333,7 +1332,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
                 <div className="grid grid-cols-7 gap-1 mb-1">
                   {['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'].map((label) => (
-                    <div key={label} className="text-center text-[10px] font-black uppercase text-gray-500 py-1">{label}</div>
+                    <div key={label} className="text-center text-[0.75rem] font-black uppercase text-gray-500 py-1">{label}</div>
                   ))}
                 </div>
 
@@ -1350,7 +1349,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                           setSelectedDate(cell.iso);
                           setShowHomeCalendar(false);
                         }}
-                        className={`h-9 rounded-lg text-[11px] font-black transition-all ${cell.isSelected
+                        className={`h-9 rounded-lg text-[0.6875rem] font-black transition ${cell.isSelected
                           ? 'bg-red-600 text-white'
                           : cell.isToday
                             ? 'border border-amber-400/60 bg-amber-400/10 text-amber-300'
@@ -1368,7 +1367,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           <button
             onClick={() => setShowReportPeriodModal(true)}
             disabled={loading}
-            className="h-12 w-12 bg-red-600 hover:bg-red-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-red-600/30 transition-all disabled:opacity-60"
+            className="h-12 w-12 bg-red-600 hover:bg-red-500 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-red-600/30 transition disabled:opacity-60"
             title={loading ? 'Génération en cours' : 'Générer la synthèse PDF'}
           >
             <FileCheck className="w-4 h-4" />
@@ -1400,7 +1399,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
 
             <div className="space-y-4">
               <div>
-                <label className="block text-[10px] font-black uppercase text-gray-400 mb-2">
+                <label className="block text-[0.75rem] font-black uppercase text-gray-400 mb-2">
                   Période du rapport
                 </label>
 
@@ -1432,11 +1431,11 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
       {/* Team KPI Bar */}
       <div className="grid grid-cols-2 gap-3">
         <div className="glass-card p-4 text-center border border-white/10">
-          <span className="text-[9px] font-black uppercase text-gray-400 block mb-1">Hôtesses Actives</span>
+          <span className="text-[0.6875rem] font-black uppercase text-gray-400 block mb-1">Hôtesses Actives</span>
           <span className="text-2xl font-black text-red-500">{activeCount} / {teamData.length}</span>
         </div>
         <div className="glass-card p-4 text-center border border-white/10">
-          <span className="text-[9px] font-black uppercase text-gray-400 block mb-1">Clôtures Reçues</span>
+          <span className="text-[0.6875rem] font-black uppercase text-gray-400 block mb-1">Clôtures Reçues</span>
           <span className="text-2xl font-black text-emerald-400">{closedCount}</span>
         </div>
       </div>
@@ -1453,12 +1452,12 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
         {currentPodiumLeader && platinumStreak >= 5 && (
           <div className="relative mb-3 overflow-hidden rounded-2xl border border-slate-100/40 bg-[linear-gradient(135deg,rgba(226,232,240,0.26),rgba(100,116,139,0.20))] p-3">
             <img src={publicUrl('podium-trophies/platinum-trophy.png')} alt="" className="pointer-events-none absolute -right-4 -bottom-12 h-40 w-40 -rotate-12 object-contain opacity-25" />
-            <div className="relative flex items-center gap-2"><Trophy className="text-slate-100" size={20}/><div><p className="text-[9px] font-black uppercase tracking-[0.16em] text-slate-100">Coupe platine</p><p className="text-xs font-black text-white">{currentPodiumLeader.name} conserve la première place depuis {platinumStreak} journées.</p></div></div>
+            <div className="relative flex items-center gap-2"><Trophy className="text-slate-100" size={20}/><div><p className="text-[0.6875rem] font-black uppercase tracking-[0.16em] text-slate-100">Coupe platine</p><p className="text-xs font-black text-white">{currentPodiumLeader.name} conserve la première place depuis {platinumStreak} journées.</p></div></div>
           </div>
         )}
         <div className="space-y-2">
           {sortedPodium.length === 0 ? (
-            <div className="text-[10px] text-gray-400 italic">Aucune activité réelle aujourd'hui pour le podium.</div>
+            <div className="text-[0.75rem] text-gray-400 italic">Aucune activité réelle aujourd'hui pour le podium.</div>
           ) : (
             <>
               {sortedPodium.slice(0, 3).map((item, idx) => {
@@ -1479,12 +1478,12 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                       <span className="text-lg font-black w-6 text-center">#{idx + 1}</span>
                       <div>
                         <p className="text-xs font-black uppercase text-white">{item.name}</p>
-                        <p className="text-[9px] text-gray-400 font-bold uppercase">{item.shop}</p>
+                        <p className="text-[0.6875rem] text-gray-400 font-bold uppercase">{item.shop}</p>
                       </div>
                     </div>
                     <div className="relative text-right">
                       <span className="text-sm font-black text-white">{total}</span>
-                      <span className="text-[8px] text-gray-400 font-bold uppercase block">Leads</span>
+                      <span className="text-[0.6875rem] text-gray-400 font-bold uppercase block">Leads</span>
                     </div>
                   </div>
                 );
@@ -1494,7 +1493,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-black uppercase text-white">4e+ position</p>
-                      <p className="text-[9px] text-gray-400 font-bold uppercase">Autres agents actifs</p>
+                      <p className="text-[0.6875rem] text-gray-400 font-bold uppercase">Autres agents actifs</p>
                     </div>
                     <span className="text-sm font-black text-white">{sortedPodium.length - 3}</span>
                   </div>

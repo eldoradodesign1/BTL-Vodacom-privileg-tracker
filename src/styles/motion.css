@@ -131,3 +131,18 @@
     transition: none !important;
   }
 }
+
+/* Mouvement réduit : les animations décoratives s'arrêtent, les indicateurs de chargement restent (ils portent une information). */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse,
+  .animate-bounce,
+  .animate-ping,
+  .animate-pop,
+  .animate-fade-in,
+  .animate-slide-up,
+  .animate-slide-in,
+  .calendar-dock-stretch,
+  .presence-registry-modal-in {
+    animation: none;
+  }
+}

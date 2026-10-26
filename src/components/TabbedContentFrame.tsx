@@ -65,7 +65,9 @@ export const TabbedContentFrame: React.FC<TabbedContentFrameProps> = ({ tabs, ac
       onPointerUp={handlePointerUp}
       onPointerCancel={clearPointer}
       aria-label="Contenu de l’application"
+      tabIndex={0}
     >
+      <h1 className="sr-only">Beyond The Line · {tabs.find((tab) => tab.tab === activeTab)?.label ?? 'Accueil'}</h1>
       {children}
     </main>
   );

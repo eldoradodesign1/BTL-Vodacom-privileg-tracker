@@ -408,7 +408,7 @@ export const DateRangeKnobSlider: React.FC<DateRangeKnobSliderProps> = ({
   return (
     <div ref={rootRef} data-swipe-ignore className="relative rounded-2xl border border-white/10 bg-black/50 p-3 select-none">
       {/* Top action row: Start date button, Today quick-pick, End date button */}
-      <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 text-[10px] font-black uppercase">
+      <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-1.5 text-[0.75rem] font-black uppercase">
         <button
           type="button"
           onClick={() => {
@@ -431,7 +431,7 @@ export const DateRangeKnobSlider: React.FC<DateRangeKnobSliderProps> = ({
           type="button"
           disabled={!isTodayAvailable}
           onClick={applyToday}
-          className={`rounded-lg border px-2.5 py-1.5 text-[9px] font-black uppercase transition ${
+          className={`rounded-lg border px-2.5 py-1.5 text-[0.6875rem] font-black uppercase transition ${
             isCurrentlyTodayOnly
               ? 'border-amber-400 bg-amber-400/30 text-amber-100 shadow-[0_0_14px_rgba(251,191,36,0.35)]'
               : 'border-amber-300/30 bg-amber-400/10 text-amber-200 hover:bg-amber-400/20 active:scale-95'
@@ -472,7 +472,7 @@ export const DateRangeKnobSlider: React.FC<DateRangeKnobSliderProps> = ({
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="text-[11px] font-black uppercase text-white tracking-wider">{monthLabel}</span>
+            <span className="text-[0.6875rem] font-black uppercase text-white tracking-wider">{monthLabel}</span>
             <button
               type="button"
               onClick={() => setCalendarMonth(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1))}
@@ -485,7 +485,7 @@ export const DateRangeKnobSlider: React.FC<DateRangeKnobSliderProps> = ({
 
           <div className="mb-1 grid grid-cols-7 gap-1">
             {['Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa', 'Di'].map((label) => (
-              <div key={label} className="py-1 text-center text-[9px] font-black uppercase text-gray-400">{label}</div>
+              <div key={label} className="py-1 text-center text-[0.6875rem] font-black uppercase text-gray-400">{label}</div>
             ))}
           </div>
 
@@ -511,7 +511,7 @@ export const DateRangeKnobSlider: React.FC<DateRangeKnobSliderProps> = ({
                   type="button"
                   disabled={isDisabled}
                   onClick={() => applyManualDate(iso)}
-                  className={`relative h-8 rounded-lg text-[10px] font-black transition ${
+                  className={`relative h-8 rounded-lg text-[0.75rem] font-black transition ${
                     isSelected
                       ? (calendarTarget === 'start' ? 'bg-red-600 text-white shadow-md' : 'bg-blue-600 text-white shadow-md')
                       : isInRange
@@ -529,7 +529,7 @@ export const DateRangeKnobSlider: React.FC<DateRangeKnobSliderProps> = ({
           </div>
 
           {/* Shortcut to today inside calendar */}
-          <div className="mt-2.5 pt-2 border-t border-white/10 flex justify-between items-center text-[9px]">
+          <div className="mt-2.5 pt-2 border-t border-white/10 flex justify-between items-center text-[0.6875rem]">
             <button
               type="button"
               onClick={applyToday}
@@ -629,7 +629,7 @@ export const DateRangeKnobSlider: React.FC<DateRangeKnobSliderProps> = ({
       </div>
 
       {/* Bottom Min / Max bounds display */}
-      <div className="mt-1 flex items-center justify-between text-[9px] font-bold uppercase text-gray-400 pointer-events-none">
+      <div className="mt-1 flex items-center justify-between text-[0.6875rem] font-bold uppercase text-gray-400 pointer-events-none">
         <span>{minLabel}</span>
         <span>{maxLabel}</span>
       </div>

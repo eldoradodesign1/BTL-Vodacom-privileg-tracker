@@ -102,14 +102,14 @@ export const LeadModal: React.FC<LeadModalProps> = ({
         </div>
 
         {!entryAllowed && (
-          <div className="mb-4 p-3 rounded-2xl border border-amber-500/40 bg-amber-950/35 text-amber-200 text-[11px] font-black uppercase">
+          <div className="mb-4 p-3 rounded-2xl border border-amber-500/40 bg-amber-950/35 text-amber-200 text-[0.6875rem] font-black uppercase">
             {campaignPaused ? 'Campagne en pause. Nouvelle saisie client désactivée.' : reportDone ? "Session déjà clôturée aujourd'hui. Nouvelle saisie client désactivée." : "Validez d’abord votre pointage d’arrivée."}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Nom du Client</label>
+            <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1">Nom du Client</label>
             <input
               type="text"
               value={clientName}
@@ -125,23 +125,23 @@ export const LeadModal: React.FC<LeadModalProps> = ({
           </div>
 
           <div>
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1 flex justify-between">
+            <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1 flex justify-between">
               <span>MSISDN (Téléphone Client RDC)</span>
               <span className="text-red-400 font-bold">10 Chiffres (081/082/083/089/099...)</span>
             </label>
-            <input
+            <input inputMode="tel" autoComplete="tel"
               type="tel"
               value={msisdn}
               onChange={(e) => handlePhoneChange(e.target.value)}
               placeholder="Ex: 0810000002"
               required
               disabled={!entryAllowed}
-              className={`w-full bg-white/5 border rounded-2xl px-4 py-3 text-white text-sm font-mono font-bold focus:outline-none transition-all ${
+              className={`w-full bg-white/5 border rounded-2xl px-4 py-3 text-white text-sm font-mono font-bold focus:outline-none transition ${
                 phoneError ? 'border-red-500 bg-red-950/20' : 'border-white/10 focus:border-red-500'
               }`}
             />
             {phoneError && (
-              <div className="mt-2 p-2.5 bg-red-950/60 border border-red-500/40 rounded-xl text-red-300 text-[11px] font-bold flex items-start space-x-1.5 animate-pop">
+              <div className="mt-2 p-2.5 bg-red-950/60 border border-red-500/40 rounded-xl text-red-300 text-[0.6875rem] font-bold flex items-start space-x-1.5 animate-pop">
                 <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
                 <span>{phoneError}</span>
               </div>
@@ -149,7 +149,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
           </div>
 
           <div>
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Type d'Action / Offre</label>
+            <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1">Type d'Action / Offre</label>
             <select aria-label="Type d'Action / Offre"
               value={actionType}
               onChange={(e) => setActionType(e.target.value as any)}
@@ -163,7 +163,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
           </div>
 
           {submitError && (
-            <div className="p-2.5 bg-red-950/60 border border-red-500/40 rounded-xl text-red-300 text-[11px] font-bold flex items-start space-x-1.5 animate-pop">
+            <div className="p-2.5 bg-red-950/60 border border-red-500/40 rounded-xl text-red-300 text-[0.6875rem] font-bold flex items-start space-x-1.5 animate-pop">
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
               <span>{submitError}</span>
             </div>

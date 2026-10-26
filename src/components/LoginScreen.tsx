@@ -3,6 +3,7 @@ import { ChevronRight, Eye, EyeOff, Lock, Phone, Trash2 } from 'lucide-react';
 import { User, Campaign, CampaignContext } from '../types';
 import { authenticate, getSyncPendingCount, purgeAndResetEverything, refreshUsersFromSupabase } from '../utils/storage';
 import { getCampaignsForUser } from '../utils/merchantCampaign';
+import { confirmAction } from '../utils/confirmDialog';
 
 interface LoginScreenProps {
   onLoginSuccess: (user: User, campaign?: CampaignContext) => void;
@@ -113,7 +114,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             <p className="text-xs font-semibold text-gray-400">Bienvenue {pendingUser.name.split(' ')[0]}. Sélectionnez l’espace de travail souhaité.</p>
           </div>
 
-          <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block mb-2">Campagne active</label>
+          <label className="text-[0.75rem] font-black uppercase tracking-wider text-gray-400 block mb-2">Campagne active</label>
           <select aria-label="Campagne active"
             value={selectedCampaignId}
             onChange={(e) => setSelectedCampaignId(e.target.value)}
@@ -136,7 +137,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           <button
             type="button"
             onClick={() => { setPendingUser(null); setAvailableCampaigns([]); }}
-            className="w-full mt-4 text-[10px] font-bold text-gray-500 hover:text-red-400 uppercase tracking-wider"
+            className="w-full mt-4 text-[0.75rem] font-bold text-gray-500 hover:text-red-400 uppercase tracking-wider"
           >
             Utiliser un autre compte
           </button>
@@ -153,12 +154,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
       <div className="login-panel w-full glass-card border relative z-10 animate-pop">
         <div className="text-center mb-8">
           <div className="brand-text text-3xl sm:text-4xl font-black tracking-tighter mb-1">BEYOND THE LINE</div>
-          <div className="login-eyebrow btl-keep-small text-[11px] font-black uppercase">Deployment tracker · by Eldo</div>
+          <div className="login-eyebrow btl-keep-small text-[0.6875rem] font-black uppercase">Deployment tracker · by Eldo</div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1">
-            <label htmlFor="phone" className="text-[10px] font-black uppercase tracking-wider text-gray-300 flex items-center space-x-1">
+            <label htmlFor="phone" className="text-[0.75rem] font-black uppercase tracking-wider text-gray-300 flex items-center space-x-1">
               <Phone className="w-3 h-3 text-red-500" />
               <span>Identifiant Réseau (MSISDN)</span>
             </label>
@@ -174,12 +175,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               onKeyDown={handleEnterSubmit}
               placeholder="081XXXXXXX"
               required
-              className="app-input w-full border rounded-2xl px-4 py-3.5 text-white text-sm font-semibold focus:outline-none transition-all placeholder:text-gray-600"
+              className="app-input w-full border rounded-2xl px-4 py-3.5 text-white text-sm font-semibold focus:outline-none transition placeholder:text-gray-600"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="password" className="text-[10px] font-black uppercase tracking-wider text-gray-300 flex items-center space-x-1">
+            <label htmlFor="password" className="text-[0.75rem] font-black uppercase tracking-wider text-gray-300 flex items-center space-x-1">
               <Lock className="w-3 h-3 text-red-500" />
               <span>Clé de Sécurité</span>
             </label>
@@ -193,13 +194,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               required
-              className="app-input w-full pr-14 border rounded-2xl px-4 py-3.5 text-white text-sm font-semibold focus:outline-none transition-all placeholder:text-gray-600"
+              className="app-input w-full pr-14 border rounded-2xl px-4 py-3.5 text-white text-sm font-semibold focus:outline-none transition placeholder:text-gray-600"
             />
             <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-1.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-xl text-gray-300 hover:text-white" aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'} aria-pressed={showPassword}>{showPassword ? <EyeOff className="h-5 w-5" aria-hidden="true" /> : <Eye className="h-5 w-5" aria-hidden="true" />}</button>
           </div>
           </div>
 
-          <div className="login-note rounded-2xl border px-4 py-3 text-[11px] font-semibold text-gray-400">
+          <div className="login-note rounded-2xl border px-4 py-3 text-[0.6875rem] font-semibold text-gray-400">
             Utilisez votre numéro de téléphone et votre mot de passe pour vous connecter.
           </div>
 
@@ -218,17 +219,17 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
         <div className="mt-6 pt-3 border-t border-white/10 text-center">
           <button
             type="button"
-            onClick={() => {
+            onClick={async () => {
               const pending = getSyncPendingCount();
               const warning = pending > 0
                 ? `Attention : ${pending} saisie(s) ou pointage(s) ne sont pas encore envoyés et seront PERDUS. Reconnectez-vous au réseau et synchronisez avant de continuer.\n\nVider quand même le cache et réinitialiser les données ?`
                 : 'Vider complètement le cache et réinitialiser les données ?';
-              if (window.confirm(warning)) {
+              if (await confirmAction({ title: 'Vider le cache', message: warning, confirmLabel: 'Vider', tone: 'danger' })) {
                 purgeAndResetEverything();
                 window.location.reload();
               }
             }}
-            className="inline-flex min-h-[44px] items-center space-x-1.5 px-3 text-[12px] font-bold text-gray-400 hover:text-red-400 transition-colors uppercase tracking-wider"
+            className="inline-flex min-h-[44px] items-center space-x-1.5 px-3 text-[0.75rem] font-bold text-gray-400 hover:text-red-400 transition-colors uppercase tracking-wider"
           >
             <Trash2 className="w-3 h-3" />
             <span>Vider le cache système</span>

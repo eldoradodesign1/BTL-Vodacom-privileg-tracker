@@ -51,7 +51,7 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
       <div className="merchant-chart-glow pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-red-400/[0.08] blur-3xl"/>
       <div className="relative flex items-start justify-between gap-3">
         <div>
-          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-fuchsia-200/80">Pilotage Merchant</p>
+          <p className="text-[0.75rem] font-black uppercase tracking-[0.18em] text-fuchsia-200/80">Pilotage Merchant</p>
           <h1 className="mt-1 text-xl font-black tracking-tight">Exécution de campagne</h1>
           <p className="mt-1 text-xs text-gray-400">Objectifs, couverture POS et cadence des Brand Ambassadors.</p>
         </div>
@@ -59,22 +59,22 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
       </div>
       <div className="relative mt-4 grid grid-cols-3 gap-2 text-center">
         <button type="button" onClick={onOpenManagement} className="rounded-2xl border border-violet-300/25 bg-violet-500/[0.08] p-3 text-left transition hover:bg-violet-500/[0.13]">
-          <span className="flex items-center gap-1 text-[9px] font-black uppercase text-violet-100"><Target size={12}/> Objectif campagne</span>
+          <span className="flex items-center gap-1 text-[0.6875rem] font-black uppercase text-violet-100"><Target size={12}/> Objectif campagne</span>
           <b className="mt-1 block text-xl font-black text-white">{summary.targets.campaign_pos_target}</b>
-          <span className="text-[9px] font-bold text-gray-400">POS configurés</span>
+          <span className="text-[0.6875rem] font-bold text-gray-400">POS configurés</span>
         </button>
         <div className="rounded-2xl border border-red-300/25 bg-red-500/[0.08] p-3">
-          <span className="flex items-center justify-center gap-1 text-[9px] font-black uppercase text-red-300"><UsersRound size={12}/> Équipe active</span>
+          <span className="flex items-center justify-center gap-1 text-[0.6875rem] font-black uppercase text-red-300"><UsersRound size={12}/> Équipe active</span>
           <b className="mt-1 block text-xl font-black text-white">{summary.activeBas}/{summary.teamSize}</b>
-          <span className="text-[9px] font-bold text-gray-400">BA pointés</span>
+          <span className="text-[0.6875rem] font-bold text-gray-400">BA pointés</span>
         </div>
         <div className="rounded-2xl border border-emerald-300/25 bg-emerald-500/[0.08] p-3">
-          <span className="flex items-center justify-center gap-1 text-[9px] font-black uppercase text-emerald-100"><Activity size={12}/> Exécution jour</span>
+          <span className="flex items-center justify-center gap-1 text-[0.6875rem] font-black uppercase text-emerald-100"><Activity size={12}/> Exécution jour</span>
           <b className={`mt-1 block text-xl font-black ${percentageColor(summary.dailyExecutionRate)}`}>{summary.dailyExecutionRate}%</b>
-          <span className="text-[9px] font-bold text-gray-400">{summary.visitedToday} POS visités</span>
+          <span className="text-[0.6875rem] font-bold text-gray-400">{summary.visitedToday} POS visités</span>
         </div>
       </div>
-      {onOpenFundRequests && <button type="button" onClick={onOpenFundRequests} className="relative mt-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/25 bg-emerald-500/[0.07] px-3.5 py-3 text-left transition hover:bg-emerald-500/[0.12]"><span className="flex items-center gap-2"><Banknote className="text-emerald-200" size={17}/><span><b className="block text-[10px] font-black uppercase tracking-wide text-emerald-100">Demandes de fonds</b><span className="mt-0.5 block text-[9px] font-semibold text-gray-400">Ouvrir le registre et traiter les demandes BA.</span></span></span><span className={`relative rounded-xl border px-3 py-1.5 text-[10px] font-black ${pendingFundRequestCount ? 'border-amber-300/40 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-white/[0.04] text-gray-400'}`}>{pendingFundRequestCount || '0'}{pendingFundRequestCount > 0 && <i className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-(--m-edge-soft) bg-amber-400 animate-pulse"/>}</span></button>}
+      {onOpenFundRequests && <button type="button" onClick={onOpenFundRequests} className="relative mt-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/25 bg-emerald-500/[0.07] px-3.5 py-3 text-left transition hover:bg-emerald-500/[0.12]"><span className="flex items-center gap-2"><Banknote className="text-emerald-200" size={17}/><span><b className="block text-[0.75rem] font-black uppercase tracking-wide text-emerald-100">Demandes de fonds</b><span className="mt-0.5 block text-[0.6875rem] font-semibold text-gray-400">Ouvrir le registre et traiter les demandes BA.</span></span></span><span className={`relative rounded-xl border px-3 py-1.5 text-[0.75rem] font-black ${pendingFundRequestCount ? 'border-amber-300/40 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-white/[0.04] text-gray-400'}`}>{pendingFundRequestCount || '0'}{pendingFundRequestCount > 0 && <i className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-(--m-edge-soft) bg-amber-400 animate-pulse"/>}</span></button>}
     </section>
 
     {podiumSlot}
@@ -84,33 +84,33 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
     <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <article className="glass-card relative overflow-hidden p-4">
         <div className="merchant-chart-glow pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-violet-400/[0.12] blur-3xl"/>
-        <div className="relative flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-violet-200">Anneau de couverture</p><h2 className="mt-1 text-sm font-black">État des POS</h2></div><span className={`rounded-xl border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-black ${percentageColor(summary.campaignExecutionRate)}`}>{summary.campaignExecutionRate}%</span></div>
-        <div className="relative mt-2 h-56"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={summary.donut} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={58} outerRadius={84} paddingAngle={4} cornerRadius={9} isAnimationActive={false}>{summary.donut.map((entry) => <Cell key={entry.name} fill={entry.color} style={{ filter: `drop-shadow(0 0 7px ${entry.color}80)` }}/>)}</Pie><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><b className="text-2xl font-black text-white">{summary.campaignExecutionRate}%</b><span className="text-[9px] font-black uppercase text-gray-400">Couverture</span></div></div>
-        <div className="flex justify-center gap-2 text-[9px] font-black uppercase">{summary.donut.map((item) => <span key={item.name} className="flex items-center gap-1 rounded-lg bg-white/[0.04] px-2 py-1 text-gray-300"><i className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }}/>{item.name} {item.value}</span>)}</div>
+        <div className="relative flex items-center justify-between"><div><p className="text-[0.75rem] font-black uppercase tracking-[0.16em] text-violet-200">Anneau de couverture</p><h2 className="mt-1 text-sm font-black">État des POS</h2></div><span className={`rounded-xl border border-white/10 bg-white/5 px-2.5 py-1 text-[0.75rem] font-black ${percentageColor(summary.campaignExecutionRate)}`}>{summary.campaignExecutionRate}%</span></div>
+        <div className="relative mt-2 h-56"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={summary.donut} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={58} outerRadius={84} paddingAngle={4} cornerRadius={9} isAnimationActive={false}>{summary.donut.map((entry) => <Cell key={entry.name} fill={entry.color} style={{ filter: `drop-shadow(0 0 7px ${entry.color}80)` }}/>)}</Pie><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><b className="text-2xl font-black text-white">{summary.campaignExecutionRate}%</b><span className="text-[0.6875rem] font-black uppercase text-gray-400">Couverture</span></div></div>
+        <div className="flex justify-center gap-2 text-[0.6875rem] font-black uppercase">{summary.donut.map((item) => <span key={item.name} className="flex items-center gap-1 rounded-lg bg-white/[0.04] px-2 py-1 text-gray-300"><i className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }}/>{item.name} {item.value}</span>)}</div>
       </article>
       <article className="glass-card relative overflow-hidden p-4">
         <div className="merchant-chart-glow pointer-events-none absolute -left-10 -bottom-12 h-32 w-32 rounded-full bg-red-400/[0.10] blur-3xl"/>
-        <div className="relative"><p className="text-[10px] font-black uppercase tracking-[0.16em] text-red-300">Histogramme de cadence</p><h2 className="mt-1 text-sm font-black">POS réalisés par BA</h2><p className="mt-1 text-[10px] text-gray-400">Barre cyan : réalisé · barre mauve : objectif journalier.</p></div>
-        <div className="relative mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary.byBa} margin={{ top: 10, right: 4, left: -22, bottom: 8 }}><CartesianGrid stroke="var(--m-edge-soft)" vertical={false}/><XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false}/><YAxis tick={{ fill: '#9ca3af', fontSize: 10 }} allowDecimals={false} axisLine={false} tickLine={false}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Bar dataKey="pos" name="POS réalisés" fill="#38bdf8" radius={[7,7,0,0]} isAnimationActive={false}/><Bar dataKey="target" name="Objectif" fill="#a78bfa" radius={[7,7,0,0]} isAnimationActive={false}/></BarChart></ResponsiveContainer></div>
+        <div className="relative"><p className="text-[0.75rem] font-black uppercase tracking-[0.16em] text-red-300">Histogramme de cadence</p><h2 className="mt-1 text-sm font-black">POS réalisés par BA</h2><p className="mt-1 text-[0.75rem] text-gray-400">Barre cyan : réalisé · barre mauve : objectif journalier.</p></div>
+        <div className="relative mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary.byBa} margin={{ top: 10, right: 4, left: -22, bottom: 8 }}><CartesianGrid stroke="var(--m-edge-soft)" vertical={false}/><XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} axisLine={false} tickLine={false}/><YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} allowDecimals={false} axisLine={false} tickLine={false}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Bar dataKey="pos" name="POS réalisés" fill="#38bdf8" radius={[7,7,0,0]} isAnimationActive={false}/><Bar dataKey="target" name="Objectif" fill="#a78bfa" radius={[7,7,0,0]} isAnimationActive={false}/></BarChart></ResponsiveContainer></div>
       </article>
     </section>
 
     <section className="glass-card relative overflow-hidden p-4">
       <div className="merchant-chart-glow pointer-events-none absolute -right-14 -bottom-16 h-44 w-44 rounded-full bg-emerald-400/[0.08] blur-3xl"/>
-      <div className="relative flex items-center gap-2"><TrendingUp className="text-emerald-200" size={18}/><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-200">Courbe de progression</p><h2 className="mt-1 text-sm font-black">POS visités · 30 derniers jours</h2></div></div>
+      <div className="relative flex items-center gap-2"><TrendingUp className="text-emerald-200" size={18}/><div><p className="text-[0.75rem] font-black uppercase tracking-[0.16em] text-emerald-200">Courbe de progression</p><h2 className="mt-1 text-sm font-black">POS visités · 30 derniers jours</h2></div></div>
       <div className="relative mt-3 h-64 overflow-hidden rounded-2xl border border-white/10 bg-black/10">
         <div className="flex h-full min-w-0">
           <div className="z-10 w-12 shrink-0 border-r border-white/10 bg-(--m-sheet)/85">
-            <ResponsiveContainer width="100%" height="100%"><LineChart data={summary.timeline} margin={{ top: 12, right: 0, left: 0, bottom: 3 }}><YAxis domain={[0, 'auto']} tick={{ fill: '#9ca3af', fontSize: 10 }} allowDecimals={false} axisLine={false} tickLine={false} width={40}/></LineChart></ResponsiveContainer>
+            <ResponsiveContainer width="100%" height="100%"><LineChart data={summary.timeline} margin={{ top: 12, right: 0, left: 0, bottom: 3 }}><YAxis domain={[0, 'auto']} tick={{ fill: '#9ca3af', fontSize: 12 }} allowDecimals={false} axisLine={false} tickLine={false} width={40}/></LineChart></ResponsiveContainer>
           </div>
           <div className="min-w-0 flex-1 overflow-x-auto custom-scrollbar">
             <div className="h-full" style={{ minWidth: `${Math.max(720, summary.timeline.length * 46)}px` }}>
-              <ResponsiveContainer width="100%" height="100%"><LineChart data={summary.timeline} margin={{ top: 12, right: 18, left: 8, bottom: 3 }}><CartesianGrid stroke="var(--m-edge-soft)" vertical={false}/><XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 10 }} axisLine={false} tickLine={false} interval={summary.timeline.length > 15 ? 2 : 0}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Legend wrapperStyle={{ fontSize: '10px' }}/><Line type="monotone" dataKey="visits" name="POS visités" stroke="#34d399" strokeWidth={3} dot={{ r: 3, fill: '#34d399' }} activeDot={{ r: 6 }} isAnimationActive={false}/><Line type="monotone" dataKey="target" name="Objectif actif" stroke="#fbbf24" strokeWidth={2} strokeDasharray="6 5" dot={false} isAnimationActive={false}/></LineChart></ResponsiveContainer>
+              <ResponsiveContainer width="100%" height="100%"><LineChart data={summary.timeline} margin={{ top: 12, right: 18, left: 8, bottom: 3 }}><CartesianGrid stroke="var(--m-edge-soft)" vertical={false}/><XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 12 }} axisLine={false} tickLine={false} interval={summary.timeline.length > 15 ? 2 : 0}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Legend wrapperStyle={{ fontSize: '10px' }}/><Line type="monotone" dataKey="visits" name="POS visités" stroke="#34d399" strokeWidth={3} dot={{ r: 3, fill: '#34d399' }} activeDot={{ r: 6 }} isAnimationActive={false}/><Line type="monotone" dataKey="target" name="Objectif actif" stroke="#fbbf24" strokeWidth={2} strokeDasharray="6 5" dot={false} isAnimationActive={false}/></LineChart></ResponsiveContainer>
             </div>
           </div>
         </div>
       </div>
-      <div className="relative mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-[10px]"><span className="font-bold text-gray-400">Transactions aujourd’hui</span><b className="text-emerald-100">{summary.transactionsToday.toLocaleString('fr-FR')}</b><span className="font-bold text-gray-400">Objectifs pilotables dans Gestion</span><CheckCircle2 size={15} className="text-emerald-300"/></div>
+      <div className="relative mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-[0.75rem]"><span className="font-bold text-gray-400">Transactions aujourd’hui</span><b className="text-emerald-100">{summary.transactionsToday.toLocaleString('fr-FR')}</b><span className="font-bold text-gray-400">Objectifs pilotables dans Gestion</span><CheckCircle2 size={15} className="text-emerald-300"/></div>
     </section>
   </div>;
 };

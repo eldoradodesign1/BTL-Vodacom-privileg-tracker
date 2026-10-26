@@ -37,7 +37,7 @@ export const TodayClientsModal: React.FC<TodayClientsModalProps> = ({
           </div>
           <div>
             <h2 className="text-lg font-black uppercase text-white">Clients du jour</h2>
-            <p className="text-[10px] font-bold uppercase text-gray-400">{agent.name} • {agent.shop}</p>
+            <p className="text-[0.75rem] font-bold uppercase text-gray-400">{agent.name} • {agent.shop}</p>
           </div>
         </div>
 
@@ -48,10 +48,10 @@ export const TodayClientsModal: React.FC<TodayClientsModalProps> = ({
             dayLeads.map(ld => (
               <div key={ld.id} className="p-3 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-black text-white">{ld.client_name}</p>
-                  <p className="text-[9px] font-bold text-gray-400 uppercase">{ld.action_type}</p>
+                  <p className="text-[0.6875rem] font-black text-white">{ld.client_name}</p>
+                  <p className="text-[0.6875rem] font-bold text-gray-400 uppercase">{ld.action_type}</p>
                 </div>
-                <span className="text-[10px] font-black text-red-400 shrink-0">{ld.msisdn}</span>
+                <span className="text-[0.75rem] font-black text-red-400 shrink-0">{ld.msisdn}</span>
               </div>
             ))
           )}

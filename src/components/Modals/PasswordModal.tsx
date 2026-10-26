@@ -151,8 +151,8 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUse
           <div className="flex items-center gap-2 mb-3 px-1">
             <ShieldCheck className="w-4 h-4 text-red-300" />
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-red-300">Autorisations de l’appareil</p>
-              <p className="text-[10px] text-gray-400 mt-0.5">Relancez la demande après un refus.</p>
+              <p className="text-[0.75rem] font-black uppercase tracking-[0.16em] text-red-300">Autorisations de l’appareil</p>
+              <p className="text-[0.75rem] text-gray-400 mt-0.5">Relancez la demande après un refus.</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -160,31 +160,31 @@ export const PasswordModal: React.FC<PasswordModalProps> = ({ isOpen, currentUse
               type="button"
               onClick={requestCameraPermission}
               disabled={requesting !== null}
-              className="rounded-2xl border border-red-300/25 bg-red-400/10 p-3 text-left transition-all hover:bg-red-400/15 active:scale-[0.98] disabled:opacity-60"
+              className="rounded-2xl border border-red-300/25 bg-red-400/10 p-3 text-left transition hover:bg-red-400/15 active:scale-[0.98] disabled:opacity-60"
             >
               <span className="flex items-center justify-between gap-2">
                 <Camera className="w-4 h-4 text-red-300" />
                 {requesting === 'camera' && <Loader2 className="w-3.5 h-3.5 animate-spin text-red-300" />}
               </span>
-              <span className="block mt-2 text-[11px] font-black uppercase tracking-wide text-white">Autoriser caméra</span>
+              <span className="block mt-2 text-[0.6875rem] font-black uppercase tracking-wide text-white">Autoriser caméra</span>
             </button>
             <button
               type="button"
               onClick={requestGpsPermission}
               disabled={requesting !== null}
-              className="rounded-2xl border border-amber-300/25 bg-amber-400/10 p-3 text-left transition-all hover:bg-amber-400/15 active:scale-[0.98] disabled:opacity-60"
+              className="rounded-2xl border border-amber-300/25 bg-amber-400/10 p-3 text-left transition hover:bg-amber-400/15 active:scale-[0.98] disabled:opacity-60"
             >
               <span className="flex items-center justify-between gap-2">
                 <MapPin className="w-4 h-4 text-amber-200" />
                 {requesting === 'gps' && <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-100" />}
               </span>
-              <span className="block mt-2 text-[11px] font-black uppercase tracking-wide text-white">Autoriser GPS</span>
+              <span className="block mt-2 text-[0.6875rem] font-black uppercase tracking-wide text-white">Autoriser GPS</span>
             </button>
-            <button type="button" onClick={() => void requestNotificationPermission()} disabled={requesting !== null} className="rounded-2xl border border-fuchsia-300/30 bg-fuchsia-500/10 p-3 text-left text-fuchsia-100 transition-all hover:bg-fuchsia-500/15 active:scale-[0.98] disabled:opacity-60"><span className="flex items-center justify-between gap-2"><Bell className="w-4 h-4"/>{requesting === 'notifications' && <Loader2 className="w-3.5 h-3.5 animate-spin"/>}</span><span className="block mt-2 text-[11px] font-black uppercase tracking-wide">Autoriser notifications</span></button>
-            <button type="button" onClick={() => void requestClipboardPermission()} disabled={requesting !== null} className="rounded-2xl border border-emerald-300/30 bg-emerald-500/10 p-3 text-left text-emerald-100 transition-all hover:bg-emerald-500/15 active:scale-[0.98] disabled:opacity-60"><span className="flex items-center justify-between gap-2"><Clipboard className="w-4 h-4"/>{requesting === 'clipboard' && <Loader2 className="w-3.5 h-3.5 animate-spin"/>}</span><span className="block mt-2 text-[11px] font-black uppercase tracking-wide">Autoriser presse-papier</span></button>
+            <button type="button" onClick={() => void requestNotificationPermission()} disabled={requesting !== null} className="rounded-2xl border border-fuchsia-300/30 bg-fuchsia-500/10 p-3 text-left text-fuchsia-100 transition hover:bg-fuchsia-500/15 active:scale-[0.98] disabled:opacity-60"><span className="flex items-center justify-between gap-2"><Bell className="w-4 h-4"/>{requesting === 'notifications' && <Loader2 className="w-3.5 h-3.5 animate-spin"/>}</span><span className="block mt-2 text-[0.6875rem] font-black uppercase tracking-wide">Autoriser notifications</span></button>
+            <button type="button" onClick={() => void requestClipboardPermission()} disabled={requesting !== null} className="rounded-2xl border border-emerald-300/30 bg-emerald-500/10 p-3 text-left text-emerald-100 transition hover:bg-emerald-500/15 active:scale-[0.98] disabled:opacity-60"><span className="flex items-center justify-between gap-2"><Clipboard className="w-4 h-4"/>{requesting === 'clipboard' && <Loader2 className="w-3.5 h-3.5 animate-spin"/>}</span><span className="block mt-2 text-[0.6875rem] font-black uppercase tracking-wide">Autoriser presse-papier</span></button>
           </div>
           {permissionFeedback && (
-            <div className={`mt-3 rounded-2xl border px-3 py-2.5 text-[11px] font-semibold leading-relaxed ${feedbackStyle}`}>
+            <div className={`mt-3 rounded-2xl border px-3 py-2.5 text-[0.6875rem] font-semibold leading-relaxed ${feedbackStyle}`}>
               {permissionFeedback.text}
             </div>
           )}

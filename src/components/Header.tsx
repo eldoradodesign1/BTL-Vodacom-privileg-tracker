@@ -233,7 +233,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
             />
           ) : (
-            <span className="btl-keep-small flex flex-col items-center gap-1 text-center leading-none"><Camera className="h-5 w-5" aria-hidden="true" /><span className="whitespace-nowrap text-[10px] font-black">Pointer</span></span>
+            <span className="btl-keep-small flex flex-col items-center gap-1 text-center leading-none"><Camera className="h-5 w-5" aria-hidden="true" /><span className="whitespace-nowrap text-[0.625rem] font-black">Pointer</span></span>
           )}
           <span className={`status-dot absolute -bottom-0.5 -right-0.5 border-2 ${isDarkTheme ? 'border-black' : 'border-white'} ${online ? 'status-online' : 'status-offline'}`} />
         </button>
@@ -258,7 +258,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span className={`inline-block w-2.5 h-2.5 rounded-full shadow ${syncDotClass}`} />
               <span className="truncate">{roleLabel}: {user.name}</span>
             </span>
-            <span className="hidden sm:inline text-[9px] text-zinc-400 font-bold tracking-wide uppercase opacity-80">
+            <span className="hidden sm:inline text-[0.6875rem] text-zinc-400 font-bold tracking-wide uppercase opacity-80">
               Par <b className="text-red-500 font-black">Eldorado Design</b>
             </span>
           </div>
@@ -269,7 +269,7 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <button
                 onClick={() => setShowCampaignMenu((prev) => !prev)}
-                className={`app-icon-button p-2 rounded-xl border transition-all ${
+                className={`app-icon-button p-2 rounded-xl border transition ${
                   isDarkTheme ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
                 }`}
                 title="Changer de campagne"
@@ -284,12 +284,12 @@ export const Header: React.FC<HeaderProps> = ({
                     <button
                       key={campaign.key}
                       onClick={() => { onSetCampaign(campaign.key); setShowCampaignMenu(false); }}
-                      className={`w-full text-left px-3 py-2.5 rounded-xl transition-all ${
+                      className={`w-full text-left px-3 py-2.5 rounded-xl transition ${
                         activeCampaign === campaign.key ? 'bg-red-600 text-white' : (isDarkTheme ? 'hover:bg-white/10 text-gray-100' : 'hover:bg-zinc-100 text-zinc-700')
                       }`}
                     >
                       <span className="block text-xs font-black uppercase">{campaign.label}</span>
-                      <span className="block mt-0.5 text-[9px] font-bold opacity-70">{campaign.note}</span>
+                      <span className="block mt-0.5 text-[0.6875rem] font-bold opacity-70">{campaign.note}</span>
                     </button>
                   ))}
                 </div>
@@ -301,7 +301,7 @@ export const Header: React.FC<HeaderProps> = ({
           {onRefreshData && (
             <button
               onClick={onRefreshData}
-              className={`p-2 border rounded-xl transition-all shadow-sm ${refreshBtnClass}`}
+              className={`p-2 border rounded-xl transition shadow-sm ${refreshBtnClass}`}
               title="Actualiser les données"
             >
               <RefreshCw className="w-4 h-4" />
@@ -317,7 +317,7 @@ export const Header: React.FC<HeaderProps> = ({
                   onMarkNotifsRead();
                 }
               }}
-              className={`app-icon-button w-10 h-10 rounded-xl border flex items-center justify-center transition-all relative ${
+              className={`app-icon-button w-10 h-10 rounded-xl border flex items-center justify-center transition relative ${
                 isDarkTheme
                   ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300'
                   : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
@@ -325,7 +325,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white rounded-full text-[10px] font-black flex items-center justify-center border-2 border-black animate-pulse">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white rounded-full text-[0.75rem] font-black flex items-center justify-center border-2 border-black animate-pulse">
                   {unreadCount}
                 </span>
               )}
@@ -342,7 +342,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <button
                       type="button"
                       onClick={() => setNotificationsMuted(user.id, !notificationsMuted)}
-                      className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[9px] font-black uppercase transition ${notificationsMuted ? 'border-amber-300/35 bg-amber-400/10 text-amber-200' : 'border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'}`}
+                      className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[0.6875rem] font-black uppercase transition ${notificationsMuted ? 'border-amber-300/35 bg-amber-400/10 text-amber-200' : 'border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'}`}
                       title={notificationsMuted ? 'Réactiver le son des notifications' : 'Mettre les notifications en sourdine'}
                       aria-label={notificationsMuted ? 'Réactiver les notifications' : 'Mettre les notifications en sourdine'}
                     >
@@ -354,7 +354,7 @@ export const Header: React.FC<HeaderProps> = ({
                         if (onClearNotifications) onClearNotifications();
                         else onMarkNotifsRead();
                       }}
-                      className="text-[9px] font-black uppercase text-red-500 hover:text-red-400"
+                      className="text-[0.6875rem] font-black uppercase text-red-500 hover:text-red-400"
                     >
                       Effacer
                     </button>
@@ -366,7 +366,7 @@ export const Header: React.FC<HeaderProps> = ({
                     <p className="text-center text-xs text-gray-500 italic py-4">Aucune notification.</p>
                   ) : (
                     <>
-                      {fundRequestAlerts.map((request) => <button key={`fund-${request.id}`} type="button" onClick={() => { onOpenFundRequest?.(request.id); setShowNotifPanel(false); }} className="w-full rounded-xl border border-emerald-300/30 bg-emerald-500/[0.10] p-3 text-left text-xs transition hover:bg-emerald-500/[0.18]"><span className="flex items-start gap-2"><Banknote size={15} className="mt-0.5 shrink-0 text-emerald-200"/><span><b className="block text-emerald-50">Nouvelle demande de fonds</b><span className="mt-1 block text-[10px] text-emerald-100/75">{request.baName} · ${Number(request.amount).toLocaleString('fr-FR')} · {request.posLabel}</span><span className="mt-1 block text-[9px] text-gray-400">Ouvrir le traitement</span></span></span></button>)}
+                      {fundRequestAlerts.map((request) => <button key={`fund-${request.id}`} type="button" onClick={() => { onOpenFundRequest?.(request.id); setShowNotifPanel(false); }} className="w-full rounded-xl border border-emerald-300/30 bg-emerald-500/[0.10] p-3 text-left text-xs transition hover:bg-emerald-500/[0.18]"><span className="flex items-start gap-2"><Banknote size={15} className="mt-0.5 shrink-0 text-emerald-200"/><span><b className="block text-emerald-50">Nouvelle demande de fonds</b><span className="mt-1 block text-[0.75rem] text-emerald-100/75">{request.baName} · ${Number(request.amount).toLocaleString('fr-FR')} · {request.posLabel}</span><span className="mt-1 block text-[0.6875rem] text-gray-400">Ouvrir le traitement</span></span></span></button>)}
                       {safeNotifications.map(n => (
                         <div key={n.id} className="p-3 bg-red-500/10 border-l-4 border-red-600 rounded-xl text-xs font-semibold">
                           {n.message}
@@ -384,7 +384,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={() => { setShowThemeMenu((prev) => !prev); setShowCampaignMenu(false); setShowNotifPanel(false); }}
-              className={`app-icon-button w-10 h-10 rounded-xl border flex items-center justify-center transition-all ${
+              className={`app-icon-button w-10 h-10 rounded-xl border flex items-center justify-center transition ${
                 isDarkTheme ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-200' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
               }`}
               aria-label="Menu du compte"
@@ -416,7 +416,7 @@ export const Header: React.FC<HeaderProps> = ({
                           role="menuitemradio"
                           aria-checked={theme === opt.key}
                           onClick={() => { onSetTheme(opt.key as ThemeMode); setShowThemeMenu(false); }}
-                          className={`min-h-[40px] rounded-xl px-1 text-xs font-black transition-all ${
+                          className={`min-h-[40px] rounded-xl px-1 text-xs font-black transition ${
                             theme === opt.key ? 'bg-red-600 text-white' : (isDarkTheme ? 'bg-white/5 hover:bg-white/10 text-gray-100' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')
                           }`}
                         >
@@ -430,7 +430,7 @@ export const Header: React.FC<HeaderProps> = ({
                   type="button"
                   role="menuitem"
                   onClick={() => { setShowThemeMenu(false); onOpenPasswordModal(); }}
-                  className={`flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-bold transition-all ${isDarkTheme ? 'hover:bg-white/10' : 'hover:bg-zinc-100'}`}
+                  className={`flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-bold transition ${isDarkTheme ? 'hover:bg-white/10' : 'hover:bg-zinc-100'}`}
                 >
                   <Shield className="w-4 h-4" aria-hidden="true" /> Sécuriser mon accès
                 </button>
@@ -438,7 +438,7 @@ export const Header: React.FC<HeaderProps> = ({
                   type="button"
                   role="menuitem"
                   onClick={() => { setShowThemeMenu(false); onLogout(); }}
-                  className="mt-1 flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-red-400 transition-all hover:bg-red-600/15"
+                  className="mt-1 flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-red-400 transition hover:bg-red-600/15"
                 >
                   <LogOut className="w-4 h-4" aria-hidden="true" /> Se déconnecter
                 </button>
@@ -453,7 +453,7 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             type="button"
             onClick={() => setIsPhotoViewerOpen(false)}
-            className="absolute right-4 top-4 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-white/20"
+            className="absolute right-4 top-4 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-[0.6875rem] font-black uppercase tracking-[0.2em] text-white transition hover:bg-white/20"
           >
             Fermer
           </button>

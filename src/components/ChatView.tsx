@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { User, ChatMessage } from '../types';
 import { deleteChatMessage, getChatMessages, sendChatMessage } from '../utils/storage';
 import { Send, MessageSquare, Trash2 } from 'lucide-react';
+import { confirmAction } from '../utils/confirmDialog';
 
 interface ChatViewProps {
   currentUser: User;
@@ -46,7 +47,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onDataChanged }
   };
 
   const handleDeleteMessage = async (msgId: string) => {
-    if (!window.confirm('Supprimer ce message pour tout le monde ?')) return;
+    if (!(await confirmAction({ title: 'Supprimer le message', message: 'Supprimer ce message pour tout le monde ?', confirmLabel: 'Supprimer', tone: 'danger' }))) return;
     const ok = await deleteChatMessage(msgId, currentUser);
     if (!ok) return;
     const list = await getChatMessages();
@@ -61,7 +62,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onDataChanged }
         <MessageSquare className="w-5 h-5 text-red-500" />
         <div>
           <h1 className="chat-title text-lg font-black uppercase text-white tracking-tight">Messagerie Équipe</h1>
-          <p className="chat-subtitle text-[10px] text-gray-400 font-bold">Discussion en direct avec le réseau terrain</p>
+          <p className="chat-subtitle text-[0.75rem] text-gray-400 font-bold">Discussion en direct avec le réseau terrain</p>
         </div>
       </div>
 
@@ -76,8 +77,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onDataChanged }
               className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
             >
               <div className="flex items-center space-x-1.5 mb-1 px-1">
-                <span className="chat-meta-name text-[9px] font-black text-gray-400 uppercase">{msg.sender_name}</span>
-                <span className="chat-meta-time text-[8px] font-bold text-gray-500">{msg.timestamp}</span>
+                <span className="chat-meta-name text-[0.6875rem] font-black text-gray-400 uppercase">{msg.sender_name}</span>
+                <span className="chat-meta-time text-[0.6875rem] font-bold text-gray-500">{msg.timestamp}</span>
                 {(currentUser.role === 'admin' || currentUser.role === 'super_admin') && (
                   <button
                     onClick={() => handleDeleteMessage(msg.id)}
@@ -114,7 +115,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onDataChanged }
         />
         <button aria-label="Envoyer"
           type="submit"
-          className="w-10 h-10 bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center justify-center transition-all shadow-md"
+          className="w-10 h-10 bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center justify-center transition shadow-md"
         >
           <Send className="w-4 h-4" />
         </button>

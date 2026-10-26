@@ -78,7 +78,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
         <div className="flex items-center gap-2 border-b border-white/10 p-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-500/10 text-red-200"><UserRound size={16}/></div>
           <div className="min-w-0 flex-1">
-            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-red-200/80">Simulation Master</p>
+            <p className="text-[0.6875rem] font-black uppercase tracking-[0.2em] text-red-200/80">Simulation Master</p>
             <p className="truncate text-sm font-black">{selectedUser.name}</p>
           </div>
           <button type="button" onClick={() => { setPickerOpen(false); setSelectorQuery(''); }} className={`rounded-xl p-2 ${muted}`} aria-label="Fermer"><X size={16}/></button>
@@ -91,7 +91,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
               value={selectorQuery}
               onChange={(event) => setSelectorQuery(event.target.value)}
               placeholder="Rechercher un utilisateur…"
-              className={`min-w-0 flex-1 bg-transparent text-[10px] font-bold outline-none ${isDiamondTheme ? 'placeholder:text-slate-400' : 'placeholder:text-white/30'}`}
+              className={`min-w-0 flex-1 bg-transparent text-[0.75rem] font-bold outline-none ${isDiamondTheme ? 'placeholder:text-slate-400' : 'placeholder:text-white/30'}`}
             />
             {selectorQuery && <button aria-label="Fermer" type="button" onClick={() => setSelectorQuery('')} className={muted}><X size={13}/></button>}
           </div>
@@ -105,12 +105,12 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
               >
                 <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white/10"><UserRound size={13}/></span>
                 <span className="min-w-0 flex-1">
-                  <b className="block truncate text-[10px]">{user.name}</b>
-                  <span className="text-[8px] font-black uppercase opacity-50">{user.role} · {user.userCategory || '—'}</span>
+                  <b className="block truncate text-[0.75rem]">{user.name}</b>
+                  <span className="text-[0.6875rem] font-black uppercase opacity-50">{user.role} · {user.userCategory || '—'}</span>
                 </span>
               </button>
             ))}
-            {!filteredUsers.length && <div className={`py-8 text-center text-[10px] font-bold ${muted}`}>Aucun utilisateur trouvé.</div>}
+            {!filteredUsers.length && <div className={`py-8 text-center text-[0.75rem] font-bold ${muted}`}>Aucun utilisateur trouvé.</div>}
           </div>
         </div>
       </div>
@@ -157,21 +157,21 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
                   <Shield size={14}/><span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-red-300"/>
                 </div>
                 <div className="hidden min-w-0 sm:block">
-                  <p className="text-[8px] font-black uppercase tracking-[0.2em] text-red-300/80">Simulation Master</p>
-                  <p className={`truncate text-[9px] font-bold ${muted}`}>Origine · {masterUser.name}</p>
+                  <p className="text-[0.6875rem] font-black uppercase tracking-[0.2em] text-red-300/80">Simulation Master</p>
+                  <p className={`truncate text-[0.6875rem] font-bold ${muted}`}>Origine · {masterUser.name}</p>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setPickerOpen(true)}
-                className={`group flex min-w-0 flex-1 items-center gap-2 rounded-xl border px-2 py-1.5 text-left transition-all duration-300 hover:border-red-300/40 ${chip}`}
+                className={`group flex min-w-0 flex-1 items-center gap-2 rounded-xl border px-2 py-1.5 text-left transition duration-300 hover:border-red-300/40 ${chip}`}
                 aria-label="Choisir l'utilisateur simulé"
               >
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white/10"><UserRound size={12}/></span>
                 <span className="min-w-0 flex-1">
-                  <b className="block truncate text-[9px] font-black">{selectedUser.name}</b>
-                  <span className={`block truncate text-[7px] font-black uppercase tracking-wider ${muted}`}>{selectedUser.role} · {selectedUser.userCategory || 'utilisateur'}</span>
+                  <b className="block truncate text-[0.6875rem] font-black">{selectedUser.name}</b>
+                  <span className={`block truncate text-[0.6875rem] font-black uppercase tracking-wider ${muted}`}>{selectedUser.role} · {selectedUser.userCategory || 'utilisateur'}</span>
                 </span>
                 <SlidersHorizontal size={13} className={`shrink-0 group-hover:text-red-300 ${muted}`}/>
               </button>
@@ -186,7 +186,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
                       disabled={!target}
                       onClick={() => target && onSimulateUserChange(target.id)}
                       aria-label={target ? `Simuler ${target.name}` : `Compte ${key} indisponible`}
-                      className={`relative flex h-7 min-w-7 items-center justify-center rounded-lg border px-2 text-[8px] font-black uppercase tracking-wide transition-all duration-200 ${active ? activeChip : `${muted} border-transparent hover:border-white/10 hover:bg-white/[0.06] hover:text-white`} ${!target ? 'cursor-not-allowed opacity-30' : 'cursor-pointer'}`}
+                      className={`relative flex h-7 min-w-7 items-center justify-center rounded-lg border px-2 text-[0.6875rem] font-black uppercase tracking-wide transition duration-200 ${active ? activeChip : `${muted} border-transparent hover:border-white/10 hover:bg-white/[0.06] hover:text-white`} ${!target ? 'cursor-not-allowed opacity-30' : 'cursor-pointer'}`}
                     >
                       {tag}
                     </button>

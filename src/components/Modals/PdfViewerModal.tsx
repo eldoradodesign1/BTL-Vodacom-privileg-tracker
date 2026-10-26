@@ -229,7 +229,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
           <div className="flex items-center space-x-2">
             <button
               onClick={handleDownload}
-              className="px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase flex items-center space-x-1.5 transition-all shadow-md shadow-red-600/30"
+              className="px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-black uppercase flex items-center space-x-1.5 transition shadow-md shadow-red-600/30"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Télécharger PDF</span>
@@ -237,7 +237,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
 
             <button
               onClick={handlePrint}
-              className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl transition-all"
+              className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl transition"
               title="Imprimer"
             >
               <Printer className="w-4 h-4" />
@@ -247,7 +247,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
               href={activeReport ? '#' : (downloadUrl || pdfUrl || '#')}
               target="_blank"
               rel="noreferrer"
-              className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl transition-all"
+              className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl transition"
               title="Ouvrir dans une nouvelle fenêtre"
               onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
                 if (activeReport) {
@@ -272,7 +272,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
 
             <button aria-label="Fermer"
               onClick={onClose}
-              className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-xl transition-all"
+              className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-xl transition"
             >
               <X className="w-5 h-5" />
             </button>
@@ -307,11 +307,11 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
 
                 <div className="bg-zinc-100 p-4 rounded-2xl border border-zinc-200 grid grid-cols-2 gap-4 text-xs font-bold">
                   <div>
-                    <span className="text-zinc-400 text-[10px] uppercase block">Statut Document</span>
+                    <span className="text-zinc-400 text-[0.75rem] uppercase block">Statut Document</span>
                     <span className="text-emerald-600 font-black">✔ Signé & Transmis à la Direction</span>
                   </div>
                   <div>
-                    <span className="text-zinc-400 text-[10px] uppercase block">Fichier Téléchargeable</span>
+                    <span className="text-zinc-400 text-[0.75rem] uppercase block">Fichier Téléchargeable</span>
                     <button onClick={handleDownload} className="text-red-600 underline font-black">
                       Télécharger le fichier PDF complet (.pdf)
                     </button>
@@ -341,7 +341,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
               <div className="absolute bottom-4 right-4">
                 <button
                   onClick={() => setUseFallbackView(true)}
-                  className="px-3 py-2 bg-black/60 hover:bg-black/75 text-white rounded-xl text-[10px] font-black uppercase border border-white/20"
+                  className="px-3 py-2 bg-black/60 hover:bg-black/75 text-white rounded-xl text-[0.75rem] font-black uppercase border border-white/20"
                 >
                   Aperçu synthétique
                 </button>

@@ -49,7 +49,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Nom du Shop</label>
+            <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1">Nom du Shop</label>
             <input
               type="text"
               value={name}
@@ -61,7 +61,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           </div>
 
           <div>
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Ville</label>
+            <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1">Ville</label>
             <input
               type="text"
               value={city}
@@ -73,7 +73,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           </div>
 
           <div>
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Type de Boutique</label>
+            <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1">Type de Boutique</label>
             <select aria-label="Type de Boutique"
               value={type}
               onChange={(e) => setType(e.target.value as any)}

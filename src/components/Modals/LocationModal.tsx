@@ -31,8 +31,8 @@ export const LocationModal: React.FC<LocationModalProps> = ({ isOpen, agent, onC
           </div>
           <div>
             <h2 className="text-lg font-black uppercase text-white">Localisation</h2>
-            <p className="text-[11px] font-bold uppercase text-gray-400">{agent.name}</p>
-            <p className="text-[10px] font-bold uppercase text-gray-300 mt-1">
+            <p className="text-[0.6875rem] font-bold uppercase text-gray-400">{agent.name}</p>
+            <p className="text-[0.75rem] font-bold uppercase text-gray-300 mt-1">
               {formatAgentLocationLine({
                 shop: agent.shop,
                 status: agent.status,

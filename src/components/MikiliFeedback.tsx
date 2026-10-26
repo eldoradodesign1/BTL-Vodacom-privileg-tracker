@@ -13,7 +13,7 @@ export const MikiliFeedback: React.FC<MikiliFeedbackProps> = ({ comment, rating,
   if (!cleanComment && safeRating === null) return null;
 
   return (
-    <div className={`mt-2 space-y-1.5 ${compact ? 'text-[8px]' : 'text-[9px]'}`}>
+    <div className={`mt-2 space-y-1.5 ${compact ? 'text-[0.6875rem]' : 'text-[0.6875rem]'}`}>
       {safeRating !== null && (
         <div className="flex items-center gap-1.5" role="img" aria-label={`Satisfaction du client : ${safeRating} sur 5`}>
           <span className="flex items-center gap-0.5 text-amber-300" aria-hidden="true">

@@ -68,7 +68,7 @@ export const SupervisorProfileModal: React.FC<SupervisorProfileModalProps> = ({
         </div>
 
         <div className="flex justify-center mb-4">
-          <span className="rounded-full border px-3 py-1 text-[10px] font-black uppercase bg-amber-500/20 text-amber-300 border-amber-500/40">
+          <span className="rounded-full border px-3 py-1 text-[0.75rem] font-black uppercase bg-amber-500/20 text-amber-300 border-amber-500/40">
             {hostesses.length} hôtesse(s) affectée(s)
           </span>
         </div>
@@ -93,33 +93,33 @@ export const SupervisorProfileModal: React.FC<SupervisorProfileModalProps> = ({
 
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Totaux de l'équipe</p>
+            <p className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-gray-400">Totaux de l'équipe</p>
             <div className="flex items-center gap-1 text-amber-400">
               <Users className="w-3.5 h-3.5" />
-              <span className="text-[10px] font-black uppercase">{hostesses.length} hôtesses</span>
+              <span className="text-[0.75rem] font-black uppercase">{hostesses.length} hôtesses</span>
             </div>
           </div>
           <div className="grid grid-cols-3 gap-1.5">
             <div className="rounded-xl bg-black/35 px-2 py-1 text-center">
-              <p className="text-[8px] font-black uppercase text-gray-400">Privilège</p>
-              <p className="text-[10px] font-black text-red-400">{totals.priv}</p>
+              <p className="text-[0.6875rem] font-black uppercase text-gray-400">Privilège</p>
+              <p className="text-[0.75rem] font-black text-red-400">{totals.priv}</p>
             </div>
             <div className="rounded-xl bg-black/35 px-2 py-1 text-center">
-              <p className="text-[8px] font-black uppercase text-gray-400">Roaming</p>
-              <p className="text-[10px] font-black text-amber-300">{totals.roam}</p>
+              <p className="text-[0.6875rem] font-black uppercase text-gray-400">Roaming</p>
+              <p className="text-[0.75rem] font-black text-amber-300">{totals.roam}</p>
             </div>
             <div className="rounded-xl bg-black/35 px-2 py-1 text-center">
-              <p className="text-[8px] font-black uppercase text-gray-400">Bundle</p>
-              <p className="text-[10px] font-black text-blue-300">{totals.bund}</p>
+              <p className="text-[0.6875rem] font-black uppercase text-gray-400">Bundle</p>
+              <p className="text-[0.75rem] font-black text-blue-300">{totals.bund}</p>
             </div>
           </div>
         </div>
 
         <div className="space-y-2">
-          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Liste des hôtesses</h3>
+          <h3 className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-gray-400">Liste des hôtesses</h3>
 
           {hostesses.length === 0 ? (
-            <p className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-[10px] font-semibold text-gray-400">
+            <p className="rounded-2xl border border-white/10 bg-white/5 px-3 py-3 text-[0.75rem] font-semibold text-gray-400">
               Aucune hôtesse affectée à ce superviseur.
             </p>
           ) : (
@@ -127,8 +127,8 @@ export const SupervisorProfileModal: React.FC<SupervisorProfileModalProps> = ({
               <div key={hostess.id} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="truncate text-[11px] font-black uppercase text-white">{hostess.name}</p>
-                    <p className="truncate text-[9px] font-bold uppercase text-gray-400">{hostess.shop}</p>
+                    <p className="truncate text-[0.6875rem] font-black uppercase text-white">{hostess.name}</p>
+                    <p className="truncate text-[0.6875rem] font-bold uppercase text-gray-400">{hostess.shop}</p>
                   </div>
 
                   <button
@@ -143,16 +143,16 @@ export const SupervisorProfileModal: React.FC<SupervisorProfileModalProps> = ({
 
                 <div className="mt-2 grid grid-cols-3 gap-1.5">
                   <div className="rounded-xl bg-black/35 px-2 py-1 text-center">
-                    <p className="text-[8px] font-black uppercase text-gray-400">Privilège</p>
-                    <p className="text-[10px] font-black text-red-400">{hostess.totalPriv}</p>
+                    <p className="text-[0.6875rem] font-black uppercase text-gray-400">Privilège</p>
+                    <p className="text-[0.75rem] font-black text-red-400">{hostess.totalPriv}</p>
                   </div>
                   <div className="rounded-xl bg-black/35 px-2 py-1 text-center">
-                    <p className="text-[8px] font-black uppercase text-gray-400">Roaming</p>
-                    <p className="text-[10px] font-black text-amber-300">{hostess.totalRoam}</p>
+                    <p className="text-[0.6875rem] font-black uppercase text-gray-400">Roaming</p>
+                    <p className="text-[0.75rem] font-black text-amber-300">{hostess.totalRoam}</p>
                   </div>
                   <div className="rounded-xl bg-black/35 px-2 py-1 text-center">
-                    <p className="text-[8px] font-black uppercase text-gray-400">Bundle</p>
-                    <p className="text-[10px] font-black text-blue-300">{hostess.totalBund}</p>
+                    <p className="text-[0.6875rem] font-black uppercase text-gray-400">Bundle</p>
+                    <p className="text-[0.75rem] font-black text-blue-300">{hostess.totalBund}</p>
                   </div>
                 </div>
               </div>

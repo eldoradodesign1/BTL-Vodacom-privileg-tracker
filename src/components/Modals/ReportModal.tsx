@@ -190,35 +190,35 @@ export const ReportModal: React.FC<ReportModalProps> = ({
 
         <div className="space-y-4">
           <div>
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Date d'activité</label>
+            <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1">Date d'activité</label>
             <div className="w-full bg-white/5 border border-white/10 rounded-2xl px-3 py-2.5">
               <DateIconPicker
                 value={reportDate}
                 onChange={setReportDate}
                 className="inline-flex items-center w-full"
                 buttonClassName="h-9 w-9 rounded-xl bg-black/50 border border-white/10 text-gray-200 hover:bg-white/10"
-                labelClassName="text-[11px] font-black uppercase text-white"
+                labelClassName="text-[0.6875rem] font-black uppercase text-white"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
-              <span className="text-[8px] font-black uppercase text-gray-400">Privilège</span>
+              <span className="text-[0.6875rem] font-black uppercase text-gray-400">Privilège</span>
               <p className="text-lg font-black text-white">{privCount}</p>
             </div>
             <div className="bg-white/5 border border-white/10 p-3 rounded-2xl">
-              <span className="text-[8px] font-black uppercase text-gray-400">Roaming</span>
+              <span className="text-[0.6875rem] font-black uppercase text-gray-400">Roaming</span>
               <p className="text-lg font-black text-amber-400">{roamCount}</p>
             </div>
             <div className="bg-red-600/20 border border-red-500/30 p-3 rounded-2xl">
-              <span className="text-[8px] font-black uppercase text-red-400">Bundles</span>
+              <span className="text-[0.6875rem] font-black uppercase text-red-400">Bundles</span>
               <p className="text-lg font-black text-red-500">{bundCount}</p>
             </div>
           </div>
 
           <div>
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Preuves Photos (Max 3)</label>
+            <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1">Preuves Photos (Max 3)</label>
             <div className="grid grid-cols-3 gap-2">
               {photos.map((p, idx) => (
                 <div key={idx} className="aspect-square rounded-2xl bg-cover bg-center relative border border-white/20 overflow-hidden" style={{ backgroundImage: `url(${p})` }}>
@@ -231,9 +231,9 @@ export const ReportModal: React.FC<ReportModalProps> = ({
                 </div>
               ))}
               {photos.length < 3 && (
-                <label className="aspect-square rounded-2xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center text-gray-400 hover:text-white cursor-pointer bg-white/5 hover:bg-white/10 transition-all">
+                <label className="aspect-square rounded-2xl border-2 border-dashed border-white/20 flex flex-col items-center justify-center text-gray-400 hover:text-white cursor-pointer bg-white/5 hover:bg-white/10 transition">
                   <Plus className="w-6 h-6 mb-1" />
-                  <span className="text-[9px] font-black uppercase">Photo</span>
+                  <span className="text-[0.6875rem] font-black uppercase">Photo</span>
                   <input type="file" accept="image/*" multiple onChange={handlePhotoUpload} className="hidden" />
                 </label>
               )}
@@ -241,7 +241,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
           </div>
 
           <div>
-            <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Commentaire de clôture <span className="text-red-300">*</span></label>
+            <label className="text-[0.75rem] font-black uppercase text-gray-400 block mb-1">Commentaire de clôture <span className="text-red-300">*</span></label>
             <textarea
               value={comment}
               onChange={(e) => { setComment(e.target.value); if (commentError) setCommentError(''); }}
@@ -249,7 +249,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
               placeholder="Résumé obligatoire de la journée, alerte ou information terrain…"
               className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white text-xs h-24 focus:outline-none focus:border-red-500"
             />
-            {commentError && <p className="mt-2 text-[10px] font-bold text-red-300">{commentError}</p>}
+            {commentError && <p className="mt-2 text-[0.75rem] font-bold text-red-300">{commentError}</p>}
           </div>
 
           <button

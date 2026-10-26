@@ -210,7 +210,7 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
         </div>
 
         <div className="flex justify-center mb-4">
-          <span className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase ${statusBadgeClass}`}>
+          <span className={`rounded-full border px-3 py-1 text-[0.75rem] font-black uppercase ${statusBadgeClass}`}>
             {agent.status}
           </span>
         </div>
@@ -236,25 +236,25 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
         {latestPhoto && (
           <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-3 flex items-center gap-2 text-left">
             <Camera className="w-4 h-4 text-red-400" />
-            <p className="text-[10px] font-bold uppercase text-gray-300">Photo de pointage visible dans le profil</p>
+            <p className="text-[0.75rem] font-bold uppercase text-gray-300">Photo de pointage visible dans le profil</p>
           </div>
         )}
 
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-3 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Affectation</p>
-              <p className="text-[11px] font-semibold text-white">{agent.shop}</p>
+              <p className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-gray-400">Affectation</p>
+              <p className="text-[0.6875rem] font-semibold text-white">{agent.shop}</p>
             </div>
             <div className="flex items-center gap-2 text-emerald-400">
               <UserCheck className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase">Shop</span>
+              <span className="text-[0.75rem] font-black uppercase">Shop</span>
             </div>
           </div>
           <select aria-label="Shop"
             value={selectedShopId}
             onChange={(e) => setSelectedShopId(e.target.value)}
-            className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-[11px] font-bold text-white"
+            className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-[0.6875rem] font-bold text-white"
           >
             <option value="">Aucun shop</option>
             {shops.map((shop) => (
@@ -263,7 +263,7 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
           </select>
           <button
             onClick={handleAssignmentSave}
-            className="w-full rounded-xl bg-red-600/90 px-3 py-2 text-[10px] font-black uppercase text-white"
+            className="w-full rounded-xl bg-red-600/90 px-3 py-2 text-[0.75rem] font-black uppercase text-white"
           >
             Enregistrer l'affectation
           </button>
@@ -271,17 +271,17 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
 
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Évolution quotidienne</p>
+            <p className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-gray-400">Évolution quotidienne</p>
             <div className="flex items-center gap-1 text-red-400">
               <Clock3 className="w-3 h-3" />
-              <span className="text-[10px] font-black uppercase">Rapports</span>
+              <span className="text-[0.75rem] font-black uppercase">Rapports</span>
             </div>
           </div>
           <div className="h-32 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={evolutionData}>
-                <XAxis dataKey="label" stroke="var(--m-muted)" fontSize={9} />
-                <YAxis stroke="var(--m-muted)" fontSize={9} />
+                <XAxis dataKey="label" stroke="var(--m-muted)" fontSize={11} />
+                <YAxis stroke="var(--m-muted)" fontSize={11} />
                 <Tooltip contentStyle={{ backgroundColor: '#18181b', borderColor: '#3f3f46', borderRadius: '10px', fontSize: '11px' }} />
                 <Line
                   type="monotone"
@@ -330,22 +330,22 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
 
         <div className="mb-4 rounded-2xl border border-white/10 bg-white/5 p-3">
           <div className="mb-2 flex items-center justify-between">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">{detailTitle}</p>
+            <p className="text-[0.75rem] font-black uppercase tracking-[0.2em] text-gray-400">{detailTitle}</p>
             <div className="flex items-center gap-1 text-emerald-400">
               <CheckCircle2 className="w-3 h-3" />
-              <span className="text-[10px] font-black uppercase">{detailLeads.length}</span>
+              <span className="text-[0.75rem] font-black uppercase">{detailLeads.length}</span>
             </div>
           </div>
           <div className="max-h-32 space-y-2 overflow-y-auto pr-1">
             {detailLeads.length === 0 ? (
-              <p className="text-[10px] text-gray-500 italic">{detailEmptyText}</p>
+              <p className="text-[0.75rem] text-gray-500 italic">{detailEmptyText}</p>
             ) : detailLeads.map((lead) => (
               <div key={lead.id} className="rounded-xl border border-white/10 bg-black/30 px-2.5 py-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-black text-white">{lead.client_name}</span>
-                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-black uppercase text-gray-300">{lead.action_type}</span>
+                  <span className="text-[0.75rem] font-black text-white">{lead.client_name}</span>
+                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[0.6875rem] font-black uppercase text-gray-300">{lead.action_type}</span>
                 </div>
-                <p className="mt-1 text-[9px] text-gray-400">{lead.msisdn}</p>
+                <p className="mt-1 text-[0.6875rem] text-gray-400">{lead.msisdn}</p>
               </div>
             ))}
           </div>
@@ -364,14 +364,14 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
                 <div key={rep.id} className="p-3 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-between">
                   <div>
                     <p className="text-xs font-black text-white">{rep.date}</p>
-                    <p className="text-[9px] font-bold text-gray-400 uppercase">
+                    <p className="text-[0.6875rem] font-bold text-gray-400 uppercase">
                       Priv: {rep.priv} | Roam: {rep.roam} | Bund: {rep.bund}
                     </p>
                   </div>
 
                   <button
                     onClick={() => onOpenPdf(`report-id:${rep.id}`)}
-                    className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl text-[10px] font-black uppercase flex items-center space-x-1 transition-all"
+                    className="px-3 py-1.5 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white border border-red-500/30 rounded-xl text-[0.75rem] font-black uppercase flex items-center space-x-1 transition"
                   >
                     <Eye className="w-3 h-3" />
                     <span>VOIR</span>
@@ -391,7 +391,7 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
           <button
             type="button"
             onClick={() => setIsPhotoViewerOpen(false)}
-            className="absolute right-4 top-4 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-[11px] font-black uppercase tracking-[0.2em] text-white transition hover:bg-white/20"
+            className="absolute right-4 top-4 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-[0.6875rem] font-black uppercase tracking-[0.2em] text-white transition hover:bg-white/20"
           >
             Fermer
           </button>

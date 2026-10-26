@@ -17,7 +17,7 @@
   background: var(--m-surface);
   color: var(--m-text);
   box-shadow: 0 1px 0 var(--m-highlight) inset;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   transition: transform 160ms ease, background 160ms ease;
 }
@@ -113,7 +113,7 @@ body:has(.event-checkin-only) .agent-dock-action {
   max-width: 22rem;
   margin-inline: auto;
   text-align: center;
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.4;
   color: var(--m-text-2);
 }
@@ -128,7 +128,7 @@ body:has(.event-checkin-only) .agent-dock-action {
   border: 1px solid var(--m-edge-soft);
   background: var(--m-tile);
   color: var(--m-text);
-  font-size: 13px;
+  font-size: 0.8125rem;
   line-height: 1.35;
 }
 
@@ -136,7 +136,7 @@ body:has(.event-checkin-only) .agent-dock-action {
 .agent-greeting {
   margin: 0;
   padding: 0 4px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--theme-text-400);
 }

@@ -8,12 +8,15 @@ html {
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-optical-sizing: auto;
+  -webkit-text-size-adjust: 100%;
   background-color: var(--bg-deep);
   background-image: var(--bg-gradient);
   background-attachment: fixed;
   color: var(--text-main);
   min-height: 100vh;
+  min-height: 100dvh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   scrollbar-width: none;
@@ -209,4 +212,27 @@ button:not(:disabled):active,
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }
+}
+
+/* ── Zones de toucher : les petits boutons gardent leur taille visible, mais se touchent comme des boutons de 44 px ── */
+button:is(.w-8, .w-9, .h-8, .h-9, .w-7, .h-7, .w-6, .h-6):not(.absolute, .fixed, .sticky, .relative) {
+  position: relative;
+}
+
+button:is(.w-8, .w-9, .h-8, .h-9)::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+button:is(.w-7, .h-7)::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+}
+
+button:is(.w-6, .h-6)::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
 }
