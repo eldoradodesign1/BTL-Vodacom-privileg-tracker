@@ -54,39 +54,21 @@ body[data-theme] .hover\:bg-rose-500:hover {
 }
 
 
-/* Soie animée globale (fond principal, sans JPG) */
-body[data-theme]::before {
-  content: "";
-  position: fixed;
-  inset: -10% -15%;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse 55% 35% at 20% 30%, var(--m-silk-1) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 30% at 80% 45%, var(--m-silk-2) 0%, transparent 68%),
-    radial-gradient(ellipse 60% 40% at 55% 75%, var(--m-silk-3, var(--m-silk-2)) 0%, transparent 72%);
-  filter: blur(40px);
-  opacity: 0.9;
-  animation: btlSilkDrift 16s ease-in-out infinite alternate;
-  mix-blend-mode: screen;
-}
-
-body[data-theme="diamond"]::before {
-  mix-blend-mode: multiply;
-  opacity: 0.55;
-  filter: blur(48px);
-}
+/* Fond soie = image générée (silk-*.jpg), via --m-silk-image (publicUrl) */
 
 /* ── Anthracite ───────────────────────────────────────────────────────── */
 body[data-theme="anthracite"] {
   color-scheme: dark;
   background-color: #07090c;
   background-image:
-    radial-gradient(ellipse 90% 55% at 15% 20%, rgba(210, 220, 240, 0.22) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 45% at 85% 35%, rgba(140, 150, 170, 0.18) 0%, transparent 58%),
-    radial-gradient(ellipse 80% 50% at 50% 85%, rgba(90, 70, 50, 0.16) 0%, transparent 60%),
-    linear-gradient(155deg, #050608 0%, #12151c 42%, #0a0c10 72%, #141018 100%);
+    linear-gradient(160deg, rgba(4, 6, 10, 0.52) 0%, rgba(10, 12, 16, 0.22) 45%, rgba(6, 8, 12, 0.40) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-anthracite.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
   background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-anthracite.jpg");
+  --m-podium-filter: brightness(0.9) contrast(1.1) saturate(0.8);
   color: #f4f6fa;
   --content-scrim: rgba(6, 8, 12, 0.34);
 
@@ -143,11 +125,14 @@ body[data-theme="rubis"] {
   color-scheme: dark;
   background-color: #120508;
   background-image:
-    radial-gradient(ellipse 90% 55% at 18% 22%, rgba(255, 90, 120, 0.28) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 45% at 88% 40%, rgba(160, 30, 55, 0.26) 0%, transparent 58%),
-    radial-gradient(ellipse 85% 50% at 45% 88%, rgba(90, 10, 25, 0.35) 0%, transparent 62%),
-    linear-gradient(155deg, #0a0306 0%, #2a0a14 45%, #140508 78%, #1c0810 100%);
+    linear-gradient(160deg, rgba(18, 4, 8, 0.50) 0%, rgba(40, 8, 14, 0.22) 45%, rgba(14, 4, 8, 0.38) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-rubis.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
   background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-rubis.jpg");
+  --m-podium-filter: hue-rotate(-18deg) saturate(1.35) brightness(0.95);
   color: #fff3f5;
   --content-scrim: rgba(22, 5, 10, 0.34);
 
@@ -204,11 +189,14 @@ body[data-theme="sapphire"] {
   color-scheme: dark;
   background-color: #040a14;
   background-image:
-    radial-gradient(ellipse 90% 55% at 16% 20%, rgba(90, 160, 255, 0.28) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 45% at 90% 38%, rgba(40, 90, 200, 0.24) 0%, transparent 58%),
-    radial-gradient(ellipse 85% 50% at 48% 90%, rgba(10, 30, 80, 0.35) 0%, transparent 62%),
-    linear-gradient(155deg, #02060e 0%, #0a1838 45%, #040c1c 78%, #061428 100%);
+    linear-gradient(160deg, rgba(4, 10, 24, 0.50) 0%, rgba(8, 24, 56, 0.22) 45%, rgba(4, 12, 28, 0.38) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-sapphire.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
   background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-sapphire.jpg");
+  --m-podium-filter: hue-rotate(195deg) saturate(1.3) brightness(0.95);
   color: #f2f7ff;
   --content-scrim: rgba(4, 10, 24, 0.34);
 
@@ -265,11 +253,14 @@ body[data-theme="silver"] {
   color-scheme: dark;
   background-color: #0a101c;
   background-image:
-    radial-gradient(ellipse 90% 55% at 14% 18%, rgba(220, 232, 255, 0.26) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 45% at 88% 36%, rgba(120, 150, 200, 0.20) 0%, transparent 58%),
-    radial-gradient(ellipse 85% 50% at 50% 88%, rgba(50, 70, 100, 0.28) 0%, transparent 62%),
-    linear-gradient(155deg, #050a14 0%, #152036 45%, #0a1220 78%, #1a2438 100%);
+    linear-gradient(160deg, rgba(5, 10, 20, 0.48) 0%, rgba(18, 28, 48, 0.20) 45%, rgba(8, 14, 26, 0.36) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-silver.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
   background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-silver.jpg");
+  --m-podium-filter: none;
   color: #f6f8fc;
   --content-scrim: rgba(5, 13, 25, 0.28);
 
@@ -326,11 +317,14 @@ body[data-theme="diamond"] {
   color-scheme: light;
   background-color: #eef2f8;
   background-image:
-    radial-gradient(ellipse 90% 55% at 18% 16%, rgba(255, 255, 255, 0.95) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 45% at 85% 40%, rgba(180, 210, 255, 0.45) 0%, transparent 58%),
-    radial-gradient(ellipse 85% 50% at 45% 90%, rgba(200, 210, 230, 0.40) 0%, transparent 62%),
-    linear-gradient(155deg, #ffffff 0%, #e8eef8 42%, #f4f7fb 72%, #dce6f4 100%);
+    linear-gradient(160deg, rgba(255, 255, 255, 0.42) 0%, rgba(245, 248, 252, 0.18) 45%, rgba(230, 236, 246, 0.28) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-diamond.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
   background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-diamond.jpg");
+  --m-podium-filter: none;
   color: #1b2742;
   --content-scrim: rgba(255, 255, 255, 0.26);
 
@@ -387,11 +381,14 @@ body[data-theme="ambre"] {
   color-scheme: dark;
   background-color: #140a04;
   background-image:
-    radial-gradient(ellipse 90% 55% at 16% 20%, rgba(255, 180, 60, 0.32) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 45% at 88% 38%, rgba(180, 80, 20, 0.26) 0%, transparent 58%),
-    radial-gradient(ellipse 85% 50% at 48% 90%, rgba(80, 35, 8, 0.40) 0%, transparent 62%),
-    linear-gradient(155deg, #0a0502 0%, #2a1608 45%, #140a04 78%, #3a1c08 100%);
+    linear-gradient(160deg, rgba(16, 8, 2, 0.50) 0%, rgba(40, 22, 6, 0.20) 45%, rgba(18, 10, 4, 0.38) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-ambre.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
   background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-ambre.jpg");
+  --m-podium-filter: none;
   color: #fff8ea;
   --content-scrim: rgba(16, 8, 2, 0.3);
 

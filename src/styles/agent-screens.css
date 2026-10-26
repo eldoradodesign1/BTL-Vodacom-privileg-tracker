@@ -37,7 +37,7 @@ body:has(.event-checkin-only) .agent-dock-action {
   display: none !important;
 }
 
-/* ── Accueil pré-pointage : rubans de soie (fond principal) ──────────── */
+/* ── Accueil pré-pointage : soie = photo de fond (body), pas de rubans CSS ─ */
 .agent-before-checkin {
   position: relative;
   isolation: isolate;
@@ -45,55 +45,9 @@ body:has(.event-checkin-only) .agent-dock-action {
   min-height: calc(100dvh - 7rem);
 }
 
-.agent-before-checkin::before,
-.agent-before-checkin::after {
-  content: '';
-  position: absolute;
-  pointer-events: none;
-  z-index: 0;
-  border-radius: 48% 42% 58% 40%;
-  filter: blur(22px);
-  opacity: 0.72;
-  mix-blend-mode: screen;
-}
-
-.agent-before-checkin::before {
-  width: min(140vw, 640px);
-  height: min(85vw, 420px);
-  top: -2%;
-  left: -28%;
-  background:
-    radial-gradient(ellipse 80% 55% at 28% 38%, var(--m-silk-1) 0%, transparent 62%),
-    radial-gradient(ellipse 60% 45% at 72% 62%, var(--m-silk-2) 0%, transparent 58%),
-    radial-gradient(ellipse 40% 30% at 50% 20%, var(--m-silk-3, var(--m-silk-1)) 0%, transparent 70%);
-  transform: rotate(-14deg);
-  animation: btlSilkDrift 14s ease-in-out infinite alternate;
-}
-
-.agent-before-checkin::after {
-  width: min(130vw, 580px);
-  height: min(75vw, 380px);
-  top: 22%;
-  right: -30%;
-  background:
-    radial-gradient(ellipse 70% 50% at 42% 32%, var(--m-silk-2) 0%, transparent 60%),
-    radial-gradient(ellipse 55% 40% at 68% 72%, var(--m-silk-1) 0%, transparent 55%),
-    radial-gradient(ellipse 35% 28% at 30% 80%, var(--m-silk-3, var(--m-silk-2)) 0%, transparent 68%);
-  transform: rotate(16deg);
-  opacity: 0.58;
-  animation: btlSilkDrift 18s ease-in-out infinite alternate-reverse;
-}
-
 .agent-before-checkin > * {
   position: relative;
   z-index: 1;
-}
-
-body[data-theme="diamond"] .agent-before-checkin::before,
-body[data-theme="diamond"] .agent-before-checkin::after {
-  mix-blend-mode: multiply;
-  opacity: 0.42;
-  filter: blur(28px);
 }
 
 /* ── Bouton « Démarrer la journée » : sphère glossy + halo ───────────── */
@@ -263,6 +217,42 @@ body[data-theme="diamond"] .agent-before-checkin::after {
   align-items: center;
   padding-bottom: 1.75rem;
   margin-top: 0.5rem;
+}
+
+.btl-podium-photo {
+  position: absolute;
+  left: 50%;
+  bottom: 0.15rem;
+  transform: translateX(-50%);
+  width: min(94%, 340px);
+  aspect-ratio: 1 / 1;
+  background-image: var(--m-podium-image);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  pointer-events: none;
+  z-index: 0;
+  filter: var(--m-podium-filter, none) drop-shadow(0 18px 28px rgba(0, 0, 0, 0.45));
+  opacity: 0.98;
+}
+
+.btl-podium-stage--photo .btl-podium-reflect {
+  opacity: 0.35;
+}
+
+.btl-podium-stage--photo .btl-podium-pillar {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+.btl-podium-stage--photo .btl-podium-pillar::before,
+.btl-podium-stage--photo .btl-podium-pillar::after {
+  display: none;
+}
+
+.btl-podium-stage--photo .btl-podium-pillar span {
+  opacity: 0;
 }
 
 .btl-podium-reflect {

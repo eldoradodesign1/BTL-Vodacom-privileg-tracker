@@ -470,7 +470,8 @@ export const AgentView: React.FC<AgentViewProps> = ({
       {campaignPaused && <p className="text-center text-sm font-bold text-amber-200">Campagne en pause. Pointage indisponible.</p>}
       {feedback.primaryText && <p className="text-center text-[0.6875rem] text-gray-300">{feedback.primaryText}</p>}
 
-      <div className="btl-podium-stage px-5 pt-2" aria-label="Podium du jour">
+      <div className="btl-podium-stage btl-podium-stage--photo px-5 pt-2" aria-label="Podium du jour">
+        <div className="btl-podium-photo" aria-hidden="true" />
         <div className="btl-podium-reflect" aria-hidden="true" />
         <div className="btl-podium-grid">
           {topThree.map((rankIndex) => {

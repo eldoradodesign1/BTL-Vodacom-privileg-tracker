@@ -132,9 +132,6 @@
 @media (prefers-reduced-motion: reduce) {
   .btl-power-button--ready,
   .btl-power-wrap::before,
-  .agent-before-checkin::before,
-  .agent-before-checkin::after,
-  body[data-theme]::before,
   .agent-before-checkin .btl-podium-avatar {
     animation: none;
   }
