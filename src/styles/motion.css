@@ -110,7 +110,7 @@
 
 @keyframes btlPowerBreath {
   0%,100% {transform:scale(1);filter:brightness(1)}
-  50% {transform:scale(1.04);filter:brightness(1.1)}
+  50% {transform:scale(1.025);filter:brightness(1.04)}
 }
 
 @keyframes btlAvatarBounce {

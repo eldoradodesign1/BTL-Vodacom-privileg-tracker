@@ -134,7 +134,7 @@ body[data-theme] .podium-neutral {
   inset: 0;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(circle at 82% 8%, rgba(255, 255, 255, 0.12), transparent 26%), radial-gradient(circle at 10% 90%, rgba(var(--theme-accent-rgb), 0.12), transparent 34%);
+  background: radial-gradient(circle at 82% 8%, rgba(255, 255, 255, 0.10), transparent 28%), radial-gradient(circle at 10% 90%, rgba(var(--theme-accent-rgb), 0.08), transparent 36%);
 }
 
 .login-shell {
@@ -220,7 +220,7 @@ body[data-theme] .app-input:focus {
 
 .login-eyebrow {
   color: var(--theme-text-400);
-  letter-spacing: 0.24em;
+  letter-spacing: 0.12em;
 }
 
 body[data-theme] .login-note {
@@ -254,7 +254,7 @@ body[data-theme] .login-note {
   min-height: 3.35rem;
   border: 1px solid var(--m-btn-edge);
   border-radius: 1.2rem;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.06em;
   box-shadow: 0 12px 30px -10px var(--m-glow), 0 1px 0 var(--m-highlight) inset;
 }
 
@@ -284,7 +284,7 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   border-radius: 999px;
   transform: translateX(-50%);
   background: var(--theme-accent);
-  box-shadow: 0 0 12px var(--theme-accent-glow);
+  box-shadow: 0 0 8px var(--theme-accent-glow);
   transition: width 0.22s ease;
 }
 
@@ -460,7 +460,7 @@ body[data-theme] .btn-red:hover:not(:disabled) {
 }
 
 .dock-tab[data-active='true'] .dock-tab-icon {
-  filter: drop-shadow(0 2px 5px rgba(var(--theme-accent-rgb), 0.18));
+  filter: drop-shadow(0 2px 4px rgba(var(--theme-accent-rgb), 0.12));
 }
 
 .dock-tab-label {
