@@ -93,15 +93,16 @@ input[type="range"]::-moz-range-thumb {
 body::after {
   content: "";
   position: fixed;
-  bottom: -10%;
-  left: -10%;
-  width: 400px;
-  height: 400px;
-  background: color-mix(in srgb, var(--theme-accent) 18%, transparent);
-  filter: blur(100px);
+  bottom: -15%;
+  right: -12%;
+  width: min(70vw, 420px);
+  height: min(70vw, 420px);
+  background: color-mix(in srgb, var(--theme-accent) 14%, transparent);
+  filter: blur(110px);
   border-radius: 50%;
   z-index: -1;
   pointer-events: none;
+  opacity: 0.7;
 }
 
 ::-webkit-scrollbar {
