@@ -149,7 +149,7 @@ body::after {
   --surface-border-quiet: rgba(255, 255, 255, 0.13);
   --shadow-elevation: 0 24px 64px rgba(2, 6, 23, 0.38), 0 2px 0 rgba(255, 255, 255, 0.08) inset;
   --shadow-floating: 0 30px 80px rgba(2, 6, 23, 0.56), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
-  --content-scrim: rgba(5, 8, 14, 0.28);
+  --content-scrim: rgba(5, 8, 14, 0.42);
 }
 
 /* Listes déroulantes natives : la liste ouverte reprend la matière du thème (fond plein, texte lisible). */
@@ -192,10 +192,21 @@ button:not(:disabled):active,
   .modal-sheet,
   .modal-sticky-header,
   .day-card,
-  .app-input {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
+  .app-input,
+  .confirm-sheet,
+  .confirm-overlay,
+  .rank-card-podium,
+  .podium-neutral,
+  .btl-podium-empty,
+  .agent-closure-action,
+  .agent-dock::before {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
     background: var(--m-surface-solid);
+  }
+
+  .confirm-overlay {
+    background: rgba(0, 0, 0, 0.72);
   }
 }
 

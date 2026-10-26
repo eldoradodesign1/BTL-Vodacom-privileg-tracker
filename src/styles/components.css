@@ -43,22 +43,31 @@ body[data-theme] .btn-dark:hover {
 }
 
 body[data-theme] .rank-card-podium {
-  background: var(--m-surface);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.14) 0%, transparent 40%),
+    var(--m-surface);
   padding: 24px;
   border-radius: var(--radius-xl);
   border: 1px solid var(--m-edge-soft);
-  box-shadow: 0 1px 0 var(--m-highlight) inset, 0 12px 30px var(--m-glow);
+  box-shadow: 0 1px 0 var(--m-highlight) inset, 0 16px 40px var(--m-glow), 0 4px 14px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(var(--m-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--m-blur)) saturate(160%);
+}
+
+body[data-theme] .podium-neutral {
+  border-color: var(--m-edge-soft);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.10) 0%, transparent 45%),
+    var(--m-surface);
+  backdrop-filter: blur(var(--m-blur)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--m-blur)) saturate(150%);
+  box-shadow: 0 1px 0 var(--m-highlight) inset, 0 10px 28px var(--m-glow);
 }
 
 .rank-card-podium > *,
 .podium-card > * {
   position: relative;
   z-index: 1;
-}
-
-body[data-theme] .podium-neutral {
-  border-color: var(--m-edge-soft);
-  background: var(--m-surface);
 }
 
 .modal-sheet::-webkit-scrollbar {
@@ -88,9 +97,12 @@ body[data-theme] .podium-neutral {
   margin: -32px -24px 18px;
   padding: 18px 24px 14px;
   border-bottom: 1px solid var(--m-edge-soft);
-  background: linear-gradient(180deg, color-mix(in srgb, var(--m-sheet) 96%, transparent) 0%, color-mix(in srgb, var(--m-sheet) 88%, transparent) 70%, color-mix(in srgb, var(--m-sheet) 58%, transparent) 100%);
-  backdrop-filter: blur(18px) saturate(145%);
-  -webkit-backdrop-filter: blur(18px) saturate(145%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, transparent 55%),
+    linear-gradient(180deg, color-mix(in srgb, var(--m-sheet) 94%, transparent) 0%, color-mix(in srgb, var(--m-sheet) 78%, transparent) 70%, color-mix(in srgb, var(--m-sheet) 42%, transparent) 100%);
+  backdrop-filter: blur(var(--m-modal-blur, 50px)) saturate(165%);
+  -webkit-backdrop-filter: blur(var(--m-modal-blur, 50px)) saturate(165%);
+  box-shadow: 0 1px 0 var(--m-highlight) inset;
 }
 
 .modal-sticky-header .modal-handle {
@@ -99,8 +111,8 @@ body[data-theme] .podium-neutral {
 
 @media (max-width: 639px) {
   .modal-sticky-header {
-    backdrop-filter: blur(10px) saturate(125%);
-    -webkit-backdrop-filter: blur(10px) saturate(125%);
+    backdrop-filter: blur(calc(var(--m-modal-blur, 50px) - 8px)) saturate(155%);
+    -webkit-backdrop-filter: blur(calc(var(--m-modal-blur, 50px) - 8px)) saturate(155%);
   }
 }
 
@@ -147,10 +159,12 @@ body[data-theme] .podium-neutral {
   border-radius: var(--radius-xl);
   padding: 24px;
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  background: var(--m-surface);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.12) 0%, transparent 42%),
+    var(--m-surface);
   box-shadow: var(--shadow-elevation);
-  backdrop-filter: blur(var(--m-blur)) saturate(140%);
-  -webkit-backdrop-filter: blur(var(--m-blur)) saturate(140%);
+  backdrop-filter: blur(var(--m-blur)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--m-blur)) saturate(160%);
 }
 
 body[data-theme] .glass-card:hover {
@@ -159,25 +173,30 @@ body[data-theme] .glass-card:hover {
 }
 
 body[data-theme] .app-popover {
-  background: var(--m-sheet);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.12) 0%, transparent 40%),
+    var(--m-surface),
+    var(--m-sheet-frost, var(--m-sheet));
   border-color: var(--m-edge-soft);
   box-shadow: var(--shadow-floating);
+  backdrop-filter: blur(var(--m-modal-blur, 50px)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--m-modal-blur, 50px)) saturate(160%);
 }
 
 body[data-theme] .app-bottom-nav {
   background: var(--m-chrome);
   border-color: var(--m-edge-soft);
   box-shadow: var(--shadow-elevation);
-  backdrop-filter: blur(var(--m-blur)) saturate(150%);
-  -webkit-backdrop-filter: blur(var(--m-blur)) saturate(150%);
+  backdrop-filter: blur(var(--m-blur)) saturate(165%);
+  -webkit-backdrop-filter: blur(var(--m-blur)) saturate(165%);
 }
 
 body[data-theme] .app-header {
   border-color: var(--m-edge-soft);
   border-bottom-color: var(--m-edge);
   box-shadow: var(--shadow-elevation);
-  backdrop-filter: blur(10px) saturate(118%);
-  -webkit-backdrop-filter: blur(10px) saturate(118%);
+  backdrop-filter: blur(calc(var(--m-blur) - 8px)) saturate(150%);
+  -webkit-backdrop-filter: blur(calc(var(--m-blur) - 8px)) saturate(150%);
 }
 
 .app-bottom-nav {
@@ -202,8 +221,8 @@ body[data-theme] .app-input {
   border-color: var(--m-edge-soft);
   color: var(--m-text);
   box-shadow: 0 1px 0 var(--m-highlight) inset;
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(calc(var(--m-blur) - 14px)) saturate(140%);
+  -webkit-backdrop-filter: blur(calc(var(--m-blur) - 14px)) saturate(140%);
 }
 
 body[data-theme] .app-input:focus {
@@ -298,6 +317,7 @@ body[data-theme] .btn-red:hover:not(:disabled) {
 }
 
 .modal-sheet {
+  position: relative;
   width: 100%;
   max-width: 520px;
   max-height: min(92vh, 760px);
@@ -306,14 +326,34 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   overscroll-behavior: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  border-top: 1px solid var(--m-edge);
+  border-top: 1px solid color-mix(in srgb, var(--m-highlight) 55%, var(--m-edge));
   border-radius: 36px 36px 0 0;
   padding: 32px 24px;
-  background: var(--m-surface), var(--m-sheet);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 18%, transparent 42%),
+    var(--m-surface),
+    var(--m-sheet-frost, color-mix(in srgb, var(--m-sheet) 82%, transparent));
   border: 1px solid var(--m-edge-soft);
-  box-shadow: var(--shadow-floating);
-  backdrop-filter: blur(30px) saturate(148%);
-  -webkit-backdrop-filter: blur(30px) saturate(148%);
+  box-shadow:
+    0 1px 0 var(--m-highlight) inset,
+    0 -0.5px 0 rgba(255, 255, 255, 0.06) inset,
+    0 28px 80px rgba(0, 0, 0, 0.55),
+    0 8px 28px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(var(--m-modal-blur, 50px)) saturate(170%);
+  -webkit-backdrop-filter: blur(var(--m-modal-blur, 50px)) saturate(170%);
+  isolation: isolate;
+}
+
+.modal-sheet::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 6%, rgba(255, 255, 255, 0.42) 50%, transparent 94%);
+  opacity: 0.9;
+  z-index: 2;
 }
 
 @media (max-width: 639px) {
@@ -401,9 +441,9 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   border: 1px solid var(--m-edge);
   border-radius: inherit;
   background: color-mix(in srgb, var(--dock-surface) 72%, transparent), var(--m-surface);
-  backdrop-filter: blur(var(--m-blur)) saturate(1.35);
-  -webkit-backdrop-filter: blur(var(--m-blur)) saturate(1.35);
-  box-shadow: 0 1px 0 var(--m-highlight) inset, 0 12px 32px var(--m-glow);
+  backdrop-filter: blur(var(--m-blur)) saturate(1.55);
+  -webkit-backdrop-filter: blur(var(--m-blur)) saturate(1.55);
+  box-shadow: 0 1px 0 var(--m-highlight) inset, 0 14px 36px var(--m-glow), 0 4px 14px rgba(0, 0, 0, 0.22);
 }
 
 .agent-dock:has(.agent-dock-action)::before {
@@ -565,7 +605,9 @@ textarea::placeholder {
   align-items: flex-end;
   justify-content: center;
   padding: 16px;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
   animation: confirmFade 160ms ease-out;
 }
 
@@ -575,14 +617,33 @@ textarea::placeholder {
 }
 
 .confirm-sheet {
+  position: relative;
   width: min(100%, 420px);
   padding: 20px;
   border-radius: 24px;
   color: var(--m-text);
-  background: var(--m-surface), var(--m-sheet);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, transparent 36%),
+    var(--m-surface),
+    var(--m-sheet-frost, color-mix(in srgb, var(--m-sheet) 82%, transparent));
   border: 1px solid var(--m-edge);
-  box-shadow: var(--shadow-floating);
+  box-shadow:
+    0 1px 0 var(--m-highlight) inset,
+    0 28px 72px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(var(--m-modal-blur, 50px)) saturate(165%);
+  -webkit-backdrop-filter: blur(var(--m-modal-blur, 50px)) saturate(165%);
   animation: confirmRise 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  isolation: isolate;
+}
+
+.confirm-sheet::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 8%, rgba(255, 255, 255, 0.4) 50%, transparent 92%);
 }
 
 .confirm-title {
@@ -650,4 +711,12 @@ textarea::placeholder {
 @media (prefers-reduced-motion: reduce) {
   .confirm-overlay,
   .confirm-sheet { animation: none; }
+}
+
+/* ── Scrim modales : flou + assombrissement Apple (sans toucher au JSX) ── */
+body[data-theme] .fixed.inset-0.backdrop-blur-md,
+body[data-theme] .fixed.inset-0.backdrop-blur-sm,
+body[data-theme] .fixed.inset-0.backdrop-blur-xl {
+  backdrop-filter: blur(22px) saturate(155%) !important;
+  -webkit-backdrop-filter: blur(22px) saturate(155%) !important;
 }
