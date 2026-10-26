@@ -400,8 +400,10 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   inset: 0;
   border: 1px solid var(--m-edge);
   border-radius: inherit;
-  background: var(--m-surface), var(--dock-surface);
-  box-shadow: 0 1px 0 var(--m-highlight) inset;
+  background: color-mix(in srgb, var(--dock-surface) 72%, transparent), var(--m-surface);
+  backdrop-filter: blur(var(--m-blur)) saturate(1.35);
+  -webkit-backdrop-filter: blur(var(--m-blur)) saturate(1.35);
+  box-shadow: 0 1px 0 var(--m-highlight) inset, 0 12px 32px var(--m-glow);
 }
 
 .agent-dock:has(.agent-dock-action)::before {

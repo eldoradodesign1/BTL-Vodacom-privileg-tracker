@@ -93,7 +93,18 @@ body[data-theme="anthracite"] {
   --m-btn-bg: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(120,128,145,0.18) 48%, rgba(40,44,54,0.55) 100%);
   --m-btn-edge: rgba(230,235,244,0.36);
   --m-btn-ink: #ffffff;
-  --m-power-bg: radial-gradient(circle at 34% 24%, #3a404c 0%, #171a20 52%, #0a0b0e 100%);
+  --m-silk-1: rgba(200, 210, 230, 0.28);
+  --m-silk-2: rgba(120, 130, 150, 0.18);
+  --m-metal-bg: linear-gradient(180deg, #8a93a3 0%, #3a404c 42%, #1a1d24 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #d8dee8 0%, #9aa3b4 28%, #4a5160 70%, #1c2028 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #b8c0ce 0%, #6a7384 45%, #2a303a 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #9aa3b2 0%, #4a5160 50%, #1e222a 100%);
+  --m-metal-edge: rgba(230, 235, 244, 0.45);
+  --m-metal-edge-1: rgba(240, 244, 250, 0.65);
+  --m-metal-edge-2: rgba(200, 210, 225, 0.45);
+  --m-metal-edge-3: rgba(170, 180, 195, 0.4);
+  --m-metal-ink: #f4f6fa;
+  --m-power-bg: radial-gradient(circle at 32% 22%, #6a7388 0%, #3a404c 28%, #171a20 62%, #07080a 100%);
   --m-power-ink: #f5f7fb;
 }
 
@@ -137,7 +148,18 @@ body[data-theme="rubis"] {
   --m-btn-bg: linear-gradient(180deg, rgba(220,110,135,0.55) 0%, rgba(120,22,45,0.72) 100%);
   --m-btn-edge: rgba(230,150,165,0.48);
   --m-btn-ink: #ffffff;
-  --m-power-bg: radial-gradient(circle at 34% 24%, #5c2034 0%, #1a0a10 55%, #0c0508 100%);
+  --m-silk-1: rgba(232, 100, 130, 0.32);
+  --m-silk-2: rgba(140, 30, 55, 0.22);
+  --m-metal-bg: linear-gradient(180deg, #c45a72 0%, #6a1828 45%, #2a0a12 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #f0a8b8 0%, #c45a72 30%, #7a1e35 70%, #2a0a12 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #d87890 0%, #8a2840 50%, #3a1018 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #b85068 0%, #5a1828 55%, #220810 100%);
+  --m-metal-edge: rgba(240, 160, 175, 0.5);
+  --m-metal-edge-1: rgba(255, 200, 210, 0.65);
+  --m-metal-edge-2: rgba(220, 130, 150, 0.45);
+  --m-metal-edge-3: rgba(180, 90, 110, 0.4);
+  --m-metal-ink: #fff0f3;
+  --m-power-bg: radial-gradient(circle at 32% 22%, #8a3050 0%, #5c2034 30%, #1a0a10 65%, #080305 100%);
   --m-power-ink: #ffe8ed;
 }
 
@@ -181,7 +203,18 @@ body[data-theme="sapphire"] {
   --m-btn-bg: linear-gradient(180deg, rgba(80,140,220,0.58) 0%, rgba(20,55,140,0.72) 100%);
   --m-btn-edge: rgba(140,185,245,0.48);
   --m-btn-ink: #ffffff;
-  --m-power-bg: radial-gradient(circle at 34% 24%, #1e4a8e 0%, #0a1838 55%, #040a18 100%);
+  --m-silk-1: rgba(100, 160, 240, 0.32);
+  --m-silk-2: rgba(30, 70, 160, 0.22);
+  --m-metal-bg: linear-gradient(180deg, #6a9ad8 0%, #1e4a8e 45%, #0a1838 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #c8ddff 0%, #7aabf0 28%, #2a66db 70%, #0a1838 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #98c0f0 0%, #3d6ec4 50%, #102848 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #6a9ad8 0%, #1e4a8e 55%, #081428 100%);
+  --m-metal-edge: rgba(160, 200, 255, 0.5);
+  --m-metal-edge-1: rgba(210, 230, 255, 0.7);
+  --m-metal-edge-2: rgba(120, 170, 240, 0.45);
+  --m-metal-edge-3: rgba(80, 130, 200, 0.4);
+  --m-metal-ink: #eef5ff;
+  --m-power-bg: radial-gradient(circle at 32% 22%, #3a7ad0 0%, #1e4a8e 30%, #0a1838 65%, #030812 100%);
   --m-power-ink: #e8f2ff;
 }
 
@@ -225,7 +258,18 @@ body[data-theme="silver"] {
   --m-btn-bg: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(200,214,240,0.1) 100%);
   --m-btn-edge: rgba(240,246,255,0.5);
   --m-btn-ink: #ffffff;
-  --m-power-bg: radial-gradient(circle at 35% 25%, #5b6f96 0%, #1b2438 58%, #0d1220 100%);
+  --m-silk-1: rgba(200, 220, 255, 0.30);
+  --m-silk-2: rgba(100, 130, 180, 0.20);
+  --m-metal-bg: linear-gradient(180deg, #c0cce0 0%, #5b6f96 42%, #1b2438 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #eef3ff 0%, #c8d6f0 28%, #6a82b0 68%, #1b2438 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #d0dced 0%, #7a90b4 48%, #222c40 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #a8b8d0 0%, #4f6fa8 55%, #141c2c 100%);
+  --m-metal-edge: rgba(230, 240, 255, 0.55);
+  --m-metal-edge-1: rgba(245, 250, 255, 0.75);
+  --m-metal-edge-2: rgba(200, 215, 240, 0.5);
+  --m-metal-edge-3: rgba(160, 180, 210, 0.4);
+  --m-metal-ink: #f6f8fc;
+  --m-power-bg: radial-gradient(circle at 32% 22%, #8aa0c8 0%, #5b6f96 28%, #1b2438 64%, #090e18 100%);
   --m-power-ink: #ffffff;
 }
 
@@ -269,7 +313,18 @@ body[data-theme="diamond"] {
   --m-btn-bg: linear-gradient(180deg, #5aa2ff 0%, #2f78ff 100%);
   --m-btn-edge: rgba(80,140,255,0.8);
   --m-btn-ink: #ffffff;
-  --m-power-bg: radial-gradient(circle at 35% 25%, #ffffff 0%, #e6f0ff 58%, #cfe0fb 100%);
+  --m-silk-1: rgba(180, 210, 255, 0.40);
+  --m-silk-2: rgba(220, 230, 245, 0.35);
+  --m-metal-bg: linear-gradient(180deg, #ffffff 0%, #d0dced 45%, #9aadc8 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #ffffff 0%, #e8f0ff 30%, #a8c4f0 70%, #6a90c8 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #f4f8ff 0%, #c8d8f0 50%, #8aa0c0 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #e8eef8 0%, #b0c0d8 55%, #7a90b0 100%);
+  --m-metal-edge: rgba(120, 170, 245, 0.45);
+  --m-metal-edge-1: rgba(90, 150, 255, 0.55);
+  --m-metal-edge-2: rgba(140, 170, 210, 0.4);
+  --m-metal-edge-3: rgba(150, 165, 190, 0.35);
+  --m-metal-ink: #1b2742;
+  --m-power-bg: radial-gradient(circle at 32% 22%, #ffffff 0%, #f0f6ff 35%, #d4e4fb 68%, #b0c8ec 100%);
   --m-power-ink: #1f6bff;
 }
 
@@ -313,7 +368,18 @@ body[data-theme="ambre"] {
   --m-btn-bg: linear-gradient(180deg, rgba(255,205,100,0.92) 0%, rgba(205,120,12,0.92) 100%);
   --m-btn-edge: rgba(255,210,120,0.8);
   --m-btn-ink: #2a1706;
-  --m-power-bg: radial-gradient(circle at 35% 25%, #7a4c10 0%, #26170a 58%, #120a04 100%);
+  --m-silk-1: rgba(255, 180, 60, 0.34);
+  --m-silk-2: rgba(160, 80, 20, 0.24);
+  --m-metal-bg: linear-gradient(180deg, #e8a848 0%, #8a5010 42%, #2a1706 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #ffe0a0 0%, #f6b53b 28%, #b7690a 68%, #3a1e08 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #f0c060 0%, #c9780a 48%, #3a2008 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #d8a040 0%, #8a5010 55%, #241508 100%);
+  --m-metal-edge: rgba(255, 210, 120, 0.55);
+  --m-metal-edge-1: rgba(255, 230, 160, 0.75);
+  --m-metal-edge-2: rgba(240, 180, 80, 0.5);
+  --m-metal-edge-3: rgba(200, 140, 50, 0.4);
+  --m-metal-ink: #fff8ea;
+  --m-power-bg: radial-gradient(circle at 32% 22%, #c88820 0%, #7a4c10 30%, #26170a 65%, #0c0602 100%);
   --m-power-ink: #fff1d2;
 }
 
@@ -357,4 +423,19 @@ body[data-theme="diamond"] .agent-home-surface > section .rounded-full.bg-white\
 
 body[data-theme="diamond"] .agent-before-checkin .text-white {
   color: var(--m-text);
+}
+
+body[data-theme="diamond"] .btl-podium-name,
+body[data-theme="diamond"] .btl-podium-score,
+body[data-theme="diamond"] .btl-podium-empty {
+  color: var(--m-text);
+}
+
+body[data-theme="diamond"] .btl-podium-score {
+  color: var(--m-text-2);
+}
+
+body[data-theme="diamond"] .btl-podium-avatar {
+  color: var(--m-text);
+  border-color: var(--m-edge);
 }

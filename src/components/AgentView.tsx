@@ -443,30 +443,57 @@ export const AgentView: React.FC<AgentViewProps> = ({
   }
 
   // La page de démarrage est isolée: aucune logique post-pointage n'est remplacée.
-  if (activeTab === 'home' && !(checkinDone || checkinDoneLocal)) return (
+  if (activeTab === 'home' && !(checkinDone || checkinDoneLocal)) {
+    const topThree = [2, 0, 1] as const;
+    const hasRanking = globalActivityRanking.slice(0, 3).some(Boolean);
+    return (
     <section className="agent-before-checkin agent-home-surface space-y-4 pb-6">
       <h1 className="pt-5 text-center text-lg font-black uppercase tracking-[0.08em] text-white">Vodacom Privilège</h1>
-      {globalActivityRanking.slice(0, 3).some(Boolean) ? (
-      <div className="px-5 pt-2"><div className="btl-podium-grid mt-4 grid grid-cols-3 items-end gap-2">{([2, 0, 1] as const).map((rankIndex) => { const entry = globalActivityRanking[rankIndex]; return <div key={rankIndex} className="min-w-0 text-center">
-  <div className="btl-podium-avatar mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white">{entry ? entry.name.trim().split(/\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase() : <Users size={18}/>}</div>
-  <p className="mt-2 truncate text-[0.75rem] font-black text-white" title={entry?.name || 'Place libre'}>{entry?.name || 'Place libre'}</p>
-  <p className="mt-0.5 text-[0.6875rem] text-gray-300">{entry ? entry.total + ' clients' : '0 client'}</p>
-  <div className={rankIndex === 0 ? 'mt-2 flex h-20 items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-400/20 text-xl font-black text-amber-200' : rankIndex === 1 ? 'mt-2 flex h-14 items-center justify-center rounded-2xl border border-slate-300/20 bg-slate-300/15 text-lg font-black text-slate-200' : 'mt-2 flex h-10 items-center justify-center rounded-2xl border border-orange-300/20 bg-orange-400/15 text-lg font-black text-orange-200'}>{rankIndex + 1}</div>
-</div>;})}</div></div>
-      ) : (
-      <div className="btl-podium-empty" role="status"><Trophy className="h-5 w-5 shrink-0 text-amber-300" aria-hidden="true"/><span>Classement du jour : personne n’a encore enregistré de client. Soyez le premier&nbsp;!</span></div>
-      )}
-      <div className="flex justify-center py-6" style={{minHeight:'min(43vh,380px)'}}>
-        <button type="button" disabled={campaignPaused || reportDone} onClick={() => { handleCaptureClick(); startInputRef.current?.click(); }} aria-label="Démarrer la journée : prendre la photo de pointage" title="Démarrer la journée" className={`btl-power-button ${campaignPaused || reportDone ? 'btl-power-button--inactive' : 'btl-power-button--ready'} flex flex-col items-center justify-center gap-3 text-center text-white ${campaignPaused || reportDone ? 'cursor-not-allowed' : 'cursor-pointer active:scale-95'}`} >
-          <svg viewBox="0 0 24 24" width="100" height="100" fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/><path d="M12 2v10"/></svg><span className="text-sm font-black uppercase tracking-widest">Démarrer la journée</span>
-        </button>
+
+      <div className="btl-podium-empty" role="status">
+        <Trophy className="h-5 w-5 shrink-0 text-amber-300" aria-hidden="true"/>
+        <span>{hasRanking
+          ? `Classement du jour : ${globalActivityRanking[0]?.name || '—'}${globalActivityRanking[0] ? ` mène avec ${globalActivityRanking[0].total} client${globalActivityRanking[0].total > 1 ? 's' : ''}` : ''}.`
+          : 'Classement du jour : personne n’a encore enregistré de client. Soyez le premier !'}</span>
+      </div>
+
+      <div className="btl-power-stage flex justify-center py-4" style={{minHeight:'min(40vh,340px)'}}>
+        <div className="btl-power-wrap">
+          <button type="button" disabled={campaignPaused || reportDone} onClick={() => { handleCaptureClick(); startInputRef.current?.click(); }} aria-label="Démarrer la journée : prendre la photo de pointage" title="Démarrer la journée" className={`btl-power-button ${campaignPaused || reportDone ? 'btl-power-button--inactive' : 'btl-power-button--ready'} flex flex-col items-center justify-center gap-3 text-center text-white ${campaignPaused || reportDone ? 'cursor-not-allowed' : 'cursor-pointer active:scale-95'}`} >
+            <svg viewBox="0 0 24 24" width="100" height="100" fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/><path d="M12 2v10"/></svg><span className="text-sm font-black uppercase tracking-widest">Démarrer la journée</span>
+          </button>
+        </div>
         <input ref={startInputRef} type="file" accept="image/*" capture="user" className="hidden" tabIndex={-1} disabled={campaignPaused || reportDone} onChange={handleCameraChange}/>
       </div>
+
       {!campaignPaused && !reportDone && <p className="btl-start-hint">Touchez le bouton pour prendre votre photo de pointage. Votre position GPS est relevée automatiquement.</p>}
       {campaignPaused && <p className="text-center text-sm font-bold text-amber-200">Campagne en pause. Pointage indisponible.</p>}
       {feedback.primaryText && <p className="text-center text-[0.6875rem] text-gray-300">{feedback.primaryText}</p>}
+
+      <div className="btl-podium-stage px-5 pt-2" aria-label="Podium du jour">
+        <div className="btl-podium-reflect" aria-hidden="true" />
+        <div className="btl-podium-grid">
+          {topThree.map((rankIndex) => {
+            const entry = globalActivityRanking[rankIndex];
+            const initials = entry
+              ? entry.name.trim().split(/\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase()
+              : null;
+            return (
+              <div key={rankIndex} className={`btl-podium-slot btl-podium-slot--${rankIndex + 1}`}>
+                <div className={`btl-podium-avatar ${entry ? '' : 'btl-podium-avatar--empty'}`}>
+                  {initials || <Users size={18} aria-hidden="true" />}
+                </div>
+                <p className="btl-podium-name" title={entry?.name || 'Place libre'}>{entry?.name || 'Place libre'}</p>
+                <p className="btl-podium-score">{entry ? `${entry.total} client${entry.total > 1 ? 's' : ''}` : '0 client'}</p>
+                <div className="btl-podium-pillar" aria-hidden="true"><span>{rankIndex + 1}</span></div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </section>
-  );
+    );
+  }
 
   
 

@@ -110,7 +110,17 @@
 
 @keyframes btlPowerBreath {
   0%,100% {transform:scale(1);filter:brightness(1)}
-  50% {transform:scale(1.025);filter:brightness(1.04)}
+  50% {transform:scale(1.025);filter:brightness(1.06)}
+}
+
+@keyframes btlHaloBreath {
+  0%,100% {opacity:0.55;transform:scale(1)}
+  50% {opacity:0.95;transform:scale(1.06)}
+}
+
+@keyframes btlSilkDrift {
+  0% {transform:rotate(-12deg) translate3d(0,0,0) scale(1)}
+  100% {transform:rotate(-6deg) translate3d(3%,2%,0) scale(1.04)}
 }
 
 @keyframes btlAvatarBounce {
@@ -121,6 +131,9 @@
 
 @media (prefers-reduced-motion: reduce) {
   .btl-power-button--ready,
+  .btl-power-wrap::before,
+  .agent-before-checkin::before,
+  .agent-before-checkin::after,
   .agent-before-checkin .btl-podium-avatar {
     animation: none;
   }
