@@ -251,7 +251,7 @@ export const AgentProfileModal: React.FC<AgentProfileModalProps> = ({
               <span className="text-[10px] font-black uppercase">Shop</span>
             </div>
           </div>
-          <select
+          <select aria-label="Shop"
             value={selectedShopId}
             onChange={(e) => setSelectedShopId(e.target.value)}
             className="w-full rounded-xl border border-white/10 bg-black/50 px-3 py-2 text-[11px] font-bold text-white"

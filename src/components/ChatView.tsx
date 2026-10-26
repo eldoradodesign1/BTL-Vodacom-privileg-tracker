@@ -112,7 +112,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onDataChanged }
           placeholder="Écrire à l'équipe terrain..."
           className="chat-input flex-1 bg-transparent border-0 px-3 py-2 text-white text-xs font-medium focus:outline-none placeholder:text-gray-500"
         />
-        <button
+        <button aria-label="Envoyer"
           type="submit"
           className="w-10 h-10 bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center justify-center transition-all shadow-md"
         >

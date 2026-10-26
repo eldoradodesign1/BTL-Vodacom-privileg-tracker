@@ -310,7 +310,7 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Notifications Bell */}
           <div className="relative">
-            <button
+            <button aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} non lue${unreadCount > 1 ? 's' : ''}` : 'Notifications'}
               onClick={() => {
                 openNotifications();
                 if (!showNotifPanel && unreadCount > 0) {

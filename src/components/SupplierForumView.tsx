@@ -82,7 +82,7 @@ export const SupplierForumView: React.FC<Props> = ({ currentUser, campaign, onRe
   if (isManager) return <section className="space-y-4">
     {eventConfig.dates && eventConfig.dates.length > 1 && <div className="glass-card p-4">
       <label htmlFor="event-date-select" className="block text-xs font-black uppercase text-red-300">Journée de pointage</label>
-      <select id="event-date-select" className="app-input mt-2 w-full rounded-xl p-3" value={activeDate} onChange={(event) => setSelectedEventDate(event.target.value)}>
+      <select aria-label="Journée de pointage" id="event-date-select" className="app-input mt-2 w-full rounded-xl p-3" value={activeDate} onChange={(event) => setSelectedEventDate(event.target.value)}>
         {eventConfig.dates.map((day) => <option key={day} value={day}>{new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Africa/Kinshasa' }).format(new Date(`${day}T12:00:00+01:00`))}</option>)}
       </select>
     </div>}

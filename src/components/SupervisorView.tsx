@@ -1231,7 +1231,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           <div className="space-y-3">
             <div>
               <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Sélectionner l'hôte/hôtesse</label>
-              <select
+              <select aria-label="Sélectionner l'hôte/hôtesse"
                 value={assigningUserId || ''}
                 onChange={(e) => setAssigningUserId(e.target.value)}
                 className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
@@ -1251,7 +1251,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
             {assigningUserId && (
               <div>
                 <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Sélectionner le nouveau Shop</label>
-                <select
+                <select aria-label="Sélectionner le nouveau Shop"
                   value={assigningShopId}
                   onChange={(e) => setAssigningShopId(e.target.value)}
                   className="w-full bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-white text-xs font-bold focus:outline-none focus:border-red-500"
@@ -1389,7 +1389,7 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
                 </p>
               </div>
 
-              <button
+              <button aria-label="Fermer"
                 type="button"
                 onClick={() => setShowReportPeriodModal(false)}
                 className="h-9 w-9 rounded-xl bg-white/5 text-gray-300"

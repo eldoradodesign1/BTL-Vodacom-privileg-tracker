@@ -114,7 +114,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           </div>
 
           <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block mb-2">Campagne active</label>
-          <select
+          <select aria-label="Campagne active"
             value={selectedCampaignId}
             onChange={(e) => setSelectedCampaignId(e.target.value)}
             className="app-input w-full border rounded-2xl px-4 py-3.5 text-white text-sm font-semibold focus:outline-none"

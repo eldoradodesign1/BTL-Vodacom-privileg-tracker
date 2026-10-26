@@ -121,7 +121,7 @@ export const MerchantCompiledReportModal: React.FC<Props> = ({ isOpen, runId, ar
     <div className="relative flex max-h-[94dvh] w-full max-w-4xl flex-col overflow-hidden rounded-t-[2rem] border border-white/10 bg-(--m-sheet)/95 shadow-2xl sm:rounded-[2rem]">
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-gradient-to-b from-(--m-sheet) via-(--m-sheet)/95 to-(--m-sheet)/80 px-5 py-4 backdrop-blur-xl">
         <div className="min-w-0"><p className="text-[10px] font-black uppercase tracking-[0.2em] text-amber-200/70">Rapports Merchant</p><h2 className="mt-1 truncate text-lg font-black text-white">Rapport compilé</h2><p className="mt-0.5 text-xs text-slate-400">{selectedStartDate} → {selectedEndDate} · {report.totals.reports} rapport{report.totals.reports > 1 ? 's' : ''}</p></div>
-        <button type="button" onClick={onClose} className="ml-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200"><X size={18}/></button>
+        <button aria-label="Fermer" type="button" onClick={onClose} className="ml-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-slate-200"><X size={18}/></button>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
         {error && <div className="mb-4 rounded-2xl border border-rose-400/35 bg-rose-500/10 p-3 text-sm font-semibold text-rose-100">{error}</div>}

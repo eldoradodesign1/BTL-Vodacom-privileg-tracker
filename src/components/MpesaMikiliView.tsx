@@ -368,7 +368,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
         <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-gradient-to-br from-red-500/[0.16] to-transparent p-5">
           <div className="flex items-end justify-between gap-3">
             <div><p className="text-[9px] font-black uppercase tracking-[0.2em] text-red-200">Carnet terrain</p><h2 className="mt-1 text-2xl font-black text-white">{filteredClientsView.length} clients</h2></div>
-            <button type="button" onClick={() => void refresh(false)} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-gray-300"><RefreshCw size={16}/></button>
+            <button aria-label="Actualiser" type="button" onClick={() => void refresh(false)} className="rounded-2xl border border-white/10 bg-white/5 p-3 text-gray-300"><RefreshCw size={16}/></button>
           </div>
           <div className="mt-3 flex items-center rounded-2xl border border-white/10 bg-black/15 px-2 py-1">
             <DateIconPicker value={clientsDate} min="2026-09-01" max={today} onChange={setClientsDate} className="flex min-w-0 flex-1 items-center" buttonClassName="h-10 w-10 shrink-0 rounded-xl border border-red-300/20 bg-red-500/10 text-red-100" labelClassName="truncate text-[10px] font-black uppercase text-gray-200"/>

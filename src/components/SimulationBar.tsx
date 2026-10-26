@@ -93,7 +93,7 @@ export const SimulationBar: React.FC<SimulationBarProps> = ({
               placeholder="Rechercher un utilisateur…"
               className={`min-w-0 flex-1 bg-transparent text-[10px] font-bold outline-none ${isDiamondTheme ? 'placeholder:text-slate-400' : 'placeholder:text-white/30'}`}
             />
-            {selectorQuery && <button type="button" onClick={() => setSelectorQuery('')} className={muted}><X size={13}/></button>}
+            {selectorQuery && <button aria-label="Fermer" type="button" onClick={() => setSelectorQuery('')} className={muted}><X size={13}/></button>}
           </div>
           <div className="mt-2 max-h-[55vh] space-y-1 overflow-y-auto pr-1 custom-scrollbar">
             {filteredUsers.map((user) => (

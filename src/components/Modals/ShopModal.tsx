@@ -35,7 +35,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-pop" onClick={onClose}>
       <div className="modal-sheet relative w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-handle" />
-        <button
+        <button aria-label="Fermer"
           onClick={onClose}
           className="absolute top-6 right-6 text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10"
         >
@@ -74,7 +74,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
 
           <div>
             <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Type de Boutique</label>
-            <select
+            <select aria-label="Type de Boutique"
               value={type}
               onChange={(e) => setType(e.target.value as any)}
               className="w-full bg-zinc-900 border border-white/10 rounded-2xl px-4 py-3 text-white text-sm focus:outline-none focus:border-red-500"

@@ -179,7 +179,7 @@ export default function CampaignAssignmentsPanel({ currentUser }: CampaignAssign
                       <div className="mt-3 rounded-xl border border-violet-300/20 bg-violet-500/[0.05] p-3">
                         <div className="mb-2 flex items-center justify-between gap-2">
                           <p className="text-[10px] font-black uppercase tracking-wider text-violet-200">Ajouter à {campaign.name}</p>
-                          <button type="button" onClick={() => setAddingTo(null)} className="text-gray-500 hover:text-white"><X className="h-4 w-4" /></button>
+                          <button aria-label="Fermer" type="button" onClick={() => setAddingTo(null)} className="text-gray-500 hover:text-white"><X className="h-4 w-4" /></button>
                         </div>
                         <div className="relative">
                           <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-500" />

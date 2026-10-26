@@ -270,7 +270,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
               <ExternalLink className="w-4 h-4" />
             </a>
 
-            <button
+            <button aria-label="Fermer"
               onClick={onClose}
               className="p-2 bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white rounded-xl transition-all"
             >

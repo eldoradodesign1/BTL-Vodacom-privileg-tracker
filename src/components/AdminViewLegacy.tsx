@@ -1506,7 +1506,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                 <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-500">Affectation du shop</p>
                 <h3 className="text-base font-black uppercase text-white">{shopAssignmentModal.agentName}</h3>
               </div>
-              <button
+              <button aria-label="Fermer"
                 type="button"
                 onClick={() => setShopAssignmentModal(null)}
                 className="rounded-full border border-white/10 bg-white/5 p-2 text-gray-400 hover:text-white"

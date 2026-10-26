@@ -147,3 +147,66 @@ body::after {
   --shadow-floating: 0 30px 80px rgba(2, 6, 23, 0.56), 0 1px 0 rgba(255, 255, 255, 0.18) inset;
   --content-scrim: rgba(5, 8, 14, 0.28);
 }
+
+/* Listes déroulantes natives : la liste ouverte reprend la matière du thème (fond plein, texte lisible). */
+body[data-theme] select option,
+body[data-theme] select optgroup {
+  background-color: var(--m-sheet);
+  color: var(--m-text);
+}
+
+/* ── Retour immédiat au toucher (réactivité) : la propriété `scale` se combine avec tout `transform` existant ── */
+button,
+[role="button"] {
+  transition-property: scale, background-color, border-color, color, box-shadow, opacity;
+  transition-duration: 100ms;
+  transition-timing-function: ease-out;
+}
+
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active {
+  scale: 0.97;
+}
+
+/* ── Zone de toucher d'au moins 44 px pour les boutons-icônes, sans changer leur taille visible ── */
+.app-icon-button {
+  position: relative;
+}
+
+.app-icon-button::after {
+  content: '';
+  position: absolute;
+  inset: -4px;
+}
+
+/* ── Préférences d'accessibilité ── */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-card,
+  .app-header,
+  .app-bottom-nav,
+  .app-popover,
+  .modal-sheet,
+  .modal-sticky-header,
+  .day-card,
+  .app-input {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--m-surface-solid);
+  }
+}
+
+@media (prefers-contrast: more) {
+  body[data-theme] {
+    --m-edge-soft: var(--m-edge);
+    --m-muted: var(--m-text-2);
+  }
+
+  .glass-card,
+  .modal-sheet,
+  .day-card,
+  .app-popover {
+    background: var(--m-surface-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

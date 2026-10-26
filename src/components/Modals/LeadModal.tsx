@@ -89,7 +89,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-pop" onClick={onClose}>
       <div className="modal-sheet relative w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-handle" />
-        <button
+        <button aria-label="Fermer"
           onClick={onClose}
           className="absolute top-6 right-6 text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10"
         >
@@ -150,7 +150,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
 
           <div>
             <label className="text-[10px] font-black uppercase text-gray-400 block mb-1">Type d'Action / Offre</label>
-            <select
+            <select aria-label="Type d'Action / Offre"
               value={actionType}
               onChange={(e) => setActionType(e.target.value as any)}
               disabled={!entryAllowed}

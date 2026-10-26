@@ -176,7 +176,7 @@ export const ReportModal: React.FC<ReportModalProps> = ({
     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 animate-pop" onClick={onClose}>
       <div className="modal-sheet relative w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="modal-handle" />
-        <button
+        <button aria-label="Fermer"
           onClick={onClose}
           className="absolute top-6 right-6 text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10"
         >
