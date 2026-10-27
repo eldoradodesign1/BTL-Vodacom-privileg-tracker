@@ -94,6 +94,32 @@ export const applyBackdropBlur = (value: number | null) => {
   }, 250);
 };
 
+// Ombre portée et lueur externe des cartes et de la barre (0 à 100 ; 50 = apparence de référence).
+const levelSetting = (key: string, cssVar: string) => {
+  let pending: number | undefined;
+  return {
+    get: (): number => {
+      try {
+        const stored = localStorage.getItem(key);
+        const value = stored === null ? 50 : Number(stored);
+        return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 50;
+      } catch {
+        return 50;
+      }
+    },
+    apply: (value: number) => {
+      document.body.style.setProperty(cssVar, String(value));
+      window.clearTimeout(pending);
+      pending = window.setTimeout(() => {
+        try { localStorage.setItem(key, String(value)); } catch { /* préférence locale facultative */ }
+      }, 250);
+    },
+  };
+};
+
+export const shadowLevel = levelSetting('vodacom_ui_shadow', '--ui-shadow-n');
+export const glowLevel = levelSetting('vodacom_ui_glow', '--ui-glow-n');
+
 /** Pose la matière sur le document : attribut, fond soie et podium. */
 export const applyThemeToDocument = (theme: ThemeMode) => {
   document.body.dataset.theme = theme;

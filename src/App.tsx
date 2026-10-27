@@ -13,7 +13,7 @@ import { CheckCircle2, CircleAlert } from 'lucide-react';
 import { SimulationBar, getSimulationShortcuts } from './components/SimulationBar';
 import { Header, ThemeMode } from './components/Header';
 import { ThemesView } from './components/ThemesView';
-import { applyBackdropBlur, applyCardSolidity, applyThemeToDocument, getBackdropBlur, getCardSolidity, isThemeMode, transitionTheme } from './utils/themes';
+import { applyBackdropBlur, applyCardSolidity, applyThemeToDocument, getBackdropBlur, getCardSolidity, glowLevel, isThemeMode, shadowLevel, transitionTheme } from './utils/themes';
 import { flushSync } from 'react-dom';
 import { BottomNav, getBottomNavTabs, TabType } from './components/BottomNav';
 import { AgentDockAction } from './components/AgentDockAction';
@@ -116,6 +116,8 @@ export default function App() {
     applyThemeToDocument(theme);
     applyCardSolidity(getCardSolidity());
     applyBackdropBlur(getBackdropBlur());
+    shadowLevel.apply(shadowLevel.get());
+    glowLevel.apply(glowLevel.get());
   }, [theme]);
   useEffect(() => { const open = (event: Event) => { const tab = (event as CustomEvent<{ tab?: TabType }>).detail?.tab; if (tab) handleTabChange(tab); }; window.addEventListener('btl:open-tab', open); return () => window.removeEventListener('btl:open-tab', open); });
   useEffect(() => { const arm = () => { void armFundRequestAlertAudio(); }; window.addEventListener('pointerdown', arm, { capture: true, passive: true }); window.addEventListener('keydown', arm, { capture: true }); return () => { window.removeEventListener('pointerdown', arm, { capture: true }); window.removeEventListener('keydown', arm, { capture: true }); }; }, []);
