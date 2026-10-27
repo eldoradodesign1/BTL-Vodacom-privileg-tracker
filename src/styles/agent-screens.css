@@ -514,3 +514,8 @@ body:has(.event-checkin-only) .agent-dock-action {
   -webkit-backdrop-filter: blur(calc(var(--m-blur) - 10px)) saturate(145%);
   border-color: var(--m-edge-soft) !important;
 }
+
+/* Avant le pointage, l'accueil n'a qu'une action : démarrer la journée. La barre de navigation apparaît ensuite. */
+body:has(.agent-home-surface.agent-before-checkin) .app-bottom-nav {
+  display: none;
+}

@@ -39,6 +39,25 @@ body[data-theme] {
   --color-zinc-300: var(--m-text);
   --color-zinc-400: var(--m-text-2);
   --color-zinc-500: var(--m-muted);
+  /* Teintes décoratives héritées : elles suivent les couleurs de graphique de la matière. */
+  --color-slate-300: var(--m-text);
+  --color-slate-400: var(--m-text-2);
+  --color-slate-500: var(--m-muted);
+  --color-violet-300: var(--m-chart-3);
+  --color-violet-400: var(--m-chart-3);
+  --color-violet-500: var(--m-chart-3);
+  --color-fuchsia-300: var(--m-chart-3);
+  --color-fuchsia-400: var(--m-chart-3);
+  --color-fuchsia-500: var(--m-chart-3);
+  --color-purple-300: var(--m-chart-3);
+  --color-purple-400: var(--m-chart-3);
+  --color-purple-500: var(--m-chart-3);
+  --color-indigo-300: var(--m-chart-3);
+  --color-indigo-400: var(--m-chart-3);
+  --color-indigo-500: var(--m-chart-3);
+  --color-sky-300: var(--m-chart-2);
+  --color-sky-400: var(--m-chart-2);
+  --color-sky-500: var(--m-chart-2);
 }
 
 /* Remplissages pleins : fond de matière + texte lisible. */
@@ -83,7 +102,8 @@ body[data-theme="anthracite"] {
   --m-fill-hover: #5a6272;
   --m-fill-ink: #ffffff;
 
-  --m-surface: linear-gradient(150deg, rgba(255,255,255,0.22) 0%, rgba(180,190,210,0.10) 45%, rgba(255,255,255,0.04) 100%), rgba(12, 14, 20, 0.70);
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(70,76,90,0.5) 0%, rgba(10,12,16,0.9) 100%);
   --m-surface-solid: #15171c;
   --m-edge: rgba(230,235,244,0.34);
   --m-edge-soft: rgba(230,235,244,0.12);
@@ -98,10 +118,17 @@ body[data-theme="anthracite"] {
   --m-track: rgba(255,255,255,0.12);
   --m-pill: rgba(255,255,255,0.14);
   --m-tile: rgba(255,255,255,0.12);
-  --m-field: rgba(255,255,255,0.055);
+  --m-field: #101216;
   --m-chrome: rgba(14,16,20,0.92);
   --m-sheet: #121418;
   --m-dock: #16181d;
+  --m-hair: rgba(230,235,244,0.22);
+  --m-act: linear-gradient(180deg, #6a7388 0%, #2e333d 100%);
+  --m-act-glow: rgba(190,200,220,0.18);
+  --m-chart-1: #e6ebf4;
+  --m-chart-2: #8b95a8;
+  --m-chart-3: #e8c878;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c8d0de' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 
   --m-btn-bg: linear-gradient(180deg, rgba(255,255,255,0.22) 0%, rgba(120,128,145,0.18) 48%, rgba(40,44,54,0.55) 100%);
   --m-btn-edge: rgba(230,235,244,0.36);
@@ -147,7 +174,8 @@ body[data-theme="rubis"] {
   --m-fill-hover: #c92d50;
   --m-fill-ink: #ffffff;
 
-  --m-surface: linear-gradient(150deg, rgba(232,120,145,0.22) 0%, rgba(90,18,36,0.42) 100%), rgba(28, 8, 14, 0.72);
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(140,24,52,0.55) 0%, rgba(24,5,11,0.92) 100%);
   --m-surface-solid: #241018;
   --m-edge: rgba(220,130,150,0.48);
   --m-edge-soft: rgba(220,130,150,0.14);
@@ -162,10 +190,17 @@ body[data-theme="rubis"] {
   --m-track: rgba(255,255,255,0.12);
   --m-pill: rgba(200,70,100,0.20);
   --m-tile: rgba(200,60,90,0.16);
-  --m-field: rgba(200,80,110,0.06);
+  --m-field: #1c0710;
   --m-chrome: rgba(30,10,16,0.92);
   --m-sheet: #1c0c12;
   --m-dock: #241018;
+  --m-hair: rgba(240,150,170,0.3);
+  --m-act: linear-gradient(180deg, #e04368 0%, #8a1430 100%);
+  --m-act-glow: rgba(224,67,104,0.35);
+  --m-chart-1: #e8899c;
+  --m-chart-2: #ffc2cf;
+  --m-chart-3: #ffb35c;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f0b4c0' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 
   --m-btn-bg: linear-gradient(180deg, rgba(220,110,135,0.55) 0%, rgba(120,22,45,0.72) 100%);
   --m-btn-edge: rgba(230,150,165,0.48);
@@ -189,9 +224,9 @@ body[data-theme="rubis"] {
 /* ── Sapphire ───────────────────────────────────────────────────────── */
 body[data-theme="sapphire"] {
   color-scheme: dark;
-  background-color: #040a14;
+  background-color: #050c26;
   background-image:
-    linear-gradient(160deg, rgba(4, 10, 24, 0.50) 0%, rgba(8, 24, 56, 0.22) 45%, rgba(4, 12, 28, 0.38) 100%),
+    linear-gradient(160deg, rgba(5, 12, 38, 0.66) 0%, rgba(6, 15, 48, 0.42) 45%, rgba(5, 12, 38, 0.62) 100%),
     var(--m-silk-image, url("/theme-backgrounds/silk-sapphire.jpg"));
   background-size: cover;
   background-position: center top;
@@ -200,38 +235,46 @@ body[data-theme="sapphire"] {
   --m-silk-image: url("/theme-backgrounds/silk-sapphire.jpg");
   --m-podium-filter: hue-rotate(195deg) saturate(1.3) brightness(0.95);
   color: #f2f7ff;
-  --content-scrim: rgba(4, 10, 24, 0.48);
+  --content-scrim: rgba(5, 12, 38, 0.5);
 
-  --m-accent: #7aabf0;
-  --m-accent-soft: #a8c8f5;
-  --m-accent-2: #3d6ec4;
-  --m-accent-rgb: 122, 171, 240;
-  --m-accent-soft-rgb: 168, 200, 245;
-  --m-fill: #1f56c8;
-  --m-fill-hover: #2a66db;
+  --m-accent: #6fd4ff;
+  --m-accent-soft: #a9e6ff;
+  --m-accent-2: #2f7cff;
+  --m-accent-rgb: 111, 212, 255;
+  --m-accent-soft-rgb: 169, 230, 255;
+  --m-fill: #2f7cff;
+  --m-fill-hover: #4a8dff;
   --m-fill-ink: #ffffff;
 
-  --m-surface: linear-gradient(150deg, rgba(90,150,230,0.22) 0%, rgba(12,40,95,0.42) 100%), rgba(6, 14, 36, 0.72);
-  --m-surface-solid: #0a1838;
-  --m-edge: rgba(110,165,230,0.48);
-  --m-edge-soft: rgba(110,165,230,0.14);
-  --m-highlight: rgba(180,210,255,0.22);
-  --m-glow: rgba(40,95,190,0.20);
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(18,48,128,0.62) 0%, rgba(4,10,38,0.9) 100%);
+  --m-surface-solid: #0a1a52;
+  --m-edge: rgba(130,175,255,0.42);
+  --m-edge-soft: rgba(130,175,255,0.16);
+  --m-highlight: rgba(170,205,255,0.24);
+  --m-glow: rgba(20,60,190,0.28);
   --m-blur: 38px;
 
-  --m-text: #f2f7ff;
-  --m-text-2: rgba(226,238,255,0.88);
-  --m-muted: rgba(200,220,250,0.68);
+  --m-text: #eef4ff;
+  --m-text-2: rgba(222,234,255,0.82);
+  --m-muted: rgba(190,210,250,0.62);
 
   --m-track: rgba(255,255,255,0.12);
   --m-pill: rgba(70,130,220,0.20);
-  --m-tile: rgba(60,120,210,0.16);
-  --m-field: rgba(80,140,220,0.06);
-  --m-chrome: rgba(8,18,40,0.92);
-  --m-sheet: #081428;
-  --m-dock: #0b1a3a;
+  --m-tile: rgba(6,16,48,0.55);
+  --m-field: #071331;
+  --m-chrome: rgba(6,16,48,0.9);
+  --m-sheet: #071338;
+  --m-dock: #081646;
+  --m-hair: rgba(130,175,255,0.3);
+  --m-act: linear-gradient(180deg, #2f7cff 0%, #123fb8 100%);
+  --m-act-glow: rgba(47,124,255,0.38);
+  --m-chart-1: #2f7cff;
+  --m-chart-2: #6fd4ff;
+  --m-chart-3: #b9a6ff;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236fd4ff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 
-  --m-btn-bg: linear-gradient(180deg, rgba(80,140,220,0.58) 0%, rgba(20,55,140,0.72) 100%);
+  --m-btn-bg: linear-gradient(180deg, #2f7cff 0%, #123fb8 100%);
   --m-btn-edge: rgba(140,185,245,0.48);
   --m-btn-ink: #ffffff;
   --m-silk-1: rgba(110, 180, 255, 0.48);
@@ -246,8 +289,8 @@ body[data-theme="sapphire"] {
   --m-metal-edge-2: rgba(120, 170, 240, 0.45);
   --m-metal-edge-3: rgba(80, 130, 200, 0.4);
   --m-metal-ink: #eef5ff;
-  --m-power-bg: radial-gradient(circle at 32% 22%, #3a7ad0 0%, #1e4a8e 30%, #0a1838 65%, #030812 100%);
-  --m-power-ink: #e8f2ff;
+  --m-power-bg: radial-gradient(circle at 35% 25%, #6aa6ff 0%, #2f7cff 38%, #123fb8 78%, #0a2470 100%);
+  --m-power-ink: #ffffff;
 }
 
 /* ── Silver ───────────────────────────────────────────────────────── */
@@ -275,7 +318,8 @@ body[data-theme="silver"] {
   --m-fill-hover: #6182ba;
   --m-fill-ink: #ffffff;
 
-  --m-surface: linear-gradient(150deg, rgba(220,232,255,0.28) 0%, rgba(150,175,215,0.12) 100%), rgba(16, 22, 36, 0.70);
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(160,182,220,0.3) 0%, rgba(16,22,36,0.9) 100%);
   --m-surface-solid: #222b3d;
   --m-edge: rgba(225,236,255,0.62);
   --m-edge-soft: rgba(205,222,255,0.18);
@@ -290,10 +334,17 @@ body[data-theme="silver"] {
   --m-track: rgba(255,255,255,0.15);
   --m-pill: rgba(255,255,255,0.16);
   --m-tile: rgba(255,255,255,0.13);
-  --m-field: rgba(220,232,255,0.07);
+  --m-field: #151d2e;
   --m-chrome: rgba(24,32,48,0.92);
   --m-sheet: #1e2739;
   --m-dock: #222c40;
+  --m-hair: rgba(225,236,255,0.3);
+  --m-act: linear-gradient(180deg, #7f9fd6 0%, #3b5488 100%);
+  --m-act-glow: rgba(127,159,214,0.32);
+  --m-chart-1: #dce8ff;
+  --m-chart-2: #8fb0e6;
+  --m-chart-3: #ffd28a;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23dce8ff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 
   --m-btn-bg: linear-gradient(180deg, rgba(255,255,255,0.3) 0%, rgba(200,214,240,0.1) 100%);
   --m-btn-edge: rgba(240,246,255,0.5);
@@ -339,7 +390,8 @@ body[data-theme="diamond"] {
   --m-fill-hover: #1f6bff;
   --m-fill-ink: #ffffff;
 
-  --m-surface: linear-gradient(150deg, rgba(255,255,255,0.94) 0%, rgba(230,240,255,0.78) 100%), rgba(244, 248, 255, 0.72);
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(236,243,255,0.86) 100%);
   --m-surface-solid: #f4f8ff;
   --m-edge: rgba(120,170,245,0.42);
   --m-edge-soft: rgba(120,170,245,0.18);
@@ -354,10 +406,17 @@ body[data-theme="diamond"] {
   --m-track: rgba(60,100,170,0.14);
   --m-pill: rgba(31,107,255,0.10);
   --m-tile: rgba(255,255,255,0.82);
-  --m-field: rgba(255,255,255,0.78);
+  --m-field: #ffffff;
   --m-chrome: rgba(255,255,255,0.92);
   --m-sheet: #f7faff;
   --m-dock: #f2f7ff;
+  --m-hair: rgba(80,130,220,0.28);
+  --m-act: linear-gradient(180deg, #5aa2ff 0%, #2f78ff 100%);
+  --m-act-glow: rgba(47,120,255,0.3);
+  --m-chart-1: #2f78ff;
+  --m-chart-2: #7fb4ff;
+  --m-chart-3: #8a6cf0;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232a6ff0' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 
   --m-btn-bg: linear-gradient(180deg, #5aa2ff 0%, #2f78ff 100%);
   --m-btn-edge: rgba(80,140,255,0.8);
@@ -403,7 +462,8 @@ body[data-theme="ambre"] {
   --m-fill-hover: #c97a14;
   --m-fill-ink: #ffffff;
 
-  --m-surface: linear-gradient(150deg, rgba(255,190,90,0.24) 0%, rgba(120,65,8,0.40) 100%), rgba(28, 14, 4, 0.72);
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(160,92,12,0.5) 0%, rgba(28,14,4,0.92) 100%);
   --m-surface-solid: #2a1a0a;
   --m-edge: rgba(255,190,80,0.62);
   --m-edge-soft: rgba(255,190,80,0.18);
@@ -418,10 +478,17 @@ body[data-theme="ambre"] {
   --m-track: rgba(255,255,255,0.13);
   --m-pill: rgba(255,190,80,0.22);
   --m-tile: rgba(255,190,80,0.18);
-  --m-field: rgba(255,200,100,0.07);
+  --m-field: #1e1006;
   --m-chrome: rgba(34,20,8,0.92);
   --m-sheet: #231508;
   --m-dock: #2b1b0b;
+  --m-hair: rgba(255,190,80,0.3);
+  --m-act: linear-gradient(180deg, #e89a22 0%, #a85c06 100%);
+  --m-act-glow: rgba(240,168,48,0.32);
+  --m-chart-1: #f6b53b;
+  --m-chart-2: #ffd98a;
+  --m-chart-3: #ff8a5c;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23f6b53b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
 
   --m-btn-bg: linear-gradient(180deg, rgba(255,205,100,0.92) 0%, rgba(205,120,12,0.92) 100%);
   --m-btn-edge: rgba(255,210,120,0.8);

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, Eye, EyeOff, Lock, Phone, Trash2 } from 'lucide-react';
+import { ChevronRight, Eye, EyeOff, Trash2 } from 'lucide-react';
 import { User, Campaign, CampaignContext } from '../types';
 import { authenticate, getSyncPendingCount, purgeAndResetEverything, refreshUsersFromSupabase } from '../utils/storage';
 import { getCampaignsForUser } from '../utils/merchantCampaign';
@@ -27,6 +27,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [pendingUser, setPendingUser] = useState<User | null>(null);
   const [availableCampaigns, setAvailableCampaigns] = useState<Campaign[]>([]);
@@ -148,21 +149,15 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
 
   return (
     <div className="login-shell w-full flex flex-col justify-center items-center p-6 relative overflow-hidden">
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-red-600/20 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-10 right-10 w-80 h-80 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none" />
-
       <div className="login-panel w-full glass-card border relative z-10 animate-pop">
         <div className="text-center mb-8">
-          <div className="brand-text text-3xl sm:text-4xl font-black tracking-tighter mb-1">BEYOND THE LINE</div>
-          <div className="login-eyebrow btl-keep-small text-[0.6875rem] font-black uppercase">Deployment tracker · by Eldo</div>
+          <div className="brand-text text-3xl sm:text-4xl mb-1">Beyond the Line</div>
+          <div className="login-eyebrow text-sm font-medium">Deployment tracker · by Eldo</div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1">
-            <label htmlFor="phone" className="text-[0.75rem] font-black uppercase tracking-wider text-gray-300 flex items-center space-x-1">
-              <Phone className="w-3 h-3 text-red-500" />
-              <span>Identifiant Réseau (MSISDN)</span>
-            </label>
+            <label htmlFor="phone" className="block text-sm font-semibold text-[var(--m-text-2)]">Numéro de téléphone</label>
             <input
               id="phone"
               name="phone"
@@ -173,17 +168,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               onKeyDown={handleEnterSubmit}
-              placeholder="081XXXXXXX"
+              placeholder="081 234 5678"
               required
               className="app-input w-full border rounded-2xl px-4 py-3.5 text-white text-sm font-semibold focus:outline-none transition placeholder:text-gray-600"
             />
           </div>
 
           <div className="space-y-1">
-            <label htmlFor="password" className="text-[0.75rem] font-black uppercase tracking-wider text-gray-300 flex items-center space-x-1">
-              <Lock className="w-3 h-3 text-red-500" />
-              <span>Clé de Sécurité</span>
-            </label>
+            <label htmlFor="password" className="block text-sm font-semibold text-[var(--m-text-2)]">Mot de passe</label>
             <div className="relative">
             <input
               id="password"
@@ -200,23 +192,29 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
           </div>
           </div>
 
-          <div className="login-note rounded-2xl border px-4 py-3 text-[0.6875rem] font-semibold text-gray-400">
-            Utilisez votre numéro de téléphone et votre mot de passe pour vous connecter.
-          </div>
-
-          <button type="submit" disabled={loading} className="btn-neon btn-red w-full mt-4 flex items-center justify-center space-x-2">
-            <Lock className="w-4 h-4" />
-            <span>{loading ? 'VÉRIFICATION...' : 'DÉVERROUILLER'}</span>
+          <button type="submit" disabled={loading} className="btn-neon btn-red w-full mt-2 !text-[0.9375rem] !normal-case !tracking-normal">
+            {loading ? 'Vérification…' : 'Se connecter'}
           </button>
         </form>
 
         {error && (
-          <div className="mt-4 p-3 bg-red-950/40 border border-red-500/40 rounded-2xl text-red-400 text-center text-xs font-black uppercase">
+          <div role="alert" className="mt-4 rounded-xl border border-red-500/40 bg-red-950/40 p-3 text-center text-sm font-semibold text-red-300">
             {error}
           </div>
         )}
 
-        <div className="mt-6 pt-3 border-t border-white/10 text-center">
+        <div className="mt-5 text-center">
+          <button
+            type="button"
+            aria-expanded={showHelp}
+            onClick={() => setShowHelp((open) => !open)}
+            className="inline-flex min-h-[44px] items-center px-3 text-sm font-semibold text-[var(--m-accent)]"
+          >
+            Problème de connexion ?
+          </button>
+          {showHelp && (
+            <div className="mt-2 space-y-2 rounded-[18px] bg-[var(--m-tile)] p-3 text-left text-sm text-[var(--m-text-2)]">
+              <p>Mot de passe oublié ou compte bloqué : contactez votre superviseur.</p>
           <button
             type="button"
             onClick={async () => {
@@ -229,11 +227,13 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 window.location.reload();
               }
             }}
-            className="inline-flex min-h-[44px] items-center space-x-1.5 px-3 text-[0.75rem] font-bold text-gray-400 hover:text-red-400 transition-colors uppercase tracking-wider"
+            className="inline-flex min-h-[44px] items-center gap-2 font-semibold text-[var(--m-text)]"
           >
-            <Trash2 className="w-3 h-3" />
-            <span>Vider le cache système</span>
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+            Vider le cache de l’application
           </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

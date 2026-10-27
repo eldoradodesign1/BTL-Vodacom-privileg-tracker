@@ -333,33 +333,32 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Notifications Panel */}
             {showNotifPanel && (
-              <div className={`app-popover absolute right-0 top-12 w-80 border rounded-3xl p-4 shadow-2xl z-50 animate-pop ${
+              <div className={`app-popover absolute -right-12 sm:right-0 top-12 w-[min(20rem,calc(100vw-1.5rem))] border p-3 shadow-2xl z-50 ${
                 isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
               }`}>
-                <div className="flex justify-between items-center mb-3 border-b border-white/10 pb-2">
-                  <span className="text-xs font-black uppercase text-gray-400 tracking-wider">Alertes Internes</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setNotificationsMuted(user.id, !notificationsMuted)}
-                      className={`inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[0.6875rem] font-black uppercase transition ${notificationsMuted ? 'border-amber-300/35 bg-amber-400/10 text-amber-200' : 'border-white/10 text-gray-400 hover:bg-white/10 hover:text-white'}`}
-                      title={notificationsMuted ? 'Réactiver le son des notifications' : 'Mettre les notifications en sourdine'}
-                      aria-label={notificationsMuted ? 'Réactiver les notifications' : 'Mettre les notifications en sourdine'}
-                    >
-                      {notificationsMuted ? <VolumeX size={12}/> : <Volume2 size={12}/>} {notificationsMuted ? 'Sourdine' : 'Son'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (onClearNotifications) onClearNotifications();
-                        else onMarkNotifsRead();
-                      }}
-                      className="text-[0.6875rem] font-black uppercase text-red-500 hover:text-red-400"
-                    >
-                      Effacer
-                    </button>
-                  </div>
+                <div className="flex items-center justify-between gap-2 px-1 pb-2">
+                  <span className="text-sm font-bold text-[var(--m-text)]">Alertes</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onClearNotifications) onClearNotifications();
+                      else onMarkNotifsRead();
+                    }}
+                    className="text-sm font-semibold text-[var(--m-accent)]"
+                  >
+                    Tout effacer
+                  </button>
                 </div>
+                <label className="mb-2 flex min-h-[44px] cursor-pointer items-center gap-3 border-b border-[var(--m-edge-soft)] px-1 pb-2 text-sm font-semibold text-[var(--m-text)]">
+                  {notificationsMuted ? <VolumeX size={16} aria-hidden="true"/> : <Volume2 size={16} aria-hidden="true"/>}
+                  Son des alertes
+                  <input
+                    type="checkbox"
+                    className="ml-auto"
+                    checked={!notificationsMuted}
+                    onChange={() => setNotificationsMuted(user.id, !notificationsMuted)}
+                  />
+                </label>
 
                 <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                   {safeNotifications.length === 0 && fundRequestAlerts.length === 0 ? (
@@ -398,10 +397,14 @@ export const Header: React.FC<HeaderProps> = ({
               <div role="menu" className={`app-popover absolute right-0 top-12 w-64 border rounded-2xl p-2 shadow-2xl z-50 ${
                 isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
               }`}>
+                <div className="border-b border-[var(--m-edge-soft)] px-3 pb-2.5 pt-1.5">
+                  <p className="truncate text-sm font-bold text-[var(--m-text)]">{user.name}</p>
+                  <p className="truncate text-xs text-[var(--m-text-2)]">{roleLabel}</p>
+                </div>
                 {onSetTheme && (
-                  <div className="px-2 pb-2 pt-1">
-                    <p className="mb-2 text-xs font-black uppercase tracking-wider text-gray-400">Thème</p>
-                    <div className="grid grid-cols-3 gap-1.5">
+                  <div className="border-b border-[var(--m-edge-soft)] px-2 pb-2.5 pt-2">
+                    <p className="mb-2 px-1 text-xs font-semibold text-[var(--m-text-2)]">Thème</p>
+                    <div className="grid grid-cols-3 gap-x-1 gap-y-2">
                       {[
                         { key: 'anthracite', label: 'Anthracite' },
                         { key: 'rubis', label: 'Rubis' },
@@ -415,12 +418,13 @@ export const Header: React.FC<HeaderProps> = ({
                           type="button"
                           role="menuitemradio"
                           aria-checked={theme === opt.key}
-                          onClick={() => { onSetTheme(opt.key as ThemeMode); setShowThemeMenu(false); }}
-                          className={`min-h-[40px] rounded-xl px-1 text-xs font-black transition ${
-                            theme === opt.key ? 'bg-red-600 text-white' : (isDarkTheme ? 'bg-white/5 hover:bg-white/10 text-gray-100' : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-700')
-                          }`}
+                          aria-label={`Thème ${opt.label}`}
+                          title={opt.label}
+                          onClick={() => onSetTheme(opt.key as ThemeMode)}
+                          className="theme-swatch grid justify-items-center gap-1 rounded-xl py-1 text-[0.6875rem] font-semibold text-[var(--m-muted)] aria-checked:text-[var(--m-text)]"
                         >
-                          {opt.label}
+                          <span className={`theme-dot theme-dot--${opt.key}`} aria-hidden="true" />
+                          <span className="max-w-full truncate">{opt.label}</span>
                         </button>
                       ))}
                     </div>
