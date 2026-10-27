@@ -404,7 +404,7 @@ export const Header: React.FC<HeaderProps> = ({
                 {onSetTheme && (
                   <div className="border-b border-[var(--m-edge-soft)] px-2 pb-2.5 pt-2">
                     <p className="mb-2 px-1 text-xs font-semibold text-[var(--m-text-2)]">Thème</p>
-                    <div className="grid grid-cols-6 gap-1">
+                    <div className="grid grid-cols-3 gap-x-1 gap-y-2">
                       {[
                         { key: 'anthracite', label: 'Anthracite' },
                         { key: 'rubis', label: 'Rubis' },

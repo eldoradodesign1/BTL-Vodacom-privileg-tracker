@@ -77,9 +77,18 @@ const SegmentedGauge: React.FC<{ value: number; total: number }> = ({ value, tot
 };
 
 const RhythmChart: React.FC<{ actual: number[]; pace: number[]; currentHour: number }> = ({ actual, pace, currentHour }) => {
-  const width = 280;
-  const height = 150;
-  const left = 24;
+  // Le graphique se dessine à la largeur réelle de sa carte : les libellés gardent leur taille en mobile comme en bureau.
+  const frame = React.useRef<HTMLDivElement>(null);
+  const [width, setWidth] = React.useState(520);
+  React.useEffect(() => {
+    const node = frame.current;
+    if (!node || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(([entry]) => setWidth(Math.max(260, Math.round(entry.contentRect.width))));
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  const height = 170;
+  const left = 28;
   const right = 8;
   const top = 18;
   const bottom = 22;
@@ -103,7 +112,7 @@ const RhythmChart: React.FC<{ actual: number[]; pace: number[]; currentHour: num
   const line = points.length > 1 ? smooth(points) : '';
   const ticks = Array.from({ length: 5 }, (_, index) => (max / 4) * index);
   return (
-    <div>
+    <div ref={frame}>
       <svg viewBox={`0 0 ${width} ${height}`} className="block h-auto w-full" role="img" aria-label="Activations par heure aujourd’hui">
         <defs>
           <linearGradient id="admin-rhythm-fill" x1="0" y1="0" x2="0" y2="1">
@@ -114,10 +123,10 @@ const RhythmChart: React.FC<{ actual: number[]; pace: number[]; currentHour: num
         {ticks.map((tick) => (
           <g key={tick}>
             <line x1={left} x2={width - right} y1={y(tick)} y2={y(tick)} style={{ stroke: 'var(--m-edge-soft)' }} />
-            <text x={left - 6} y={y(tick) + 3.5} textAnchor="end" fontSize={9} style={{ fill: 'var(--m-muted)' }}>{Math.round(tick)}</text>
+            <text x={left - 6} y={y(tick) + 3.5} textAnchor="end" fontSize={11} style={{ fill: 'var(--m-muted)' }}>{Math.round(tick)}</text>
           </g>
         ))}
-        {HOURS.map((hour, index) => (index % 2 === 0 ? <text key={hour} x={x(index)} y={height - 6} textAnchor="middle" fontSize={9} style={{ fill: 'var(--m-muted)' }}>{`${hour}h`}</text> : null))}
+        {HOURS.map((hour, index) => (index % 2 === 0 ? <text key={hour} x={x(index)} y={height - 6} textAnchor="middle" fontSize={11} style={{ fill: 'var(--m-muted)' }}>{`${hour}h`}</text> : null))}
         {line && <path d={`${line} L${points[points.length - 1][0]} ${y(0)} L${points[0][0]} ${y(0)} Z`} fill="url(#admin-rhythm-fill)" />}
         {line && <path d={line} fill="none" strokeWidth={2.2} style={{ stroke: 'var(--m-chart-1)' }} />}
         <path d={smooth(pace.map((value, index) => [x(index), y(value)] as [number, number]))} fill="none" strokeWidth={1.4} strokeDasharray="2 4" strokeLinecap="round" style={{ stroke: 'var(--m-text-2)' }} />
@@ -125,9 +134,9 @@ const RhythmChart: React.FC<{ actual: number[]; pace: number[]; currentHour: num
           <g>
             <line x1={x(peakIndex)} x2={x(peakIndex)} y1={y(visible[peakIndex])} y2={y(0)} strokeDasharray="3 3" style={{ stroke: 'var(--m-text-2)', opacity: 0.6 }} />
             <circle cx={x(peakIndex)} cy={y(visible[peakIndex])} r={4.5} strokeWidth={2} style={{ fill: 'var(--m-text)', stroke: 'var(--m-chart-1)' }} />
-            <g transform={`translate(${Math.min(x(peakIndex) + 10, width - right - 86)} ${Math.max(y(visible[peakIndex]) + 6, top + 10)})`}>
-              <rect x={0} y={-9} width={86} height={18} rx={9} style={{ fill: 'var(--m-sheet)', stroke: 'var(--m-hair)' }} />
-              <text x={43} y={3.5} textAnchor="middle" fontSize={9.5} fontWeight={700} style={{ fill: 'var(--m-text)' }}>{`${HOURS[peakIndex]}h · ${visible[peakIndex]} activation${visible[peakIndex] > 1 ? 's' : ''}`}</text>
+            <g transform={`translate(${Math.min(x(peakIndex) + 10, width - right - 104)} ${Math.max(y(visible[peakIndex]) + 6, top + 10)})`}>
+              <rect x={0} y={-11} width={104} height={22} rx={11} style={{ fill: 'var(--m-sheet)', stroke: 'var(--m-hair)' }} />
+              <text x={52} y={4} textAnchor="middle" fontSize={11} fontWeight={700} style={{ fill: 'var(--m-text)' }}>{`${HOURS[peakIndex]}h · ${visible[peakIndex]} activation${visible[peakIndex] > 1 ? 's' : ''}`}</text>
             </g>
           </g>
         )}
@@ -210,24 +219,24 @@ export const AdminHomeDashboard: React.FC<AdminHomeDashboardProps> = ({ totalAct
   const totalOf = (name: string) => pieData.find((item) => item.name === name)?.value ?? 0;
 
   return (
-    <div className="admin-home space-y-4 animate-pop">
+    <div className="admin-home @container space-y-4 animate-pop">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h2 className="text-[1.75rem] font-extrabold leading-tight tracking-tight text-[var(--m-text)]">Le terrain <span className="text-[var(--m-accent)]">aujourd’hui.</span></h2>
           <p className="text-sm text-[var(--m-text-2)]">{hostesses.length} hôtesses · actualisé à {updatedAt}</p>
         </div>
-        <div className="admin-home-stats flex w-full sm:w-auto">
-          <button type="button" onClick={onOpenLeads} className="min-w-0 flex-1 pr-4 text-left sm:w-32">
+        <div className="admin-home-stats flex w-full @xl:w-auto">
+          <button type="button" onClick={onOpenLeads} className="min-w-0 flex-1 pr-4 text-left @xl:w-32">
             <span className="block text-[1.65rem] font-extrabold leading-tight tabular-nums text-[var(--m-text)]">{totalActivations}</span>
             <span className="block text-xs text-[var(--m-text-2)]">activations</span>
             <Sparkline values={last8.length > 1 ? last8 : [0, 0]} />
           </button>
-          <button type="button" onClick={() => onOpenMonitoring('ALL')} className="min-w-0 flex-1 border-l border-[var(--m-edge-soft)] px-4 text-left sm:w-32">
+          <button type="button" onClick={() => onOpenMonitoring('ALL')} className="min-w-0 flex-1 border-l border-[var(--m-edge-soft)] px-4 text-left @xl:w-32">
             <span className="block text-[1.65rem] font-extrabold leading-tight tabular-nums text-[var(--m-text)]">{present.length}<span className="text-lg text-[var(--m-muted)]"> / {hostesses.length}</span></span>
             <span className="block text-xs text-[var(--m-text-2)]">présentes</span>
             <Sparkline values={presenceTrend} />
           </button>
-          <div className="min-w-0 flex-1 border-l border-[var(--m-edge-soft)] pl-4 sm:w-32">
+          <div className="min-w-0 flex-1 border-l border-[var(--m-edge-soft)] pl-4 @xl:w-32">
             <span className="block text-[1.65rem] font-extrabold leading-tight tabular-nums text-[var(--m-text)]">{todayLeads.length}</span>
             <span className="block text-xs text-[var(--m-text-2)]">aujourd’hui</span>
             <Sparkline values={cumulativeToday} />
@@ -235,7 +244,7 @@ export const AdminHomeDashboard: React.FC<AdminHomeDashboardProps> = ({ totalAct
         </div>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-[1.15fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 @3xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
         <section className="glass-card space-y-3 !p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -244,12 +253,13 @@ export const AdminHomeDashboard: React.FC<AdminHomeDashboardProps> = ({ totalAct
             </div>
           </div>
           <SegmentedGauge value={todayLeads.length} total={teamTarget} />
+          <p className="mx-auto w-full max-w-[26rem] text-xs text-[var(--m-text-2)]">Depuis le début de la campagne</p>
           <div className="mx-auto grid w-full max-w-[26rem] grid-cols-3 gap-2">
             {[['Privilège', 'var(--m-chart-1)'], ['Bundles', 'var(--m-chart-2)'], ['Roaming', 'var(--m-chart-3)']].map(([name, color]) => (
               <div key={name} className="grid grid-cols-[auto_1fr] items-center gap-x-2">
                 <i className="row-span-2 block h-3 w-3 rounded-full" style={{ background: color }} />
                 <b className="text-base font-extrabold leading-tight tabular-nums text-[var(--m-text)]">{totalOf(name)}</b>
-                <span className="text-xs text-[var(--m-muted)]">{name} · total</span>
+                <span className="text-xs text-[var(--m-muted)]">{name}</span>
               </div>
             ))}
           </div>
@@ -272,7 +282,7 @@ export const AdminHomeDashboard: React.FC<AdminHomeDashboardProps> = ({ totalAct
             {absent.length === 0 && pendingSync === 0 ? (
               <p className="mt-1 text-sm text-[var(--m-text-2)]">Rien en attente : toutes les hôtesses ont pointé et tout est synchronisé.</p>
             ) : (
-              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+              <div className="mt-3 flex flex-col gap-2 @xl:flex-row">
                 {absent.length > 0 && <TodoTile icon={<UserX className="h-5 w-5" />} count={absent.length} label={absent.length > 1 ? 'hôtesses non pointées' : 'hôtesse non pointée'} onClick={() => onOpenMonitoring('Absent')} />}
                 {pendingSync > 0 && <TodoTile icon={<RefreshCw className="h-5 w-5" />} count={pendingSync} label={pendingSync > 1 ? 'saisies à synchroniser' : 'saisie à synchroniser'} />}
               </div>
@@ -281,7 +291,7 @@ export const AdminHomeDashboard: React.FC<AdminHomeDashboardProps> = ({ totalAct
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
+      <div className="grid grid-cols-1 gap-4 @3xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <section className="glass-card !p-5">
           <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
             <div>
@@ -298,17 +308,17 @@ export const AdminHomeDashboard: React.FC<AdminHomeDashboardProps> = ({ totalAct
             <p className="text-sm text-[var(--m-text-2)]">Aucune hôtesse n’a encore pointé aujourd’hui.</p>
           ) : (
             <div className="space-y-2">
-              <div className="grid grid-cols-[2rem_1fr] gap-2 sm:grid-cols-[8rem_1fr]">
+              <div className="grid grid-cols-[2rem_1fr] gap-2 @xl:grid-cols-[8rem_1fr]">
                 <span />
                 <div className="relative h-4 text-[0.75rem] text-[var(--m-muted)]">
                   {[8, 10, 12, 14, 16, 18].map((hour) => <span key={hour} className="absolute" style={{ left: position(hour), transform: hour === 8 ? 'none' : hour === 18 ? 'translateX(-100%)' : 'translateX(-50%)' }}>{hour}h</span>)}
                 </div>
               </div>
               {days.map(({ hostess, arrival, leave, activations, closed }) => (
-                <div key={hostess.id} className="grid grid-cols-[2rem_1fr] items-center gap-2 sm:grid-cols-[8rem_1fr]">
+                <div key={hostess.id} className="grid grid-cols-[2rem_1fr] items-center gap-2 @xl:grid-cols-[8rem_1fr]">
                   <span className="flex min-w-0 items-center gap-2 text-sm text-[var(--m-text)]">
                     <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-[color-mix(in_srgb,var(--m-chart-1)_50%,transparent)] bg-[color-mix(in_srgb,var(--m-chart-1)_22%,transparent)] text-[0.75rem] font-extrabold">{initials(hostess.name)}</span>
-                    <span className="hidden truncate sm:block">{hostess.name}</span>
+                    <span className="hidden truncate @xl:block">{hostess.name}</span>
                   </span>
                   <div className="relative h-5">
                     <span className="absolute top-1/2 h-px bg-[var(--m-edge-soft)]" style={{ left: position(arrival), width: `calc(${position(leave ?? DAY_END)} - ${position(arrival)})` }} />

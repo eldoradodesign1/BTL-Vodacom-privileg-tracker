@@ -104,6 +104,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
   const [presenceCalendarAgentId, setPresenceCalendarAgentId] = useState<string | null>(null);
   const [agentActionMenuId, setAgentActionMenuId] = useState<string | null>(null);
+  const [agentActionMenuUp, setAgentActionMenuUp] = useState(false);
   const [presenceCalendarPosition, setPresenceCalendarPosition] = useState<{ top: number; left: number } | null>(null);
   const [presenceCalendarMonth, setPresenceCalendarMonth] = useState(() => {
     const now = new Date();
@@ -1075,7 +1076,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
               return (
                 <div
                   key={agent.id}
-                  className="glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition cursor-pointer"
+                  className={`glass-card p-4 border border-white/10 space-y-3 hover:border-red-500/30 transition cursor-pointer ${agentActionMenuId === agent.id ? 'relative z-30' : ''}`}
                   onClick={() => {
                     if (onOpenAgentProfile) {
                       onOpenAgentProfile(agent);
@@ -1095,7 +1096,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     </div>
 
                     <div className="flex shrink-0 items-center gap-2">
-                      <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${statusBg}`}>
+                      <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${agent.status === 'Présent' ? 'border-emerald-400/40 bg-emerald-400/12 text-emerald-300' : agent.status === 'Clôturé' ? 'border-[var(--m-edge-soft)] bg-[var(--m-tile)] text-[var(--m-text)]' : 'border-[var(--m-edge-soft)] bg-[var(--m-track)] text-[var(--m-muted)]'}`}>
                         {agent.status === 'Présent' ? 'En ligne' : agent.status === 'Clôturé' ? 'Clôturée' : 'Absente'}
                       </span>
 
@@ -1107,6 +1108,8 @@ export const AdminView: React.FC<AdminViewProps> = ({
                           aria-label={`Actions pour ${agent.name}`}
                           onClick={(e) => {
                             e.stopPropagation();
+                            // Ouvre vers le haut quand le menu passerait sous le dock.
+                            setAgentActionMenuUp((e.currentTarget as HTMLButtonElement).getBoundingClientRect().bottom + 260 > window.innerHeight - 96);
                             setAgentActionMenuId((current) => (current === agent.id ? null : agent.id));
                           }}
                           className="app-icon-button flex h-9 w-9 items-center justify-center rounded-full border"
@@ -1117,7 +1120,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                         {agentActionMenuId === agent.id && (
                           <>
                             <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setAgentActionMenuId(null); }} />
-                            <div role="menu" className="app-popover absolute right-0 top-11 z-50 grid w-60 gap-0.5 border p-2" onClick={(e) => e.stopPropagation()}>
+                            <div role="menu" className={`app-popover absolute right-0 z-50 grid w-60 gap-0.5 border p-2 ${agentActionMenuUp ? 'bottom-11 origin-bottom-right' : 'top-11'}`} onClick={(e) => e.stopPropagation()}>
                               {[
                                 { label: 'Profil', icon: <UserIcon className="h-4 w-4" />, enabled: !!onOpenAgentProfile, run: () => onOpenAgentProfile(agent) },
                                 { label: agent.reportObj ? 'Rapport du jour' : 'Pas encore de rapport', icon: agent.reportObj ? <FileText className="h-4 w-4" /> : <FileX2 className="h-4 w-4" />, enabled: !!agent.reportObj, run: () => onOpenPdfModal(`report-id:${agent.reportObj?.id}`) },
