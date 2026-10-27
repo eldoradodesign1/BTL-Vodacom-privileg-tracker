@@ -1,3 +1,5 @@
+import { publicUrl } from './assets';
+
 // Catalogue des matières : les pierres précieuses et métaux de l'appli. Le CSS de chaque matière vit dans styles/themes.css.
 
 export type ThemeMode =
@@ -52,7 +54,48 @@ export const getCardSolidity = (): number => {
   }
 };
 
+let solidityWrite: number | undefined;
+
+/** Applique l'opacité tout de suite ; l'enregistrement sur l'appareil attend la fin du geste. */
 export const applyCardSolidity = (value: number) => {
   document.body.style.setProperty('--ui-solidity', `${value}%`);
-  try { localStorage.setItem(SOLIDITY_KEY, String(value)); } catch { /* préférence locale facultative */ }
+  document.body.style.setProperty('--ui-solidity-n', String(value));
+  window.clearTimeout(solidityWrite);
+  solidityWrite = window.setTimeout(() => {
+    try { localStorage.setItem(SOLIDITY_KEY, String(value)); } catch { /* préférence locale facultative */ }
+  }, 250);
+};
+
+/** Pose la matière sur le document : attribut, fond soie et podium. */
+export const applyThemeToDocument = (theme: ThemeMode) => {
+  document.body.dataset.theme = theme;
+  document.body.style.setProperty('--m-silk-image', `url("${publicUrl(`theme-backgrounds/silk-${theme}.jpg`)}")`);
+  document.body.style.setProperty('--m-podium-image', `url("${publicUrl(`theme-backgrounds/${podiumAssetFor(theme)}`)}")`);
+};
+
+type ViewTransitionDocument = Document & { startViewTransition?: (update: () => void) => unknown };
+
+/**
+ * Change de matière avec un dévoilement circulaire depuis le point touché.
+ * Sans View Transitions (ou avec « réduire les animations »), le changement est immédiat.
+ */
+export const transitionTheme = (theme: ThemeMode, commit: () => void, origin?: { x: number; y: number }) => {
+  const doc = document as ViewTransitionDocument;
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (!doc.startViewTransition || reduced) {
+    applyThemeToDocument(theme);
+    commit();
+    return;
+  }
+  const x = origin?.x ?? window.innerWidth / 2;
+  const y = origin?.y ?? window.innerHeight / 2;
+  const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+  const root = document.documentElement.style;
+  root.setProperty('--reveal-x', `${x}px`);
+  root.setProperty('--reveal-y', `${y}px`);
+  root.setProperty('--reveal-r', `${radius}px`);
+  doc.startViewTransition(() => {
+    applyThemeToDocument(theme);
+    commit();
+  });
 };

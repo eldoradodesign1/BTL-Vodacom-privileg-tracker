@@ -10,7 +10,7 @@ import { publicUrl } from '../utils/assets';
 interface ThemesViewProps {
   userId: string;
   theme: ThemeMode;
-  onSetTheme: (theme: ThemeMode) => void;
+  onSetTheme: (theme: ThemeMode, origin?: { x: number; y: number }) => void;
 }
 
 export const ThemesView: React.FC<ThemesViewProps> = ({ userId, theme, onSetTheme }) => {
@@ -43,14 +43,14 @@ export const ThemesView: React.FC<ThemesViewProps> = ({ userId, theme, onSetThem
         <div className="space-y-2 border-t border-[var(--m-edge-soft)] pt-4">
           <div className="flex items-center justify-between text-sm font-semibold text-[var(--m-text)]">
             <label htmlFor="card-solidity">Opacité des cartes</label>
-            <span className="tabular-nums text-[var(--m-text-2)]">{solidity} %</span>
+            <span className="tabular-nums text-[var(--m-text-2)]">{Math.round(solidity)} %</span>
           </div>
           <input
             id="card-solidity"
             type="range"
             min={0}
             max={100}
-            step={5}
+            step={0.001}
             value={solidity}
             onChange={(event) => { const next = Number(event.target.value); setSolidity(next); applyCardSolidity(next); }}
             className="theme-solidity w-full"
@@ -69,7 +69,10 @@ export const ThemesView: React.FC<ThemesViewProps> = ({ userId, theme, onSetThem
               type="button"
               role="radio"
               aria-checked={active}
-              onClick={() => onSetTheme(option.key)}
+              onClick={(event) => {
+                const box = event.currentTarget.getBoundingClientRect();
+                onSetTheme(option.key, { x: box.left + box.width / 2, y: box.top + box.height / 2 });
+              }}
               data-theme-preview={option.key}
               className="theme-card"
               style={{ ['--m-silk-image' as string]: `url("${publicUrl(`theme-backgrounds/silk-${option.key}.jpg`)}")` }}

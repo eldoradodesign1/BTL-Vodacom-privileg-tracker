@@ -13,7 +13,8 @@ import { CheckCircle2, CircleAlert } from 'lucide-react';
 import { SimulationBar, getSimulationShortcuts } from './components/SimulationBar';
 import { Header, ThemeMode } from './components/Header';
 import { ThemesView } from './components/ThemesView';
-import { applyCardSolidity, getCardSolidity, isThemeMode, podiumAssetFor } from './utils/themes';
+import { applyCardSolidity, applyThemeToDocument, getCardSolidity, isThemeMode, transitionTheme } from './utils/themes';
+import { flushSync } from 'react-dom';
 import { BottomNav, getBottomNavTabs, TabType } from './components/BottomNav';
 import { AgentDockAction } from './components/AgentDockAction';
 import { TabbedContentFrame } from './components/TabbedContentFrame';
@@ -112,18 +113,14 @@ export default function App() {
   useEffect(() => { if (currentUser) { signedOutRef.current = false; localStorage.setItem('vodacom_user', JSON.stringify(currentUser)); setActiveShopId(currentUser.permanentShopId || 'shp-std-01'); if (!masterUser) setMasterUser(currentUser); } else { localStorage.removeItem('vodacom_user'); setMasterUser(null); } }, [currentUser, masterUser]);
   useEffect(() => {
     localStorage.setItem('vodacom_theme', theme);
-    document.body.dataset.theme = theme;
+    applyThemeToDocument(theme);
     applyCardSolidity(getCardSolidity());
-    // Soie + podium : URLs avec BASE_URL (GitHub Pages /BTL-Vodacom-privileg-tracker/)
-    document.body.style.setProperty('--m-silk-image', `url("${publicUrl(`theme-backgrounds/silk-${theme}.jpg`)}")`);
-    const podiumAsset = podiumAssetFor(theme);
-    document.body.style.setProperty('--m-podium-image', `url("${publicUrl(`theme-backgrounds/${podiumAsset}`)}")`);
   }, [theme]);
   useEffect(() => { const arm = () => { void armFundRequestAlertAudio(); }; window.addEventListener('pointerdown', arm, { capture: true, passive: true }); window.addEventListener('keydown', arm, { capture: true }); return () => { window.removeEventListener('pointerdown', arm, { capture: true }); window.removeEventListener('keydown', arm, { capture: true }); }; }, []);
   useEffect(() => { if (!currentUser) return; let cancelled = false; const refreshPrivilegePause = async () => { try { const campaigns = await getCampaigns(); const privilegeCampaign = campaigns.find((campaign) => campaign.campaign_type !== 'brand_ambassador' && campaign.code !== 'merchant-educational-campaign'); if (!privilegeCampaign) { if (!cancelled) setPrivilegeRemindersPaused(true); return; } const pauses = await getCampaignPauses(privilegeCampaign.id, true); if (!cancelled) setPrivilegeRemindersPaused(isCampaignPausedOn(pauses, toISO(new Date()))); } catch { if (!cancelled) setPrivilegeRemindersPaused(true); } }; void refreshPrivilegePause(); const timer = window.setInterval(() => { void refreshPrivilegePause(); }, 30000); return () => { cancelled = true; window.clearInterval(timer); }; }, [dataRevision, currentUser?.id]);
   useEffect(() => { const base = simulatedUserId ? users.find((user) => user.id === simulatedUserId) || currentUser : currentUser; const role = simulatedRole || base?.role; const canReviewFunds = role === 'supervisor' || role === 'admin' || role === 'super_admin' || role === 'sub_admin'; if (!base || !canReviewFunds || activeCampaign !== 'merchant-educational') { setFundRequestAlerts([]); alertedFundRequestIdsRef.current = new Set(); return; } let cancelled = false; const emitStrongFundAlert = (requests: Array<{ id: string; baName: string; amount: number; posLabel: string }>, notifySystem = false) => { const muted = getNotificationsMuted(base.id); if (!muted) emitFundRequestAlertSound(); const first = requests[0]; if (notifySystem && first) void showFundRequestSystemNotification(first, muted); const initialTitle = document.title; document.title = `⚠ ${requests.length} demande${requests.length > 1 ? 's' : ''} de fonds`; window.setTimeout(() => { if (document.title.startsWith('⚠ ')) document.title = initialTitle; }, 8000); }; const refreshFundAlerts = async () => { try { const campaign = await getMerchantCampaign(); if (!campaign) return; const runs = await getActiveCampaignRuns(campaign.id); const activeRun = runs.find((run) => run.status === 'active') || runs[0]; if (!activeRun) return; const requests = await getMerchantFundRequests({ runId: activeRun.id, ...(role === 'supervisor' ? { supervisorId: base.id } : {}) }); const pending = requests.filter((request) => request.status === 'pending').map((request) => ({ id: request.id, baName: request.ba?.name || 'Brand Ambassador', amount: Number(request.amount), posLabel: request.point_of_sale?.denomination || request.point_of_sale?.agent_number || 'POS non renseigné', requestedAt: request.requested_at })); if (!cancelled) { const unseen = pending.filter((request) => !alertedFundRequestIdsRef.current.has(request.id)); const now = Date.now(); if (unseen.length) { emitStrongFundAlert(unseen, true); lastFundAlertSignalAtRef.current = now; } else if (pending.length > 0 && now - lastFundAlertSignalAtRef.current >= 15000) { emitStrongFundAlert([pending[0]]); lastFundAlertSignalAtRef.current = now; } if (pending.length === 0) lastFundAlertSignalAtRef.current = 0; alertedFundRequestIdsRef.current = new Set(pending.map((request) => request.id)); setFundRequestAlerts(pending); } } catch { if (!cancelled) setFundRequestAlerts([]); } }; void refreshFundAlerts(); const timer = window.setInterval(() => { void refreshFundAlerts(); }, 15000); return () => { cancelled = true; window.clearInterval(timer); }; }, [activeCampaign, currentUser, dataRevision, simulatedRole, simulatedUserId, users]);
 
-  const setThemeMode = (nextTheme: ThemeMode) => setTheme(nextTheme);
+  const setThemeMode = (nextTheme: ThemeMode, origin?: { x: number; y: number }) => transitionTheme(nextTheme, () => flushSync(() => setTheme(nextTheme)), origin);
   const setCampaignContext = (campaign: CampaignContext) => { managerCampaignRef.current = campaign; setActiveCampaign(campaign); localStorage.setItem('btl_active_campaign', campaign); setActiveTab('home'); };
   const campaignSubject = simulatedUserId
     ? users.find((user) => user.id === simulatedUserId) || null
