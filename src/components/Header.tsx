@@ -33,6 +33,8 @@ interface HeaderProps {
   onOpenFundRequest?: (id: string) => void;
   /** Ouvre l'onglet Thèmes (accessible même avant le pointage, quand la barre est masquée). */
   onOpenThemes?: () => void;
+  /** Super-admin : lecture, pause et arrêt de la campagne, à droite du sélecteur. */
+  campaignControls?: React.ReactNode;
   /** Super-admin : raccourcis et sélecteur de simulation affichés dans le menu du compte. */
   simulation?: {
     shortcuts: Array<{ key: string; label: string; targetId?: string; active: boolean }>;
@@ -64,6 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
   fundRequestAlerts = [],
   onOpenFundRequest,
   onOpenThemes,
+  campaignControls,
   simulation
 }) => {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
@@ -247,7 +250,7 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
 
-        <div className="flex justify-center">
+        <div className="flex items-center justify-center gap-1.5">
             {onSetCampaign && visibleCampaigns.length > 1 && (
               <div className="relative" data-campaign-selector>
                 <button
@@ -289,6 +292,7 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="truncate">{visibleCampaigns.find((campaign) => campaign.key === activeCampaign)?.label}</span>
             </span>
           )}
+          {campaignControls}
         </div>
 
         <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0" data-header-actions>

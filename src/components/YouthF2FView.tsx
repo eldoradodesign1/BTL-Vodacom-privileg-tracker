@@ -394,7 +394,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
         <form onSubmit={saveContact} className="space-y-5">
           <input aria-label="Nom de l’abonné" value={contactName} onChange={(event) => setContactName(event.target.value)} className="app-input w-full rounded-2xl px-4 py-3 text-sm" placeholder="Nom de l’abonné" />
           <div className="grid grid-cols-2 gap-3">
-            <input aria-label="Numéro de téléphone" value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} inputMode="tel" maxLength={13} className="app-input min-w-0 w-full rounded-2xl px-3 py-3 text-sm" placeholder="Numéro de téléphone" />
+            <input data-phone-input aria-label="Numéro de téléphone" value={contactPhone} onChange={(event) => setContactPhone(event.target.value)} inputMode="tel" maxLength={13} className="app-input min-w-0 w-full rounded-2xl px-3 py-3 text-sm" placeholder="Numéro de téléphone" />
             <select aria-label="Région" value={contactRegion} onChange={(event) => setContactRegion(event.target.value as YouthRegion)} className="app-input min-w-0 w-full rounded-2xl px-3 py-3 text-sm">{(['Bandundu','Equateur','Kongo_Central','Kinshasa','Province_Orientale','H_Lualaba','H_Katanga','Kasai_Occidental','Kasai_Oriental','Maniema','Nord_Kivu','Sud_Kivu'] as YouthRegion[]).map((region) => <option key={region} value={region}>{region.replaceAll('_', ' ')}</option>)}</select>
           </div>
           <div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, BarChart3, Banknote, CheckCircle2, RefreshCw, Target, TrendingUp, UsersRound } from 'lucide-react';
+import { Activity, BarChart3, CheckCircle2, RefreshCw, Target, TrendingUp, UsersRound } from 'lucide-react';
 import { CampaignProgressGauge } from './CampaignProgressGauge';
 import { TargetBars, TargetRings, TrendChart, WelcomeHeader } from './DashboardKit';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -10,13 +10,11 @@ interface MerchantAdminDashboardProps {
   onOpenManagement: () => void;
   podiumSlot?: React.ReactNode;
   userName?: string;
-  pendingFundRequestCount?: number;
-  onOpenFundRequests?: () => void;
 }
 
 const percentageColor = (value: number) => value >= 85 ? 'text-emerald-200' : value >= 50 ? 'text-amber-200' : 'text-rose-200';
 
-export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ userName = '', onOpenManagement, podiumSlot, pendingFundRequestCount = 0, onOpenFundRequests }) => {
+export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ userName = '', onOpenManagement, podiumSlot }) => {
   const [run, setRun] = useState<CampaignRun | null>(null);
   const [summary, setSummary] = useState<MerchantDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -93,14 +91,6 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
         { label: 'Équipe active', value: summary.activeBas, target: summary.teamSize, color: 'var(--m-chart-3)', caption: `${summary.activeBas} / ${summary.teamSize} BA pointés` },
       ]}
     />
-
-    {onOpenFundRequests && <button type="button" onClick={onOpenFundRequests} className="glass-card flex w-full items-center justify-between gap-3 !px-4 !py-3 text-left">
-      <span className="flex items-center gap-3">
-        <Banknote className="h-5 w-5 text-[var(--m-accent)]" aria-hidden="true"/>
-        <span><b className="block text-sm font-bold text-[var(--m-text)]">Demandes de fonds</b><span className="block text-xs text-[var(--m-text-2)]">Ouvrir le registre et traiter les demandes BA</span></span>
-      </span>
-      <span className={`relative rounded-xl border px-3 py-1.5 text-sm font-bold ${pendingFundRequestCount ? 'border-amber-300/40 bg-amber-500/20 text-amber-100' : 'border-[var(--m-edge-soft)] bg-[var(--m-tile)] text-[var(--m-muted)]'}`}>{pendingFundRequestCount || '0'}{pendingFundRequestCount > 0 && <i className="absolute -right-1 -top-1 h-2.5 w-2.5 animate-pulse rounded-full bg-amber-400"/>}</span>
-    </button>}
 
     <TrendChart
       title="Cadence des visites"

@@ -871,6 +871,35 @@ body[data-theme] button:is(.bg-red-500, .bg-red-600, .bg-rose-500, .bg-rose-600)
   box-shadow: 0 2px 10px var(--m-act-glow);
 }
 
+/* Pastille « Aujourd’hui » des sélecteurs de date. */
+.date-today-pill {
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--m-edge-soft);
+  background: var(--m-tile);
+  color: var(--m-accent);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.date-today-pill:hover {
+  border-color: var(--m-accent);
+}
+
+/* Champs téléphone : longueur contrôlée en direct (+243 puis 9 chiffres, sinon 10 chiffres). */
+body[data-theme] input[data-phone-state="error"] {
+  border-color: #f87171 !important;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.22) !important;
+}
+
+body[data-theme] input[data-phone-state="ok"] {
+  border-color: rgba(52, 211, 153, 0.7) !important;
+}
+
 /* Échelle de rayons : cartes 24, blocs internes 18, contrôles 12. */
 :root {
   --radius-sheet: 28px;
@@ -1280,4 +1309,120 @@ body[data-theme] .glass-card:hover {
     0 1px 0 var(--m-highlight) inset,
     0 calc(var(--ui-shadow-n, 50) * 0.12px) calc(var(--ui-shadow-n, 50) * 0.56px) rgba(0, 0, 0, calc(var(--ui-shadow-n, 50) * 0.0065)),
     0 0 calc(var(--ui-glow-n, 50) * 0.72px) color-mix(in srgb, var(--m-accent) calc(var(--ui-glow-n, 50) * 0.32%), transparent);
+}
+
+/* Bouton flottant des demandes de fonds (Merchant) : au-dessus de la barre en mobile, en bas à droite en bureau. */
+.fund-fab {
+  position: fixed;
+  z-index: 45;
+  right: 16px;
+  bottom: calc(max(12px, env(safe-area-inset-bottom)) + 76px + 14px);
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 20px;
+  color: var(--m-fill-ink);
+  background: var(--m-act);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.22) inset, 0 10px 26px var(--m-act-glow);
+  transition: transform 160ms ease;
+}
+
+.fund-fab:active {
+  transform: scale(0.94);
+}
+
+.fund-fab__badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 2px solid var(--m-bg, #0b0b10);
+  background: #f59e0b;
+  color: #1a1203;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  animation: fund-fab-pulse 2s ease-in-out infinite;
+}
+
+@keyframes fund-fab-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.55); }
+  50% { box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
+}
+
+@media (min-width: 1024px) {
+  .fund-fab {
+    right: 24px;
+    bottom: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fund-fab__badge { animation: none; }
+}
+
+/* Super-admin : lecture / pause / arrêt de campagne, à droite du sélecteur. */
+.campaign-run {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 12px;
+  border: 1px solid var(--m-edge-soft);
+  background: var(--m-tile);
+}
+
+.campaign-run__btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  color: var(--m-text-2);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.campaign-run__btn:hover:not(:disabled) {
+  color: var(--m-text);
+  background: var(--m-field);
+}
+
+.campaign-run__btn:disabled {
+  opacity: 0.4;
+}
+
+.campaign-run[data-state="paused"] .campaign-run__btn:first-child {
+  color: #1a1203;
+  background: #f59e0b;
+}
+
+.campaign-run[data-state="stopped"] .campaign-run__btn:first-child {
+  color: #fff;
+  background: #ef4444;
+}
+
+.campaign-run__btn--stop:hover:not(:disabled) {
+  color: #f87171;
+}
+
+/* Variante empilée : le compte au-dessus du libellé, pour quatre choix sur un écran étroit. */
+.seg-control--stacked > button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  padding: 6px 4px;
+  font-size: 0.75rem;
+  line-height: 1.2;
+}
+
+.seg-control--stacked > button > b {
+  font-size: 1rem;
+  font-weight: 800;
 }
