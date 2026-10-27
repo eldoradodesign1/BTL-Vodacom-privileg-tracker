@@ -11,6 +11,8 @@ interface DateIconPickerProps {
   buttonClassName?: string;
   labelClassName?: string;
   popoverAlign?: 'left' | 'right';
+  /** Pastille « Aujourd’hui » intégrée ; à couper quand la vue a déjà sa propre bascule. */
+  showToday?: boolean;
 }
 
 const toIsoDate = (date: Date): string => {
@@ -35,7 +37,8 @@ export const DateIconPicker: React.FC<DateIconPickerProps> = ({
   className = '',
   buttonClassName = 'h-10 w-10 rounded-xl bg-white/5 text-gray-200 hover:bg-white/10 border border-white/10',
   labelClassName = 'text-[0.6875rem] font-black uppercase text-gray-200',
-  popoverAlign = 'right'
+  popoverAlign = 'right',
+  showToday = true
 }) => {
   const selectedDate = parseIsoDate(value);
   const initialMonth = selectedDate || new Date();
@@ -143,6 +146,12 @@ export const DateIconPicker: React.FC<DateIconPickerProps> = ({
         <CalendarDays className="w-4 h-4" />
       </button>
       <span className={`ml-2 ${labelClassName}`}>{displayLabel}</span>
+      {/* Retour au jour courant, partout où l'on choisit une date. */}
+      {showToday && value !== todayIso && !isDisabled(todayIso) && (
+        <button type="button" onClick={() => { onChange(todayIso); setIsOpen(false); }} className="date-today-pill ml-2">
+          Aujourd’hui
+        </button>
+      )}
 
       {isOpen && popoverPosition && createPortal(
         <div

@@ -274,6 +274,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
                 className="flex-1 inline-flex items-center"
                 buttonClassName="h-10 w-10 rounded-xl bg-black/60 border border-white/10 text-gray-200 hover:bg-white/10"
                 labelClassName="text-[0.75rem] font-black uppercase text-gray-200"
+                showToday={false}
               />
               <button
                 onClick={() => setClientDateFilter(todayStr)}

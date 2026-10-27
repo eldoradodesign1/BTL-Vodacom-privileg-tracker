@@ -101,11 +101,6 @@ export const WelcomeHeader: React.FC<WelcomeHeaderProps> = ({ eyebrow, name, sub
           labelClassName="truncate text-sm font-bold text-[var(--m-text)]"
           popoverAlign="left"
         />
-        {maxDate && date !== maxDate && (
-          <button type="button" onClick={() => onDateChange(maxDate)} className="shrink-0 rounded-xl border border-[var(--m-edge-soft)] px-3 py-2 text-sm font-bold text-[var(--m-accent)]">
-            Aujourd’hui
-          </button>
-        )}
       </div>
     )}
   </section>

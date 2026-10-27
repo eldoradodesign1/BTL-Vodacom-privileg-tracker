@@ -4,8 +4,10 @@ import App from './App.tsx';
 import { loadSharedRuntimeConfig } from './utils/appConfig';
 import './index.css';
 import { installSheetGestures } from './utils/sheetGestures';
+import { installPhoneInputs } from './utils/phoneInput';
 
 installSheetGestures();
+installPhoneInputs();
 
 let audioContext: AudioContext | null = null;
 

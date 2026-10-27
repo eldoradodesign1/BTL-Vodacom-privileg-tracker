@@ -129,7 +129,7 @@ export const LeadModal: React.FC<LeadModalProps> = ({
               <span>MSISDN (Téléphone Client RDC)</span>
               <span className="text-red-400 font-bold">10 Chiffres (081/082/083/089/099...)</span>
             </label>
-            <input inputMode="tel" autoComplete="tel"
+            <input inputMode="tel" autoComplete="tel" data-phone-input
               type="tel"
               value={msisdn}
               onChange={(e) => handlePhoneChange(e.target.value)}

@@ -160,6 +160,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
             <label htmlFor="phone" className="block text-sm font-semibold text-[var(--m-text-2)]">Numéro de téléphone</label>
             <input
               id="phone"
+              data-phone-input
               name="phone"
               type="tel"
               inputMode="tel"
