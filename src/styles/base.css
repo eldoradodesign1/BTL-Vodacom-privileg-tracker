@@ -140,9 +140,17 @@ body::after {
   --color-success: #4ade80;
   --color-error: #ff453a;
   --color-process: #3b82f6;
+  /* Échelle de rayons (Apple-like, cohérente)
+     sheet = surfaces modales / bottom-sheets
+     xl    = grandes cards / podium
+     lg    = cards secondaires
+     md    = contrôles (inputs, boutons)
+     pill  = chips / pills */
+  --radius-sheet: 32px;
   --radius-xl: 36px;
   --radius-lg: 24px;
   --radius-md: 16px;
+  --radius-pill: 999px;
   --surface-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.17) 0%, rgba(255, 255, 255, 0.055) 100%);
   --surface-glass-strong: linear-gradient(135deg, rgba(255, 255, 255, 0.23) 0%, rgba(255, 255, 255, 0.08) 100%);
   --surface-border: rgba(255, 255, 255, 0.22);

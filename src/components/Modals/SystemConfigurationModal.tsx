@@ -101,7 +101,7 @@ export const SystemConfigurationModal: React.FC<SystemConfigurationModalProps> =
   };
 
   return <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/80 p-0 backdrop-blur-md sm:items-center sm:p-5" role="dialog" aria-modal="true" aria-labelledby="system-settings-title">
-    <section className="modal-sheet max-h-[92vh] w-full max-w-xl overflow-y-auto p-5 sm:rounded-3xl">
+    <section className="modal-sheet max-h-[92vh] w-full max-w-xl overflow-y-auto p-5">
       <button type="button" onClick={onClose} className="absolute right-5 top-5 rounded-xl p-2 text-gray-400 transition hover:bg-white/10 hover:text-white" aria-label="Fermer"><X size={18}/></button>
       <div className="flex items-start gap-3 pr-10"><div className="rounded-2xl border border-fuchsia-300/30 bg-fuchsia-400/10 p-3 text-fuchsia-100"><Settings2 size={22}/></div><div><p className="text-[0.75rem] font-black uppercase tracking-[0.18em] text-fuchsia-200/70">Super admin</p><h2 id="system-settings-title" className="mt-1 text-lg font-black">Paramètres de la base</h2><p className="mt-1 text-xs text-gray-400">Configuration commune à tous les appareils et aux deux campagnes.</p></div></div>
       {message && <div className={`mt-4 rounded-2xl border p-3 text-xs font-bold ${message.type === 'success' ? 'border-emerald-400/30 bg-emerald-400/10 text-emerald-100' : 'border-red-400/40 bg-red-500/10 text-red-100'}`}>{message.text}</div>}

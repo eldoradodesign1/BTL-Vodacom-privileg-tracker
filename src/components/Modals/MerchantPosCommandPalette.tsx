@@ -47,7 +47,7 @@ export const MerchantPosCommandPalette: React.FC<MerchantPosCommandPaletteProps>
 
   return (
     <div className="fixed inset-0 z-[130] flex items-end bg-black/75 p-0 backdrop-blur-md sm:items-center sm:justify-center sm:p-4" onClick={onClose}>
-      <section className="modal-sheet w-full max-w-xl overflow-hidden p-0 sm:rounded-3xl" onClick={(event) => event.stopPropagation()}>
+      <section className="modal-sheet w-full max-w-xl overflow-hidden p-0" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <div className="flex items-center gap-2 text-red-300"><Command size={18}/><div><h2 className="text-sm font-black">Rechercher un POS</h2><p className="text-[0.75rem] text-gray-400">Short-code, marchand, adresse, pool ou MFS</p></div></div>
           <button aria-label="Fermer" type="button" onClick={onClose} className="rounded-xl p-2 text-gray-400 hover:bg-white/10 hover:text-white"><X size={18}/></button>

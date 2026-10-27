@@ -78,7 +78,6 @@ body[data-theme] .podium-neutral {
 @media (min-width: 640px) {
   .modal-sheet {
     max-height: min(88vh, 760px);
-    border-radius: 32px;
   }
 }
 
@@ -96,6 +95,9 @@ body[data-theme] .podium-neutral {
   z-index: 30;
   margin: -32px -24px 18px;
   padding: 18px 24px 14px;
+  /* Suit la courbe du sheet — sinon coins carrés (overflow-y:auto ne clippe pas toujours) */
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
   border-bottom: 1px solid var(--m-edge-soft);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.10) 0%, transparent 55%),
@@ -321,13 +323,15 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   width: 100%;
   max-width: 520px;
   max-height: min(92vh, 760px);
-  overflow-y: auto;
+  /* Scroll par défaut (modales simples). Les shells structurés ajoutent overflow-hidden pour clipper la courbe. */
   overflow-x: hidden;
+  overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
   -ms-overflow-style: none;
   border-top: 1px solid color-mix(in srgb, var(--m-highlight) 55%, var(--m-edge));
-  border-radius: 36px 36px 0 0;
+  /* Mobile = bottom sheet : hauts arrondis, bas flush écran */
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
   padding: 32px 24px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.04) 18%, transparent 42%),
@@ -342,6 +346,33 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   backdrop-filter: blur(var(--m-modal-blur, 50px)) saturate(170%);
   -webkit-backdrop-filter: blur(var(--m-modal-blur, 50px)) saturate(170%);
   isolation: isolate;
+}
+
+/* Shells structurés (header sticky + body scroll) : clip strict pour la courbe */
+.modal-sheet.overflow-hidden,
+.modal-sheet.modal-sheet--clip {
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .modal-sheet {
+    /* Desktop = carte centrée : les 4 coins suivent le token */
+    border-radius: var(--radius-sheet);
+  }
+}
+
+/* Headers full-bleed / sticky : héritent la courbe du sheet (anti coins carrés) */
+.modal-sheet > .sticky:first-child,
+.modal-sheet > .modal-sticky-header:first-child,
+.modal-sheet > [class*="sticky"]:first-child {
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+
+.modal-sheet > .sticky:last-child,
+.modal-sheet > [class*="sticky"]:last-child {
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
 }
 
 .modal-sheet::before {
@@ -657,7 +688,8 @@ textarea::placeholder {
   position: relative;
   width: min(100%, 420px);
   padding: 20px;
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
   color: var(--m-text);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.14) 0%, transparent 36%),

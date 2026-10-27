@@ -63,12 +63,13 @@ function readableDate(date: string): string {
 
 const ModalShell: React.FC<{ title: string; onClose: () => void; children: React.ReactNode; error?: string; dismissOnBackdrop?: boolean }> = ({ title, onClose, children, error, dismissOnBackdrop = true }) => (
   <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/75 p-0 backdrop-blur-md sm:items-center sm:p-4" onClick={dismissOnBackdrop ? onClose : undefined} role="dialog" aria-modal="true" aria-label={title}>
-    <div className="modal-sheet relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-white/15 bg-(--m-sheet)/95 shadow-2xl sm:rounded-3xl" onClick={(event) => event.stopPropagation()}>
+    {/* Rayon = token --radius-sheet via .modal-sheet ; overflow-hidden clippe le header sticky */}
+    <div className="modal-sheet relative flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden border border-white/15 bg-(--m-sheet)/95 shadow-2xl" onClick={(event) => event.stopPropagation()}>
       <div className="modal-grip sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-(--m-sheet)/92 px-5 py-4 backdrop-blur-xl">
         <h2 className="text-sm font-black uppercase tracking-[0.12em] text-white">{title}</h2>
         <button type="button" onClick={onClose} className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-300 transition hover:bg-white/10 hover:text-white" aria-label="Fermer"><X size={20} /></button>
       </div>
-      <div className="overflow-y-auto p-5">
+      <div className="min-h-0 flex-1 overflow-y-auto p-5">
         {error && <div role="alert" className="mb-4 flex gap-2 rounded-2xl border border-red-400/50 bg-red-950/60 p-3 text-sm font-semibold text-red-100"><CircleAlert className="mt-0.5 shrink-0" size={18}/><span>{error}</span></div>}
         {children}
       </div>

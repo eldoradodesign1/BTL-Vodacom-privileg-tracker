@@ -34,12 +34,13 @@ type WorkspaceTab = 'today' | 'clients' | 'archives';
 
 const ModalShell: React.FC<{ title: string; onClose: () => void; children: React.ReactNode }> = ({ title, onClose, children }) => (
   <div className="fixed inset-0 z-[90] flex items-end justify-center bg-black/75 p-0 backdrop-blur-md sm:items-center sm:p-4" onClick={onClose}>
-    <div className="modal-sheet relative flex max-h-[94vh] w-full max-w-lg flex-col overflow-hidden rounded-t-3xl border border-white/15 bg-(--m-sheet)/95 shadow-2xl sm:rounded-3xl" onClick={(event) => event.stopPropagation()}>
+    {/* Rayon = token --radius-sheet via .modal-sheet ; overflow-hidden clippe le header sticky */}
+    <div className="modal-sheet relative flex max-h-[94vh] w-full max-w-lg flex-col overflow-hidden border border-white/15 bg-(--m-sheet)/95 shadow-2xl" onClick={(event) => event.stopPropagation()}>
       <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-(--m-sheet)/95 px-5 py-4 backdrop-blur-xl">
         <h2 className="text-sm font-black uppercase tracking-[0.12em] text-white">{title}</h2>
         <button type="button" onClick={onClose} className="rounded-xl p-2 text-gray-300 hover:bg-white/10 hover:text-white" aria-label="Fermer"><X size={18} /></button>
       </div>
-      <div className="overflow-y-auto p-5">{children}</div>
+      <div className="min-h-0 flex-1 overflow-y-auto p-5">{children}</div>
     </div>
   </div>
 );

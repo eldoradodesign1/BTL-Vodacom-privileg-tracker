@@ -72,7 +72,7 @@ export const MerchantPosCreateModal: React.FC<MerchantPosCreateModalProps> = ({ 
 
   return (
     <div className="fixed inset-0 z-[120] flex items-end bg-black/75 p-0 backdrop-blur-md sm:items-center sm:justify-center sm:p-4" onClick={() => !saving && onClose()}>
-      <section role="dialog" aria-modal="true" aria-labelledby="merchant-pos-create-title" className="modal-sheet relative max-h-[92vh] w-full max-w-xl overflow-y-auto rounded-t-[2rem] border border-red-300/20 bg-(--m-sheet)/95 p-5 shadow-2xl sm:rounded-[2rem]" onClick={(event) => event.stopPropagation()}>
+      <section role="dialog" aria-modal="true" aria-labelledby="merchant-pos-create-title" className="modal-sheet relative max-h-[92vh] w-full max-w-xl overflow-y-auto border border-red-300/20 bg-(--m-sheet)/95 p-5 shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="modal-handle" />
         <button type="button" onClick={onClose} disabled={saving} aria-label="Fermer" className="absolute right-4 top-4 rounded-full p-2 text-gray-400 transition hover:bg-white/10 hover:text-white disabled:opacity-50"><X size={19}/></button>
         <div className="pr-10">
