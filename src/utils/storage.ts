@@ -1467,9 +1467,9 @@ export function getDashboardData(filters: { start?: string; end?: string; agentI
   });
 
   const pieData = [
-    { name: 'Privilège', value: priv, color: 'var(--theme-accent)' },
-    { name: 'Roaming', value: roam, color: '#FFD700' },
-    { name: 'Bundles', value: bund, color: '#3b82f6' }
+    { name: 'Privilège', value: priv, color: 'var(--m-chart-1)' },
+    { name: 'Roaming', value: roam, color: 'var(--m-chart-3)' },
+    { name: 'Bundles', value: bund, color: 'var(--m-chart-2)' }
   ];
 
   const sortedDates = Object.keys(daily).sort();

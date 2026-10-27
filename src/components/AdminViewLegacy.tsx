@@ -4,14 +4,14 @@ import { Shop, AgentMasterStatus, User } from '../types';
 import { getAdminMasterList, getCheckins, getDashboardData, getLeads, getReports, getUsers, toISO, updateUserShopAssignment, updateUserSupervisor, resolveStoredPhotoUrl, saveTargetDefinition, getSupervisorAgentCampaignAssignments } from '../utils/storage';
 import { getCampaignAssignmentsOverview, getCampaignPauses, getCampaigns, type CampaignAssignmentOverview } from '../utils/merchantCampaign';
 import { TabType } from './BottomNav';
-import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { UserPlus, Store, FileSpreadsheet, Eye, User as UserIcon, UserCheck, FileText, Search, Filter, MapPin, Clock3, Pencil, X, Check, Circle, CalendarDays, ChevronLeft, ChevronRight, FileX2 } from 'lucide-react';
+import { UserPlus, Store, FileSpreadsheet, Eye, User as UserIcon, UserCheck, FileText, Search, Filter, MapPin, Clock3, Pencil, X, Check, Circle, CalendarDays, ChevronLeft, ChevronRight, FileX2, MoreHorizontal } from 'lucide-react';
 import { formatAgentLocationLine } from '../utils/location';
 import { SupervisorProfileModal, SupervisorHostessSummary } from './Modals/SupervisorProfileModal';
 import { DateIconPicker } from './DateIconPicker';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 import { CampaignPauseControl } from './CampaignPauseControl';
 import { confirmAction } from '../utils/confirmDialog';
+import { AdminHomeDashboard } from './AdminHomeDashboard';
 
 interface AdminViewProps {
   currentUser: User;
@@ -103,6 +103,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [shopPickerOpen, setShopPickerOpen] = useState(false);
   const [selectedSupervisorId, setSelectedSupervisorId] = useState<string | null>(null);
   const [presenceCalendarAgentId, setPresenceCalendarAgentId] = useState<string | null>(null);
+  const [agentActionMenuId, setAgentActionMenuId] = useState<string | null>(null);
   const [presenceCalendarPosition, setPresenceCalendarPosition] = useState<{ top: number; left: number } | null>(null);
   const [presenceCalendarMonth, setPresenceCalendarMonth] = useState(() => {
     const now = new Date();
@@ -1012,28 +1013,22 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="seg-control" role="group" aria-label="Filtrer par statut">
             {[
-              { key: 'ALL', label: 'Toutes' },
-              { key: 'Online', label: 'En ligne' },
-              { key: 'Absent', label: 'Absents' },
-              { key: 'Clôturé', label: 'Clôturés' }
-            ].map(option => {
-              const isActive = statusFilter === option.key;
-              return (
-                <button
-                  key={option.key}
-                  onClick={() => setStatusFilter(option.key as 'ALL' | 'Online' | 'Absent' | 'Clôturé')}
-                  className={`px-3 py-2 rounded-xl border text-[0.75rem] font-black uppercase transition ${
-                    isActive
-                      ? 'bg-red-600 text-white border-red-500 shadow-lg'
-                      : 'bg-black/60 text-gray-300 border-white/10 hover:border-red-500/40 hover:text-white'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
+              { key: 'ALL', label: 'Toutes', count: monitoringMasterList.length },
+              { key: 'Online', label: 'En ligne', count: monitoringMasterList.filter((agent) => agent.status === 'Présent').length },
+              { key: 'Absent', label: 'Absentes', count: monitoringMasterList.filter((agent) => agent.status === 'Absent').length },
+              { key: 'Clôturé', label: 'Clôturées', count: monitoringMasterList.filter((agent) => agent.status === 'Clôturé').length }
+            ].map(option => (
+              <button
+                key={option.key}
+                type="button"
+                aria-pressed={statusFilter === option.key}
+                onClick={() => setStatusFilter(option.key as 'ALL' | 'Online' | 'Absent' | 'Clôturé')}
+              >
+                {option.label}<span className="ml-1 opacity-75 tabular-nums">{option.count}</span>
+              </button>
+            ))}
           </div>
 
           <div className="space-y-3">
@@ -1096,96 +1091,69 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       <p className="text-[0.6875rem] font-bold text-gray-400 uppercase flex items-center flex-nowrap gap-1 mt-1 whitespace-nowrap overflow-hidden">
                         <MapPin className="w-3 h-3 text-blue-400" />
                         <span className="truncate">{formatAgentLocationLine({ shop: agent.shop, status: agent.status, arrivalTime: agent.reportObj?.arrival_time, departureTime: agent.reportObj?.departure_time })}</span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openShopAssignmentModal(agent);
-                          }}
-                          className="ml-1 rounded-full border border-white/10 bg-white/5 p-1 text-gray-300 hover:text-white hover:bg-white/10"
-                          title={`Modifier l'affectation du shop de ${agent.name}`}
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </button>
                       </p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 shrink-0">
-                      {onOpenAgentProfile && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenAgentProfile(agent);
-                          }}
-                          className={`p-1.5 ${statusBg} rounded-xl border transition shrink-0 flex items-center justify-center`}
-                          title="Détail hotesse"
-                        >
-                          <UserIcon className="w-4 h-4" />
-                        </button>
-                      )}
-
-                      {agent.reportObj ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onOpenPdfModal(`report-id:${agent.reportObj?.id}`);
-                          }}
-                          className={`p-1.5 ${statusBg} rounded-xl border transition shrink-0 flex items-center justify-center`}
-                          title="Voir le rapport PDF"
-                        >
-                          <FileText className="w-4 h-4" />
-                        </button>
-                      ) : (
-                        <span
-                          className={`p-1.5 ${statusBg} rounded-xl border transition shrink-0 flex items-center justify-center opacity-75`}
-                          title="Pas de rapport"
-                        >
-                          <FileX2 className="w-4 h-4" />
-                        </span>
-                      )}
-
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (agent.status === 'Présent' || agent.status === 'Clôturé') {
-                            if (onOpenLocationModal) {
-                              onOpenLocationModal(agent);
-                            }
-                          }
-                        }}
-                        className={`p-1.5 rounded-xl border ${statusBg} ${(agent.status === 'Présent' || agent.status === 'Clôturé') ? 'cursor-pointer hover:opacity-90' : 'cursor-default'} flex items-center justify-center`}
-                        title={getStatusActionTitle(agent.status)}
-                      >
-                        {getStatusIcon(agent.status)}
-                      </button>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className={`rounded-full border px-2.5 py-1 text-xs font-bold ${statusBg}`}>
+                        {agent.status === 'Présent' ? 'En ligne' : agent.status === 'Clôturé' ? 'Clôturée' : 'Absente'}
+                      </span>
 
                       <div className="relative">
                         <button
+                          type="button"
+                          aria-haspopup="menu"
+                          aria-expanded={agentActionMenuId === agent.id}
+                          aria-label={`Actions pour ${agent.name}`}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (isPresenceCalendarOpen) {
-                              setPresenceCalendarAgentId(null);
-                              setPresenceCalendarPosition(null);
-                              return;
-                            }
-                            const rect = (e.currentTarget as HTMLButtonElement).getBoundingClientRect();
-                            const popupWidth = 320;
-                            const popupHeight = 360;
-                            const left = Math.max(8, Math.min(rect.right - popupWidth, window.innerWidth - popupWidth - 8));
-                            const topBelow = rect.bottom + 8;
-                            const top = topBelow + popupHeight > window.innerHeight - 8
-                              ? Math.max(8, rect.top - popupHeight - 8)
-                              : topBelow;
-                            const now = new Date();
-                            setPresenceCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1));
-                            setPresenceCalendarPosition({ top, left });
-                            setPresenceCalendarAgentId(agent.id);
+                            setAgentActionMenuId((current) => (current === agent.id ? null : agent.id));
                           }}
-                          className={`p-1.5 rounded-xl border transition flex items-center justify-center ${statusBg}`}
-                          title={`Registre de présence (7 jours): ${historyTitle}`}
+                          className="app-icon-button flex h-9 w-9 items-center justify-center rounded-full border"
                         >
-                          <CalendarDays className="w-4 h-4" />
+                          <MoreHorizontal className="h-4 w-4" />
                         </button>
+
+                        {agentActionMenuId === agent.id && (
+                          <>
+                            <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setAgentActionMenuId(null); }} />
+                            <div role="menu" className="app-popover absolute right-0 top-11 z-50 grid w-60 gap-0.5 border p-2" onClick={(e) => e.stopPropagation()}>
+                              {[
+                                { label: 'Profil', icon: <UserIcon className="h-4 w-4" />, enabled: !!onOpenAgentProfile, run: () => onOpenAgentProfile(agent) },
+                                { label: agent.reportObj ? 'Rapport du jour' : 'Pas encore de rapport', icon: agent.reportObj ? <FileText className="h-4 w-4" /> : <FileX2 className="h-4 w-4" />, enabled: !!agent.reportObj, run: () => onOpenPdfModal(`report-id:${agent.reportObj?.id}`) },
+                                { label: getStatusActionTitle(agent.status) === 'Absent' ? 'Pas de pointage' : getStatusActionTitle(agent.status), icon: <MapPin className="h-4 w-4" />, enabled: (agent.status === 'Présent' || agent.status === 'Clôturé') && !!onOpenLocationModal, run: () => onOpenLocationModal?.(agent) },
+                                {
+                                  label: 'Registre de présence',
+                                  icon: <CalendarDays className="h-4 w-4" />,
+                                  enabled: true,
+                                  run: () => {
+                                    const popupWidth = 320;
+                                    const popupHeight = 360;
+                                    const left = Math.max(8, (window.innerWidth - popupWidth) / 2);
+                                    const top = Math.max(8, (window.innerHeight - popupHeight) / 2);
+                                    const now = new Date();
+                                    setPresenceCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+                                    setPresenceCalendarPosition({ top, left });
+                                    setPresenceCalendarAgentId(agent.id);
+                                  }
+                                },
+                                { label: 'Changer de shop', icon: <Pencil className="h-4 w-4" />, enabled: true, run: () => openShopAssignmentModal(agent) }
+                              ].map((item) => (
+                                <button
+                                  key={item.label}
+                                  type="button"
+                                  role="menuitem"
+                                  disabled={!item.enabled}
+                                  title={item.label === 'Registre de présence' ? `7 derniers jours : ${historyTitle}` : undefined}
+                                  onClick={() => { setAgentActionMenuId(null); item.run(); }}
+                                  className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[var(--m-text)] hover:bg-[var(--m-tile)] disabled:cursor-default disabled:opacity-45"
+                                >
+                                  {item.icon}{item.label}
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        )}
 
                         {isPresenceCalendarOpen && presenceCalendarPosition && createPortal(
                           <div
@@ -1273,9 +1241,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   {agent.status !== 'Absent' && (
                     <div className="grid grid-cols-3 gap-2 text-center text-[0.75rem] font-bold">
                       {[
-                        { label: 'Privilège', value: agent.stats?.priv ?? 0, colorClass: 'text-red-500' },
-                        { label: 'Roaming', value: agent.stats?.roam ?? 0, colorClass: 'text-amber-400' },
-                        { label: 'Bundles', value: agent.stats?.bund ?? 0, colorClass: 'text-blue-400' }
+                        { label: 'Privilège', value: agent.stats?.priv ?? 0, colorClass: 'text-[var(--m-chart-1)]' },
+                        { label: 'Roaming', value: agent.stats?.roam ?? 0, colorClass: 'text-[var(--m-chart-3)]' },
+                        { label: 'Bundles', value: agent.stats?.bund ?? 0, colorClass: 'text-[var(--m-chart-2)]' }
                       ].map(tile => (
                         <button
                           key={tile.label}
@@ -1305,138 +1273,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
       {/* --- SUB-TAB 2: ANALYSES --- */}
       {subTab === 'stats' && (
         <div className="space-y-5 animate-pop">
-          {/* KPI Cards */}
-          <div className="grid grid-cols-2 gap-3">
-            <div
-              onClick={() => setSubTab('leads')}
-              className="relative overflow-hidden bg-white/[0.128] text-white p-5 rounded-[28px] text-center shadow-[0_18px_38px_rgba(0,0,0,0.38)] border border-white/25 backdrop-blur-xl cursor-pointer transition hover:scale-[1.02] active:scale-95 group"
-              title="Cliquer pour voir tous les Leads / Rapport de Synthèse"
-            >
-              <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-rose-500/20 blur-2xl" />
-              <div className="pointer-events-none absolute left-3 top-3 h-7 w-7 rounded-full border border-white/20" />
-              <span className="text-[0.6875rem] font-black uppercase tracking-wider text-gray-300 block group-hover:text-red-400">Total Activations</span>
-              <p className="text-3xl font-black text-red-400 drop-shadow-[0_0_14px_rgba(0,0,0,0.4)]">{totalActivations}</p>
-              <span className="text-[0.6875rem] font-bold text-gray-300 uppercase mt-1 block group-hover:underline">→ Voir la liste</span>
-            </div>
-            <div
-              onClick={() => {
-                setSubTab('manage');
-                setManageSection('hostess');
-                if (onRequestTabChange) onRequestTabChange('admin');
-              }}
-              className="relative overflow-hidden bg-white/[0.128] text-white p-5 rounded-[28px] text-center shadow-[0_18px_38px_rgba(0,0,0,0.38)] border border-white/25 backdrop-blur-xl cursor-pointer transition hover:scale-[1.02] active:scale-95 group"
-              title="Cliquer pour aller au Monitoring des hôtesses"
-            >
-              <div className="pointer-events-none absolute -left-10 -bottom-10 h-28 w-28 rounded-full bg-amber-400/18 blur-2xl" />
-              <div className="pointer-events-none absolute right-3 top-3 h-7 w-7 rounded-full border border-white/20" />
-              <span className="text-[0.6875rem] font-black uppercase tracking-wider text-gray-300 block group-hover:text-white">Effectif Hôtesses</span>
-              <p className="text-3xl font-black text-white drop-shadow-[0_0_12px_rgba(0,0,0,0.4)]">{hostessList.length}</p>
-              <span className="text-[0.6875rem] font-bold text-gray-300 uppercase mt-1 block group-hover:underline">→ Aller au Monitoring</span>
-            </div>
-          </div>
-
-          {/* Offres Distribution Pie Chart */}
-          <div className="relative overflow-hidden glass-card p-5 border border-white/10 rounded-[26px] shadow-[0_20px_45px_rgba(0,0,0,0.35)]">
-            <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-rose-500/12 blur-3xl" />
-            <div className="pointer-events-none absolute left-1/3 -bottom-16 h-36 w-36 rounded-full bg-amber-400/12 blur-3xl" />
-            <div className="pointer-events-none absolute -left-14 top-10 h-28 w-28 rounded-full bg-red-400/10 blur-3xl" />
-            <h3 className="text-xs font-black uppercase text-red-400 tracking-[0.16em] mb-3 text-center">
-              Répartition des Activations
-            </h3>
-            <div className="h-56 w-full rounded-3xl border border-white/10 bg-black/20 backdrop-blur-sm px-2 py-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={dashboardData.pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={58}
-                    outerRadius={86}
-                    cornerRadius={10}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {dashboardData.pieData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={entry.color}
-                        style={{ filter: `drop-shadow(0 0 8px ${entry.color}88)` }}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#09090b', borderColor: '#3f3f46', borderRadius: '14px', fontSize: '12px', boxShadow: '0 12px 25px rgba(0,0,0,0.35)' }}
-                    itemStyle={{ color: '#ffffff', fontWeight: 'bold' }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="flex justify-around pt-2 text-center text-xs font-bold">
-              {dashboardData.pieData.map(item => (
-                <div key={item.name} className="flex flex-col items-center rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
-                  <div className="flex items-center space-x-1">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: item.color }} />
-                    <span className="text-[0.75rem] text-gray-300 font-black uppercase">{item.name}</span>
-                  </div>
-                  <span className="text-sm font-black text-white">{item.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Line Chart Activity */}
-          <div className="relative overflow-hidden glass-card p-5 border border-white/10 rounded-[26px] shadow-[0_20px_45px_rgba(0,0,0,0.35)]">
-            <div className="pointer-events-none absolute -right-20 -bottom-20 h-44 w-44 rounded-full bg-rose-500/12 blur-3xl" />
-            <div className="pointer-events-none absolute -left-12 -top-10 h-32 w-32 rounded-full bg-amber-300/10 blur-3xl" />
-            <h3 className="text-xs font-black uppercase text-gray-200 tracking-[0.16em] mb-3">
-              Évolution Journalière des Leads
-            </h3>
-            <div className="w-full rounded-3xl border border-white/10 bg-black/20 py-1 backdrop-blur-sm">
-              <div className="flex h-48 min-w-0">
-                <div className="z-10 w-10 shrink-0 border-r border-white/10 bg-black/20">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={rollingLineData} margin={{ left: 0, right: 0 }}>
-                      <YAxis stroke="var(--m-muted)" fontSize={12} tickLine={false} axisLine={false} width={34} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="min-w-0 flex-1 overflow-x-auto">
-                  <div className="h-full min-w-[980px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={rollingLineData} margin={{ left: 4, right: 18 }}>
-                  <defs>
-                    <filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">
-                      <feGaussianBlur stdDeviation="2.4" result="blur" />
-                      <feMerge>
-                        <feMergeNode in="blur" />
-                        <feMergeNode in="SourceGraphic" />
-                      </feMerge>
-                    </filter>
-                  </defs>
-                  <CartesianGrid strokeDasharray="4 5" stroke="rgba(161,161,170,0.22)" vertical={false} />
-                  <XAxis dataKey="date" stroke="var(--m-muted)" fontSize={12} tickLine={false} axisLine={false} interval={2} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#09090b', borderColor: '#3f3f46', borderRadius: '14px', fontSize: '12px', boxShadow: '0 12px 25px rgba(0,0,0,0.35)' }}
-                    itemStyle={{ color: '#ffffff', fontWeight: 'bold' }}
-                    labelStyle={{ color: '#d4d4d8' }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    stroke="var(--m-accent)"
-                    strokeWidth={3.5}
-                    filter="url(#lineGlow)"
-                    dot={{ fill: '#fb7185', r: 4, stroke: '#fff', strokeWidth: 1.5 }}
-                    activeDot={{ r: 6, fill: '#fb7185', stroke: '#fff', strokeWidth: 2 }}
-                  />
-                    </LineChart>
-                  </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <AdminHomeDashboard
+            totalActivations={totalActivations}
+            pieData={dashboardData.pieData}
+            rollingLineData={rollingLineData}
+            hostesses={hostessList}
+            shops={shops}
+            onOpenLeads={() => setSubTab('leads')}
+            onOpenMonitoring={(filter = 'ALL') => {
+              setStatusFilter(filter);
+              setSubTab('monitoring');
+              if (onRequestTabChange) onRequestTabChange('tab2');
+            }}
+          />
         </div>
       )}
 

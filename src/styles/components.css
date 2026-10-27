@@ -179,7 +179,10 @@ body[data-theme] .app-popover {
     linear-gradient(165deg, rgba(255, 255, 255, 0.12) 0%, transparent 40%),
     var(--m-surface),
     var(--m-sheet-frost, var(--m-sheet));
-  border-color: var(--m-edge-soft);
+  border-color: var(--m-hair);
+  border-radius: 18px;
+  transform-origin: top right;
+  animation: popoverMaterialize 200ms cubic-bezier(0.2, 0.9, 0.3, 1);
   box-shadow: var(--shadow-floating);
   backdrop-filter: blur(var(--m-modal-blur, 50px)) saturate(160%);
   -webkit-backdrop-filter: blur(var(--m-modal-blur, 50px)) saturate(160%);
@@ -220,7 +223,8 @@ body[data-theme] .app-icon-button:hover {
 
 body[data-theme] .app-input {
   background: var(--m-field);
-  border-color: var(--m-edge-soft);
+  border-color: var(--m-hair);
+  border-radius: 12px;
   color: var(--m-text);
   box-shadow: 0 1px 0 var(--m-highlight) inset;
   backdrop-filter: blur(calc(var(--m-blur) - 14px)) saturate(140%);
@@ -229,7 +233,7 @@ body[data-theme] .app-input {
 
 body[data-theme] .app-input:focus {
   border-color: var(--m-accent);
-  box-shadow: 0 0 0 4px rgba(var(--m-accent-rgb), 0.18);
+  box-shadow: 0 0 0 3px rgba(var(--m-accent-rgb), 0.2);
 }
 
 .login-panel {
@@ -251,8 +255,9 @@ body[data-theme] .login-note {
 }
 
 .brand-text {
-  font-weight: 900;
-  font-style: italic;
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: -0.02em;
   background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.82) 50%, rgba(var(--theme-accent-soft-rgb), 0.94) 100%);
   background-clip: text;
   -webkit-background-clip: text;
@@ -263,8 +268,8 @@ body[data-theme] .login-note {
 .btn-neon {
   width: 100%;
   padding: 18px 24px;
-  font-size: 0.6875rem;
-  font-weight: 900;
+  font-size: 0.8125rem;
+  font-weight: 800;
   text-transform: uppercase;
   cursor: pointer;
   display: flex;
@@ -274,20 +279,21 @@ body[data-theme] .login-note {
   transition: transform 0.18s ease, background-color 0.18s ease, box-shadow 0.18s ease;
   min-height: 3.35rem;
   border: 1px solid var(--m-btn-edge);
-  border-radius: 1.2rem;
-  letter-spacing: 0.06em;
+  border-radius: 14px;
+  letter-spacing: 0.04em;
   box-shadow: 0 12px 30px -10px var(--m-glow), 0 1px 0 var(--m-highlight) inset;
 }
 
 body[data-theme] .btn-red {
   color: var(--m-fill-ink);
-  box-shadow: 0 8px 25px -5px var(--m-glow);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--m-fill) 80%, #ffffff) 0%, var(--m-fill) 58%, color-mix(in srgb, var(--m-fill) 82%, #0f172a) 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.25) inset, 0 8px 22px var(--m-act-glow);
+  background: var(--m-act);
 }
 
 body[data-theme] .btn-red:hover:not(:disabled) {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--m-fill-hover) 72%, #ffffff) 0%, var(--m-fill-hover) 56%, color-mix(in srgb, var(--m-fill-hover) 80%, #0f172a) 100%);
-  transform: translateY(-2px);
+  background: var(--m-act);
+  filter: brightness(1.08);
+  transform: translateY(-1px);
 }
 
 .app-tab {
@@ -473,7 +479,8 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   inset: 0;
   border: 1px solid var(--m-edge);
   border-radius: inherit;
-  background: color-mix(in srgb, var(--dock-surface) 72%, transparent), var(--m-surface);
+  /* La couleur doit rester le dernier calque, sinon toute la déclaration est ignorée et le dock devient transparent. */
+  background: var(--m-surface), color-mix(in srgb, var(--dock-surface) 88%, transparent);
   backdrop-filter: blur(var(--dock-blur)) saturate(1.55);
   -webkit-backdrop-filter: blur(var(--dock-blur)) saturate(1.55);
   box-shadow: 0 1px 0 var(--m-highlight) inset, 0 14px 36px var(--m-glow), 0 4px 14px rgba(0, 0, 0, 0.22);
@@ -539,7 +546,7 @@ body[data-theme] .btn-red:hover:not(:disabled) {
 }
 
 .dock-tab-label {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 700;
   line-height: 1.1;
   text-align: center;
@@ -753,4 +760,152 @@ body[data-theme] .fixed.inset-0.backdrop-blur-sm,
 body[data-theme] .fixed.inset-0.backdrop-blur-xl {
   backdrop-filter: blur(22px) saturate(155%) !important;
   -webkit-backdrop-filter: blur(22px) saturate(155%) !important;
+}
+
+/* ── Recette commune (DA Sapphire) : mêmes formes et contrôles dans les six thèmes, seule la matière change ── */
+
+@keyframes popoverMaterialize {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-theme] .app-popover { animation: none; }
+}
+
+/* Champs : fond plein de la matière, filet, rayon 12, anneau de focus à l'accent. */
+body[data-theme] :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), select, textarea):not(.bg-transparent, .border-0, .border-none, .app-input) {
+  background-color: var(--m-field);
+  border-color: var(--m-hair);
+  border-radius: 12px;
+  color: var(--m-text);
+}
+
+body[data-theme] :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), select, textarea):not(.bg-transparent, .border-0, .border-none):focus {
+  border-color: var(--m-accent);
+  box-shadow: 0 0 0 3px rgba(var(--m-accent-rgb), 0.2);
+  outline: none;
+}
+
+/* Listes déroulantes : chevron de la matière à la place de la flèche système. */
+body[data-theme] select:not(.bg-transparent) {
+  background-image: var(--m-chevron);
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  padding-right: 2.5rem;
+}
+
+/* Cases à cocher : interrupteur à piste dégradée. */
+body[data-theme] input[type="checkbox"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: none;
+  width: 2.5rem;
+  height: 1.5rem;
+  margin: 0;
+  border-radius: 999px;
+  border: 1px solid var(--m-edge-soft);
+  background:
+    radial-gradient(circle at 0.75rem 50%, #f4f7ff 0 0.5rem, transparent 0.5625rem),
+    var(--m-track);
+  cursor: pointer;
+  transition: background-position 180ms cubic-bezier(0.2, 0.9, 0.3, 1), background-color 180ms ease;
+}
+
+body[data-theme] input[type="checkbox"]:checked {
+  border-color: transparent;
+  background:
+    radial-gradient(circle at calc(100% - 0.75rem) 50%, #ffffff 0 0.5rem, transparent 0.5625rem),
+    linear-gradient(90deg, color-mix(in srgb, var(--m-fill) 70%, #000) 0%, var(--m-fill) 55%, var(--m-accent) 100%);
+  box-shadow: 0 2px 10px var(--m-act-glow);
+}
+
+body[data-theme] input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--m-accent);
+  outline-offset: 2px;
+}
+
+/* Boutons d'action pleins hérités (bg-red-*) : dégradé d'action de la matière. */
+body[data-theme] button:is(.bg-red-500, .bg-red-600, .bg-rose-500, .bg-rose-600) {
+  background-image: var(--m-act);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.22) inset, 0 8px 22px var(--m-act-glow);
+}
+
+/* Contrôle segmenté (choix courts). */
+.seg-control {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--m-field);
+  border: 1px solid var(--m-edge-soft);
+}
+
+.seg-control > button {
+  flex: 1;
+  min-height: 36px;
+  padding: 6px 8px;
+  border-radius: 9px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--m-text-2);
+  white-space: nowrap;
+}
+
+.seg-control > button[aria-pressed="true"] {
+  color: var(--m-fill-ink);
+  background: var(--m-act);
+  box-shadow: 0 2px 10px var(--m-act-glow);
+}
+
+/* Échelle de rayons : cartes 24, blocs internes 18, contrôles 12. */
+:root {
+  --radius-sheet: 28px;
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 12px;
+}
+
+:is(.rounded-\[2rem\], .rounded-\[1\.8rem\], .rounded-\[1\.75rem\], .rounded-\[1\.7rem\], .rounded-\[28px\], .rounded-\[26px\]) {
+  border-radius: 24px;
+}
+
+:is(.rounded-\[1\.5rem\], .rounded-\[1\.45rem\], .rounded-\[1\.4rem\], .rounded-\[1\.35rem\], .rounded-\[24px\]) {
+  border-radius: 20px;
+}
+
+/* Typographie : plancher de 12 px, graisse 800 au lieu de 900. */
+.text-\[0\.6875rem\],
+.text-\[0\.625rem\] {
+  font-size: 0.75rem;
+}
+
+.font-black {
+  font-weight: 800;
+}
+
+/* Pastilles de thème : chacune montre sa matière, même quand un autre thème est actif. */
+.theme-dot {
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.theme-dot--anthracite { background: radial-gradient(circle at 30% 25%, #6a7388, #171a20 70%); }
+.theme-dot--rubis { background: radial-gradient(circle at 30% 25%, #f0899c, #6a0f26 70%); }
+.theme-dot--silver { background: radial-gradient(circle at 30% 25%, #ffffff, #8a9ab8 70%); }
+.theme-dot--diamond { background: radial-gradient(circle at 30% 25%, #ffffff, #bcd5ff 70%); border-color: rgba(80, 130, 220, 0.4); }
+.theme-dot--sapphire { background: radial-gradient(circle at 30% 25%, #6fd4ff, #123fb8 70%); }
+.theme-dot--ambre { background: radial-gradient(circle at 30% 25%, #ffd98a, #a85a06 70%); }
+
+.theme-swatch[aria-checked="true"] .theme-dot {
+  box-shadow: 0 0 0 2px var(--m-sheet), 0 0 0 4px var(--m-accent);
+}
+
+.theme-swatch:focus-visible {
+  outline: 2px solid var(--m-accent);
+  outline-offset: 1px;
 }
