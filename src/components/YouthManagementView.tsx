@@ -4,6 +4,7 @@ import type { User } from '../types';
 import { CampaignPauseControl } from './CampaignPauseControl';
 import { DateIconPicker } from './DateIconPicker';
 import { CampaignProgressGauge } from './CampaignProgressGauge';
+import { TargetBars, TargetRings, TrendChart, WelcomeHeader } from './DashboardKit';
 import { getYouthCampaign, getYouthOperatorAgents, getYouthOperatorArchive, saveYouthTargets, youthTodayIso, type YouthOperatorAgent } from '../utils/youthCampaign';
 
 interface Props { currentUser: User; activeTab: 'home' | 'tab2' | 'tab3' | 'admin'; }
@@ -86,6 +87,19 @@ export const YouthManagementView: React.FC<Props> = ({ currentUser, activeTab })
     contacts: agents.reduce((sum, row) => sum + row.contacts.length, 0),
   }), [agents]);
 
+  const isTransaction = (actions: string[]) => actions.some((action) => YOUTH_TRANSACTION_ACTIONS.some(([key]) => key === action));
+  const dayTransactions = agents.reduce((sum, row) => sum + row.contacts.filter((contact) => isTransaction(contact.actions)).length, 0);
+  const campaignDates: string[] = [];
+  for (const cursor = new Date(`${campaignStart}T12:00:00`); cursor.toISOString().slice(0, 10) <= today; cursor.setDate(cursor.getDate() + 1)) campaignDates.push(cursor.toISOString().slice(0, 10));
+  const contactsByDay = campaignRows.flatMap((row) => row.contacts).reduce<Record<string, { contacts: number; transactions: number }>>((acc, contact) => {
+    const entry = acc[contact.activity_date] || { contacts: 0, transactions: 0 };
+    entry.contacts += 1;
+    if (isTransaction(contact.actions)) entry.transactions += 1;
+    acc[contact.activity_date] = entry;
+    return acc;
+  }, {});
+  const presenceByDay = campaignRows.flatMap((row) => row.attendanceDates || []).reduce<Record<string, number>>((acc, day) => { acc[day] = (acc[day] || 0) + 1; return acc; }, {});
+
   const saveTargets = async () => {
     if (!campaignId) return;
     setSaving(true); setError('');
@@ -105,11 +119,49 @@ export const YouthManagementView: React.FC<Props> = ({ currentUser, activeTab })
   return <div className="space-y-4 pb-6">
     {error && <div className="glass-card flex items-center gap-2 border border-red-400/30 bg-red-500/[0.08] p-3 text-xs font-bold text-red-100"><CircleAlert size={16}/>{error}</div>}
     {activeTab === 'home' && <>
-    <section className="glass-card relative overflow-hidden border border-red-300/20 bg-gradient-to-br from-red-500/[0.14] via-white/[0.04] to-transparent p-5">
-      <div className="flex items-start justify-between gap-3"><div><p className="text-[0.6875rem] font-black uppercase tracking-[0.2em] text-red-300">{campaignName} · opérateurs</p><h1 className="mt-1 text-2xl font-black text-white">Pilotage Youth F2F</h1><p className="mt-1 text-[0.6875rem] text-gray-400">Agents affectés à cette campagne uniquement · début {labelDate(campaignStart)}</p></div><button aria-label="Actualiser" type="button" onClick={() => void load(true)} className="rounded-xl border border-white/10 bg-white/[0.06] p-2 text-red-300"><RefreshCw size={16} className={refreshing ? 'animate-spin' : ''}/></button></div>
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">{metricCards.map(({ label, value, Icon }) => <div key={label} className="rounded-2xl border border-white/10 bg-black/15 p-3"><Icon size={15} className="text-red-300"/><b className="mt-2 block text-xl font-black text-white">{value}</b><span className="text-[0.6875rem] font-black uppercase text-gray-500">{label}</span></div>)}</div>
-    </section>
+      <WelcomeHeader
+        eyebrow={`${campaignName} · pilotage`}
+        name={currentUser.name}
+        subtitle={`Sensibilisation terrain · ${metrics.total} BA affectés`}
+        date={date}
+        minDate={campaignStart}
+        maxDate={today}
+        onDateChange={setDate}
+        onRefresh={() => void load(true)}
+        refreshing={refreshing}
+      />
       <YouthCampaignProgress rows={campaignRows} dailyClients={dailyClients} dailyTransactions={dailyTransactions} campaignStart={campaignStart}/>
+      <TargetRings
+        title="Indicateurs du jour"
+        subtitle={labelDate(date)}
+        rings={[
+          { label: 'Contacts', value: metrics.contacts, target: dailyClients * metrics.checked, color: 'var(--m-chart-1)' },
+          { label: 'Transactions', value: dayTransactions, target: dailyTransactions * metrics.checked, color: 'var(--m-chart-2)' },
+          { label: 'Présence', value: metrics.checked, target: metrics.total, color: 'var(--m-chart-3)', caption: `${metrics.checked} / ${metrics.total} BA` },
+          { label: 'Clôtures', value: metrics.closed, target: metrics.checked, color: 'var(--m-accent)', caption: metrics.checked ? `${metrics.closed} / ${metrics.checked} pointés` : 'Aucun BA pointé' },
+        ]}
+      />
+      <TrendChart
+        title="Progression du terrain"
+        subtitle="Contacts et transactions par jour"
+        views={[{ key: 'campaign', label: 'Campagne', dates: campaignDates }, { key: 'month', label: '30 jours', dates: campaignDates.slice(-30) }].map(({ key, label, dates }) => ({
+          key,
+          label,
+          labels: dates.map((day) => `${day.slice(8)}/${day.slice(5, 7)}`),
+          series: [
+            { key: 'contacts', label: 'Contacts', values: dates.map((day) => contactsByDay[day]?.contacts || 0) },
+            { key: 'transactions', label: 'Transactions', values: dates.map((day) => contactsByDay[day]?.transactions || 0) },
+          ],
+          target: dailyClients > 0 ? dates.map((day) => (presenceByDay[day] || 0) * dailyClients) : undefined,
+          targetLabel: 'Objectif contacts',
+        }))}
+      />
+      <TargetBars
+        title="BA face à l’objectif"
+        subtitle={`Contacts du ${labelDate(date)} · trait = target journalier`}
+        rows={agents.filter((row) => row.attendance?.checkin_at || row.contacts.length > 0).map((row) => ({ key: row.user.id, label: row.user.name, value: row.contacts.length, target: dailyClients }))}
+        emptyText="Aucun BA pointé ce jour."
+      />
     </>}
     {activeTab === 'admin' ? <>
       <section className="glass-card p-4"><div className="flex items-start gap-2"><Target className="text-red-300" size={19}/><div><h2 className="font-black text-white">Targets Youth F2F</h2><p className="text-xs text-gray-400">Objectifs journaliers utilisés pour le suivi de la campagne.</p></div></div><div className="mt-4 grid grid-cols-2 gap-2"><label className="rounded-2xl border border-red-300/20 bg-black/20 p-3"><span className="block text-[0.6875rem] font-black uppercase text-gray-400">Contacts / BA / jour</span><input type="number" min="0" value={dailyClients} onChange={(e) => setDailyClients(Math.max(0, Number(e.target.value || 0)))} className="mt-1 w-full rounded-xl border border-white/10 bg-black/40 px-2 py-2 text-center text-xl font-black text-white"/></label><label className="rounded-2xl border border-violet-300/20 bg-black/20 p-3"><span className="block text-[0.6875rem] font-black uppercase text-gray-400">Transactions / jour</span><input type="number" min="0" value={dailyTransactions} onChange={(e) => setDailyTransactions(Math.max(0, Number(e.target.value || 0)))} className="mt-1 w-full rounded-xl border border-white/10 bg-black/40 px-2 py-2 text-center text-xl font-black text-white"/></label></div><button type="button" disabled={saving} onClick={() => void saveTargets()} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-300/35 bg-red-500/15 px-3 py-2.5 text-[0.75rem] font-black uppercase text-red-300 disabled:opacity-50"><Save size={14}/>{saving ? 'Mise à jour…' : 'Enregistrer les targets'}</button></section>

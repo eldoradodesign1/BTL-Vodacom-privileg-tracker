@@ -300,18 +300,6 @@ export const AdminView: React.FC<AdminViewProps> = ({
     const d = toISO(ld.timestamp);
     return d >= leadStartDate && d <= leadEndDate;
   });
-  const rollingChartStart = new Date();
-  rollingChartStart.setHours(0, 0, 0, 0);
-  rollingChartStart.setDate(rollingChartStart.getDate() - 29);
-  const rollingChartStartIso = toISO(rollingChartStart);
-  const rollingChartData = getDashboardData({ start: rollingChartStartIso, end: todayIso, agentId: selectedAgentId });
-  const rollingLeadCounts = new Map(rollingChartData.lineData.map((item) => [item.date, item.value]));
-  const rollingLineData = Array.from({ length: 30 }, (_, index) => {
-    const date = new Date(rollingChartStart);
-    date.setDate(rollingChartStart.getDate() + index);
-    const isoDate = toISO(date);
-    return { date: isoDate.slice(5), value: rollingLeadCounts.get(isoDate) || 0 };
-  });
   useEffect(() => {
     if (subTab !== 'manage' || manageSection !== 'campaigns') return;
     let mounted = true;
@@ -1277,9 +1265,10 @@ export const AdminView: React.FC<AdminViewProps> = ({
       {subTab === 'stats' && (
         <div className="space-y-5 animate-pop">
           <AdminHomeDashboard
+            userName={currentUser.name}
             totalActivations={totalActivations}
             pieData={dashboardData.pieData}
-            rollingLineData={rollingLineData}
+            onRefresh={onRefreshData}
             hostesses={hostessList}
             shops={shops}
             onOpenLeads={() => setSubTab('leads')}
