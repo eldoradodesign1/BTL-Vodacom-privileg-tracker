@@ -433,3 +433,37 @@ export async function saveMikiliTargets(campaignId: string, targets: MikiliTarge
   fail(error, 'Impossible d’enregistrer les objectifs M-Pesa Mikili');
   invalidateMerchantCache('campaign');
 }
+
+export interface MikiliCampaignProgress {
+  workedDays: number;
+  clients: number;
+  transactions: number;
+  sendClients: number;
+  receiveClients: number;
+}
+
+// Cumul de toute la campagne, compté côté base pour ne pas dépendre des 1 000 lignes d'une page de résultats.
+export async function getMikiliCampaignProgress(campaignId: string, agentIds?: string[]): Promise<MikiliCampaignProgress> {
+  const db = getClient();
+  if (agentIds && agentIds.length === 0) return { workedDays: 0, clients: 0, transactions: 0, sendClients: 0, receiveClients: 0 };
+  // Requête de comptage sans rapatrier les lignes ; le filtre d'équipe s'applique pour un superviseur.
+  const counted = (table: string, agentColumn: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query: any = db.from(table).select('id', { count: 'exact', head: true }).eq('campaign_id', campaignId);
+    if (agentIds) query = query.in(agentColumn, agentIds);
+    return query;
+  };
+  const total = async (query: PromiseLike<{ count: number | null; error: { message: string } | null }>, context: string) => {
+    const { count, error } = await query;
+    fail(error, context);
+    return count || 0;
+  };
+  const [workedDays, clients, transactions, sendClients, receiveClients] = await Promise.all([
+    total(counted('mpesa_mikili_daily_attendance', 'ba_id').not('checkin_at', 'is', null), 'Impossible de compter les présences M-Pesa Mikili'),
+    total(counted('mpesa_mikili_clients', 'agent_id'), 'Impossible de compter les clients M-Pesa Mikili'),
+    total(counted('mpesa_mikili_clients', 'agent_id').eq('transaction_done', true), 'Impossible de compter les transactions M-Pesa Mikili'),
+    total(counted('mpesa_mikili_clients', 'agent_id').in('presented_service', ['send', 'both']), 'Impossible de compter les présentations envoi'),
+    total(counted('mpesa_mikili_clients', 'agent_id').in('presented_service', ['receive', 'both']), 'Impossible de compter les présentations réception'),
+  ]);
+  return { workedDays, clients, transactions, sendClients, receiveClients };
+}

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, BarChart3, Banknote, CheckCircle2, RefreshCw, Target, TrendingUp, UsersRound } from 'lucide-react';
+import { CampaignProgressGauge } from './CampaignProgressGauge';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { CampaignRun } from '../types';
 import { getActiveCampaignRuns, getMerchantCampaign, getMerchantDashboardSummary, type MerchantDashboardSummary } from '../utils/merchantCampaign';
@@ -82,12 +83,25 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
     {error && <div className="rounded-2xl border border-rose-400/40 bg-rose-950/45 p-3 text-xs font-bold text-rose-100">{error}</div>}
 
     <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <article className="glass-card relative overflow-hidden p-4">
-        <div className="merchant-chart-glow pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full bg-violet-400/[0.12] blur-3xl"/>
-        <div className="relative flex items-center justify-between"><div><p className="text-[0.75rem] font-black uppercase tracking-[0.16em] text-violet-200">Anneau de couverture</p><h2 className="mt-1 text-sm font-black">État des POS</h2></div><span className={`rounded-xl border border-white/10 bg-white/5 px-2.5 py-1 text-[0.75rem] font-black ${percentageColor(summary.campaignExecutionRate)}`}>{summary.campaignExecutionRate}%</span></div>
-        <div className="relative mt-2 h-56"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={summary.donut} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={58} outerRadius={84} paddingAngle={4} cornerRadius={9} isAnimationActive={false}>{summary.donut.map((entry) => <Cell key={entry.name} fill={entry.color} style={{ filter: `drop-shadow(0 0 7px ${entry.color}80)` }}/>)}</Pie><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/></PieChart></ResponsiveContainer><div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><b className="text-2xl font-black text-white">{summary.campaignExecutionRate}%</b><span className="text-[0.6875rem] font-black uppercase text-gray-400">Couverture</span></div></div>
-        <div className="flex justify-center gap-2 text-[0.6875rem] font-black uppercase">{summary.donut.map((item) => <span key={item.name} className="flex items-center gap-1 rounded-lg bg-white/[0.04] px-2 py-1 text-gray-300"><i className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }}/>{item.name} {item.value}</span>)}</div>
-      </article>
+      {(() => {
+        // Couverture de la base ciblée : POS touchés sur l'objectif de campagne ; le menu isole chaque statut.
+        const statusColors: Record<string, string> = { 'Complétés': 'var(--m-chart-1)', 'Actifs': 'var(--m-chart-2)', 'Inachevés': 'var(--m-chart-3)', 'Non actifs': 'var(--m-muted)' };
+        const touched = summary.donut.filter((item) => item.name !== 'À couvrir');
+        const covered = touched.reduce((sum, item) => sum + item.value, 0);
+        const target = summary.targets.campaign_pos_target;
+        return (
+          <CampaignProgressGauge
+            title="Couverture"
+            subtitle="POS de la base ciblée · toute la campagne"
+            modes={[
+              { key: 'coverage', label: 'Couverture', value: covered, target, unit: 'POS' },
+              ...touched.map((item) => ({ key: item.name, label: item.name, value: item.value, target, unit: 'POS', color: statusColors[item.name] })),
+            ]}
+            legend={touched.map((item) => ({ label: item.name, value: item.value, color: statusColors[item.name] || 'var(--m-chart-1)' }))}
+            note={`${Math.max(0, target - covered).toLocaleString('fr-FR')} POS restent à couvrir.`}
+          />
+        );
+      })()}
       <article className="glass-card relative overflow-hidden p-4">
         <div className="merchant-chart-glow pointer-events-none absolute -left-10 -bottom-12 h-32 w-32 rounded-full bg-red-400/[0.10] blur-3xl"/>
         <div className="relative"><p className="text-[0.75rem] font-black uppercase tracking-[0.16em] text-red-300">Histogramme de cadence</p><h2 className="mt-1 text-sm font-black">POS réalisés par BA</h2><p className="mt-1 text-[0.75rem] text-gray-400">Barre cyan : réalisé · barre mauve : objectif journalier.</p></div>
