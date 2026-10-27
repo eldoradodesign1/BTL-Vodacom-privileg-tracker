@@ -448,7 +448,7 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   --dock-surface: var(--m-dock);
   --dock-ink: var(--m-muted);
   /* Léger bump de flou sur toute la barre uniquement (pas de pastille active). */
-  --dock-blur: calc(var(--ui-blur, var(--m-blur)) + 4px);
+  --dock-blur: var(--ui-blur, calc(var(--m-blur) + 4px));
   --dock-notch: 40px;
   position: fixed;
   z-index: 40;
@@ -1169,10 +1169,11 @@ body[data-theme] .glass-card::before {
   opacity: min(1, var(--ui-solidity-n, 50) / 50);
 }
 
+/* La barre suit exactement la règle des cartes : 0 → aucun fond, 50 → référence (88 %), 100 → opaque. */
 .agent-dock::before {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 60%),
-    color-mix(in srgb, var(--dock-surface) min(14% + var(--ui-solidity-n, 50) * 1.48%, 88% + (var(--ui-solidity-n, 50) - 50) * 0.24%), transparent);
+    linear-gradient(180deg, rgba(255, 255, 255, calc(0.08 * min(1, var(--ui-solidity-n, 50) / 50))) 0%, transparent 60%),
+    color-mix(in srgb, var(--dock-surface) min(var(--ui-solidity-n, 50) * 1.76%, 88% + (var(--ui-solidity-n, 50) - 50) * 0.24%), transparent);
 }
 
 body[data-theme] .app-header {
