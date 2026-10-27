@@ -42,15 +42,16 @@ export const podiumAssetFor = (theme: ThemeMode) => (
       : 'podium-silver.jpg'
 );
 
-// Opacité des cartes (0 = verre, 100 = opaque), réglée dans l'onglet Thèmes et gardée sur l'appareil.
+// Opacité des cartes (0 = vitre givrée, 50 = apparence de référence, 100 = opaque), réglée dans l'onglet Thèmes et gardée sur l'appareil.
 const SOLIDITY_KEY = 'vodacom_ui_solidity';
 
 export const getCardSolidity = (): number => {
   try {
-    const value = Number(localStorage.getItem(SOLIDITY_KEY));
-    return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 0;
+    const stored = localStorage.getItem(SOLIDITY_KEY);
+    const value = stored === null ? 50 : Number(stored);
+    return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 50;
   } catch {
-    return 0;
+    return 50;
   }
 };
 
@@ -75,27 +76,11 @@ export const applyThemeToDocument = (theme: ThemeMode) => {
 
 type ViewTransitionDocument = Document & { startViewTransition?: (update: () => void) => unknown };
 
-/**
- * Change de matière avec un dévoilement circulaire depuis le point touché.
- * Sans View Transitions (ou avec « réduire les animations »), le changement est immédiat.
- */
-export const transitionTheme = (theme: ThemeMode, commit: () => void, origin?: { x: number; y: number }) => {
+/** Change de matière en fondu enchaîné ; immédiat sans View Transitions ou avec « réduire les animations ». */
+export const transitionTheme = (theme: ThemeMode, commit: () => void) => {
   const doc = document as ViewTransitionDocument;
   const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  if (!doc.startViewTransition || reduced) {
-    applyThemeToDocument(theme);
-    commit();
-    return;
-  }
-  const x = origin?.x ?? window.innerWidth / 2;
-  const y = origin?.y ?? window.innerHeight / 2;
-  const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
-  const root = document.documentElement.style;
-  root.setProperty('--reveal-x', `${x}px`);
-  root.setProperty('--reveal-y', `${y}px`);
-  root.setProperty('--reveal-r', `${radius}px`);
-  doc.startViewTransition(() => {
-    applyThemeToDocument(theme);
-    commit();
-  });
+  const update = () => { applyThemeToDocument(theme); commit(); };
+  if (!doc.startViewTransition || reduced) update();
+  else doc.startViewTransition(update);
 };

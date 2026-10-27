@@ -10,7 +10,7 @@ import { publicUrl } from '../utils/assets';
 interface ThemesViewProps {
   userId: string;
   theme: ThemeMode;
-  onSetTheme: (theme: ThemeMode, origin?: { x: number; y: number }) => void;
+  onSetTheme: (theme: ThemeMode) => void;
 }
 
 export const ThemesView: React.FC<ThemesViewProps> = ({ userId, theme, onSetTheme }) => {
@@ -56,7 +56,7 @@ export const ThemesView: React.FC<ThemesViewProps> = ({ userId, theme, onSetThem
             className="theme-solidity w-full"
             style={{ ['--solidity' as string]: `${solidity}%` }}
           />
-          <div className="flex justify-between text-xs text-[var(--m-muted)]"><span>Verre</span><span>Opaque</span></div>
+          <div className="flex justify-between text-xs text-[var(--m-muted)]"><span>Givré</span><span>Opaque</span></div>
         </div>
       </section>
 
@@ -69,10 +69,7 @@ export const ThemesView: React.FC<ThemesViewProps> = ({ userId, theme, onSetThem
               type="button"
               role="radio"
               aria-checked={active}
-              onClick={(event) => {
-                const box = event.currentTarget.getBoundingClientRect();
-                onSetTheme(option.key, { x: box.left + box.width / 2, y: box.top + box.height / 2 });
-              }}
+              onClick={() => onSetTheme(option.key)}
               data-theme-preview={option.key}
               className="theme-card"
               style={{ ['--m-silk-image' as string]: `url("${publicUrl(`theme-backgrounds/silk-${option.key}.jpg`)}")` }}
