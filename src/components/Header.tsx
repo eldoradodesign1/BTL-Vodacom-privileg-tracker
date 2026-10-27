@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { User, NotificationItem, CampaignContext } from '../types';
-import { Bell, LogOut, Shield, RefreshCw, UserRound, Camera, X, BriefcaseBusiness, Banknote, Volume2, VolumeX } from 'lucide-react';
+import { Bell, LogOut, Shield, RefreshCw, UserRound, Camera, X, Banknote, Volume2, VolumeX, Flag, ChevronDown, CalendarDays, Eye } from 'lucide-react';
 import { addCheckin, getShopById, resolveStoredPhotoUrl } from '../utils/storage';
 import { armFundRequestAlertAudio, getNotificationsMuted, setNotificationsMuted } from '../utils/fundRequestAlert';
 import { publicUrl } from '../utils/assets';
@@ -30,6 +30,12 @@ interface HeaderProps {
   checkinUnavailableLabel?: string;
   fundRequestAlerts?: Array<{ id: string; baName: string; amount: number; posLabel: string; requestedAt: string }>;
   onOpenFundRequest?: (id: string) => void;
+  /** Super-admin : raccourcis et sélecteur de simulation affichés dans le menu du compte. */
+  simulation?: {
+    shortcuts: Array<{ key: string; label: string; targetId?: string; active: boolean }>;
+    onSimulate: (userId: string) => void;
+    onOpenPicker: () => void;
+  };
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -53,7 +59,8 @@ export const Header: React.FC<HeaderProps> = ({
   allowCheckin = true,
   checkinUnavailableLabel = 'Pointage indisponible pendant la pause de campagne',
   fundRequestAlerts = [],
-  onOpenFundRequest
+  onOpenFundRequest,
+  simulation
 }) => {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
   const [showThemeMenu, setShowThemeMenu] = useState(false);
@@ -205,9 +212,8 @@ export const Header: React.FC<HeaderProps> = ({
         ? 'border-white/10 text-white'
         : 'border-zinc-200 text-zinc-900 shadow-xl'
     }`}>
-      <div className="flex items-start justify-between gap-2 sm:gap-3">
-        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
-        {/* Vodacom / Eldorado Badge */}
+      <div className="flex items-center justify-between gap-2 sm:gap-3">
+        <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
           onClick={() => {
@@ -218,7 +224,9 @@ export const Header: React.FC<HeaderProps> = ({
             }
           }}
           disabled={isPointagePending || !allowCheckin}
-          className={`relative w-[3.25rem] h-12 bg-red-600 rounded-2xl flex items-center justify-center font-black text-white text-base shadow-lg shadow-red-600/30 overflow-hidden shrink-0 border border-white/20 transition-transform ${photoSrc ? 'cursor-zoom-in hover:scale-[1.03]' : user.role === 'agent' ? 'cursor-pointer hover:scale-[1.03]' : 'cursor-default'} ${isPointagePending ? 'opacity-75' : ''}`}
+          className={photoSrc
+            ? `relative h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-[var(--m-accent)] ${isPointagePending ? 'opacity-75' : ''}`
+            : `btn-neon btn-red relative shrink-0 !min-h-0 !w-auto !gap-1.5 !rounded-full !px-4 !py-2.5 !text-sm !normal-case !tracking-normal ${isPointagePending ? 'opacity-75' : ''}`}
           aria-label={photoSrc ? 'Ouvrir la photo de pointage en plein écran' : (allowCheckin ? 'Check-in en attente' : checkinUnavailableLabel)}
         >
           {photoSrc ? (
@@ -233,7 +241,7 @@ export const Header: React.FC<HeaderProps> = ({
               }}
             />
           ) : (
-            <span className="btl-keep-small flex flex-col items-center gap-1 text-center leading-none"><Camera className="h-5 w-5" aria-hidden="true" /><span className="whitespace-nowrap text-[0.625rem] font-black">Pointer</span></span>
+            <><Camera className="h-4 w-4" aria-hidden="true" />Pointer</>
           )}
           <span className={`status-dot absolute -bottom-0.5 -right-0.5 border-2 ${isDarkTheme ? 'border-black' : 'border-white'} ${online ? 'status-online' : 'status-offline'}`} />
         </button>
@@ -245,39 +253,23 @@ export const Header: React.FC<HeaderProps> = ({
           onChange={handlePointageCapture}
           className="hidden"
         />
-
-          <div className="flex flex-col min-w-0">
-          <div className="flex items-center space-x-2">
-              <span className="font-black text-sm sm:text-lg tracking-tight brand-text truncate">
-              <span className="hidden min-[420px]:inline">BTL Deployment Tracker</span><span className="min-[420px]:hidden">BTL Tracker</span>
-            </span>
-          </div>
-            <span className={`text-xs sm:text-sm font-black mt-0.5 px-2.5 py-1 rounded-full inline-flex items-center gap-2 w-fit max-w-full truncate ${
-              isDarkTheme ? 'bg-white/10 text-red-100 border border-white/20' : 'bg-red-50 text-red-700 border border-red-200'
-            }`} title={user.name}>
-              <span className={`inline-block w-2.5 h-2.5 rounded-full shadow ${syncDotClass}`} />
-              <span className="truncate">{roleLabel}: {user.name}</span>
-            </span>
-            <span className="hidden sm:inline text-[0.6875rem] text-zinc-400 font-bold tracking-wide uppercase opacity-80">
-              Par <b className="text-red-500 font-black">Eldorado Design</b>
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0" data-header-actions>
           {onSetCampaign && visibleCampaigns.length > 1 && (
             <div className="relative">
               <button
+                type="button"
                 onClick={() => setShowCampaignMenu((prev) => !prev)}
-                className={`app-icon-button p-2 rounded-xl border transition ${
-                  isDarkTheme ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-300' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
-                }`}
+                className="inline-flex h-10 max-w-[11rem] items-center gap-1.5 rounded-xl border border-[var(--m-edge-soft)] bg-[var(--m-tile)] px-3 text-sm font-bold text-[var(--m-text)] lg:max-w-none"
+                aria-haspopup="menu"
+                aria-expanded={showCampaignMenu}
                 title="Changer de campagne"
+                aria-label="Changer de campagne"
               >
-                <BriefcaseBusiness className="w-4 h-4" />
+                <Flag className="h-4 w-4 shrink-0 text-[var(--m-accent)]" aria-hidden="true" />
+                <span className="truncate">{visibleCampaigns.find((campaign) => campaign.key === activeCampaign)?.label || 'Campagne'}</span>
+                <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${showCampaignMenu ? 'rotate-180' : ''}`} aria-hidden="true" />
               </button>
               {showCampaignMenu && (
-                <div className={`app-popover absolute right-0 top-11 w-56 border rounded-2xl p-1.5 shadow-2xl z-50 ${
+                <div className={`app-popover absolute left-0 top-12 w-60 border rounded-2xl p-1.5 shadow-2xl z-50 ${
                   isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
                 }`}>
                   {visibleCampaigns.map((campaign) => (
@@ -296,7 +288,13 @@ export const Header: React.FC<HeaderProps> = ({
               )}
             </div>
           )}
+        </div>
 
+        <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0" data-header-actions>
+          <span className="hidden h-10 items-center gap-2 rounded-xl border border-[var(--m-edge-soft)] bg-[var(--m-tile)] px-3 text-sm font-bold text-[var(--m-text)] lg:inline-flex">
+            <CalendarDays className="h-4 w-4 text-[var(--m-accent)]" aria-hidden="true" />
+            {new Date().toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short', timeZone: 'Africa/Kinshasa' })}
+          </span>
           {/* Actualisation des données pour les comptes non super_admin */}
           {onRefreshData && (
             <button
@@ -383,7 +381,7 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               type="button"
               onClick={() => { setShowThemeMenu((prev) => !prev); setShowCampaignMenu(false); setShowNotifPanel(false); }}
-              className={`app-icon-button w-10 h-10 rounded-xl border flex items-center justify-center transition ${
+              className={`app-icon-button relative w-10 h-10 rounded-full border flex items-center justify-center transition ${
                 isDarkTheme ? 'bg-white/5 hover:bg-white/10 border-white/10 text-gray-200' : 'bg-zinc-100 hover:bg-zinc-200 border-zinc-300 text-zinc-700'
               }`}
               aria-label="Menu du compte"
@@ -392,6 +390,7 @@ export const Header: React.FC<HeaderProps> = ({
               title="Menu du compte"
             >
               <UserRound className="w-5 h-5" />
+              <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 border-[var(--m-sheet)] ${syncDotClass}`} aria-hidden="true" />
             </button>
             {showThemeMenu && (
               <div role="menu" className={`app-popover absolute right-0 top-12 w-64 border rounded-2xl p-2 shadow-2xl z-50 ${
@@ -428,6 +427,19 @@ export const Header: React.FC<HeaderProps> = ({
                         </button>
                       ))}
                     </div>
+                  </div>
+                )}
+                {simulation && (
+                  <div className="border-b border-[var(--m-edge-soft)] px-2 pb-2.5 pt-2">
+                    <p className="mb-2 px-1 text-xs font-semibold text-[var(--m-text-2)]">Voir l’appli comme</p>
+                    <div className="seg-control">
+                      {simulation.shortcuts.map((shortcut) => (
+                        <button key={shortcut.key} type="button" disabled={!shortcut.targetId} aria-pressed={shortcut.active} onClick={() => { if (shortcut.targetId) { simulation.onSimulate(shortcut.targetId); setShowThemeMenu(false); } }}>{shortcut.label}</button>
+                      ))}
+                    </div>
+                    <button type="button" role="menuitem" onClick={() => { setShowThemeMenu(false); simulation.onOpenPicker(); }} className="mt-1.5 flex min-h-[40px] w-full items-center gap-3 rounded-xl px-2 text-left text-sm font-semibold text-[var(--m-text)] hover:bg-[var(--m-tile)]">
+                      <Eye className="h-4 w-4" aria-hidden="true" /> Autre compte…
+                    </button>
                   </div>
                 )}
                 <button

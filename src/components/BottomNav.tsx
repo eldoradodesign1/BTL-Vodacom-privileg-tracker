@@ -73,6 +73,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   return (
     <nav className="app-bottom-nav agent-dock" aria-label="Navigation principale"
       data-agent={userRole === 'agent'} data-campaign={eventContext ? 'event' : merchantContext ? 'merchant' : youthContext ? 'youth' : mikiliContext ? 'mikili' : 'privilege'}>
+      <div className="dock-brand" aria-hidden="true">BTL</div>
       <div className="dock-tab-group">{tabs.slice(0, split).map(renderTab)}</div>
       <div id="agent-dock-action-slot" className="dock-action-slot" />
       {tabs.length > split && <div className="dock-tab-group">{tabs.slice(split).map(renderTab)}</div>}

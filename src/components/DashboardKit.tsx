@@ -74,7 +74,7 @@ interface WelcomeHeaderProps {
 
 /** En-tête d'accueil : salutation, rôle de l'écran, date consultée. */
 export const WelcomeHeader: React.FC<WelcomeHeaderProps> = ({ eyebrow, name, subtitle, date, minDate, maxDate, onDateChange, onRefresh, refreshing }) => (
-  <section className="glass-card space-y-4 !p-5">
+  <section data-slot="welcome" className="glass-card space-y-4 !p-5">
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--m-accent)]">{eyebrow}</p>
@@ -151,7 +151,7 @@ const Ring: React.FC<TargetRing> = ({ label, value, target, color = 'var(--m-cha
 
 /** Anneaux des targets du jour consulté. */
 export const TargetRings: React.FC<{ title: string; subtitle?: string; rings: TargetRing[] }> = ({ title, subtitle, rings }) => (
-  <section className="glass-card space-y-3 !p-5">
+  <section data-slot="rings" className="glass-card space-y-3 !p-5">
     <div className="flex items-start justify-between gap-3">
       <h3 className="text-base font-bold text-[var(--m-text)]">{title}</h3>
       {subtitle && <span className="shrink-0 text-xs font-semibold text-[var(--m-text-2)]">{subtitle}</span>}
@@ -230,7 +230,7 @@ export const TrendChart: React.FC<{ title: string; subtitle?: string; views: Tre
   const tooltip = focus === null ? '' : [view.labels[focus], ...view.series.map((serie) => `${formatNumber(serie.values[focus] || 0)} ${serie.label.toLowerCase()}`)].join(' · ');
   const tooltipWidth = Math.min(width - left - right, tooltip.length * 6.2 + 20);
   return (
-    <section className="glass-card space-y-2 !p-5">
+    <section data-slot="trend" className="glass-card space-y-2 !p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-base font-bold text-[var(--m-text)]">{title}</h3>
@@ -305,7 +305,7 @@ export const TargetBars: React.FC<{ title: string; subtitle?: string; rows: Targ
   const sorted = [...rows].sort((a, b) => ratio(b) - ratio(a) || b.value - a.value);
   const visible = expanded ? sorted : sorted.slice(0, limit);
   return (
-    <section className="glass-card space-y-3 !p-5">
+    <section data-slot="bars" className="glass-card space-y-3 !p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-base font-bold text-[var(--m-text)]">{title}</h3>

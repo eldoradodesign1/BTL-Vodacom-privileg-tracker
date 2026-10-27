@@ -134,7 +134,7 @@ export const AdminHomeDashboard: React.FC<AdminHomeDashboardProps> = ({ userName
   const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
 
   return (
-    <div className="admin-home @container space-y-4 animate-pop">
+    <div className="admin-home campaign-home @container animate-pop">
       <WelcomeHeader
         eyebrow="Vodacom Privilège · pilotage"
         name={userName}

@@ -253,7 +253,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
     <div className="space-y-4 pb-6">
       {error && <div className="glass-card flex items-center gap-2 border border-red-400/30 bg-red-500/[0.08] p-3 text-xs font-bold text-red-100"><CircleAlert size={16}/>{error}</div>}
 
-      {activeTab === 'home' && <>
+      {activeTab === 'home' && <div className="campaign-home">
         <WelcomeHeader
           eyebrow="M-Pesa Mikili · pilotage"
           name={currentUser.name}
@@ -319,7 +319,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
           <div className="flex items-center justify-between"><div><p className="text-[0.6875rem] font-black uppercase tracking-[0.2em] text-amber-200/80">Podium du jour</p><h2 className="mt-1 text-lg font-black text-white">La course Mikili</h2></div><Trophy size={21} className="text-amber-200"/></div>
           <div className="mt-3 grid grid-cols-3 gap-2">{[0,1,2].map((index) => { const entry=podium[index]; return <div key={entry?.userId || index} className={rankClasses[index] + ' min-h-24 rounded-2xl border p-3'}><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-black/15 text-[0.75rem] font-black">{index+1}</span><b className="mt-2 block truncate text-[0.75rem]">{entry?.name?.split(' ')[0] || '—'}</b><span className="mt-1 block text-[0.6875rem] font-bold opacity-80">{entry ? entry.transactions + ' Tx · ' + entry.clients + ' clients' : 'À saisir'}</span></div>; })}</div>
         </section>}
-      </>}
+      </div>}
 
       {activeTab === 'tab2' && <>
         <section className="flex items-center justify-between gap-2 rounded-[1.5rem] border border-white/10 bg-white/[0.025] p-3"><div className="flex items-center gap-2"><UsersRound size={18} className="text-red-200"/><div><p className="text-[0.6875rem] font-black uppercase tracking-[0.18em] text-gray-500">Monitoring Mikili</p><h2 className="mt-0.5 text-sm font-black text-white">{dayLabel(date)} · {team.length} BA</h2></div></div><DateIconPicker value={date} min={START_DATE} max={today} onChange={setDate} className="flex min-w-0 items-center" buttonClassName="h-9 w-9 shrink-0 rounded-xl border border-red-300/20 bg-red-500/10 text-red-100" labelClassName="hidden sm:block truncate text-[0.6875rem] font-black uppercase text-gray-300"/></section>
