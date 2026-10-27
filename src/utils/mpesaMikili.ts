@@ -386,9 +386,15 @@ export async function getMikiliCampaignClients(
   let query = db.from('mpesa_mikili_clients').select('*, location:campaign_locations(*)').eq('campaign_id', campaignId).order('activity_date', { ascending: false }).order('created_at', { ascending: false });
   if (startDate) query = query.gte('activity_date', startDate);
   if (endDate) query = query.lte('activity_date', endDate);
-  const { data, error } = await query.limit(1000);
-  fail(error, 'Impossible de charger les archives M-Pesa Mikili');
-  return (data || []) as MikiliClient[];
+  // Lecture par pages de 1 000 : une campagne dépasse vite la limite d'une seule réponse.
+  const rows: MikiliClient[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await query.range(from, from + 999);
+    fail(error, 'Impossible de charger les archives M-Pesa Mikili');
+    rows.push(...((data || []) as MikiliClient[]));
+    if (!data || data.length < 1000) break;
+  }
+  return rows;
 }
 
 
@@ -466,4 +472,18 @@ export async function getMikiliCampaignProgress(campaignId: string, agentIds?: s
     total(counted('mpesa_mikili_clients', 'agent_id').in('presented_service', ['receive', 'both']), 'Impossible de compter les présentations réception'),
   ]);
   return { workedDays, clients, transactions, sendClients, receiveClients };
+}
+
+// Nombre de BA pointés par jour (repère d'objectif des courbes) ; une seule colonne remonte par présence.
+export async function getMikiliPresenceByDay(campaignId: string, startDate: string, endDate: string, agentIds?: string[]): Promise<Record<string, number>> {
+  const db = getClient();
+  if (agentIds && agentIds.length === 0) return {};
+  let query = db.from('mpesa_mikili_daily_attendance').select('activity_date').eq('campaign_id', campaignId).not('checkin_at', 'is', null).gte('activity_date', startDate).lte('activity_date', endDate);
+  if (agentIds) query = query.in('ba_id', agentIds);
+  const { data, error } = await query.limit(10000);
+  fail(error, 'Impossible de charger les présences M-Pesa Mikili');
+  return ((data || []) as Array<{ activity_date: string }>).reduce<Record<string, number>>((acc, row) => {
+    acc[row.activity_date] = (acc[row.activity_date] || 0) + 1;
+    return acc;
+  }, {});
 }

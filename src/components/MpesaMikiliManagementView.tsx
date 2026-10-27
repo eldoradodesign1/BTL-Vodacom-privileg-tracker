@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Archive, BarChart3, FileText, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, MapPin, RefreshCw, Trophy, UsersRound, UserRound, Zap, Target, Settings2, ArrowUpRight } from 'lucide-react';
 import { CampaignProgressGauge } from './CampaignProgressGauge';
+import { TargetBars, TargetRings, TrendChart, WelcomeHeader } from './DashboardKit';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { User } from '../types';
 import {
@@ -11,6 +12,7 @@ import {
   getMikiliSupervisorRegions,
   getMikiliTargets,
   getMikiliCampaignProgress,
+  getMikiliPresenceByDay,
   type MikiliCampaignProgress,
   getMikiliTeam,
   mikiliTodayIso,
@@ -84,6 +86,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
   const [date, setDate] = useState(today);
   const [team, setTeam] = useState<MikiliTeamMember[]>([]);
   const [campaignProgress, setCampaignProgress] = useState<MikiliCampaignProgress | null>(null);
+  const [presenceByDay, setPresenceByDay] = useState<Record<string, number>>({});
   const [podium, setPodium] = useState<MikiliPodiumEntry[]>([]);
   const [archiveClients, setArchiveClients] = useState<MikiliClient[]>([]);
   const [regions, setRegions] = useState<MikiliRegion[]>([]);
@@ -142,6 +145,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
       const teamIds = new Set(nextTeam.map((member) => member.userId));
       const scopedClients = isSupervisor && currentUser.role !== 'sub_admin' ? nextClients.filter((client) => teamIds.has(client.agent_id)) : nextClients;
       if (activeTab === 'home' && !isSupervisor) setCampaignProgress(await getMikiliCampaignProgress(campaign.id));
+      if (activeTab === 'home') setPresenceByDay(await getMikiliPresenceByDay(campaign.id, START_DATE, today, isSupervisor && currentUser.role !== 'sub_admin' ? nextTeam.map((member) => member.userId) : undefined));
       setTeam(nextTeam);
       setPodium(nextPodium);
       setTargets(nextTargets);
@@ -250,19 +254,17 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
       {error && <div className="glass-card flex items-center gap-2 border border-red-400/30 bg-red-500/[0.08] p-3 text-xs font-bold text-red-100"><CircleAlert size={16}/>{error}</div>}
 
       {activeTab === 'home' && <>
-        <section className="relative overflow-hidden rounded-[2rem] border border-red-300/15 bg-gradient-to-br from-red-500/[0.20] via-white/[0.05] to-transparent p-5 shadow-2xl shadow-red-950/20">
-          <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-red-500/20 blur-3xl"/>
-          <div className="relative flex items-start justify-between gap-3"><div><p className="text-[0.6875rem] font-black uppercase tracking-[0.22em] text-red-200">M-Pesa Mikili · pilotage</p><h1 className="mt-1 text-3xl font-black tracking-tight text-white">Bonjour,<br /><span className="text-red-300">{currentUser.name.split(' ')[0]}.</span></h1><p className="mt-1 text-[0.75rem] font-semibold text-gray-400">{isSupervisor && regions.length ? regions.join(' · ') : 'Pilotage de la sensibilisation et des transactions'}</p></div><button type="button" onClick={() => void load(false)} className="rounded-2xl border border-white/10 bg-black/20 p-3 text-gray-200 transition hover:bg-white/10 active:scale-95" title="Actualiser"><RefreshCw size={17} className={refreshing ? 'animate-spin' : ''}/></button></div>
-          <div className="relative mt-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/15 p-2"><DateIconPicker value={date} min={START_DATE} max={today} onChange={setDate} className="flex min-w-0 flex-1 items-center" buttonClassName="h-10 w-10 shrink-0 rounded-xl border border-red-300/20 bg-red-500/10 text-red-100" labelClassName="truncate text-[0.75rem] font-black uppercase text-gray-200"/><button type="button" onClick={() => setDate(today)} className={date === today ? 'rounded-xl border border-red-300/50 bg-red-500/20 px-3 py-2 text-[0.6875rem] font-black uppercase text-red-100' : 'rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[0.6875rem] font-black uppercase text-gray-400'}>Aujourd’hui</button></div>
-        </section>
-        <section className="relative overflow-hidden rounded-[1.7rem] border border-white/10 bg-white/[0.025] px-4 py-3">
-          <div className="flex items-stretch divide-x divide-white/10 overflow-x-auto">{([
-            { label: 'Présents', value: metrics.present, Icon: UsersRound, tone: 'text-red-300' },
-            { label: 'Clients', value: metrics.clients, Icon: UsersRound, tone: 'text-white' },
-            { label: 'Transactions', value: metrics.transactions, Icon: Zap, tone: 'text-emerald-200' },
-            { label: 'Conversion', value: `${metrics.conversion}%`, Icon: BarChart3, tone: 'text-amber-100' },
-          ] as Array<{ label: string; value: string | number; Icon: React.ElementType; tone: string }>).map(({ label, value, Icon: I, tone }) => <div key={label} className="min-w-[105px] flex-1 px-3 first:pl-0 last:pr-0"><div className="flex items-center gap-2"><I size={14} className={tone}/><span className="text-[0.6875rem] font-black uppercase tracking-[0.16em] text-gray-500">{label}</span></div><b className="mt-1 block text-2xl font-black text-white">{value}</b></div>)}</div>
-        </section>
+        <WelcomeHeader
+          eyebrow="M-Pesa Mikili · pilotage"
+          name={currentUser.name}
+          subtitle="Pilotage de la sensibilisation et des transactions"
+          date={date}
+          minDate={START_DATE}
+          maxDate={today}
+          onDateChange={setDate}
+          onRefresh={() => void load(false)}
+          refreshing={refreshing}
+        />
         {!isSupervisor && campaignProgress && <CampaignProgressGauge
           title="Progression"
           subtitle="M-Pesa Mikili · toute la campagne"
@@ -279,62 +281,40 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
             ? `Objectif cumulé : objectif journalier × ${campaignProgress.workedDays} journée${campaignProgress.workedDays > 1 ? 's' : ''} pointée${campaignProgress.workedDays > 1 ? 's' : ''}.`
             : 'Définissez les objectifs journaliers dans Gestion pour suivre la progression.'}
         />}
-        {isSupervisor && <section className="glass-card overflow-hidden p-3 border border-red-300/15">
-          <div className="flex items-center justify-between"><div><p className="text-[0.6875rem] font-black uppercase tracking-[0.2em] text-red-300/70">Performance équipe</p><h2 className="mt-1 text-lg font-black text-white">Indicateurs du jour</h2></div><span className="text-[0.6875rem] font-black uppercase text-red-300">{metrics.present}/{team.length} présents</span></div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {[
-              { title: 'Clients / objectif', value: metrics.clients, target: targets.dailyClients * team.length, tone: '#38bdf8' },
-              { title: 'Transactions / objectif', value: metrics.transactions, target: targets.dailyTransactions * team.length, tone: '#22c55e' },
-              { title: 'Présence équipe', value: metrics.present, target: team.length, tone: '#f59e0b' },
-            ].map((item) => {
-              const pct = item.target > 0 ? Math.min(100, Math.round(item.value / item.target * 100)) : 0;
-              const donut = [{ name: 'Réalisé', value: item.value }, { name: 'Reste', value: Math.max(0, item.target - item.value) }];
-              return <div key={item.title} className="rounded-2xl border border-white/10 bg-black/15 p-2">
-                <p className="truncate text-center text-[0.6875rem] font-black uppercase text-gray-500">{item.title}</p>
-                <div className="relative mx-auto h-28 max-w-[145px]">
-                  <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={donut} dataKey="value" innerRadius={34} outerRadius={48} paddingAngle={2} stroke="none"><Cell fill={item.tone}/><Cell fill="rgba(255,255,255,.07)"/></Pie></PieChart></ResponsiveContainer>
-                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><b className="text-base font-black text-white">{item.value}</b><span className="text-[0.6875rem] font-black text-gray-500">{item.target > 0 ? String(pct) + '%' : '—'}</span></div>
-                </div>
-                <p className="text-center text-[0.6875rem] font-bold text-gray-500">{item.target > 0 ? String(item.value) + ' / ' + String(item.target) : 'Objectif non défini'}</p>
-              </div>;
-            })}
-          </div>
-        </section>}
-        <section className="grid grid-cols-2 gap-2">
-          <div className="glass-card p-4"><p className="text-[0.6875rem] font-black uppercase tracking-[0.18em] text-gray-500">Conversion</p><b className="mt-2 block text-3xl font-black text-emerald-200">{metrics.conversion}%</b><div className="mt-3 h-1.5 rounded-full bg-white/[0.06]"><div className="h-full rounded-full bg-emerald-400" style={{width:metrics.conversion+'%'}}/></div></div>
-          <div className="glass-card p-4"><p className="text-[0.6875rem] font-black uppercase tracking-[0.18em] text-gray-500">Couverture</p><b className="mt-2 block text-3xl font-black text-red-300">{targets.dailyClients > 0 && team.length ? Math.min(100, Math.round(metrics.clients / (targets.dailyClients * team.length) * 100)) : 0}%</b><span className="mt-2 block text-[0.6875rem] font-bold text-gray-500">{metrics.clients} / {targets.dailyClients * team.length || 0} clients objectif</span></div>
-        </section>
-
-        {!isSupervisor && (        <section className="glass-card overflow-hidden p-4">
-          <div className="flex items-center justify-between"><div><p className="text-[0.6875rem] font-black uppercase tracking-[0.2em] text-red-300/80">Progression</p><h2 className="mt-1 text-lg font-black text-white">Le terrain depuis le 1er septembre</h2></div><ArrowUpRight size={20} className="text-red-300"/></div>
-          <div className="mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><LineChart data={chartData}><CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,.07)"/><XAxis dataKey="label" tick={{fontSize:11,fill:'#6b7280'}} axisLine={false} tickLine={false}/><YAxis allowDecimals={false} tick={{fontSize:11,fill:'#6b7280'}} axisLine={false} tickLine={false}/><Tooltip contentStyle={{background:'#11141d',border:'1px solid rgba(255,255,255,.12)',borderRadius:12,fontSize:11}}/><Line type="monotone" dataKey="clients" name="Clients" stroke="var(--m-accent)" strokeWidth={3} dot={false}/><Line type="monotone" dataKey="transactions" name="Transactions" stroke="#22c55e" strokeWidth={3} dot={false}/></LineChart></ResponsiveContainer></div>
-        </section>
-
-    )}
-    {!isSupervisor && <section className="glass-card overflow-hidden p-3">
-          <div className="flex items-center justify-between px-1"><div><p className="text-[0.6875rem] font-black uppercase tracking-[0.2em] text-red-300/80">Indicateurs</p><h2 className="mt-1 text-lg font-black text-white">Lecture du terrain</h2></div><span className="text-[0.6875rem] font-black uppercase text-gray-500">{dayLabel(date)}</span></div>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {[
-              { title: 'Clients / objectif', done: metrics.clients, target: targets.dailyClients * team.length, tone: '#38bdf8' },
-              { title: 'Transactions / objectif', done: metrics.transactions, target: targets.dailyTransactions * team.length, tone: '#22c55e' },
-              { title: 'Profil clients', done: selectedDayClients.filter((x)=>x.existing_mikili_user==='yes').length, target: selectedDayClients.length, tone: '#f59e0b' },
-            ].map((item) => {
-              const pct = item.target > 0 ? Math.min(100, Math.round(item.done / item.target * 100)) : 0;
-              const donut = item.title === 'Profil clients'
-                ? [{ name: 'Déjà utilisateur', value: item.done }, { name: 'Pas encore', value: Math.max(0, item.target - item.done) }]
-                : [{ name: 'Réalisé', value: item.done }, { name: 'Reste', value: Math.max(0, item.target - item.done) }];
-              return <div key={item.title} className="min-w-0 rounded-2xl border border-white/10 bg-white/[.025] p-2">
-                <p className="truncate text-center text-[0.6875rem] font-black uppercase tracking-wide text-gray-500">{item.title}</p>
-                <div className="relative mx-auto h-28 max-w-[145px]">
-                  <ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={donut} dataKey="value" innerRadius={34} outerRadius={48} paddingAngle={2} stroke="none"><Cell fill={item.tone}/><Cell fill="rgba(255,255,255,.07)"/></Pie></PieChart></ResponsiveContainer>
-                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center"><b className="text-base font-black text-white">{item.done}</b><span className="text-[0.6875rem] font-black text-gray-500">{item.target > 0 ? String(pct) + '%' : '—'}</span></div>
-                </div>
-                <p className="truncate text-center text-[0.6875rem] font-bold text-gray-500">{item.title === 'Profil clients' ? String(item.done) + ' / ' + String(item.target) + ' client(s)' : item.target > 0 ? String(item.done) + ' / ' + String(item.target) : 'Objectif non défini'}</p>
-              </div>;
-            })}
-          </div>
-        </section>}
-
+        <TargetRings
+          title="Indicateurs du jour"
+          subtitle={dayLabel(date)}
+          rings={[
+            { label: 'Clients', value: metrics.clients, target: targets.dailyClients * metrics.present, color: 'var(--m-chart-1)' },
+            { label: 'Transactions', value: metrics.transactions, target: targets.dailyTransactions * metrics.present, color: 'var(--m-chart-2)', caption: `Conversion ${metrics.conversion} %` },
+            { label: 'Présence', value: metrics.present, target: team.length, color: 'var(--m-chart-3)', caption: `${metrics.present} / ${team.length} BA` },
+            { label: 'Déjà utilisateurs', value: selectedDayClients.filter((client) => client.existing_mikili_user === 'yes').length, target: selectedDayClients.length, color: 'var(--m-accent)', caption: `sur ${selectedDayClients.length} client${selectedDayClients.length > 1 ? 's' : ''}` },
+          ]}
+        />
+        <TrendChart
+          title="Progression du terrain"
+          subtitle="Clients et transactions par jour"
+          views={[
+            { key: 'campaign', label: 'Campagne', points: chartData },
+            { key: 'month', label: '30 jours', points: chartData.slice(-30) },
+          ].map(({ key, label, points }) => ({
+            key,
+            label,
+            labels: points.map((point) => point.label),
+            series: [
+              { key: 'clients', label: 'Clients', values: points.map((point) => point.clients) },
+              { key: 'transactions', label: 'Transactions', values: points.map((point) => point.transactions), color: 'var(--m-chart-3)' },
+            ],
+            target: targets.dailyClients > 0 ? points.map((point) => (presenceByDay[point.date] || 0) * targets.dailyClients) : undefined,
+            targetLabel: 'Objectif clients',
+          }))}
+        />
+        <TargetBars
+          title="BA face à l’objectif"
+          subtitle={`Clients du ${dayLabel(date)} · trait = objectif journalier`}
+          rows={team.filter((member) => member.attendance?.checkin_at || member.clients > 0).map((member) => ({ key: member.userId, label: member.name, value: member.clients, target: targets.dailyClients }))}
+          emptyText="Aucun BA pointé ce jour."
+        />
         {!isSupervisor && podium.length > 0 && <section className="glass-card overflow-hidden p-4">
           <div className="flex items-center justify-between"><div><p className="text-[0.6875rem] font-black uppercase tracking-[0.2em] text-amber-200/80">Podium du jour</p><h2 className="mt-1 text-lg font-black text-white">La course Mikili</h2></div><Trophy size={21} className="text-amber-200"/></div>
           <div className="mt-3 grid grid-cols-3 gap-2">{[0,1,2].map((index) => { const entry=podium[index]; return <div key={entry?.userId || index} className={rankClasses[index] + ' min-h-24 rounded-2xl border p-3'}><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-black/15 text-[0.75rem] font-black">{index+1}</span><b className="mt-2 block truncate text-[0.75rem]">{entry?.name?.split(' ')[0] || '—'}</b><span className="mt-1 block text-[0.6875rem] font-bold opacity-80">{entry ? entry.transactions + ' Tx · ' + entry.clients + ' clients' : 'À saisir'}</span></div>; })}</div>

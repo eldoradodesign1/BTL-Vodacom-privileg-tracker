@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, BarChart3, Banknote, CheckCircle2, RefreshCw, Target, TrendingUp, UsersRound } from 'lucide-react';
 import { CampaignProgressGauge } from './CampaignProgressGauge';
+import { TargetBars, TargetRings, TrendChart, WelcomeHeader } from './DashboardKit';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { CampaignRun } from '../types';
 import { getActiveCampaignRuns, getMerchantCampaign, getMerchantDashboardSummary, type MerchantDashboardSummary } from '../utils/merchantCampaign';
@@ -8,17 +9,20 @@ import { getActiveCampaignRuns, getMerchantCampaign, getMerchantDashboardSummary
 interface MerchantAdminDashboardProps {
   onOpenManagement: () => void;
   podiumSlot?: React.ReactNode;
+  userName?: string;
   pendingFundRequestCount?: number;
   onOpenFundRequests?: () => void;
 }
 
 const percentageColor = (value: number) => value >= 85 ? 'text-emerald-200' : value >= 50 ? 'text-amber-200' : 'text-rose-200';
 
-export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ onOpenManagement, podiumSlot, pendingFundRequestCount = 0, onOpenFundRequests }) => {
+export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ userName = '', onOpenManagement, podiumSlot, pendingFundRequestCount = 0, onOpenFundRequests }) => {
   const [run, setRun] = useState<CampaignRun | null>(null);
   const [summary, setSummary] = useState<MerchantDashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Kinshasa' });
+  const [date, setDate] = useState(todayIso);
 
   const load = async () => {
     setLoading(true);
@@ -29,7 +33,7 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
       const runs = await getActiveCampaignRuns(campaign.id);
       const activeRun = runs.find((item) => item.status === 'active') || runs[0] || null;
       if (!activeRun) throw new Error('Aucune vague Merchant active n’est disponible.');
-      const metrics = await getMerchantDashboardSummary(activeRun);
+      const metrics = await getMerchantDashboardSummary(activeRun, date);
       setRun(activeRun);
       setSummary(metrics);
     } catch (caught) {
@@ -39,92 +43,85 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
     }
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); }, [date]);
 
-  const donutTotal = useMemo(() => summary?.donut.reduce((total, item) => total + item.value, 0) || 0, [summary]);
 
   if (loading) return <div className="glass-card p-6 text-center text-xs font-black uppercase tracking-widest text-gray-400">Chargement du pilotage Merchant…</div>;
   if (!summary || !run) return <div className="glass-card p-6 text-center text-sm text-rose-200">{error || 'Les indicateurs Merchant sont indisponibles.'}</div>;
 
+  const statusColors: Record<string, string> = { 'Complétés': 'var(--m-chart-1)', 'Actifs': 'var(--m-chart-2)', 'Inachevés': 'var(--m-chart-3)', 'Non actifs': 'var(--m-muted)' };
+  const touched = summary.donut.filter((item) => item.name !== 'À couvrir');
+  const covered = touched.reduce((sum, item) => sum + item.value, 0);
+  const campaignTarget = summary.targets.campaign_pos_target;
+  const dayLabel = new Date(`${date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' });
   return <div className="space-y-4 pb-4">
-    <section className="glass-card relative overflow-hidden p-4 sm:p-5">
-      <div className="merchant-chart-glow pointer-events-none absolute -right-14 -top-12 h-48 w-48 rounded-full bg-fuchsia-400/[0.10] blur-3xl"/>
-      <div className="merchant-chart-glow pointer-events-none absolute -left-12 bottom-0 h-40 w-40 rounded-full bg-red-400/[0.08] blur-3xl"/>
-      <div className="relative flex items-start justify-between gap-3">
-        <div>
-          <p className="text-[0.75rem] font-black uppercase tracking-[0.18em] text-fuchsia-200/80">Pilotage Merchant</p>
-          <h1 className="mt-1 text-xl font-black tracking-tight">Exécution de campagne</h1>
-          <p className="mt-1 text-xs text-gray-400">Objectifs, couverture POS et cadence des Brand Ambassadors.</p>
-        </div>
-        <button type="button" onClick={() => void load()} title="Actualiser le dashboard" className="rounded-2xl border border-white/10 bg-white/5 p-3 text-gray-200 transition hover:bg-white/10"><RefreshCw size={17}/></button>
-      </div>
-      <div className="relative mt-4 grid grid-cols-3 gap-2 text-center">
-        <button type="button" onClick={onOpenManagement} className="rounded-2xl border border-violet-300/25 bg-violet-500/[0.08] p-3 text-left transition hover:bg-violet-500/[0.13]">
-          <span className="flex items-center gap-1 text-[0.6875rem] font-black uppercase text-violet-100"><Target size={12}/> Objectif campagne</span>
-          <b className="mt-1 block text-xl font-black text-white">{summary.targets.campaign_pos_target}</b>
-          <span className="text-[0.6875rem] font-bold text-gray-400">POS configurés</span>
-        </button>
-        <div className="rounded-2xl border border-red-300/25 bg-red-500/[0.08] p-3">
-          <span className="flex items-center justify-center gap-1 text-[0.6875rem] font-black uppercase text-red-300"><UsersRound size={12}/> Équipe active</span>
-          <b className="mt-1 block text-xl font-black text-white">{summary.activeBas}/{summary.teamSize}</b>
-          <span className="text-[0.6875rem] font-bold text-gray-400">BA pointés</span>
-        </div>
-        <div className="rounded-2xl border border-emerald-300/25 bg-emerald-500/[0.08] p-3">
-          <span className="flex items-center justify-center gap-1 text-[0.6875rem] font-black uppercase text-emerald-100"><Activity size={12}/> Exécution jour</span>
-          <b className={`mt-1 block text-xl font-black ${percentageColor(summary.dailyExecutionRate)}`}>{summary.dailyExecutionRate}%</b>
-          <span className="text-[0.6875rem] font-bold text-gray-400">{summary.visitedToday} POS visités</span>
-        </div>
-      </div>
-      {onOpenFundRequests && <button type="button" onClick={onOpenFundRequests} className="relative mt-3 flex w-full items-center justify-between gap-3 rounded-2xl border border-emerald-300/25 bg-emerald-500/[0.07] px-3.5 py-3 text-left transition hover:bg-emerald-500/[0.12]"><span className="flex items-center gap-2"><Banknote className="text-emerald-200" size={17}/><span><b className="block text-[0.75rem] font-black uppercase tracking-wide text-emerald-100">Demandes de fonds</b><span className="mt-0.5 block text-[0.6875rem] font-semibold text-gray-400">Ouvrir le registre et traiter les demandes BA.</span></span></span><span className={`relative rounded-xl border px-3 py-1.5 text-[0.75rem] font-black ${pendingFundRequestCount ? 'border-amber-300/40 bg-amber-500/20 text-amber-100' : 'border-white/10 bg-white/[0.04] text-gray-400'}`}>{pendingFundRequestCount || '0'}{pendingFundRequestCount > 0 && <i className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-(--m-edge-soft) bg-amber-400 animate-pulse"/>}</span></button>}
-    </section>
+    <WelcomeHeader
+      eyebrow="Merchant Education · pilotage"
+      name={userName || 'équipe'}
+      subtitle="Couverture POS et cadence des Brand Ambassadors"
+      date={date}
+      minDate={run.starts_on || undefined}
+      maxDate={todayIso}
+      onDateChange={setDate}
+      onRefresh={() => void load()}
+    />
+
+    {error && <div className="rounded-2xl border border-rose-400/40 bg-rose-950/45 p-3 text-sm font-semibold text-rose-100">{error}</div>}
+
+    <CampaignProgressGauge
+      title="Couverture"
+      subtitle="POS de la base ciblée · toute la campagne"
+      modes={[
+        { key: 'coverage', label: 'Couverture', value: covered, target: campaignTarget, unit: 'POS' },
+        ...touched.map((item) => ({ key: item.name, label: item.name, value: item.value, target: campaignTarget, unit: 'POS', color: statusColors[item.name] })),
+      ]}
+      legend={touched.map((item) => ({ label: item.name, value: item.value, color: statusColors[item.name] || 'var(--m-chart-1)' }))}
+      note={`${Math.max(0, campaignTarget - covered).toLocaleString('fr-FR')} POS restent à couvrir.`}
+    >
+      <button type="button" onClick={onOpenManagement} className="flex w-full items-center justify-between rounded-[18px] bg-[var(--m-tile)] px-3 py-2.5 text-sm font-semibold text-[var(--m-text)]">
+        Régler les objectifs de campagne
+        <Target className="h-4 w-4 text-[var(--m-muted)]" aria-hidden="true" />
+      </button>
+    </CampaignProgressGauge>
+
+    <TargetRings
+      title="Indicateurs du jour"
+      subtitle={dayLabel}
+      rings={[
+        { label: 'POS visités', value: summary.visitedToday, target: summary.activeBas * summary.targets.daily_pos_target, color: 'var(--m-chart-1)' },
+        { label: 'Transactions', value: summary.transactionsToday, target: summary.visitedToday * summary.targets.transactions_per_pos_target, color: 'var(--m-chart-2)' },
+        { label: 'Équipe active', value: summary.activeBas, target: summary.teamSize, color: 'var(--m-chart-3)', caption: `${summary.activeBas} / ${summary.teamSize} BA pointés` },
+      ]}
+    />
+
+    {onOpenFundRequests && <button type="button" onClick={onOpenFundRequests} className="glass-card flex w-full items-center justify-between gap-3 !px-4 !py-3 text-left">
+      <span className="flex items-center gap-3">
+        <Banknote className="h-5 w-5 text-[var(--m-accent)]" aria-hidden="true"/>
+        <span><b className="block text-sm font-bold text-[var(--m-text)]">Demandes de fonds</b><span className="block text-xs text-[var(--m-text-2)]">Ouvrir le registre et traiter les demandes BA</span></span>
+      </span>
+      <span className={`relative rounded-xl border px-3 py-1.5 text-sm font-bold ${pendingFundRequestCount ? 'border-amber-300/40 bg-amber-500/20 text-amber-100' : 'border-[var(--m-edge-soft)] bg-[var(--m-tile)] text-[var(--m-muted)]'}`}>{pendingFundRequestCount || '0'}{pendingFundRequestCount > 0 && <i className="absolute -right-1 -top-1 h-2.5 w-2.5 animate-pulse rounded-full bg-amber-400"/>}</span>
+    </button>}
+
+    <TrendChart
+      title="Cadence des visites"
+      subtitle="POS visités par jour face à l’objectif des BA pointés"
+      views={[{
+        key: 'days',
+        label: '30 jours',
+        labels: summary.timeline.map((point) => point.label),
+        series: [{ key: 'visits', label: 'Visites', values: summary.timeline.map((point) => point.visits) }],
+        target: summary.timeline.map((point) => point.target),
+        targetLabel: 'Objectif',
+      }]}
+    />
+
+    <TargetBars
+      title="BA face à l’objectif"
+      subtitle={`POS visités le ${dayLabel} · trait = objectif journalier`}
+      rows={summary.byBa.filter((row) => row.pos > 0 || row.transactions > 0).map((row) => ({ key: row.id, label: row.name, value: row.pos, target: row.target }))}
+      emptyText="Aucune visite enregistrée ce jour."
+    />
 
     {podiumSlot}
-
-    {error && <div className="rounded-2xl border border-rose-400/40 bg-rose-950/45 p-3 text-xs font-bold text-rose-100">{error}</div>}
-
-    <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-      {(() => {
-        // Couverture de la base ciblée : POS touchés sur l'objectif de campagne ; le menu isole chaque statut.
-        const statusColors: Record<string, string> = { 'Complétés': 'var(--m-chart-1)', 'Actifs': 'var(--m-chart-2)', 'Inachevés': 'var(--m-chart-3)', 'Non actifs': 'var(--m-muted)' };
-        const touched = summary.donut.filter((item) => item.name !== 'À couvrir');
-        const covered = touched.reduce((sum, item) => sum + item.value, 0);
-        const target = summary.targets.campaign_pos_target;
-        return (
-          <CampaignProgressGauge
-            title="Couverture"
-            subtitle="POS de la base ciblée · toute la campagne"
-            modes={[
-              { key: 'coverage', label: 'Couverture', value: covered, target, unit: 'POS' },
-              ...touched.map((item) => ({ key: item.name, label: item.name, value: item.value, target, unit: 'POS', color: statusColors[item.name] })),
-            ]}
-            legend={touched.map((item) => ({ label: item.name, value: item.value, color: statusColors[item.name] || 'var(--m-chart-1)' }))}
-            note={`${Math.max(0, target - covered).toLocaleString('fr-FR')} POS restent à couvrir.`}
-          />
-        );
-      })()}
-      <article className="glass-card relative overflow-hidden p-4">
-        <div className="merchant-chart-glow pointer-events-none absolute -left-10 -bottom-12 h-32 w-32 rounded-full bg-red-400/[0.10] blur-3xl"/>
-        <div className="relative"><p className="text-[0.75rem] font-black uppercase tracking-[0.16em] text-red-300">Histogramme de cadence</p><h2 className="mt-1 text-sm font-black">POS réalisés par BA</h2><p className="mt-1 text-[0.75rem] text-gray-400">Barre cyan : réalisé · barre mauve : objectif journalier.</p></div>
-        <div className="relative mt-3 h-64"><ResponsiveContainer width="100%" height="100%"><BarChart data={summary.byBa} margin={{ top: 10, right: 4, left: -22, bottom: 8 }}><CartesianGrid stroke="var(--m-edge-soft)" vertical={false}/><XAxis dataKey="name" tick={{ fill: '#9ca3af', fontSize: 12 }} axisLine={false} tickLine={false}/><YAxis tick={{ fill: '#9ca3af', fontSize: 12 }} allowDecimals={false} axisLine={false} tickLine={false}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Bar dataKey="pos" name="POS réalisés" fill="#38bdf8" radius={[7,7,0,0]} isAnimationActive={false}/><Bar dataKey="target" name="Objectif" fill="#a78bfa" radius={[7,7,0,0]} isAnimationActive={false}/></BarChart></ResponsiveContainer></div>
-      </article>
-    </section>
-
-    <section className="glass-card relative overflow-hidden p-4">
-      <div className="merchant-chart-glow pointer-events-none absolute -right-14 -bottom-16 h-44 w-44 rounded-full bg-emerald-400/[0.08] blur-3xl"/>
-      <div className="relative flex items-center gap-2"><TrendingUp className="text-emerald-200" size={18}/><div><p className="text-[0.75rem] font-black uppercase tracking-[0.16em] text-emerald-200">Courbe de progression</p><h2 className="mt-1 text-sm font-black">POS visités · 30 derniers jours</h2></div></div>
-      <div className="relative mt-3 h-64 overflow-hidden rounded-2xl border border-white/10 bg-black/10">
-        <div className="flex h-full min-w-0">
-          <div className="z-10 w-12 shrink-0 border-r border-white/10 bg-(--m-sheet)/85">
-            <ResponsiveContainer width="100%" height="100%"><LineChart data={summary.timeline} margin={{ top: 12, right: 0, left: 0, bottom: 3 }}><YAxis domain={[0, 'auto']} tick={{ fill: '#9ca3af', fontSize: 12 }} allowDecimals={false} axisLine={false} tickLine={false} width={40}/></LineChart></ResponsiveContainer>
-          </div>
-          <div className="min-w-0 flex-1 overflow-x-auto custom-scrollbar">
-            <div className="h-full" style={{ minWidth: `${Math.max(720, summary.timeline.length * 46)}px` }}>
-              <ResponsiveContainer width="100%" height="100%"><LineChart data={summary.timeline} margin={{ top: 12, right: 18, left: 8, bottom: 3 }}><CartesianGrid stroke="var(--m-edge-soft)" vertical={false}/><XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 12 }} axisLine={false} tickLine={false} interval={summary.timeline.length > 15 ? 2 : 0}/><Tooltip contentStyle={{ backgroundColor: '#0b1020', borderColor: '#374151', borderRadius: '14px', fontSize: '11px' }}/><Legend wrapperStyle={{ fontSize: '10px' }}/><Line type="monotone" dataKey="visits" name="POS visités" stroke="#34d399" strokeWidth={3} dot={{ r: 3, fill: '#34d399' }} activeDot={{ r: 6 }} isAnimationActive={false}/><Line type="monotone" dataKey="target" name="Objectif actif" stroke="#fbbf24" strokeWidth={2} strokeDasharray="6 5" dot={false} isAnimationActive={false}/></LineChart></ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="relative mt-2 flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.035] px-3 py-2 text-[0.75rem]"><span className="font-bold text-gray-400">Transactions aujourd’hui</span><b className="text-emerald-100">{summary.transactionsToday.toLocaleString('fr-FR')}</b><span className="font-bold text-gray-400">Objectifs pilotables dans Gestion</span><CheckCircle2 size={15} className="text-emerald-300"/></div>
-    </section>
   </div>;
 };

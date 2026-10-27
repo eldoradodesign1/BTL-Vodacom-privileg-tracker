@@ -302,6 +302,8 @@ export interface YouthOperatorAgent {
   contacts: YouthContactReport[];
   /** Journées pointées sur la période (archives uniquement). */
   workedDays?: number;
+  /** Dates pointées sur la période (archives uniquement). */
+  attendanceDates?: string[];
 }
 
 export async function getYouthOperatorAgents(campaignId: string, activityDate: string, supervisorId?: string): Promise<YouthOperatorAgent[]> {
@@ -354,6 +356,7 @@ export async function getYouthOperatorArchive(campaignId: string, startDate: str
     attendance: attendanceByAgent.get(row.id)?.[0] || null,
     contacts: contactsByAgent.get(row.id) || [],
     workedDays: (attendanceByAgent.get(row.id) || []).filter((day) => Boolean(day.checkin_at)).length,
+    attendanceDates: (attendanceByAgent.get(row.id) || []).filter((day) => Boolean(day.checkin_at)).map((day) => day.activity_date),
   }));
 }
 
