@@ -117,7 +117,10 @@ export const Header: React.FC<HeaderProps> = ({
     if (!showNotifPanel && !showThemeMenu && !showCampaignMenu) return;
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
-      if (target.closest('[data-header-actions]')) return;
+      // Le menu Campagne se trouve à gauche des actions de l’en-tête. Sans
+      // cette garde, son option est fermée au mousedown avant que son click
+      // puisse appliquer le changement de campagne.
+      if (target.closest('[data-header-actions], [data-campaign-selector]')) return;
       setShowNotifPanel(false);
       setShowThemeMenu(false);
       setShowCampaignMenu(false);
@@ -254,7 +257,7 @@ export const Header: React.FC<HeaderProps> = ({
           className="hidden"
         />
           {onSetCampaign && visibleCampaigns.length > 1 && (
-            <div className="relative">
+            <div className="relative" data-campaign-selector>
               <button
                 type="button"
                 onClick={() => setShowCampaignMenu((prev) => !prev)}
