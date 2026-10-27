@@ -1311,12 +1311,54 @@ body[data-theme] .glass-card:hover {
     0 0 calc(var(--ui-glow-n, 50) * 0.72px) color-mix(in srgb, var(--m-accent) calc(var(--ui-glow-n, 50) * 0.32%), transparent);
 }
 
-/* Bouton flottant des demandes de fonds (Merchant) : au-dessus de la barre en mobile, en bas à droite en bureau. */
-.fund-fab {
+/* Pile de boutons flottants : au-dessus de la barre en mobile, en bas à droite en bureau. */
+.fab-stack {
   position: fixed;
   z-index: 45;
   right: 16px;
   bottom: calc(max(12px, env(safe-area-inset-bottom)) + 76px + 14px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.fab-stack > * {
+  pointer-events: auto;
+}
+
+.fab-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  border: 1px solid var(--m-edge);
+  background: var(--m-surface), color-mix(in srgb, var(--m-dock) 88%, transparent);
+  backdrop-filter: blur(var(--ui-blur, 24px)) saturate(1.5);
+  -webkit-backdrop-filter: blur(var(--ui-blur, 24px)) saturate(1.5);
+  color: var(--m-text);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, calc(0.28 * var(--ui-shadow-n, 1)));
+  transition: transform 160ms ease;
+}
+
+.fab-link:active {
+  transform: scale(0.94);
+}
+
+.fab-link__label {
+  display: none;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Bouton des demandes de fonds (Merchant), en bas de la pile. */
+.fund-fab {
+  position: relative;
   display: grid;
   place-items: center;
   width: 56px;
@@ -1356,9 +1398,18 @@ body[data-theme] .glass-card:hover {
 }
 
 @media (min-width: 1024px) {
-  .fund-fab {
+  .fab-stack {
     right: 24px;
     bottom: 24px;
+  }
+
+  .fab-link {
+    width: auto;
+    padding: 0 14px;
+  }
+
+  .fab-link__label {
+    display: inline;
   }
 }
 
