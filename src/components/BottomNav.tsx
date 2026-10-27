@@ -61,7 +61,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
     <button key={tab} type="button" onClick={() => onTabChange(tab)} data-active={activeTab === tab}
       aria-current={activeTab === tab ? 'page' : undefined} className="app-tab dock-tab" title={label}>
       <span className="dock-tab-icon">
-        <Icon size={22} strokeWidth={activeTab === tab ? 2.3 : 1.7} aria-hidden="true" />
+        <Icon size={22} strokeWidth={activeTab === tab ? 2.45 : 2.05} aria-hidden="true" />
         {tab === 'chat' && unreadChatCount > 0 && activeTab !== 'chat' && (
           <span className="dock-chat-badge">{unreadChatCount > 99 ? '99+' : unreadChatCount}</span>
         )}
