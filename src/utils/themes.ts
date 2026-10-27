@@ -67,6 +67,33 @@ export const applyCardSolidity = (value: number) => {
   }, 250);
 };
 
+// Flou d'arrière-plan des cartes, de la barre et de l'en-tête (px). Sans réglage, chaque matière garde le sien.
+const BLUR_KEY = 'vodacom_ui_blur';
+export const DEFAULT_BLUR = 38;
+
+export const getBackdropBlur = (): number | null => {
+  try {
+    const stored = localStorage.getItem(BLUR_KEY);
+    if (stored === null) return null;
+    const value = Number(stored);
+    return Number.isFinite(value) ? Math.min(60, Math.max(0, value)) : null;
+  } catch {
+    return null;
+  }
+};
+
+let blurWrite: number | undefined;
+
+export const applyBackdropBlur = (value: number | null) => {
+  if (value === null) document.body.style.removeProperty('--ui-blur');
+  else document.body.style.setProperty('--ui-blur', `${value}px`);
+  window.clearTimeout(blurWrite);
+  if (value === null) return;
+  blurWrite = window.setTimeout(() => {
+    try { localStorage.setItem(BLUR_KEY, String(value)); } catch { /* préférence locale facultative */ }
+  }, 250);
+};
+
 /** Pose la matière sur le document : attribut, fond soie et podium. */
 export const applyThemeToDocument = (theme: ThemeMode) => {
   document.body.dataset.theme = theme;

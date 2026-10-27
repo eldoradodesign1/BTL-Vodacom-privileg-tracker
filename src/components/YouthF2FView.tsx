@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Podium } from './Podium';
+import { ArchivesShortcut } from './ArchivesShortcut';
 import { CalendarDays, Camera, CheckCircle2, CircleAlert, FileCheck2, GraduationCap, MapPin, Medal, PauseCircle, PlusCircle, RefreshCw, Search, Trophy, UsersRound, X } from 'lucide-react';
 import type { Campaign, User, YouthContactReport, YouthDailyAttendance, YouthRegion, YouthSubscriberType } from '../types';
 import type { TabType } from './BottomNav';
@@ -374,6 +375,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
       {activeTab === 'home' && isYouthPreCheckin && (
         <div>
           {podiumLoading ? <p className="py-5 text-center text-xs text-[var(--m-muted)]">Mise à jour du podium…</p> : <Podium entries={[0, 1, 2].map((index) => { const entry = rankedPodium[index]; return entry ? { name: entry.name, score: `${entry.contacts} contact${entry.contacts > 1 ? 's' : ''}` } : null; })} emptyScore="0 contact" />}
+          <div className="mt-4 flex justify-center"><ArchivesShortcut /></div>
           {myPodiumEntry && !rankedPodium.some((entry) => entry.baId === currentUser.id) && <p className="mt-3 text-center text-[0.75rem] text-slate-400">{myPodiumEntry.rank ? 'Votre rang : #' + myPodiumEntry.rank + ' · ' + myPodiumEntry.contacts + ' contact(s)' : 'Vous : 0 contact enregistré aujourd’hui.'}</p>}
         </div>
       )}
