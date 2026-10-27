@@ -439,9 +439,9 @@ body[data-theme] .btn-red:hover:not(:disabled) {
 }
 
 .app-bottom-nav.agent-dock {
-  /* Dock = chrome structurel : matériau plus dense que les cards (anti verre-sur-verre). */
   --dock-surface: var(--m-dock);
-  --dock-ink: var(--m-text-2);
+  --dock-ink: var(--m-muted);
+  /* Léger bump de flou sur toute la barre uniquement (pas de pastille active). */
   --dock-blur: calc(var(--m-blur) + 4px);
   --dock-notch: 40px;
   position: fixed;
@@ -463,7 +463,7 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   isolation: isolate;
-  filter: drop-shadow(0 10px 28px rgba(0, 0, 0, 0.42)) drop-shadow(0 4px 12px var(--m-glow));
+  filter: drop-shadow(0 6px 16px var(--m-glow));
 }
 
 .agent-dock::before {
@@ -471,35 +471,12 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   position: absolute;
   z-index: -1;
   inset: 0;
-  border: 1px solid color-mix(in srgb, var(--m-highlight) 42%, var(--m-edge));
+  border: 1px solid var(--m-edge);
   border-radius: inherit;
-  /* Frost dense + base solide : la soie / cards ne lavent plus les labels. */
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.05) 18%, transparent 42%),
-    color-mix(in srgb, var(--dock-surface) 90%, transparent),
-    var(--m-surface-solid);
-  backdrop-filter: blur(var(--dock-blur)) saturate(175%);
-  -webkit-backdrop-filter: blur(var(--dock-blur)) saturate(175%);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.42) inset,
-    0 -0.5px 0 rgba(0, 0, 0, 0.22) inset,
-    0 18px 48px rgba(0, 0, 0, 0.48),
-    0 6px 18px var(--m-glow);
-}
-
-.agent-dock::after {
-  /* Filet lumineux haut = lumière qui attrape la matière (Apple). */
-  content: '';
-  position: absolute;
-  z-index: 0;
-  left: 14px;
-  right: 14px;
-  top: 0;
-  height: 1px;
-  border-radius: inherit;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent 4%, rgba(255, 255, 255, 0.48) 50%, transparent 96%);
-  opacity: 0.95;
+  background: color-mix(in srgb, var(--dock-surface) 72%, transparent), var(--m-surface);
+  backdrop-filter: blur(var(--dock-blur)) saturate(1.55);
+  -webkit-backdrop-filter: blur(var(--dock-blur)) saturate(1.55);
+  box-shadow: 0 1px 0 var(--m-highlight) inset, 0 14px 36px var(--m-glow), 0 4px 14px rgba(0, 0, 0, 0.22);
 }
 
 .agent-dock:has(.agent-dock-action)::before {
@@ -513,14 +490,10 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   flex: 1;
   min-width: 0;
   align-items: center;
-  position: relative;
-  z-index: 1;
 }
 
 .dock-action-slot {
   display: none;
-  position: relative;
-  z-index: 1;
 }
 
 .agent-dock:has(.agent-dock-action) .dock-action-slot {
@@ -544,7 +517,7 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   color: var(--dock-ink);
   border-radius: 14px;
   background: transparent !important;
-  transition: color 150ms ease, transform 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+  transition: color 150ms ease, transform 150ms ease;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -553,32 +526,24 @@ body[data-theme] .btn-red:hover:not(:disabled) {
 }
 
 .app-tab.dock-tab[data-active='true'] {
-  /* Vibrancy : teinte sur pastille quasi-solide, pas translucide-sur-translucide. */
   color: var(--m-accent) !important;
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--m-accent) 26%, transparent) 0%, color-mix(in srgb, var(--m-accent) 12%, transparent) 100%),
-    color-mix(in srgb, var(--dock-surface) 94%, transparent) !important;
-  box-shadow: 0 1px 0 color-mix(in srgb, var(--m-highlight) 55%, transparent) inset;
 }
 
 .dock-tab-icon {
   position: relative;
   display: inline-flex;
-  color: inherit;
-  opacity: 0.96;
 }
 
 .dock-tab[data-active='true'] .dock-tab-icon {
-  opacity: 1;
-  filter: drop-shadow(0 1px 3px rgba(var(--theme-accent-rgb), 0.28));
+  filter: drop-shadow(0 2px 4px rgba(var(--theme-accent-rgb), 0.12));
 }
 
 .dock-tab-label {
   font-size: 0.6875rem;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.1;
   text-align: center;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.01em;
 }
 
 .dock-tab:active {
