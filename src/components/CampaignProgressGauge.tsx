@@ -81,7 +81,7 @@ export const CampaignProgressGauge: React.FC<CampaignProgressGaugeProps> = ({ ti
   const mode = modes.find((item) => item.key === modeKey) || modes[0];
   if (!mode) return null;
   return (
-    <section className="glass-card space-y-3 !p-5">
+    <section data-slot="gauge" className="glass-card space-y-3 !p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <h3 className="text-base font-bold text-[var(--m-text)]">{title}</h3>

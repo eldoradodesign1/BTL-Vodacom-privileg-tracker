@@ -118,7 +118,7 @@ export const YouthManagementView: React.FC<Props> = ({ currentUser, activeTab })
   ];
   return <div className="space-y-4 pb-6">
     {error && <div className="glass-card flex items-center gap-2 border border-red-400/30 bg-red-500/[0.08] p-3 text-xs font-bold text-red-100"><CircleAlert size={16}/>{error}</div>}
-    {activeTab === 'home' && <>
+    {activeTab === 'home' && <div className="campaign-home">
       <WelcomeHeader
         eyebrow={`${campaignName} · pilotage`}
         name={currentUser.name}
@@ -162,7 +162,7 @@ export const YouthManagementView: React.FC<Props> = ({ currentUser, activeTab })
         rows={agents.filter((row) => row.attendance?.checkin_at || row.contacts.length > 0).map((row) => ({ key: row.user.id, label: row.user.name, value: row.contacts.length, target: dailyClients }))}
         emptyText="Aucun BA pointé ce jour."
       />
-    </>}
+    </div>}
     {activeTab === 'admin' ? <>
       <section className="glass-card p-4"><div className="flex items-start gap-2"><Target className="text-red-300" size={19}/><div><h2 className="font-black text-white">Targets Youth F2F</h2><p className="text-xs text-gray-400">Objectifs journaliers utilisés pour le suivi de la campagne.</p></div></div><div className="mt-4 grid grid-cols-2 gap-2"><label className="rounded-2xl border border-red-300/20 bg-black/20 p-3"><span className="block text-[0.6875rem] font-black uppercase text-gray-400">Contacts / BA / jour</span><input type="number" min="0" value={dailyClients} onChange={(e) => setDailyClients(Math.max(0, Number(e.target.value || 0)))} className="mt-1 w-full rounded-xl border border-white/10 bg-black/40 px-2 py-2 text-center text-xl font-black text-white"/></label><label className="rounded-2xl border border-violet-300/20 bg-black/20 p-3"><span className="block text-[0.6875rem] font-black uppercase text-gray-400">Transactions / jour</span><input type="number" min="0" value={dailyTransactions} onChange={(e) => setDailyTransactions(Math.max(0, Number(e.target.value || 0)))} className="mt-1 w-full rounded-xl border border-white/10 bg-black/40 px-2 py-2 text-center text-xl font-black text-white"/></label></div><button type="button" disabled={saving} onClick={() => void saveTargets()} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-300/35 bg-red-500/15 px-3 py-2.5 text-[0.75rem] font-black uppercase text-red-300 disabled:opacity-50"><Save size={14}/>{saving ? 'Mise à jour…' : 'Enregistrer les targets'}</button></section>
       <CampaignPauseControl currentUser={currentUser} campaignCode="youth-f2f" campaignLabel="Youth F2F" minDate={campaignStart} accent="violet"/>

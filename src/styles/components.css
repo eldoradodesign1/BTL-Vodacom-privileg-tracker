@@ -909,3 +909,123 @@ body[data-theme] button:is(.bg-red-500, .bg-red-600, .bg-rose-500, .bg-rose-600)
   outline: 2px solid var(--m-accent);
   outline-offset: 1px;
 }
+
+/* ── Accueils de campagne : une colonne en mobile, deux colonnes quand la zone de contenu est large ── */
+.app-main-content {
+  container-type: inline-size;
+}
+
+.campaign-home {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+@container (min-width: 56rem) {
+  .campaign-home {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  }
+
+  .campaign-home > [data-slot="welcome"] {
+    grid-column: 1 / -1;
+  }
+
+  .campaign-home > [data-slot="gauge"] {
+    grid-column: 1;
+    grid-row: span 2;
+  }
+
+  .campaign-home > [data-slot="rings"],
+  .campaign-home > [data-slot="trend"] {
+    grid-column: 2;
+  }
+}
+
+/* Marque du rail : visible seulement en bureau. */
+.dock-brand {
+  display: none;
+}
+
+/* ── Bureau : la barre du bas devient un rail à gauche, le contenu s'élargit ── */
+@media (min-width: 1024px) {
+  .app-shell {
+    padding-left: 7.25rem;
+  }
+
+  .app-bottom-nav.agent-dock {
+    top: 1rem;
+    bottom: 1rem !important;
+    left: 1rem !important;
+    right: auto !important;
+    width: 5.5rem;
+    max-width: none;
+    height: auto !important;
+    margin: 0;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0.375rem;
+    padding: 1rem 0.5rem;
+    border-radius: 1.5rem !important;
+  }
+
+  .agent-dock:has(.agent-dock-action)::before {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .dock-brand {
+    display: block;
+    margin: 0.25rem 0 1rem;
+    text-align: center;
+    font-weight: 800;
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    color: var(--m-text);
+  }
+
+  .dock-tab-group {
+    flex: none;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
+
+  .app-tab.dock-tab {
+    flex: none;
+    min-height: 4.25rem;
+    border: 1px solid transparent;
+  }
+
+  .app-tab.dock-tab[data-active='true'] {
+    background: color-mix(in srgb, var(--m-accent) 12%, transparent) !important;
+    border-color: color-mix(in srgb, var(--m-accent) 40%, transparent);
+    color: var(--m-text) !important;
+  }
+
+  .agent-dock:has(.agent-dock-action) .dock-action-slot {
+    flex: none;
+    width: auto;
+    height: 4.5rem;
+  }
+
+  .agent-dock-action {
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .agent-dock-action:active:not(:disabled) {
+    transform: translate(-50%, -50%) scale(0.94);
+  }
+
+  .app-main-content {
+    max-width: 76rem;
+    padding-bottom: 2.5rem;
+  }
+
+  /* Les écrans de liste et de saisie gardent une largeur de lecture ; seuls les accueils occupent toute la place. */
+  .app-main-content > :not(h1):not(.campaign-home):not(:has(.campaign-home)) {
+    max-width: 48rem;
+    margin-inline: auto;
+  }
+}

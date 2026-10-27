@@ -54,7 +54,7 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
   const covered = touched.reduce((sum, item) => sum + item.value, 0);
   const campaignTarget = summary.targets.campaign_pos_target;
   const dayLabel = new Date(`${date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: 'short' });
-  return <div className="space-y-4 pb-4">
+  return <div className="campaign-home pb-4">
     <WelcomeHeader
       eyebrow="Merchant Education · pilotage"
       name={userName || 'équipe'}
