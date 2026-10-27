@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Podium } from './Podium';
 import { User, Shop, Lead, Checkin, DailyReport } from '../types';
 import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSyncPendingCount, isMatchAgent, toISO, getUsers, resolveStoredPhotoUrl, getEffectiveTargetsForDate } from '../utils/storage';
 import { TabType } from './BottomNav';
@@ -444,21 +445,12 @@ export const AgentView: React.FC<AgentViewProps> = ({
 
   // La page de démarrage est isolée: aucune logique post-pointage n'est remplacée.
   if (activeTab === 'home' && !(checkinDone || checkinDoneLocal)) {
-    const topThree = [2, 0, 1] as const;
-    const hasRanking = globalActivityRanking.slice(0, 3).some(Boolean);
     return (
     <section className="agent-before-checkin agent-home-surface space-y-4 pb-6">
       <header className="agent-precheckin-head">
         <p>Vodacom Privilège</p>
         <h1>Bonjour, {currentUser.name.trim().split(/\s+/)[0]}</h1>
       </header>
-
-      <div className="btl-podium-empty" role="status">
-        <Trophy className="h-5 w-5 shrink-0 text-amber-300" aria-hidden="true"/>
-        <span>{hasRanking
-          ? `Classement du jour : ${globalActivityRanking[0]?.name || '—'}${globalActivityRanking[0] ? ` mène avec ${globalActivityRanking[0].total} client${globalActivityRanking[0].total > 1 ? 's' : ''}` : ''}.`
-          : 'Classement du jour : personne n’a encore enregistré de client. Soyez le premier !'}</span>
-      </div>
 
       <div className="btl-power-stage flex justify-center py-4" style={{minHeight:'min(40vh,340px)'}}>
         <div className="btl-power-wrap">
@@ -473,28 +465,10 @@ export const AgentView: React.FC<AgentViewProps> = ({
       {campaignPaused && <p className="text-center text-sm font-bold text-amber-200">Campagne en pause. Pointage indisponible.</p>}
       {feedback.primaryText && <p className="text-center text-[0.6875rem] text-gray-300">{feedback.primaryText}</p>}
 
-      <div className="btl-podium-stage btl-podium-stage--photo px-5 pt-2" aria-label="Podium du jour">
-        <div className="btl-podium-photo" aria-hidden="true" />
-        <div className="btl-podium-reflect" aria-hidden="true" />
-        <div className="btl-podium-grid">
-          {topThree.map((rankIndex) => {
-            const entry = globalActivityRanking[rankIndex];
-            const initials = entry
-              ? entry.name.trim().split(/\s+/).slice(0, 2).map(part => part[0] || '').join('').toUpperCase()
-              : null;
-            return (
-              <div key={rankIndex} className={`btl-podium-slot btl-podium-slot--${rankIndex + 1}`}>
-                <div className={`btl-podium-avatar ${entry ? '' : 'btl-podium-avatar--empty'}`}>
-                  {initials || <Users size={18} aria-hidden="true" />}
-                </div>
-                <p className="btl-podium-name" title={entry?.name || 'Place libre'}>{entry?.name || 'Place libre'}</p>
-                <p className="btl-podium-score">{entry ? `${entry.total} client${entry.total > 1 ? 's' : ''}` : '0 client'}</p>
-                <div className="btl-podium-pillar" aria-hidden="true"><span>{rankIndex + 1}</span></div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <Podium
+        entries={[0, 1, 2].map((index) => { const entry = globalActivityRanking[index]; return entry ? { name: entry.name, score: `${entry.total} client${entry.total > 1 ? 's' : ''}` } : null; })}
+        emptyScore="0 client"
+      />
     </section>
     );
   }
