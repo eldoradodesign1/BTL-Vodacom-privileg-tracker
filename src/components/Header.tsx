@@ -6,7 +6,8 @@ import { addCheckin, getShopById, resolveStoredPhotoUrl } from '../utils/storage
 import { armFundRequestAlertAudio, getNotificationsMuted, setNotificationsMuted } from '../utils/fundRequestAlert';
 import { publicUrl } from '../utils/assets';
 
-export type ThemeMode = 'anthracite' | 'rubis' | 'silver' | 'diamond' | 'sapphire' | 'ambre';
+export type { ThemeMode } from '../utils/themes';
+import { isLightTheme, type ThemeMode } from '../utils/themes';
 
 interface HeaderProps {
   user: User;
@@ -80,11 +81,12 @@ export const Header: React.FC<HeaderProps> = ({
   const roleLabel = user.role === 'super_admin'
     ? 'Super-admin'
     : (user.role === 'admin' ? 'Admin' : (user.role === 'sub_admin' ? 'Ops' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent')));
-  const topbarOverlay = theme === 'diamond'
+  const topbarOverlay = isLightTheme(theme)
     ? 'linear-gradient(100deg, rgba(255,255,255,0.96), rgba(246,244,241,0.84), rgba(255,255,255,0.90))'
     : 'linear-gradient(100deg, rgba(5,7,12,0.68), rgba(10,14,22,0.34), rgba(8,10,17,0.56))';
   const topbarStyle = { backgroundImage: `${topbarOverlay}, url(${publicUrl(`topbar-backgrounds/${theme}-gem.jpg`)})`, backgroundSize: 'cover', backgroundPosition: 'center' };
-  const isDarkTheme = theme === 'anthracite' || theme === 'rubis' || theme === 'silver' || theme === 'diamond' || theme === 'sapphire' || theme === 'ambre';
+  // Les surfaces de l'en-tête suivent toutes la matière (variables CSS) ; Diamond compris, les classes « sombres » servent de base.
+  const isDarkTheme = true;
   const visibleCampaigns = campaignOptions || [
     { key: 'vodacom-privilege' as const, label: 'Vodacom Privilège', note: 'Hôtesses' },
     { key: 'merchant-educational' as const, label: 'Merchant Education', note: 'Brand Ambassadors' },
@@ -403,35 +405,6 @@ export const Header: React.FC<HeaderProps> = ({
                   <p className="truncate text-sm font-bold text-[var(--m-text)]">{user.name}</p>
                   <p className="truncate text-xs text-[var(--m-text-2)]">{roleLabel}</p>
                 </div>
-                {onSetTheme && (
-                  <div className="border-b border-[var(--m-edge-soft)] px-2 pb-2.5 pt-2">
-                    <p className="mb-2 px-1 text-xs font-semibold text-[var(--m-text-2)]">Thème</p>
-                    <div className="grid grid-cols-3 gap-x-1 gap-y-2">
-                      {[
-                        { key: 'anthracite', label: 'Anthracite' },
-                        { key: 'rubis', label: 'Rubis' },
-                        { key: 'silver', label: 'Silver' },
-                        { key: 'diamond', label: 'Diamond' },
-                        { key: 'sapphire', label: 'Sapphire' },
-                        { key: 'ambre', label: 'Ambre' }
-                      ].map((opt) => (
-                        <button
-                          key={opt.key}
-                          type="button"
-                          role="menuitemradio"
-                          aria-checked={theme === opt.key}
-                          aria-label={`Thème ${opt.label}`}
-                          title={opt.label}
-                          onClick={() => onSetTheme(opt.key as ThemeMode)}
-                          className="theme-swatch grid justify-items-center gap-1 rounded-xl py-1 text-[0.6875rem] font-semibold text-[var(--m-muted)] aria-checked:text-[var(--m-text)]"
-                        >
-                          <span className={`theme-dot theme-dot--${opt.key}`} aria-hidden="true" />
-                          <span className="max-w-full truncate">{opt.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
                 {simulation && (
                   <div className="border-b border-[var(--m-edge-soft)] px-2 pb-2.5 pt-2">
                     <p className="mb-2 px-1 text-xs font-semibold text-[var(--m-text-2)]">Voir l’appli comme</p>

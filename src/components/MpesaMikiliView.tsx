@@ -60,7 +60,7 @@ const FIELD = 'mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3.5
 
 export interface MpesaMikiliViewProps {
   currentUser: User;
-  activeTab: 'home' | 'tab2' | 'tab3' | 'chat' | 'pos' | 'admin';
+  activeTab: 'home' | 'tab2' | 'tab3' | 'chat' | 'themes' | 'pos' | 'admin';
   openClientRequested?: boolean;
   onClientRequestHandled?: () => void;
 }

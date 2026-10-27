@@ -32,7 +32,7 @@ import { getMerchantEvidencePublicUrl } from '../utils/merchantCampaign';
 
 interface Props {
   currentUser: User;
-  activeTab: 'home' | 'tab2' | 'tab3' | 'chat' | 'pos' | 'admin';
+  activeTab: 'home' | 'tab2' | 'tab3' | 'chat' | 'themes' | 'pos' | 'admin';
 }
 
 const rankClasses = [

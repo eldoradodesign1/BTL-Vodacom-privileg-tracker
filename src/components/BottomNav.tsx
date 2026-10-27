@@ -1,8 +1,8 @@
 import React from 'react';
 import type { UserRole } from '../types';
-import { Home, Users, FolderOpen, MapPinned, MessageSquare, Settings, type LucideIcon } from 'lucide-react';
+import { Home, Users, FolderOpen, MapPinned, Palette, Settings, type LucideIcon } from 'lucide-react';
 
-export type TabType = 'home' | 'tab2' | 'pos' | 'tab3' | 'chat' | 'admin';
+export type TabType = 'home' | 'tab2' | 'pos' | 'tab3' | 'chat' | 'themes' | 'admin';
 
 export interface BottomNavContext {
   userRole: UserRole;
@@ -30,6 +30,7 @@ export function getBottomNavTabs({
   if (eventContext) {
     return [
       { tab: 'home', label: 'Accueil', icon: Home },
+      { tab: 'themes', label: 'Thèmes', icon: Palette },
       ...(management ? [{ tab: 'admin' as const, label: 'Gestion', icon: Settings }] : []),
     ];
   }
@@ -38,7 +39,8 @@ export function getBottomNavTabs({
     { tab: 'tab2', label: management ? 'Monitoring' : merchantContext ? 'Mes Transactions' : 'Mes Clients', icon: Users },
     ...(merchantContext && userRole === 'agent' ? [{ tab: 'pos' as const, label: 'Mes POS', icon: MapPinned }] : []),
     { tab: 'tab3', label: 'Archives', icon: FolderOpen },
-    { tab: 'chat', label: 'Chat', icon: MessageSquare },
+    // Le chat est retiré de la navigation pour le moment ; l'onglet Thèmes prend sa place.
+    { tab: 'themes', label: 'Thèmes', icon: Palette },
     ...(management ? [{ tab: 'admin' as const, label: 'Gestion', icon: Settings }] : []),
   ];
 }
