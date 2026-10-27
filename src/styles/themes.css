@@ -78,7 +78,8 @@ body[data-theme] .hover\:bg-rose-500:hover {
 /* Fond soie = image générée (silk-*.jpg), via --m-silk-image (publicUrl) */
 
 /* ── Anthracite ───────────────────────────────────────────────────────── */
-body[data-theme="anthracite"] {
+body[data-theme="anthracite"],
+[data-theme-preview="anthracite"] {
   color-scheme: dark;
   background-color: #07090c;
   background-image:
@@ -150,7 +151,8 @@ body[data-theme="anthracite"] {
 }
 
 /* ── Rubis ───────────────────────────────────────────────────────── */
-body[data-theme="rubis"] {
+body[data-theme="rubis"],
+[data-theme-preview="rubis"] {
   color-scheme: dark;
   background-color: #120508;
   background-image:
@@ -222,7 +224,8 @@ body[data-theme="rubis"] {
 }
 
 /* ── Sapphire ───────────────────────────────────────────────────────── */
-body[data-theme="sapphire"] {
+body[data-theme="sapphire"],
+[data-theme-preview="sapphire"] {
   color-scheme: dark;
   background-color: #050c26;
   background-image:
@@ -294,7 +297,8 @@ body[data-theme="sapphire"] {
 }
 
 /* ── Silver ───────────────────────────────────────────────────────── */
-body[data-theme="silver"] {
+body[data-theme="silver"],
+[data-theme-preview="silver"] {
   color-scheme: dark;
   background-color: #0a101c;
   background-image:
@@ -366,7 +370,8 @@ body[data-theme="silver"] {
 }
 
 /* ── Diamond ───────────────────────────────────────────────────────── */
-body[data-theme="diamond"] {
+body[data-theme="diamond"],
+[data-theme-preview="diamond"] {
   color-scheme: light;
   background-color: #eef2f8;
   background-image:
@@ -438,7 +443,8 @@ body[data-theme="diamond"] {
 }
 
 /* ── Ambre ───────────────────────────────────────────────────────── */
-body[data-theme="ambre"] {
+body[data-theme="ambre"],
+[data-theme-preview="ambre"] {
   color-scheme: dark;
   background-color: #140a04;
   background-image:
@@ -509,59 +515,643 @@ body[data-theme="ambre"] {
   --m-power-ink: #fff1d2;
 }
 
-/* ── Diamond, seul thème clair : les textes blancs de l'interface sombre deviennent de l'encre ─────────── */
-body[data-theme="diamond"] .app-header .text-white,
-body[data-theme="diamond"] .app-bottom-nav .text-white,
-body[data-theme="diamond"] .app-popover .text-white,
-body[data-theme="diamond"] .glass-card .text-white,
-body[data-theme="diamond"] .modal-sheet .text-white,
-body[data-theme="diamond"] .agent-home-surface .text-white {
+/* ── Emeraude ───────────────────────────────────────────────────────── */
+body[data-theme="emeraude"],
+[data-theme-preview="emeraude"] {
+  color-scheme: dark;
+  background-color: #03130d;
+  background-image:
+    linear-gradient(160deg, rgba(3, 19, 13, 0.5) 0%, rgba(6, 32, 25, 0.22) 45%, rgba(3, 19, 13, 0.38) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-emeraude.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-emeraude.jpg");
+  --m-podium-filter: hue-rotate(-80deg) saturate(1.1);
+  color: #effff7;
+  --content-scrim: rgba(3, 19, 13, 0.48);
+
+  --m-accent: #5ee6a8;
+  --m-accent-soft: #a7f3d0;
+  --m-accent-2: #1fbf7a;
+  --m-accent-rgb: 94, 230, 168;
+  --m-accent-soft-rgb: 167, 243, 208;
+  --m-fill: #1fbf7a;
+  --m-fill-hover: #2fd08a;
+  --m-fill-ink: #ffffff;
+
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(16,110,72,0.55) 0%, rgba(3,18,12,0.92) 100%);
+  --m-surface-solid: #0a2a1d;
+  --m-edge: rgba(120,230,180,0.42);
+  --m-edge-soft: rgba(120,230,180,0.16);
+  --m-highlight: rgba(180,255,220,0.22);
+  --m-glow: rgba(20,160,100,0.25);
+  --m-blur: 38px;
+
+  --m-text: #effff7;
+  --m-text-2: rgba(220,255,238,0.82);
+  --m-muted: rgba(180,235,210,0.62);
+
+  --m-track: rgba(255,255,255,0.12);
+  --m-pill: rgba(31, 191, 122, 0.2);
+  --m-tile: rgba(4,28,18,0.55);
+  --m-field: #05190f;
+  --m-chrome: rgba(4,24,16,0.9);
+  --m-sheet: #06201a;
+  --m-dock: #082619;
+  --m-hair: rgba(120,230,180,0.3);
+  --m-act: linear-gradient(180deg, #1fbf7a 0%, #0b7a4b 100%);
+  --m-act-glow: rgba(31,191,122,0.35);
+  --m-chart-1: #34d399;
+  --m-chart-2: #a7f3d0;
+  --m-chart-3: #fcd34d;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235ee6a8' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+
+  --m-btn-bg: linear-gradient(180deg, #1fbf7a 0%, #0b7a4b 100%);
+  --m-btn-edge: rgba(167, 243, 208, 0.55);
+  --m-btn-ink: #ffffff;
+  --m-silk-1: rgba(167, 243, 208, 0.48);
+  --m-silk-2: rgba(31, 191, 122, 0.32);
+  --m-silk-3: rgba(94, 230, 168, 0.16);
+  --m-metal-bg: linear-gradient(180deg, #a7f3d0 0%, #1fbf7a 42%, #06201a 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #ffffff 0%, #a7f3d0 18%, #1fbf7a 46%, #0b7a4b 76%, #06201a 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #a7f3d0 0%, #1fbf7a 50%, #06201a 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #1fbf7a 0%, #0b7a4b 55%, #06201a 100%);
+  --m-metal-edge: rgba(167, 243, 208, 0.55);
+  --m-metal-edge-1: rgba(167, 243, 208, 0.75);
+  --m-metal-edge-2: rgba(31, 191, 122, 0.5);
+  --m-metal-edge-3: rgba(11, 122, 75, 0.4);
+  --m-metal-ink: #ffffff;
+  --m-power-bg: radial-gradient(circle at 35% 25%, #a7f3d0 0%, #1fbf7a 38%, #0b7a4b 80%, #06201a 100%);
+  --m-power-ink: #ffffff;
+}
+
+/* ── Amethyste ───────────────────────────────────────────────────────── */
+body[data-theme="amethyste"],
+[data-theme-preview="amethyste"] {
+  color-scheme: dark;
+  background-color: #0f0718;
+  background-image:
+    linear-gradient(160deg, rgba(15, 7, 24, 0.5) 0%, rgba(23, 11, 38, 0.22) 45%, rgba(15, 7, 24, 0.38) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-amethyste.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-amethyste.jpg");
+  --m-podium-filter: hue-rotate(50deg) saturate(1.1);
+  color: #f7f0ff;
+  --content-scrim: rgba(15, 7, 24, 0.48);
+
+  --m-accent: #c4a1ff;
+  --m-accent-soft: #e9d5ff;
+  --m-accent-2: #9b5cff;
+  --m-accent-rgb: 196, 161, 255;
+  --m-accent-soft-rgb: 233, 213, 255;
+  --m-fill: #9b5cff;
+  --m-fill-hover: #ab72ff;
+  --m-fill-ink: #ffffff;
+
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(96,46,170,0.55) 0%, rgba(14,6,26,0.92) 100%);
+  --m-surface-solid: #22123a;
+  --m-edge: rgba(200,160,255,0.42);
+  --m-edge-soft: rgba(200,160,255,0.16);
+  --m-highlight: rgba(225,200,255,0.22);
+  --m-glow: rgba(120,60,200,0.28);
+  --m-blur: 38px;
+
+  --m-text: #f7f0ff;
+  --m-text-2: rgba(238,226,255,0.82);
+  --m-muted: rgba(214,196,250,0.62);
+
+  --m-track: rgba(255,255,255,0.12);
+  --m-pill: rgba(155, 92, 255, 0.2);
+  --m-tile: rgba(24,10,44,0.55);
+  --m-field: #140a24;
+  --m-chrome: rgba(20,8,36,0.9);
+  --m-sheet: #170b2a;
+  --m-dock: #1d0f33;
+  --m-hair: rgba(200,160,255,0.3);
+  --m-act: linear-gradient(180deg, #9b5cff 0%, #5b21b6 100%);
+  --m-act-glow: rgba(155,92,255,0.38);
+  --m-chart-1: #a78bfa;
+  --m-chart-2: #e9d5ff;
+  --m-chart-3: #f9a8d4;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c4a1ff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+
+  --m-btn-bg: linear-gradient(180deg, #9b5cff 0%, #5b21b6 100%);
+  --m-btn-edge: rgba(233, 213, 255, 0.55);
+  --m-btn-ink: #ffffff;
+  --m-silk-1: rgba(233, 213, 255, 0.48);
+  --m-silk-2: rgba(155, 92, 255, 0.32);
+  --m-silk-3: rgba(196, 161, 255, 0.16);
+  --m-metal-bg: linear-gradient(180deg, #e9d5ff 0%, #9b5cff 42%, #170b2a 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #ffffff 0%, #e9d5ff 18%, #9b5cff 46%, #5b21b6 76%, #170b2a 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #e9d5ff 0%, #9b5cff 50%, #170b2a 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #9b5cff 0%, #5b21b6 55%, #170b2a 100%);
+  --m-metal-edge: rgba(233, 213, 255, 0.55);
+  --m-metal-edge-1: rgba(233, 213, 255, 0.75);
+  --m-metal-edge-2: rgba(155, 92, 255, 0.5);
+  --m-metal-edge-3: rgba(91, 33, 182, 0.4);
+  --m-metal-ink: #ffffff;
+  --m-power-bg: radial-gradient(circle at 35% 25%, #e9d5ff 0%, #9b5cff 38%, #5b21b6 80%, #170b2a 100%);
+  --m-power-ink: #ffffff;
+}
+
+/* ── Tanzanite ───────────────────────────────────────────────────────── */
+body[data-theme="tanzanite"],
+[data-theme-preview="tanzanite"] {
+  color-scheme: dark;
+  background-color: #090a24;
+  background-image:
+    linear-gradient(160deg, rgba(9, 10, 36, 0.5) 0%, rgba(15, 16, 54, 0.22) 45%, rgba(9, 10, 36, 0.38) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-tanzanite.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-tanzanite.jpg");
+  --m-podium-filter: hue-rotate(20deg);
+  color: #f2f1ff;
+  --content-scrim: rgba(9, 10, 36, 0.48);
+
+  --m-accent: #a5a1ff;
+  --m-accent-soft: #c7d2fe;
+  --m-accent-2: #6d5dfc;
+  --m-accent-rgb: 165, 161, 255;
+  --m-accent-soft-rgb: 199, 210, 254;
+  --m-fill: #6d5dfc;
+  --m-fill-hover: #7f71ff;
+  --m-fill-ink: #ffffff;
+
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(60,52,170,0.55) 0%, rgba(8,8,32,0.92) 100%);
+  --m-surface-solid: #16174a;
+  --m-edge: rgba(170,165,255,0.42);
+  --m-edge-soft: rgba(170,165,255,0.16);
+  --m-highlight: rgba(205,200,255,0.22);
+  --m-glow: rgba(70,60,210,0.28);
+  --m-blur: 38px;
+
+  --m-text: #f2f1ff;
+  --m-text-2: rgba(228,226,255,0.82);
+  --m-muted: rgba(196,194,250,0.62);
+
+  --m-track: rgba(255,255,255,0.12);
+  --m-pill: rgba(109, 93, 252, 0.2);
+  --m-tile: rgba(14,14,48,0.55);
+  --m-field: #0c0c2c;
+  --m-chrome: rgba(12,12,40,0.9);
+  --m-sheet: #0e0f33;
+  --m-dock: #12133d;
+  --m-hair: rgba(170,165,255,0.3);
+  --m-act: linear-gradient(180deg, #6d5dfc 0%, #3b2fb8 100%);
+  --m-act-glow: rgba(109,93,252,0.38);
+  --m-chart-1: #818cf8;
+  --m-chart-2: #c7d2fe;
+  --m-chart-3: #f0abfc;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a5a1ff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+
+  --m-btn-bg: linear-gradient(180deg, #6d5dfc 0%, #3b2fb8 100%);
+  --m-btn-edge: rgba(199, 210, 254, 0.55);
+  --m-btn-ink: #ffffff;
+  --m-silk-1: rgba(199, 210, 254, 0.48);
+  --m-silk-2: rgba(109, 93, 252, 0.32);
+  --m-silk-3: rgba(165, 161, 255, 0.16);
+  --m-metal-bg: linear-gradient(180deg, #c7d2fe 0%, #6d5dfc 42%, #0e0f33 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #ffffff 0%, #c7d2fe 18%, #6d5dfc 46%, #3b2fb8 76%, #0e0f33 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #c7d2fe 0%, #6d5dfc 50%, #0e0f33 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #6d5dfc 0%, #3b2fb8 55%, #0e0f33 100%);
+  --m-metal-edge: rgba(199, 210, 254, 0.55);
+  --m-metal-edge-1: rgba(199, 210, 254, 0.75);
+  --m-metal-edge-2: rgba(109, 93, 252, 0.5);
+  --m-metal-edge-3: rgba(59, 47, 184, 0.4);
+  --m-metal-ink: #ffffff;
+  --m-power-bg: radial-gradient(circle at 35% 25%, #c7d2fe 0%, #6d5dfc 38%, #3b2fb8 80%, #0e0f33 100%);
+  --m-power-ink: #ffffff;
+}
+
+/* ── Aiguemarine ───────────────────────────────────────────────────────── */
+body[data-theme="aiguemarine"],
+[data-theme-preview="aiguemarine"] {
+  color-scheme: dark;
+  background-color: #04121a;
+  background-image:
+    linear-gradient(160deg, rgba(4, 18, 26, 0.5) 0%, rgba(6, 28, 39, 0.22) 45%, rgba(4, 18, 26, 0.38) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-aiguemarine.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-aiguemarine.jpg");
+  --m-podium-filter: hue-rotate(-30deg) brightness(1.05);
+  color: #effbff;
+  --content-scrim: rgba(4, 18, 26, 0.48);
+
+  --m-accent: #67e0ff;
+  --m-accent-soft: #a5f3fc;
+  --m-accent-2: #22b8e6;
+  --m-accent-rgb: 103, 224, 255;
+  --m-accent-soft-rgb: 165, 243, 252;
+  --m-fill: #22b8e6;
+  --m-fill-hover: #3cc6f0;
+  --m-fill-ink: #ffffff;
+
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(22,110,150,0.55) 0%, rgba(3,16,24,0.92) 100%);
+  --m-surface-solid: #0a2836;
+  --m-edge: rgba(130,220,245,0.42);
+  --m-edge-soft: rgba(130,220,245,0.16);
+  --m-highlight: rgba(190,240,255,0.22);
+  --m-glow: rgba(30,150,200,0.26);
+  --m-blur: 38px;
+
+  --m-text: #effbff;
+  --m-text-2: rgba(220,246,255,0.82);
+  --m-muted: rgba(175,225,242,0.62);
+
+  --m-track: rgba(255,255,255,0.12);
+  --m-pill: rgba(34, 184, 230, 0.2);
+  --m-tile: rgba(4,26,36,0.55);
+  --m-field: #051822;
+  --m-chrome: rgba(4,22,32,0.9);
+  --m-sheet: #061d29;
+  --m-dock: #082431;
+  --m-hair: rgba(130,220,245,0.3);
+  --m-act: linear-gradient(180deg, #22b8e6 0%, #0d6f99 100%);
+  --m-act-glow: rgba(34,184,230,0.36);
+  --m-chart-1: #38bdf8;
+  --m-chart-2: #a5f3fc;
+  --m-chart-3: #fcd34d;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2367e0ff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+
+  --m-btn-bg: linear-gradient(180deg, #22b8e6 0%, #0d6f99 100%);
+  --m-btn-edge: rgba(165, 243, 252, 0.55);
+  --m-btn-ink: #ffffff;
+  --m-silk-1: rgba(165, 243, 252, 0.48);
+  --m-silk-2: rgba(34, 184, 230, 0.32);
+  --m-silk-3: rgba(103, 224, 255, 0.16);
+  --m-metal-bg: linear-gradient(180deg, #a5f3fc 0%, #22b8e6 42%, #061d29 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #ffffff 0%, #a5f3fc 18%, #22b8e6 46%, #0d6f99 76%, #061d29 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #a5f3fc 0%, #22b8e6 50%, #061d29 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #22b8e6 0%, #0d6f99 55%, #061d29 100%);
+  --m-metal-edge: rgba(165, 243, 252, 0.55);
+  --m-metal-edge-1: rgba(165, 243, 252, 0.75);
+  --m-metal-edge-2: rgba(34, 184, 230, 0.5);
+  --m-metal-edge-3: rgba(13, 111, 153, 0.4);
+  --m-metal-ink: #ffffff;
+  --m-power-bg: radial-gradient(circle at 35% 25%, #a5f3fc 0%, #22b8e6 38%, #0d6f99 80%, #061d29 100%);
+  --m-power-ink: #ffffff;
+}
+
+/* ── Turquoise ───────────────────────────────────────────────────────── */
+body[data-theme="turquoise"],
+[data-theme-preview="turquoise"] {
+  color-scheme: dark;
+  background-color: #031416;
+  background-image:
+    linear-gradient(160deg, rgba(3, 20, 22, 0.5) 0%, rgba(6, 33, 36, 0.22) 45%, rgba(3, 20, 22, 0.38) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-turquoise.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-turquoise.jpg");
+  --m-podium-filter: hue-rotate(-45deg);
+  color: #effffc;
+  --content-scrim: rgba(3, 20, 22, 0.48);
+
+  --m-accent: #5eead4;
+  --m-accent-soft: #99f6e4;
+  --m-accent-2: #14b8a6;
+  --m-accent-rgb: 94, 234, 212;
+  --m-accent-soft-rgb: 153, 246, 228;
+  --m-fill: #14b8a6;
+  --m-fill-hover: #22c9b6;
+  --m-fill-ink: #ffffff;
+
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(14,120,118,0.55) 0%, rgba(3,18,19,0.92) 100%);
+  --m-surface-solid: #0a2c2d;
+  --m-edge: rgba(120,235,220,0.42);
+  --m-edge-soft: rgba(120,235,220,0.16);
+  --m-highlight: rgba(180,255,245,0.22);
+  --m-glow: rgba(20,170,160,0.25);
+  --m-blur: 38px;
+
+  --m-text: #effffc;
+  --m-text-2: rgba(220,255,250,0.82);
+  --m-muted: rgba(170,232,224,0.62);
+
+  --m-track: rgba(255,255,255,0.12);
+  --m-pill: rgba(20, 184, 166, 0.2);
+  --m-tile: rgba(4,30,30,0.55);
+  --m-field: #051b1c;
+  --m-chrome: rgba(4,24,24,0.9);
+  --m-sheet: #062224;
+  --m-dock: #08292b;
+  --m-hair: rgba(120,235,220,0.3);
+  --m-act: linear-gradient(180deg, #14b8a6 0%, #0b7068 100%);
+  --m-act-glow: rgba(20,184,166,0.36);
+  --m-chart-1: #2dd4bf;
+  --m-chart-2: #99f6e4;
+  --m-chart-3: #fda4af;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235eead4' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+
+  --m-btn-bg: linear-gradient(180deg, #14b8a6 0%, #0b7068 100%);
+  --m-btn-edge: rgba(153, 246, 228, 0.55);
+  --m-btn-ink: #ffffff;
+  --m-silk-1: rgba(153, 246, 228, 0.48);
+  --m-silk-2: rgba(20, 184, 166, 0.32);
+  --m-silk-3: rgba(94, 234, 212, 0.16);
+  --m-metal-bg: linear-gradient(180deg, #99f6e4 0%, #14b8a6 42%, #062224 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #ffffff 0%, #99f6e4 18%, #14b8a6 46%, #0b7068 76%, #062224 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #99f6e4 0%, #14b8a6 50%, #062224 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #14b8a6 0%, #0b7068 55%, #062224 100%);
+  --m-metal-edge: rgba(153, 246, 228, 0.55);
+  --m-metal-edge-1: rgba(153, 246, 228, 0.75);
+  --m-metal-edge-2: rgba(20, 184, 166, 0.5);
+  --m-metal-edge-3: rgba(11, 112, 104, 0.4);
+  --m-metal-ink: #ffffff;
+  --m-power-bg: radial-gradient(circle at 35% 25%, #99f6e4 0%, #14b8a6 38%, #0b7068 80%, #062224 100%);
+  --m-power-ink: #ffffff;
+}
+
+/* ── Jade (clair) ───────────────────────────────────────────────────────── */
+body[data-theme="jade"],
+[data-theme-preview="jade"] {
+  color-scheme: light;
+  background-color: #eef7f2;
+  background-image:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.42) 0%, rgba(236, 247, 241, 0.18) 45%, rgba(255, 255, 255, 0.28) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-jade.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-jade.jpg");
+  --m-podium-filter: none;
+  color: #143326;
+  --content-scrim: rgba(255, 255, 255, 0.40);
+
+  --m-accent: #1f8a5f;
+  --m-accent-soft: #7cc9a6;
+  --m-accent-2: #2a9d6e;
+  --m-accent-rgb: 31, 138, 95;
+  --m-accent-soft-rgb: 124, 201, 166;
+  --m-fill: #2a9d6e;
+  --m-fill-hover: #1f8a5f;
+  --m-fill-ink: #ffffff;
+
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(255,255,255,0.94) 0%, rgba(228,244,236,0.86) 100%);
+  --m-surface-solid: #f2faf6;
+  --m-edge: rgba(70,150,115,0.42);
+  --m-edge-soft: rgba(70,150,115,0.2);
+  --m-highlight: rgba(255,255,255,0.96);
+  --m-glow: rgba(40,120,90,0.14);
+  --m-blur: 40px;
+
+  --m-text: #143326;
+  --m-text-2: #2f5545;
+  --m-muted: #5f8173;
+
+  --m-track: rgba(31, 138, 95, 0.12);
+  --m-pill: rgba(42, 157, 110, 0.1);
+  --m-tile: rgba(255,255,255,0.82);
+  --m-field: #ffffff;
+  --m-chrome: rgba(255,255,255,0.92);
+  --m-sheet: #f5fbf8;
+  --m-dock: #eef8f3;
+  --m-hair: rgba(60,140,105,0.3);
+  --m-act: linear-gradient(180deg, #3fb489 0%, #1f8a5f 100%);
+  --m-act-glow: rgba(31,138,95,0.3);
+  --m-chart-1: #2a9d6e;
+  --m-chart-2: #7cc9a6;
+  --m-chart-3: #d4a035;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231f8a5f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+
+  --m-btn-bg: linear-gradient(180deg, #3fb489 0%, #1f8a5f 100%);
+  --m-btn-edge: rgba(124, 201, 166, 0.55);
+  --m-btn-ink: #ffffff;
+  --m-silk-1: rgba(124, 201, 166, 0.48);
+  --m-silk-2: rgba(42, 157, 110, 0.32);
+  --m-silk-3: rgba(31, 138, 95, 0.16);
+  --m-metal-bg: linear-gradient(180deg, #7cc9a6 0%, #2a9d6e 42%, #1f8a5f 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #ffffff 0%, #7cc9a6 18%, #2a9d6e 46%, #1f8a5f 76%, #1f8a5f 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #7cc9a6 0%, #2a9d6e 50%, #1f8a5f 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #2a9d6e 0%, #1f8a5f 55%, #1f8a5f 100%);
+  --m-metal-edge: rgba(124, 201, 166, 0.55);
+  --m-metal-edge-1: rgba(124, 201, 166, 0.75);
+  --m-metal-edge-2: rgba(42, 157, 110, 0.5);
+  --m-metal-edge-3: rgba(31, 138, 95, 0.4);
+  --m-metal-ink: #143326;
+  --m-power-bg: radial-gradient(circle at 35% 25%, #7cc9a6 0%, #2a9d6e 38%, #1f8a5f 80%, #1f8a5f 100%);
+  --m-power-ink: #ffffff;
+}
+
+/* ── Citrine (clair) ───────────────────────────────────────────────────────── */
+body[data-theme="citrine"],
+[data-theme-preview="citrine"] {
+  color-scheme: light;
+  background-color: #fbf6e6;
+  background-image:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.42) 0%, rgba(252, 246, 228, 0.18) 45%, rgba(255, 255, 255, 0.28) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-citrine.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-citrine.jpg");
+  --m-podium-filter: none;
+  color: #33270a;
+  --content-scrim: rgba(255, 255, 255, 0.40);
+
+  --m-accent: #a8740a;
+  --m-accent-soft: #f0c95a;
+  --m-accent-2: #c99211;
+  --m-accent-rgb: 168, 116, 10;
+  --m-accent-soft-rgb: 240, 201, 90;
+  --m-fill: #c99211;
+  --m-fill-hover: #b98407;
+  --m-fill-ink: #2b1d02;
+
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(252,244,220,0.88) 100%);
+  --m-surface-solid: #fdf9ee;
+  --m-edge: rgba(190,140,20,0.42);
+  --m-edge-soft: rgba(190,140,20,0.2);
+  --m-highlight: rgba(255,255,255,0.96);
+  --m-glow: rgba(160,110,10,0.14);
+  --m-blur: 40px;
+
+  --m-text: #33270a;
+  --m-text-2: #5a4818;
+  --m-muted: #86733f;
+
+  --m-track: rgba(168, 116, 10, 0.12);
+  --m-pill: rgba(201, 146, 17, 0.1);
+  --m-tile: rgba(255,255,255,0.82);
+  --m-field: #ffffff;
+  --m-chrome: rgba(255,255,255,0.92);
+  --m-sheet: #fffbf0;
+  --m-dock: #fbf5e3;
+  --m-hair: rgba(170,120,20,0.3);
+  --m-act: linear-gradient(180deg, #e9b62f 0%, #b98407 100%);
+  --m-act-glow: rgba(201,146,15,0.32);
+  --m-chart-1: #d19a12;
+  --m-chart-2: #f0c95a;
+  --m-chart-3: #2f8f7a;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a8740a' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+
+  --m-btn-bg: linear-gradient(180deg, #e9b62f 0%, #b98407 100%);
+  --m-btn-edge: rgba(240, 201, 90, 0.55);
+  --m-btn-ink: #2b1d02;
+  --m-silk-1: rgba(240, 201, 90, 0.48);
+  --m-silk-2: rgba(201, 146, 17, 0.32);
+  --m-silk-3: rgba(168, 116, 10, 0.16);
+  --m-metal-bg: linear-gradient(180deg, #f0c95a 0%, #c99211 42%, #a8740a 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #ffffff 0%, #f0c95a 18%, #c99211 46%, #b98407 76%, #a8740a 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #f0c95a 0%, #c99211 50%, #b98407 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #c99211 0%, #b98407 55%, #a8740a 100%);
+  --m-metal-edge: rgba(240, 201, 90, 0.55);
+  --m-metal-edge-1: rgba(240, 201, 90, 0.75);
+  --m-metal-edge-2: rgba(201, 146, 17, 0.5);
+  --m-metal-edge-3: rgba(185, 132, 7, 0.4);
+  --m-metal-ink: #33270a;
+  --m-power-bg: radial-gradient(circle at 35% 25%, #f0c95a 0%, #c99211 38%, #b98407 80%, #a8740a 100%);
+  --m-power-ink: #2b1d02;
+}
+
+/* ── Jaspe (clair) ───────────────────────────────────────────────────────── */
+body[data-theme="jaspe"],
+[data-theme-preview="jaspe"] {
+  color-scheme: light;
+  background-color: #fbf1ec;
+  background-image:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.42) 0%, rgba(251, 240, 234, 0.18) 45%, rgba(255, 255, 255, 0.28) 100%),
+    var(--m-silk-image, url("/theme-backgrounds/silk-jaspe.jpg"));
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  --m-silk-image: url("/theme-backgrounds/silk-jaspe.jpg");
+  --m-podium-filter: none;
+  color: #3a1d14;
+  --content-scrim: rgba(255, 255, 255, 0.40);
+
+  --m-accent: #b4502f;
+  --m-accent-soft: #eba78b;
+  --m-accent-2: #c8603c;
+  --m-accent-rgb: 180, 80, 47;
+  --m-accent-soft-rgb: 235, 167, 139;
+  --m-fill: #c8603c;
+  --m-fill-hover: #b4502f;
+  --m-fill-ink: #ffffff;
+
+  /* Dégradé seul (sans couleur finale) : il peut être empilé sous d'autres calques. */
+  --m-surface: linear-gradient(160deg, rgba(255,255,255,0.95) 0%, rgba(251,236,228,0.88) 100%);
+  --m-surface-solid: #fdf6f2;
+  --m-edge: rgba(180,80,47,0.4);
+  --m-edge-soft: rgba(180,80,47,0.18);
+  --m-highlight: rgba(255,255,255,0.96);
+  --m-glow: rgba(150,60,35,0.14);
+  --m-blur: 40px;
+
+  --m-text: #3a1d14;
+  --m-text-2: #5e3a2e;
+  --m-muted: #8b6a5f;
+
+  --m-track: rgba(180, 80, 47, 0.12);
+  --m-pill: rgba(200, 96, 60, 0.1);
+  --m-tile: rgba(255,255,255,0.82);
+  --m-field: #ffffff;
+  --m-chrome: rgba(255,255,255,0.92);
+  --m-sheet: #fff8f4;
+  --m-dock: #fbf1eb;
+  --m-hair: rgba(180,80,47,0.3);
+  --m-act: linear-gradient(180deg, #e0805c 0%, #b4502f 100%);
+  --m-act-glow: rgba(200,96,60,0.3);
+  --m-chart-1: #c8603c;
+  --m-chart-2: #eba78b;
+  --m-chart-3: #3f8f75;
+  --m-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b4502f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+
+  --m-btn-bg: linear-gradient(180deg, #e0805c 0%, #b4502f 100%);
+  --m-btn-edge: rgba(235, 167, 139, 0.55);
+  --m-btn-ink: #ffffff;
+  --m-silk-1: rgba(235, 167, 139, 0.48);
+  --m-silk-2: rgba(200, 96, 60, 0.32);
+  --m-silk-3: rgba(180, 80, 47, 0.16);
+  --m-metal-bg: linear-gradient(180deg, #eba78b 0%, #c8603c 42%, #b4502f 100%);
+  --m-metal-bg-1: linear-gradient(180deg, #ffffff 0%, #eba78b 18%, #c8603c 46%, #b4502f 76%, #b4502f 100%);
+  --m-metal-bg-2: linear-gradient(180deg, #eba78b 0%, #c8603c 50%, #b4502f 100%);
+  --m-metal-bg-3: linear-gradient(180deg, #c8603c 0%, #b4502f 55%, #b4502f 100%);
+  --m-metal-edge: rgba(235, 167, 139, 0.55);
+  --m-metal-edge-1: rgba(235, 167, 139, 0.75);
+  --m-metal-edge-2: rgba(200, 96, 60, 0.5);
+  --m-metal-edge-3: rgba(180, 80, 47, 0.4);
+  --m-metal-ink: #3a1d14;
+  --m-power-bg: radial-gradient(circle at 35% 25%, #eba78b 0%, #c8603c 38%, #b4502f 80%, #b4502f 100%);
+  --m-power-ink: #ffffff;
+}
+
+/* ── Thèmes clairs (Diamond, Jade, Citrine, Jaspe) : les textes blancs de l'interface sombre deviennent de l'encre ── */
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .app-header .text-white,
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .app-bottom-nav .text-white,
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .app-popover .text-white,
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .glass-card .text-white,
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .modal-sheet .text-white,
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .agent-home-surface .text-white {
   color: var(--m-text);
 }
 
-body[data-theme="diamond"] .glass-card [class*="bg-black/"],
-body[data-theme="diamond"] .modal-sheet [class*="bg-black/"] {
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .glass-card [class*="bg-black/"],
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .modal-sheet [class*="bg-black/"] {
   background-color: var(--m-tile);
   border-color: var(--m-edge-soft);
 }
 
-body[data-theme="diamond"] .brand-text {
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .brand-text {
   background: linear-gradient(135deg, #1b2742 0%, #3a4a69 55%, #6aa8ff 100%);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-body[data-theme="diamond"] .app-header .text-red-100,
-body[data-theme="diamond"] .app-header .text-gray-300 {
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .app-header .text-red-100,
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .app-header .text-gray-300 {
   color: var(--m-text-2);
 }
 
-body[data-theme="diamond"] .agent-home-surface .text-amber-200 { color: #92400e; }
-body[data-theme="diamond"] .agent-home-surface .text-orange-200 { color: #9a3412; }
-body[data-theme="diamond"] .agent-home-surface .text-slate-200 { color: #475569; }
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .agent-home-surface .text-amber-200 { color: #92400e; }
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .agent-home-surface .text-orange-200 { color: #9a3412; }
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .agent-home-surface .text-slate-200 { color: #475569; }
 
-body[data-theme="diamond"] .agent-home-surface > section .rounded-full.bg-white\/10 {
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .agent-home-surface > section .rounded-full.bg-white\/10 {
   background: var(--m-tile);
   border-color: var(--m-edge-soft);
   color: var(--m-text);
 }
 
-body[data-theme="diamond"] .agent-before-checkin .text-white {
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .agent-before-checkin .text-white {
   color: var(--m-text);
 }
 
-body[data-theme="diamond"] .btl-podium-name,
-body[data-theme="diamond"] .btl-podium-score,
-body[data-theme="diamond"] .btl-podium-empty {
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .btl-podium-name,
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .btl-podium-score,
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .btl-podium-empty {
   color: var(--m-text);
 }
 
-body[data-theme="diamond"] .btl-podium-score {
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .btl-podium-score {
   color: var(--m-text-2);
 }
 
-body[data-theme="diamond"] .btl-podium-avatar {
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .btl-podium-avatar {
   color: var(--m-text);
   border-color: var(--m-edge);
 }

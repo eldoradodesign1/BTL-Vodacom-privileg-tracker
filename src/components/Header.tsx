@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { User, NotificationItem, CampaignContext } from '../types';
-import { Bell, LogOut, Shield, RefreshCw, UserRound, Camera, X, Banknote, Volume2, VolumeX, Flag, ChevronDown, CalendarDays, Eye } from 'lucide-react';
+import { Bell, LogOut, Shield, RefreshCw, UserRound, Camera, X, Banknote, Volume2, VolumeX, Flag, ChevronDown, CalendarDays, Eye, Palette } from 'lucide-react';
 import { addCheckin, getShopById, resolveStoredPhotoUrl } from '../utils/storage';
 import { armFundRequestAlertAudio, getNotificationsMuted, setNotificationsMuted } from '../utils/fundRequestAlert';
 import { publicUrl } from '../utils/assets';
 
-export type ThemeMode = 'anthracite' | 'rubis' | 'silver' | 'diamond' | 'sapphire' | 'ambre';
+export type { ThemeMode } from '../utils/themes';
+import { isLightTheme, type ThemeMode } from '../utils/themes';
 
 interface HeaderProps {
   user: User;
@@ -30,6 +31,8 @@ interface HeaderProps {
   checkinUnavailableLabel?: string;
   fundRequestAlerts?: Array<{ id: string; baName: string; amount: number; posLabel: string; requestedAt: string }>;
   onOpenFundRequest?: (id: string) => void;
+  /** Ouvre l'onglet Thèmes (accessible même avant le pointage, quand la barre est masquée). */
+  onOpenThemes?: () => void;
   /** Super-admin : raccourcis et sélecteur de simulation affichés dans le menu du compte. */
   simulation?: {
     shortcuts: Array<{ key: string; label: string; targetId?: string; active: boolean }>;
@@ -60,6 +63,7 @@ export const Header: React.FC<HeaderProps> = ({
   checkinUnavailableLabel = 'Pointage indisponible pendant la pause de campagne',
   fundRequestAlerts = [],
   onOpenFundRequest,
+  onOpenThemes,
   simulation
 }) => {
   const [showNotifPanel, setShowNotifPanel] = useState(false);
@@ -80,11 +84,12 @@ export const Header: React.FC<HeaderProps> = ({
   const roleLabel = user.role === 'super_admin'
     ? 'Super-admin'
     : (user.role === 'admin' ? 'Admin' : (user.role === 'sub_admin' ? 'Ops' : (user.role === 'supervisor' ? 'Superviseur' : 'Agent')));
-  const topbarOverlay = theme === 'diamond'
+  const topbarOverlay = isLightTheme(theme)
     ? 'linear-gradient(100deg, rgba(255,255,255,0.96), rgba(246,244,241,0.84), rgba(255,255,255,0.90))'
     : 'linear-gradient(100deg, rgba(5,7,12,0.68), rgba(10,14,22,0.34), rgba(8,10,17,0.56))';
   const topbarStyle = { backgroundImage: `${topbarOverlay}, url(${publicUrl(`topbar-backgrounds/${theme}-gem.jpg`)})`, backgroundSize: 'cover', backgroundPosition: 'center' };
-  const isDarkTheme = theme === 'anthracite' || theme === 'rubis' || theme === 'silver' || theme === 'diamond' || theme === 'sapphire' || theme === 'ambre';
+  // Les surfaces de l'en-tête suivent toutes la matière (variables CSS) ; Diamond compris, les classes « sombres » servent de base.
+  const isDarkTheme = true;
   const visibleCampaigns = campaignOptions || [
     { key: 'vodacom-privilege' as const, label: 'Vodacom Privilège', note: 'Hôtesses' },
     { key: 'merchant-educational' as const, label: 'Merchant Education', note: 'Brand Ambassadors' },
@@ -215,81 +220,74 @@ export const Header: React.FC<HeaderProps> = ({
         ? 'border-white/10 text-white'
         : 'border-zinc-200 text-zinc-900 shadow-xl'
     }`}>
-      <div className="flex items-center justify-between gap-2 sm:gap-3">
-        <div className="flex min-w-0 items-center gap-2">
-        <button
-          type="button"
-          onClick={() => {
-            if (photoSrc) {
-              setIsPhotoViewerOpen(true);
-            } else if (user.role === 'agent') {
-              pointageInputRef.current?.click();
-            }
-          }}
-          disabled={isPointagePending || !allowCheckin}
-          className={photoSrc
-            ? `relative h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-[var(--m-accent)] ${isPointagePending ? 'opacity-75' : ''}`
-            : `btn-neon btn-red relative shrink-0 !min-h-0 !w-auto !gap-1.5 !rounded-full !px-4 !py-2.5 !text-sm !normal-case !tracking-normal ${isPointagePending ? 'opacity-75' : ''}`}
-          aria-label={photoSrc ? 'Ouvrir la photo de pointage en plein écran' : (allowCheckin ? 'Check-in en attente' : checkinUnavailableLabel)}
-        >
-          {photoSrc ? (
-            <img
-              src={photoSrc}
-              alt="Photo pointage"
-              className="w-full h-full object-cover object-center"
-              style={{ objectPosition: 'center center' }}
-              onError={(e) => {
-                setPhotoError(true);
-                (e.target as HTMLElement).style.display = 'none';
-              }}
-            />
-          ) : (
-            <><Camera className="h-4 w-4" aria-hidden="true" />Pointer</>
+      {/* Gauche : photo de pointage (si disponible) et nom ; centre : campagne ; droite : actions. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          {photoSrc && (
+            <button
+              type="button"
+              onClick={() => setIsPhotoViewerOpen(true)}
+              className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-[var(--m-accent)]"
+              aria-label="Ouvrir la photo de pointage en plein écran"
+            >
+              <img
+                src={photoSrc}
+                alt="Photo pointage"
+                className="h-full w-full object-cover object-center"
+                onError={(e) => {
+                  setPhotoError(true);
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
+              />
+            </button>
           )}
-          <span className={`status-dot absolute -bottom-0.5 -right-0.5 border-2 ${isDarkTheme ? 'border-black' : 'border-white'} ${online ? 'status-online' : 'status-offline'}`} />
-        </button>
-        <input
-          ref={pointageInputRef}
-          type="file"
-          accept="image/*"
-          capture="user"
-          onChange={handlePointageCapture}
-          className="hidden"
-        />
-          {onSetCampaign && visibleCampaigns.length > 1 && (
-            <div className="relative" data-campaign-selector>
-              <button
-                type="button"
-                onClick={() => setShowCampaignMenu((prev) => !prev)}
-                className="inline-flex h-10 max-w-[11rem] items-center gap-1.5 rounded-xl border border-[var(--m-edge-soft)] bg-[var(--m-tile)] px-3 text-sm font-bold text-[var(--m-text)] lg:max-w-none"
-                aria-haspopup="menu"
-                aria-expanded={showCampaignMenu}
-                title="Changer de campagne"
-                aria-label="Changer de campagne"
-              >
-                <Flag className="h-4 w-4 shrink-0 text-[var(--m-accent)]" aria-hidden="true" />
-                <span className="truncate">{visibleCampaigns.find((campaign) => campaign.key === activeCampaign)?.label || 'Campagne'}</span>
-                <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${showCampaignMenu ? 'rotate-180' : ''}`} aria-hidden="true" />
-              </button>
-              {showCampaignMenu && (
-                <div className={`app-popover absolute left-0 top-12 w-60 border rounded-2xl p-1.5 shadow-2xl z-50 ${
-                  isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
-                }`}>
-                  {visibleCampaigns.map((campaign) => (
-                    <button
-                      key={campaign.key}
-                      onClick={() => { onSetCampaign(campaign.key); setShowCampaignMenu(false); }}
-                      className={`w-full text-left px-3 py-2.5 rounded-xl transition ${
-                        activeCampaign === campaign.key ? 'bg-red-600 text-white' : (isDarkTheme ? 'hover:bg-white/10 text-gray-100' : 'hover:bg-zinc-100 text-zinc-700')
-                      }`}
-                    >
-                      <span className="block text-xs font-black uppercase">{campaign.label}</span>
-                      <span className="block mt-0.5 text-[0.6875rem] font-bold opacity-70">{campaign.note}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className={`status-dot h-2 w-2 shrink-0 ${online ? 'status-online' : 'status-offline'}`} aria-label={online ? 'En ligne' : 'Hors ligne'} />
+            <span className="truncate text-sm font-bold text-[var(--m-text)]" title={user.name}>{user.name}</span>
+          </span>
+        </div>
+
+        <div className="flex justify-center">
+            {onSetCampaign && visibleCampaigns.length > 1 && (
+              <div className="relative" data-campaign-selector>
+                <button
+                  type="button"
+                  onClick={() => setShowCampaignMenu((prev) => !prev)}
+                  className="inline-flex h-10 max-w-[9.5rem] items-center gap-1.5 sm:max-w-[13rem] rounded-xl border border-[var(--m-edge-soft)] bg-[var(--m-tile)] px-3 text-sm font-bold text-[var(--m-text)] lg:max-w-none"
+                  aria-haspopup="menu"
+                  aria-expanded={showCampaignMenu}
+                  title="Changer de campagne"
+                  aria-label="Changer de campagne"
+                >
+                  <Flag className="h-4 w-4 shrink-0 text-[var(--m-accent)]" aria-hidden="true" />
+                  <span className="truncate">{visibleCampaigns.find((campaign) => campaign.key === activeCampaign)?.label || 'Campagne'}</span>
+                  <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${showCampaignMenu ? 'rotate-180' : ''}`} aria-hidden="true" />
+                </button>
+                {showCampaignMenu && (
+                  <div className={`app-popover absolute left-1/2 top-12 -ml-[7.5rem] w-60 border rounded-2xl p-1.5 shadow-2xl z-50 ${
+                    isDarkTheme ? 'bg-zinc-900 border-white/10 text-white' : 'bg-white border-zinc-200 text-zinc-900'
+                  }`}>
+                    {visibleCampaigns.map((campaign) => (
+                      <button
+                        key={campaign.key}
+                        onClick={() => { onSetCampaign(campaign.key); setShowCampaignMenu(false); }}
+                        className={`w-full text-left px-3 py-2.5 rounded-xl transition ${
+                          activeCampaign === campaign.key ? 'bg-red-600 text-white' : (isDarkTheme ? 'hover:bg-white/10 text-gray-100' : 'hover:bg-zinc-100 text-zinc-700')
+                        }`}
+                      >
+                        <span className="block text-xs font-black uppercase">{campaign.label}</span>
+                        <span className="block mt-0.5 text-[0.6875rem] font-bold opacity-70">{campaign.note}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          {!(onSetCampaign && visibleCampaigns.length > 1) && visibleCampaigns.find((campaign) => campaign.key === activeCampaign)?.label && (
+            <span className="inline-flex h-10 max-w-[9.5rem] items-center gap-1.5 rounded-xl border border-[var(--m-edge-soft)] bg-[var(--m-tile)] px-3 text-sm font-bold text-[var(--m-text)] sm:max-w-[13rem]">
+              <Flag className="h-4 w-4 shrink-0 text-[var(--m-accent)]" aria-hidden="true" />
+              <span className="truncate">{visibleCampaigns.find((campaign) => campaign.key === activeCampaign)?.label}</span>
+            </span>
           )}
         </div>
 
@@ -403,35 +401,6 @@ export const Header: React.FC<HeaderProps> = ({
                   <p className="truncate text-sm font-bold text-[var(--m-text)]">{user.name}</p>
                   <p className="truncate text-xs text-[var(--m-text-2)]">{roleLabel}</p>
                 </div>
-                {onSetTheme && (
-                  <div className="border-b border-[var(--m-edge-soft)] px-2 pb-2.5 pt-2">
-                    <p className="mb-2 px-1 text-xs font-semibold text-[var(--m-text-2)]">Thème</p>
-                    <div className="grid grid-cols-3 gap-x-1 gap-y-2">
-                      {[
-                        { key: 'anthracite', label: 'Anthracite' },
-                        { key: 'rubis', label: 'Rubis' },
-                        { key: 'silver', label: 'Silver' },
-                        { key: 'diamond', label: 'Diamond' },
-                        { key: 'sapphire', label: 'Sapphire' },
-                        { key: 'ambre', label: 'Ambre' }
-                      ].map((opt) => (
-                        <button
-                          key={opt.key}
-                          type="button"
-                          role="menuitemradio"
-                          aria-checked={theme === opt.key}
-                          aria-label={`Thème ${opt.label}`}
-                          title={opt.label}
-                          onClick={() => onSetTheme(opt.key as ThemeMode)}
-                          className="theme-swatch grid justify-items-center gap-1 rounded-xl py-1 text-[0.6875rem] font-semibold text-[var(--m-muted)] aria-checked:text-[var(--m-text)]"
-                        >
-                          <span className={`theme-dot theme-dot--${opt.key}`} aria-hidden="true" />
-                          <span className="max-w-full truncate">{opt.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
                 {simulation && (
                   <div className="border-b border-[var(--m-edge-soft)] px-2 pb-2.5 pt-2">
                     <p className="mb-2 px-1 text-xs font-semibold text-[var(--m-text-2)]">Voir l’appli comme</p>
@@ -444,6 +413,16 @@ export const Header: React.FC<HeaderProps> = ({
                       <Eye className="h-4 w-4" aria-hidden="true" /> Autre compte…
                     </button>
                   </div>
+                )}
+                {onOpenThemes && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { setShowThemeMenu(false); onOpenThemes(); }}
+                    className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-bold transition hover:bg-[var(--m-tile)]"
+                  >
+                    <Palette className="w-4 h-4" aria-hidden="true" /> Thèmes
+                  </button>
                 )}
                 <button
                   type="button"

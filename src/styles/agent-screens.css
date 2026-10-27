@@ -558,3 +558,201 @@ body:has(.agent-home-surface.agent-before-checkin) .app-bottom-nav {
 body[data-theme] .agent-before-checkin .btl-power-button {
   color: var(--m-fill-ink);
 }
+
+/* ── Podium du jour (composant Podium) : scène de la matière, marches teintées, médailles ── */
+.btl-podium {
+  --gold: linear-gradient(145deg, #fff4c4 0%, #f2c94c 35%, #b8862b 75%, #f6dd8e 100%);
+  --silver: linear-gradient(145deg, #ffffff 0%, #dfe5ee 35%, #9aa4b2 75%, #eef2f7 100%);
+  --bronze: linear-gradient(145deg, #ffe0c8 0%, #e2965f 38%, #8f4f27 78%, #f0b48a 100%);
+  position: relative;
+  margin-inline: 1.25rem;
+  padding: 1.5rem 1rem 1.25rem;
+  border-radius: 24px;
+  border: 1px solid var(--m-edge-soft);
+  background: var(--m-surface), color-mix(in srgb, var(--m-sheet) 55%, transparent);
+  box-shadow: inset 0 1px 0 var(--m-highlight), 0 18px 40px var(--m-glow);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Projecteur venu d'en haut, sur la première marche. */
+.btl-podium::before {
+  content: '';
+  position: absolute;
+  inset: -20% 15% 30%;
+  z-index: -1;
+  background: radial-gradient(50% 60% at 50% 0%, color-mix(in srgb, var(--m-accent) 32%, transparent) 0%, transparent 72%);
+  pointer-events: none;
+}
+
+.btl-podium__steps {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  align-items: end;
+  gap: 0.5rem;
+  max-width: 22rem;
+  margin-inline: auto;
+}
+
+.btl-podium__slot {
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.btl-podium__avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.5rem;
+}
+
+/* Anneau de médaille (bordure dégradée) autour d'une pastille de la matière. */
+.btl-podium__ring {
+  display: grid;
+  place-items: center;
+  width: 3.1rem;
+  height: 3.1rem;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background:
+    linear-gradient(var(--m-sheet), var(--m-sheet)) padding-box,
+    var(--silver) border-box;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+  font-size: 0.875rem;
+  font-weight: 800;
+  color: var(--m-text);
+  overflow: hidden;
+}
+
+.btl-podium__ring img {
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  object-fit: cover;
+}
+
+.btl-podium__slot--1 .btl-podium__ring {
+  width: 3.75rem;
+  height: 3.75rem;
+  font-size: 1rem;
+  background: linear-gradient(var(--m-sheet), var(--m-sheet)) padding-box, var(--gold) border-box;
+  box-shadow: 0 0 0 4px color-mix(in srgb, #f2c94c 22%, transparent), 0 10px 24px rgba(0, 0, 0, 0.32);
+}
+
+.btl-podium__slot--3 .btl-podium__ring {
+  background: linear-gradient(var(--m-sheet), var(--m-sheet)) padding-box, var(--bronze) border-box;
+}
+
+.btl-podium__slot--empty .btl-podium__ring {
+  background: transparent;
+  border: 2px dashed var(--m-edge);
+  box-shadow: none;
+  color: var(--m-muted);
+}
+
+.btl-podium__crown {
+  position: absolute;
+  top: -0.95rem;
+  width: 1.5rem;
+  height: 1rem;
+  fill: #f2c94c;
+  filter: drop-shadow(0 2px 4px rgba(184, 134, 43, 0.55));
+}
+
+.btl-podium__name {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--m-text);
+}
+
+.btl-podium__score {
+  margin: 0.1rem 0 0.55rem;
+  font-size: 0.75rem;
+  color: var(--m-text-2);
+}
+
+.btl-podium__slot--empty .btl-podium__name,
+.btl-podium__slot--empty .btl-podium__score {
+  color: var(--m-muted);
+  font-weight: 500;
+}
+
+/* Marches : verre teinté par la couleur d'action, face supérieure éclairée, chiffre en métal de médaille. */
+.btl-podium__step {
+  position: relative;
+  display: grid;
+  place-items: start center;
+  width: 100%;
+  padding-top: 0.6rem;
+  border-radius: 14px 14px 6px 6px;
+  border: 1px solid color-mix(in srgb, var(--m-fill) 45%, white 15%);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0.06) 22%, transparent 60%),
+    linear-gradient(180deg, color-mix(in srgb, var(--m-fill) 62%, transparent) 0%, color-mix(in srgb, var(--m-fill) 18%, transparent) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 12px 22px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+}
+
+.btl-podium__step span {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+  background: var(--silver);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.35));
+}
+
+.btl-podium__slot--1 .btl-podium__step { height: 5.75rem; }
+.btl-podium__slot--2 .btl-podium__step { height: 4.25rem; }
+.btl-podium__slot--3 .btl-podium__step { height: 3.25rem; }
+.btl-podium__slot--1 .btl-podium__step span { font-size: 2rem; background: var(--gold); -webkit-background-clip: text; background-clip: text; }
+.btl-podium__slot--3 .btl-podium__step span { background: var(--bronze); -webkit-background-clip: text; background-clip: text; }
+
+/* Reflet qui balaie la première marche. */
+.btl-podium__slot--1 .btl-podium__step::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 -60%;
+  width: 45%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-18deg);
+  animation: btlPodiumSheen 5.5s ease-in-out infinite;
+}
+
+@keyframes btlPodiumSheen {
+  0%, 62% { left: -60%; }
+  100% { left: 130%; }
+}
+
+.btl-podium__floor {
+  height: 0.75rem;
+  margin: 0 auto;
+  max-width: 22rem;
+  border-radius: 0 0 50% 50%;
+  background: radial-gradient(50% 100% at 50% 0%, rgba(0, 0, 0, 0.3), transparent 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btl-podium__slot--1 .btl-podium__step::after { animation: none; display: none; }
+}
+
+/* Thèmes clairs : marches plus saturées pour que les chiffres de médaille restent lisibles. */
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .btl-podium__step {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.35) 0%, rgba(255, 255, 255, 0.08) 22%, transparent 60%),
+    linear-gradient(180deg, var(--m-fill) 0%, color-mix(in srgb, var(--m-fill) 55%, transparent) 100%);
+}
+
+body:is([data-theme="diamond"], [data-theme="jade"], [data-theme="citrine"], [data-theme="jaspe"]) .btl-podium__step span {
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.45));
+  -webkit-text-stroke: 0.75px rgba(0, 0, 0, 0.35);
+}

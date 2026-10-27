@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Podium } from './Podium';
 import { Camera, CheckCircle2, CircleAlert, ChevronDown, FileText, MapPin, PlusCircle, RefreshCw, Search, Star, Trophy, UsersRound, X, Zap } from 'lucide-react';
 import type { User } from '../types';
 import { runInBackground } from '../utils/backgroundOperations';
@@ -60,7 +61,7 @@ const FIELD = 'mt-1 w-full rounded-2xl border border-white/10 bg-black/20 px-3.5
 
 export interface MpesaMikiliViewProps {
   currentUser: User;
-  activeTab: 'home' | 'tab2' | 'tab3' | 'chat' | 'pos' | 'admin';
+  activeTab: 'home' | 'tab2' | 'tab3' | 'chat' | 'themes' | 'pos' | 'admin';
   openClientRequested?: boolean;
   onClientRequestHandled?: () => void;
 }
@@ -287,7 +288,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
         <p>M-Pesa Mikili</p>
         <h1>Bonjour, {currentUser.name.trim().split(/\s+/)[0]}</h1>
       </header>
-      <div className="px-5 pt-2"><div className="btl-podium-grid mt-4 grid grid-cols-3 items-end gap-2">{([2,0,1] as const).map(rankIndex=>{const entry=podium[rankIndex];return <div key={rankIndex} className="min-w-0 text-center"><div className="btl-podium-avatar mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white">{entry?entry.name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase():<UsersRound size={18}/>}</div><p className="mt-2 truncate text-[0.75rem] font-black text-white" title={entry?.name||'Place libre'}>{entry?.name||'Place libre'}</p><p className="mt-0.5 text-[0.6875rem] text-gray-400">{entry?entry.clients+' clients · '+entry.transactions+' Tx':'0 client'}</p><div className={rankIndex===0?'mt-2 flex h-20 items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-400/20 text-xl font-black text-amber-200':rankIndex===1?'mt-2 flex h-14 items-center justify-center rounded-2xl border border-slate-300/20 bg-slate-300/15 text-lg font-black text-slate-200':'mt-2 flex h-10 items-center justify-center rounded-2xl border border-orange-300/20 bg-orange-400/15 text-lg font-black text-orange-200'}>{rankIndex+1}</div></div>;})}</div></div>
+      <Podium entries={[0, 1, 2].map((index) => { const entry = podium[index]; return entry ? { name: entry.name, score: `${entry.clients} clients · ${entry.transactions} Tx` } : null; })} emptyScore="0 client" />
       <div className="flex justify-center py-6" style={{minHeight:'min(43vh,380px)'}}>
         <label aria-label="Démarrer la journée" title="Démarrer la journée" className={`btl-power-button ${campaignId && !checkinPending && !error ? 'btl-power-button--ready' : 'btl-power-button--inactive'} flex flex-col items-center justify-center gap-3 text-center text-white`} >
           <svg viewBox="0 0 24 24" width="100" height="100" fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/><path d="M12 2v10"/></svg>
