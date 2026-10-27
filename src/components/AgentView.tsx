@@ -448,7 +448,10 @@ export const AgentView: React.FC<AgentViewProps> = ({
     const hasRanking = globalActivityRanking.slice(0, 3).some(Boolean);
     return (
     <section className="agent-before-checkin agent-home-surface space-y-4 pb-6">
-      <h1 className="pt-5 text-center text-lg font-black uppercase tracking-[0.08em] text-white">Vodacom Privilège</h1>
+      <header className="agent-precheckin-head">
+        <p>Vodacom Privilège</p>
+        <h1>Bonjour, {currentUser.name.trim().split(/\s+/)[0]}</h1>
+      </header>
 
       <div className="btl-podium-empty" role="status">
         <Trophy className="h-5 w-5 shrink-0 text-amber-300" aria-hidden="true"/>

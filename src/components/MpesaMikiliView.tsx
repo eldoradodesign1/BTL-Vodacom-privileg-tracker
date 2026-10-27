@@ -283,7 +283,10 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
 
   if (activeTab === 'home' && !isCheckedIn) return (
     <section className="agent-before-checkin agent-home-surface space-y-4 pb-6">
-      <h1 className="pt-5 text-center text-lg font-black uppercase tracking-[0.08em] text-white">M-Pesa Mikili</h1>
+      <header className="agent-precheckin-head">
+        <p>M-Pesa Mikili</p>
+        <h1>Bonjour, {currentUser.name.trim().split(/\s+/)[0]}</h1>
+      </header>
       <div className="px-5 pt-2"><div className="btl-podium-grid mt-4 grid grid-cols-3 items-end gap-2">{([2,0,1] as const).map(rankIndex=>{const entry=podium[rankIndex];return <div key={rankIndex} className="min-w-0 text-center"><div className="btl-podium-avatar mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white">{entry?entry.name.trim().split(/\s+/).slice(0,2).map(part=>part[0]||'').join('').toUpperCase():<UsersRound size={18}/>}</div><p className="mt-2 truncate text-[0.75rem] font-black text-white" title={entry?.name||'Place libre'}>{entry?.name||'Place libre'}</p><p className="mt-0.5 text-[0.6875rem] text-gray-400">{entry?entry.clients+' clients · '+entry.transactions+' Tx':'0 client'}</p><div className={rankIndex===0?'mt-2 flex h-20 items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-400/20 text-xl font-black text-amber-200':rankIndex===1?'mt-2 flex h-14 items-center justify-center rounded-2xl border border-slate-300/20 bg-slate-300/15 text-lg font-black text-slate-200':'mt-2 flex h-10 items-center justify-center rounded-2xl border border-orange-300/20 bg-orange-400/15 text-lg font-black text-orange-200'}>{rankIndex+1}</div></div>;})}</div></div>
       <div className="flex justify-center py-6" style={{minHeight:'min(43vh,380px)'}}>
         <label aria-label="Démarrer la journée" title="Démarrer la journée" className={`btl-power-button ${campaignId && !checkinPending && !error ? 'btl-power-button--ready' : 'btl-power-button--inactive'} flex flex-col items-center justify-center gap-3 text-center text-white`} >

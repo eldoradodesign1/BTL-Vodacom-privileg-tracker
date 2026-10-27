@@ -293,7 +293,8 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
           <div className="flex min-w-0 items-start gap-4">
             {!isYouthPreCheckin && <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-red-300/20 bg-red-300/10 text-red-300"><GraduationCap size={23} /></span>}
             <div className="min-w-0">
-              <p className={isYouthPreCheckin ? "text-lg font-black uppercase tracking-[0.08em] text-red-300" : "text-[0.75rem] font-black uppercase tracking-[0.18em] text-red-300/80"}>Youth F2F · Force de frappe</p>
+              <p className={isYouthPreCheckin ? "text-sm font-semibold text-[var(--m-text-2)]" : "text-[0.75rem] font-black uppercase tracking-[0.18em] text-red-300/80"}>Youth F2F · Force de frappe</p>
+              {isYouthPreCheckin && !isOperator && <h1 className="mt-0.5 text-[1.6rem] font-extrabold tracking-tight text-[var(--m-text)]">Bonjour, {currentUser.name.trim().split(/\s+/)[0]}</h1>}
               {!isYouthPreCheckin && <h1 className="mt-1 text-xl font-black tracking-tight text-white sm:text-2xl">{isOperator ? 'Espace opérationnel' : `Bonjour, ${currentUser.name.split(' ')[0]}`}</h1>}
               {!isYouthPreCheckin && <p className="mt-2 text-[0.75rem] font-medium leading-relaxed text-slate-300">{readableDate(today)} · Suivi de votre activité terrain.</p>}
             </div>
@@ -309,7 +310,7 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
           </div>}
         </div>
 
-        {activeTab === 'home' && !isOperator && (!campaignPaused || isYouthPreCheckin) && (
+        {activeTab === 'home' && !isOperator && !campaignPaused && !isYouthPreCheckin && (
           <div className={isYouthPreCheckin ? "relative mt-1 pt-1" : "relative mt-5 border-t border-white/10 pt-4"}>
             {podiumLoading ? <p className="py-5 text-center text-xs text-gray-400">Mise à jour du podium…</p> : rankedPodium.length === 0 && isYouthPreCheckin ? (
               <div className="btl-podium-empty mx-0 mt-2" role="status"><Trophy className="h-5 w-5 shrink-0 text-amber-300" aria-hidden="true"/><span>Classement du jour : aucun contact enregistré pour l’instant. Soyez le premier&nbsp;!</span></div>
@@ -368,6 +369,26 @@ export const YouthF2FView: React.FC<YouthF2FViewProps> = ({ currentUser, activeT
             {isClosed && <p className="text-center text-[0.6875rem] font-bold text-emerald-200">Rapport et GPS archivés</p>}
           </div>
         )
+      )}
+      {activeTab === 'home' && isYouthPreCheckin && (
+      <div className={isYouthPreCheckin ? "relative mt-1 pt-1" : "relative mt-5 border-t border-white/10 pt-4"}>
+        {podiumLoading ? <p className="py-5 text-center text-xs text-gray-400">Mise à jour du podium…</p> : rankedPodium.length === 0 && isYouthPreCheckin ? (
+          <div className="btl-podium-empty mx-0 mt-2" role="status"><Trophy className="h-5 w-5 shrink-0 text-amber-300" aria-hidden="true"/><span>Classement du jour : aucun contact enregistré pour l’instant. Soyez le premier&nbsp;!</span></div>
+        ) : (
+          <div className={isYouthPreCheckin ? "btl-podium-grid mt-2 grid grid-cols-3 items-end gap-2" : "mt-4 grid grid-cols-3 items-end gap-2"}>
+            {([2, 0, 1] as const).map((rankIndex) => {
+              const entry = rankedPodium[rankIndex];
+              return <div key={rankIndex} className="min-w-0 text-center">
+                <div className="btl-podium-avatar mx-auto flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-xs font-black text-white">{entry ? entry.name.trim().split(/\s+/).slice(0, 2).map((name) => name[0] || '').join('').toUpperCase() : <UsersRound size={18} />}</div>
+                <p className="mt-2 truncate text-[0.75rem] font-black text-white" title={entry?.name || 'Place libre'}>{entry?.name || 'Place libre'}</p>
+                <p className="mt-0.5 text-[0.6875rem] text-slate-300">{entry?.contacts || 0} contacts</p>
+                <div className={rankIndex === 0 ? 'mt-2 flex h-20 items-center justify-center rounded-2xl border border-amber-300/25 bg-amber-400/20 text-xl font-black text-amber-200' : rankIndex === 1 ? 'mt-2 flex h-14 items-center justify-center rounded-2xl border border-slate-300/20 bg-slate-300/15 text-lg font-black text-slate-200' : 'mt-2 flex h-10 items-center justify-center rounded-2xl border border-orange-300/20 bg-orange-400/15 text-lg font-black text-orange-200'}>{rankIndex + 1}</div>
+              </div>;
+            })}
+          </div>
+        )}
+        {myPodiumEntry && !rankedPodium.some((entry) => entry.baId === currentUser.id) && <p className="mt-3 text-center text-[0.75rem] text-slate-400">{myPodiumEntry.rank ? 'Votre rang : #' + myPodiumEntry.rank + ' · ' + myPodiumEntry.contacts + ' contact(s)' : 'Vous : 0 contact enregistré aujourd’hui.'}</p>}
+      </div>
       )}
       {isOperator && <section className="glass-card p-4 sm:p-5"><div className="mb-4 flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-violet-200/15 bg-violet-300/10 text-violet-200"><UsersRound size={19}/></span><div><p className="text-[0.75rem] font-black uppercase tracking-[0.14em] text-violet-100">Suivi Youth F2F</p><h2 className="mt-1 text-sm font-black text-white">Agents affectés à la campagne</h2></div></div>{team.length === 0 ? <p className="rounded-2xl border border-amber-300/20 bg-amber-400/[0.06] p-3 text-xs font-semibold text-amber-100">Aucun agent Youth F2F n’est encore rattaché à ce périmètre.</p> : <div className="space-y-2">{team.map((agent) => <div key={agent.id} className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/10 p-3"><span><b className="block text-xs text-white">{agent.name}</b><span className="text-[0.75rem] text-gray-500">{agent.phone}</span></span><span className="rounded-full bg-red-400/10 px-2 py-1 text-[0.6875rem] font-black uppercase text-red-300">BA Youth</span></div>)}</div>}</section>}
 
