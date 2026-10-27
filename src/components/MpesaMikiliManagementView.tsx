@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Archive, BarChart3, FileText, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleAlert, MapPin, RefreshCw, Trophy, UsersRound, UserRound, Zap, Target, Settings2, ArrowUpRight } from 'lucide-react';
+import { CampaignProgressGauge } from './CampaignProgressGauge';
 import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import type { User } from '../types';
 import {
@@ -9,6 +10,8 @@ import {
   getMikiliPodium,
   getMikiliSupervisorRegions,
   getMikiliTargets,
+  getMikiliCampaignProgress,
+  type MikiliCampaignProgress,
   getMikiliTeam,
   mikiliTodayIso,
   saveMikiliTargets,
@@ -80,6 +83,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
   const [campaignId, setCampaignId] = useState('');
   const [date, setDate] = useState(today);
   const [team, setTeam] = useState<MikiliTeamMember[]>([]);
+  const [campaignProgress, setCampaignProgress] = useState<MikiliCampaignProgress | null>(null);
   const [podium, setPodium] = useState<MikiliPodiumEntry[]>([]);
   const [archiveClients, setArchiveClients] = useState<MikiliClient[]>([]);
   const [regions, setRegions] = useState<MikiliRegion[]>([]);
@@ -137,6 +141,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
       ]);
       const teamIds = new Set(nextTeam.map((member) => member.userId));
       const scopedClients = isSupervisor && currentUser.role !== 'sub_admin' ? nextClients.filter((client) => teamIds.has(client.agent_id)) : nextClients;
+      if (activeTab === 'home' && !isSupervisor) setCampaignProgress(await getMikiliCampaignProgress(campaign.id));
       setTeam(nextTeam);
       setPodium(nextPodium);
       setTargets(nextTargets);
@@ -258,6 +263,22 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
             { label: 'Conversion', value: `${metrics.conversion}%`, Icon: BarChart3, tone: 'text-amber-100' },
           ] as Array<{ label: string; value: string | number; Icon: React.ElementType; tone: string }>).map(({ label, value, Icon: I, tone }) => <div key={label} className="min-w-[105px] flex-1 px-3 first:pl-0 last:pr-0"><div className="flex items-center gap-2"><I size={14} className={tone}/><span className="text-[0.6875rem] font-black uppercase tracking-[0.16em] text-gray-500">{label}</span></div><b className="mt-1 block text-2xl font-black text-white">{value}</b></div>)}</div>
         </section>
+        {!isSupervisor && campaignProgress && <CampaignProgressGauge
+          title="Progression"
+          subtitle="M-Pesa Mikili · toute la campagne"
+          modes={[
+            { key: 'clients', label: 'Clients', value: campaignProgress.clients, target: campaignProgress.workedDays * targets.dailyClients, unit: 'clients' },
+            { key: 'transactions', label: 'Transactions', value: campaignProgress.transactions, target: campaignProgress.workedDays * targets.dailyTransactions, unit: 'transactions', color: 'var(--m-chart-2)' },
+          ]}
+          legend={[
+            { label: 'Envoi présenté', value: campaignProgress.sendClients, color: 'var(--m-chart-1)' },
+            { label: 'Réception présentée', value: campaignProgress.receiveClients, color: 'var(--m-chart-3)' },
+          ]}
+          legendCaption="Services présentés aux clients"
+          note={targets.dailyClients > 0 || targets.dailyTransactions > 0
+            ? `Objectif cumulé : objectif journalier × ${campaignProgress.workedDays} journée${campaignProgress.workedDays > 1 ? 's' : ''} pointée${campaignProgress.workedDays > 1 ? 's' : ''}.`
+            : 'Définissez les objectifs journaliers dans Gestion pour suivre la progression.'}
+        />}
         {isSupervisor && <section className="glass-card overflow-hidden p-3 border border-red-300/15">
           <div className="flex items-center justify-between"><div><p className="text-[0.6875rem] font-black uppercase tracking-[0.2em] text-red-300/70">Performance équipe</p><h2 className="mt-1 text-lg font-black text-white">Indicateurs du jour</h2></div><span className="text-[0.6875rem] font-black uppercase text-red-300">{metrics.present}/{team.length} présents</span></div>
           <div className="mt-3 grid grid-cols-3 gap-2">

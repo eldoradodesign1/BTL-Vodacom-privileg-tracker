@@ -2,6 +2,7 @@ import React from 'react';
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { ChevronRight, RefreshCw, UserX } from 'lucide-react';
 import type { AgentMasterStatus, Shop } from '../types';
+import { CampaignProgressGauge, type ProgressMode } from './CampaignProgressGauge';
 import { getCheckins, getEffectiveTargetsForDate, getLeads, isMatchAgent, toISO } from '../utils/storage';
 
 // Accueil administrateur : chiffres clés, objectif du jour, rythme horaire, actions à débloquer,
@@ -35,43 +36,6 @@ const Sparkline: React.FC<{ values: number[] }> = ({ values }) => {
   return (
     <svg viewBox="0 0 100 22" preserveAspectRatio="none" className="mt-1 block h-5 w-full" aria-hidden="true">
       <polyline points={points.join(' ')} fill="none" strokeWidth={1.8} vectorEffect="non-scaling-stroke" strokeLinejoin="round" style={{ stroke: 'var(--m-chart-1)' }} />
-    </svg>
-  );
-};
-
-const SegmentedGauge: React.FC<{ value: number; total: number }> = ({ value, total }) => {
-  const fraction = total > 0 ? Math.min(value / total, 1) : 0;
-  const cx = 150;
-  const cy = 150;
-  const segments = 26;
-  const sweep = 115;
-  const lit = Math.round(fraction * segments);
-  const needle = ((-sweep + fraction * 2 * sweep) * Math.PI) / 180;
-  const percent = total > 0 ? Math.round((value / total) * 1000) / 10 : 0;
-  return (
-    <svg viewBox="0 -14 300 214" className="mx-auto block h-auto w-full max-w-[26rem]" role="img" aria-label={`${percent} % de l’objectif du jour`}>
-      {Array.from({ length: 61 }, (_, index) => {
-        const angle = ((-sweep + index * ((2 * sweep) / 60)) * Math.PI) / 180;
-        const major = index % 10 === 0;
-        const inner = major ? 128 : 131;
-        return <line key={`t${index}`} x1={cx + inner * Math.sin(angle)} y1={cy - inner * Math.cos(angle)} x2={cx + 137 * Math.sin(angle)} y2={cy - 137 * Math.cos(angle)} strokeWidth={major ? 1.6 : 1} style={{ stroke: 'var(--m-muted)', opacity: major ? 0.9 : 0.45 }} />;
-      })}
-      {Array.from({ length: segments }, (_, index) => {
-        const degrees = -sweep + (index + 0.5) * ((2 * sweep) / segments);
-        const mix = Math.round((1 - index / (segments - 1)) * 100);
-        const style = index < lit
-          ? { fill: `color-mix(in oklab, var(--m-chart-1) ${mix}%, var(--m-chart-2))`, filter: 'drop-shadow(0 0 4px color-mix(in srgb, var(--m-chart-1) 45%, transparent))' }
-          : { fill: 'var(--m-track)' };
-        return <rect key={`s${index}`} x={-6.5} y={-120} width={13} height={42} rx={6.5} transform={`translate(${cx} ${cy}) rotate(${degrees})`} style={style} />;
-      })}
-      <line x1={cx + 98 * Math.sin(needle)} y1={cy - 98 * Math.cos(needle)} x2={cx + 136 * Math.sin(needle)} y2={cy - 136 * Math.cos(needle)} strokeWidth={2.4} strokeLinecap="round" style={{ stroke: 'var(--m-text)' }} />
-      <circle cx={cx + 136 * Math.sin(needle)} cy={cy - 136 * Math.cos(needle)} r={5} style={{ fill: 'var(--m-text)', filter: 'drop-shadow(0 0 6px var(--m-chart-2))' }} />
-      <text x={cx} y={cy - 6} textAnchor="middle" fontSize={38} fontWeight={800} letterSpacing={-1} style={{ fill: 'var(--m-text)' }}>{`${String(percent).replace('.', ',')} %`}</text>
-      <text x={cx} y={cy + 18} textAnchor="middle" fontSize={13} style={{ fill: 'var(--m-text-2)' }}>{`${value} / ${total} activations`}</text>
-      {([['0', -sweep], ['50', 0], ['100', sweep]] as const).map(([label, degrees]) => {
-        const angle = (degrees * Math.PI) / 180;
-        return <text key={label} x={cx + 145.5 * Math.sin(angle)} y={cy - 150 * Math.cos(angle) + (degrees === 0 ? 4 : 14)} textAnchor="middle" fontSize={11} style={{ fill: 'var(--m-muted)' }}>{label}</text>;
-      })}
     </svg>
   );
 };
@@ -178,8 +142,26 @@ export const AdminHomeDashboard: React.FC<AdminHomeDashboardProps> = ({ totalAct
   const absent = hostesses.filter((hostess) => hostess.status === 'Absent');
   const teamTarget = hostesses.reduce((sum, hostess) => sum + dailyTarget(hostess.shopId), 0);
   const leadsOf = (hostess: AgentMasterStatus) => todayLeads.filter((lead) => isMatchAgent(lead.agent_id, hostess));
-  const atTarget = present.filter((hostess) => leadsOf(hostess).length >= dailyTarget(hostess.shopId)).length;
 
+  // Progression de toute la campagne : chaque journée pointée d'une hôtesse ajoute la cible journalière de son shop.
+  const workedDays = new Map<string, { date: string; shopId: string }>();
+  checkins.filter((checkin) => checkin.type === 'IN').forEach((checkin) => {
+    const hostess = hostesses.find((item) => isMatchAgent(checkin.agent_id, item));
+    if (!hostess) return;
+    const date = toISO(checkin.timestamp);
+    workedDays.set(`${hostess.id}|${date}`, { date, shopId: hostess.shopId });
+  });
+  const campaignTargets = Array.from(workedDays.values()).reduce((sum, day) => {
+    const targets = getEffectiveTargetsForDate(day.date, day.shopId);
+    return { privilege: sum.privilege + targets.privilege, bundle: sum.bundle + targets.bundle, roaming: sum.roaming + targets.roaming };
+  }, { privilege: 0, bundle: 0, roaming: 0 });
+  const done = (name: string) => pieData.find((item) => item.name === name)?.value ?? 0;
+  const campaignModes: ProgressMode[] = [
+    { key: 'total', label: 'Total', value: totalActivations, target: campaignTargets.privilege + campaignTargets.bundle + campaignTargets.roaming, unit: 'activations' },
+    { key: 'privilege', label: 'Privilège', value: done('Privilège'), target: campaignTargets.privilege, unit: 'opt-in', color: 'var(--m-chart-1)' },
+    { key: 'bundles', label: 'Bundles', value: done('Bundles'), target: campaignTargets.bundle, unit: 'bundles', color: 'var(--m-chart-2)' },
+    { key: 'roaming', label: 'Roaming', value: done('Roaming'), target: campaignTargets.roaming, unit: 'opt-in', color: 'var(--m-chart-3)' },
+  ];
   const actualByHour = HOURS.map((hour) => todayLeads.filter((lead) => Math.floor(kinshasaHour(lead.timestamp)) === hour).length);
   const pace = HOURS.map(() => Math.round((teamTarget / HOURS.length) * 10) / 10);
   const dayProgress = Math.min(Math.max((currentHour - DAY_START) / (DAY_END - DAY_START), 0), 1);
@@ -216,7 +198,6 @@ export const AdminHomeDashboard: React.FC<AdminHomeDashboardProps> = ({ totalAct
   const position = (hour: number) => `${(Math.min(Math.max(hour, DAY_START), DAY_END) - DAY_START) * (100 / (DAY_END - DAY_START))}%`;
   const initials = (name: string) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join('');
   const updatedAt = new Intl.DateTimeFormat('fr-FR', { timeZone: 'Africa/Kinshasa', hour: '2-digit', minute: '2-digit' }).format(now);
-  const totalOf = (name: string) => pieData.find((item) => item.name === name)?.value ?? 0;
 
   return (
     <div className="admin-home @container space-y-4 animate-pop">
@@ -245,31 +226,12 @@ export const AdminHomeDashboard: React.FC<AdminHomeDashboardProps> = ({ totalAct
       </header>
 
       <div className="grid grid-cols-1 gap-4 @3xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-        <section className="glass-card space-y-3 !p-5">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-base font-bold text-[var(--m-text)]">Objectif du jour</h3>
-              <p className="text-xs text-[var(--m-text-2)]">Toutes offres · cibles des shops</p>
-            </div>
-          </div>
-          <SegmentedGauge value={todayLeads.length} total={teamTarget} />
-          <p className="mx-auto w-full max-w-[26rem] text-xs text-[var(--m-text-2)]">Depuis le début de la campagne</p>
-          <div className="mx-auto grid w-full max-w-[26rem] grid-cols-3 gap-2">
-            {[['Privilège', 'var(--m-chart-1)'], ['Bundles', 'var(--m-chart-2)'], ['Roaming', 'var(--m-chart-3)']].map(([name, color]) => (
-              <div key={name} className="grid grid-cols-[auto_1fr] items-center gap-x-2">
-                <i className="row-span-2 block h-3 w-3 rounded-full" style={{ background: color }} />
-                <b className="text-base font-extrabold leading-tight tabular-nums text-[var(--m-text)]">{totalOf(name)}</b>
-                <span className="text-xs text-[var(--m-muted)]">{name}</span>
-              </div>
-            ))}
-          </div>
-          <div className="space-y-2 rounded-[18px] bg-[var(--m-tile)] px-3 py-2.5">
-            <div className="flex items-center justify-between gap-2 text-sm text-[var(--m-text-2)]"><span>Hôtesses à leur cible du jour</span><b className="tabular-nums text-[var(--m-text)]">{atTarget} / {present.length}</b></div>
-            <div className="flex gap-1 overflow-hidden" aria-hidden="true">
-              {Array.from({ length: 48 }, (_, index) => <i key={index} className="block h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: present.length > 0 && index < Math.round((48 * atTarget) / present.length) ? 'var(--m-chart-1)' : 'var(--m-track)' }} />)}
-            </div>
-          </div>
-        </section>
+        <CampaignProgressGauge
+          title="Progression"
+          subtitle="Vodacom Privilège · toute la campagne"
+          modes={campaignModes}
+          note="Objectif cumulé : cible journalière du shop pour chaque journée pointée."
+        />
 
         <div className="space-y-4">
           <section className="glass-card !p-5">

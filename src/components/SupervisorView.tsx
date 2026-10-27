@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { CampaignProgressGauge } from './CampaignProgressGauge';
 import { User, Shop, AgentMasterStatus } from '../types';
 import { getSupervisorLiveView, getAdminMasterList, getReports, getUsers, getLeads, getCheckins, updateUserShopAssignment, resolveStoredPhotoUrl, saveTargetDefinition, getEffectiveTargetsForDate,
   refreshUsersFromSupabase,
@@ -1439,6 +1440,39 @@ export const SupervisorView: React.FC<SupervisorViewProps> = ({
           <span className="text-2xl font-black text-emerald-400">{closedCount}</span>
         </div>
       </div>
+
+      {campaignCode === 'vodacom-privilege' && (() => {
+        // Objectif du jour choisi : cibles des shops des hôtesses pointées, réalisé du même jour.
+        const shopOf = (agentId: string) => allUsers.find((user) => user.id === agentId)?.permanentShopId;
+        const presentAgents = teamData.filter((agent) => agent.status !== 'Absent');
+        const targets = presentAgents.reduce((sum, agent) => {
+          const shopTargets = getEffectiveTargetsForDate(selectedDate, shopOf(agent.id));
+          return { privilege: sum.privilege + shopTargets.privilege, bundle: sum.bundle + shopTargets.bundle, roaming: sum.roaming + shopTargets.roaming };
+        }, { privilege: 0, bundle: 0, roaming: 0 });
+        const done = teamData.reduce((sum, agent) => ({ priv: sum.priv + (agent.stats?.priv || 0), bund: sum.bund + (agent.stats?.bund || 0), roam: sum.roam + (agent.stats?.roam || 0) }), { priv: 0, bund: 0, roam: 0 });
+        const atTarget = presentAgents.filter((agent) => {
+          const shopTargets = getEffectiveTargetsForDate(selectedDate, shopOf(agent.id));
+          return (agent.stats?.priv || 0) + (agent.stats?.bund || 0) + (agent.stats?.roam || 0) >= shopTargets.privilege + shopTargets.bundle + shopTargets.roaming;
+        }).length;
+        return (
+          <CampaignProgressGauge
+            title="Objectif du jour"
+            subtitle={`${selectedDateLabel} · hôtesses pointées`}
+            emptyLabel="aucune hôtesse pointée"
+            modes={[
+              { key: 'total', label: 'Total', value: done.priv + done.bund + done.roam, target: targets.privilege + targets.bundle + targets.roaming, unit: 'activations' },
+              { key: 'privilege', label: 'Privilège', value: done.priv, target: targets.privilege, unit: 'opt-in', color: 'var(--m-chart-1)' },
+              { key: 'bundles', label: 'Bundles', value: done.bund, target: targets.bundle, unit: 'bundles', color: 'var(--m-chart-2)' },
+              { key: 'roaming', label: 'Roaming', value: done.roam, target: targets.roaming, unit: 'opt-in', color: 'var(--m-chart-3)' },
+            ]}
+          >
+            <div className="flex items-center justify-between gap-2 rounded-[18px] bg-[var(--m-tile)] px-3 py-2.5 text-sm text-[var(--m-text-2)]">
+              <span>Hôtesses à leur cible</span>
+              <b className="tabular-nums text-[var(--m-text)]">{atTarget} / {presentAgents.length}</b>
+            </div>
+          </CampaignProgressGauge>
+        );
+      })()}
 
       {/* Podium Team */}
       <div className="glass-card border border-white/10 p-5">

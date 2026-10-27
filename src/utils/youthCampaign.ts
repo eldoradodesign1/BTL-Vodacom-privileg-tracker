@@ -300,6 +300,8 @@ export interface YouthOperatorAgent {
   user: User;
   attendance: YouthDailyAttendance | null;
   contacts: YouthContactReport[];
+  /** Journées pointées sur la période (archives uniquement). */
+  workedDays?: number;
 }
 
 export async function getYouthOperatorAgents(campaignId: string, activityDate: string, supervisorId?: string): Promise<YouthOperatorAgent[]> {
@@ -351,6 +353,7 @@ export async function getYouthOperatorArchive(campaignId: string, startDate: str
     user: { id: row.id, phone: row.phone, name: row.full_name, role: row.role, password: row.password_hash, supervisorId: row.supervisor_id, permanentShopId: row.permanent_shop_id, userCategory: row.user_category, created_at: row.created_at, last_login: row.last_login } as User,
     attendance: attendanceByAgent.get(row.id)?.[0] || null,
     contacts: contactsByAgent.get(row.id) || [],
+    workedDays: (attendanceByAgent.get(row.id) || []).filter((day) => Boolean(day.checkin_at)).length,
   }));
 }
 
