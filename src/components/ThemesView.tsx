@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Check, Volume2, VolumeX } from 'lucide-react';
-import { THEME_OPTIONS, applyCardSolidity, getCardSolidity, type ThemeMode } from '../utils/themes';
+import { DEFAULT_BLUR, THEME_OPTIONS, applyBackdropBlur, applyCardSolidity, getBackdropBlur, getCardSolidity, glowLevel, shadowLevel, type ThemeMode } from '../utils/themes';
+import { VerticalSlider } from './VerticalSlider';
 import { getNotificationsMuted, setNotificationsMuted } from '../utils/fundRequestAlert';
 import { publicUrl } from '../utils/assets';
 
 // Onglet Thèmes : chaque carte montre la matière elle-même (fond soie, champ, couleurs, bouton d'action).
-// Le son des alertes et l'opacité des cartes se règlent ici aussi.
+// Le son des alertes et les réglages de matière (opacité, flou, ombre, lueur) se règlent ici aussi.
 
 interface ThemesViewProps {
   userId: string;
@@ -16,6 +17,9 @@ interface ThemesViewProps {
 export const ThemesView: React.FC<ThemesViewProps> = ({ userId, theme, onSetTheme }) => {
   const [muted, setMuted] = useState(() => getNotificationsMuted(userId));
   const [solidity, setSolidity] = useState(getCardSolidity);
+  const [blur, setBlur] = useState(() => getBackdropBlur() ?? DEFAULT_BLUR);
+  const [shadow, setShadow] = useState(shadowLevel.get);
+  const [glow, setGlow] = useState(glowLevel.get);
 
   useEffect(() => { setMuted(getNotificationsMuted(userId)); }, [userId]);
 
@@ -40,23 +44,11 @@ export const ThemesView: React.FC<ThemesViewProps> = ({ userId, theme, onSetThem
           </span>
           <input type="checkbox" checked={!muted} onChange={toggleSound} />
         </label>
-        <div className="space-y-2 border-t border-[var(--m-edge-soft)] pt-4">
-          <div className="flex items-center justify-between text-sm font-semibold text-[var(--m-text)]">
-            <label htmlFor="card-solidity">Opacité des cartes</label>
-            <span className="tabular-nums text-[var(--m-text-2)]">{Math.round(solidity)} %</span>
-          </div>
-          <input
-            id="card-solidity"
-            type="range"
-            min={0}
-            max={100}
-            step={0.001}
-            value={solidity}
-            onChange={(event) => { const next = Number(event.target.value); setSolidity(next); applyCardSolidity(next); }}
-            className="theme-solidity w-full"
-            style={{ ['--solidity' as string]: `${solidity}%` }}
-          />
-          <div className="flex justify-between text-xs text-[var(--m-muted)]"><span>Givré</span><span>Opaque</span></div>
+        <div className="vslider-row border-t border-[var(--m-edge-soft)] pt-4">
+          <VerticalSlider label="Opacité" value={solidity} min={0} max={100} display={`${Math.round(solidity)} %`} onChange={(next) => { setSolidity(next); applyCardSolidity(next); }} />
+          <VerticalSlider label="Flou" value={blur} min={0} max={60} display={`${Math.round(blur)} px`} onChange={(next) => { setBlur(next); applyBackdropBlur(next); }} />
+          <VerticalSlider label="Ombre" value={shadow} min={0} max={100} display={`${Math.round(shadow)} %`} onChange={(next) => { setShadow(next); shadowLevel.apply(next); }} />
+          <VerticalSlider label="Lueur" value={glow} min={0} max={100} display={`${Math.round(glow)} %`} onChange={(next) => { setGlow(next); glowLevel.apply(next); }} />
         </div>
       </section>
 

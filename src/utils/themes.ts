@@ -67,6 +67,59 @@ export const applyCardSolidity = (value: number) => {
   }, 250);
 };
 
+// Flou d'arrière-plan des cartes, de la barre et de l'en-tête (px). Sans réglage, chaque matière garde le sien.
+const BLUR_KEY = 'vodacom_ui_blur';
+export const DEFAULT_BLUR = 38;
+
+export const getBackdropBlur = (): number | null => {
+  try {
+    const stored = localStorage.getItem(BLUR_KEY);
+    if (stored === null) return null;
+    const value = Number(stored);
+    return Number.isFinite(value) ? Math.min(60, Math.max(0, value)) : null;
+  } catch {
+    return null;
+  }
+};
+
+let blurWrite: number | undefined;
+
+export const applyBackdropBlur = (value: number | null) => {
+  if (value === null) document.body.style.removeProperty('--ui-blur');
+  else document.body.style.setProperty('--ui-blur', `${value}px`);
+  window.clearTimeout(blurWrite);
+  if (value === null) return;
+  blurWrite = window.setTimeout(() => {
+    try { localStorage.setItem(BLUR_KEY, String(value)); } catch { /* préférence locale facultative */ }
+  }, 250);
+};
+
+// Ombre portée et lueur externe des cartes et de la barre (0 à 100 ; 50 = apparence de référence).
+const levelSetting = (key: string, cssVar: string) => {
+  let pending: number | undefined;
+  return {
+    get: (): number => {
+      try {
+        const stored = localStorage.getItem(key);
+        const value = stored === null ? 50 : Number(stored);
+        return Number.isFinite(value) ? Math.min(100, Math.max(0, value)) : 50;
+      } catch {
+        return 50;
+      }
+    },
+    apply: (value: number) => {
+      document.body.style.setProperty(cssVar, String(value));
+      window.clearTimeout(pending);
+      pending = window.setTimeout(() => {
+        try { localStorage.setItem(key, String(value)); } catch { /* préférence locale facultative */ }
+      }, 250);
+    },
+  };
+};
+
+export const shadowLevel = levelSetting('vodacom_ui_shadow', '--ui-shadow-n');
+export const glowLevel = levelSetting('vodacom_ui_glow', '--ui-glow-n');
+
 /** Pose la matière sur le document : attribut, fond soie et podium. */
 export const applyThemeToDocument = (theme: ThemeMode) => {
   document.body.dataset.theme = theme;

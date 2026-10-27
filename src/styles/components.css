@@ -165,8 +165,8 @@ body[data-theme] .podium-neutral {
     linear-gradient(165deg, rgba(255, 255, 255, 0.12) 0%, transparent 42%),
     var(--m-surface);
   box-shadow: var(--shadow-elevation);
-  backdrop-filter: blur(var(--m-blur)) saturate(160%);
-  -webkit-backdrop-filter: blur(var(--m-blur)) saturate(160%);
+  backdrop-filter: blur(var(--ui-blur, var(--m-blur))) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--ui-blur, var(--m-blur))) saturate(160%);
 }
 
 body[data-theme] .glass-card:hover {
@@ -200,8 +200,8 @@ body[data-theme] .app-header {
   border-color: var(--m-edge-soft);
   border-bottom-color: var(--m-edge);
   box-shadow: var(--shadow-elevation);
-  backdrop-filter: blur(calc(var(--m-blur) - 8px)) saturate(150%);
-  -webkit-backdrop-filter: blur(calc(var(--m-blur) - 8px)) saturate(150%);
+  backdrop-filter: blur(max(0px, calc(var(--ui-blur, var(--m-blur)) - 8px))) saturate(150%);
+  -webkit-backdrop-filter: blur(max(0px, calc(var(--ui-blur, var(--m-blur)) - 8px))) saturate(150%);
 }
 
 .app-bottom-nav {
@@ -448,7 +448,7 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   --dock-surface: var(--m-dock);
   --dock-ink: var(--m-muted);
   /* Léger bump de flou sur toute la barre uniquement (pas de pastille active). */
-  --dock-blur: calc(var(--m-blur) + 4px);
+  --dock-blur: var(--ui-blur, calc(var(--m-blur) + 4px));
   --dock-notch: 40px;
   position: fixed;
   z-index: 40;
@@ -469,7 +469,6 @@ body[data-theme] .btn-red:hover:not(:disabled) {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   isolation: isolate;
-  filter: drop-shadow(0 6px 16px var(--m-glow));
 }
 
 .agent-dock::before {
@@ -1143,14 +1142,6 @@ body[data-theme] button:is(.bg-red-500, .bg-red-600, .bg-rose-500, .bg-rose-600)
   box-shadow: 0 6px 16px var(--m-act-glow);
 }
 
-/* Curseur d'opacité : piste remplie jusqu'à la valeur. */
-body[data-theme] input[type="range"].theme-solidity {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 6px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, var(--m-fill) 0 var(--solidity), var(--m-track) var(--solidity) 100%);
-}
 
 /* ── Opacité réglable (onglet Thèmes), 0 à 100 ; 50 = l'apparence de référence ──
    En dessous de 50, le fond des cartes et de la barre s'efface et il ne reste que le flou : une vitre givrée.
@@ -1178,10 +1169,11 @@ body[data-theme] .glass-card::before {
   opacity: min(1, var(--ui-solidity-n, 50) / 50);
 }
 
+/* La barre suit exactement la règle des cartes : 0 → aucun fond, 50 → référence (88 %), 100 → opaque. */
 .agent-dock::before {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, transparent 60%),
-    color-mix(in srgb, var(--dock-surface) min(14% + var(--ui-solidity-n, 50) * 1.48%, 88% + (var(--ui-solidity-n, 50) - 50) * 0.24%), transparent);
+    linear-gradient(180deg, rgba(255, 255, 255, calc(0.08 * min(1, var(--ui-solidity-n, 50) / 50))) 0%, transparent 60%),
+    color-mix(in srgb, var(--dock-surface) min(var(--ui-solidity-n, 50) * 1.76%, 88% + (var(--ui-solidity-n, 50) - 50) * 0.24%), transparent);
 }
 
 body[data-theme] .app-header {
@@ -1202,4 +1194,90 @@ body[data-theme] .app-header {
 @keyframes themeFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+/* ── Curseurs verticaux (onglet Thèmes) : piste épaisse, remplissage en dégradé, repère blanc ── */
+.vslider-row {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.vslider {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+}
+
+.vslider__value {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--m-text);
+}
+
+.vslider__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--m-text-2);
+}
+
+.vslider__track {
+  position: relative;
+  width: 0.75rem;
+  height: 9rem;
+  border-radius: 999px;
+  background: var(--m-track);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+  touch-action: none;
+}
+
+/* Zone de toucher plus large que la piste visible. */
+.vslider__track::before {
+  content: '';
+  position: absolute;
+  inset: -0.5rem -1.25rem;
+}
+
+.vslider__track:focus-visible {
+  outline: 2px solid var(--m-accent);
+  outline-offset: 6px;
+}
+
+.vslider__fill {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: var(--fill);
+  border-radius: 999px;
+  background: linear-gradient(0deg, var(--m-chart-3) 0%, var(--m-chart-1) 100%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--m-chart-1) 40%, transparent);
+}
+
+.vslider__thumb {
+  position: absolute;
+  left: 50%;
+  bottom: var(--fill);
+  width: 1.75rem;
+  height: 0.1875rem;
+  border-radius: 999px;
+  transform: translate(-50%, 50%);
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Ombre portée et lueur externe réglables (onglet Thèmes) ; 50 = apparence de référence ── */
+body[data-theme] .glass-card,
+body[data-theme] .glass-card:hover {
+  box-shadow:
+    inset 0 1px 0 var(--m-highlight),
+    0 calc(var(--ui-shadow-n, 50) * 0.16px) calc(var(--ui-shadow-n, 50) * 0.64px) rgba(0, 0, 0, calc(var(--ui-shadow-n, 50) * 0.0065)),
+    0 0 calc(var(--ui-glow-n, 50) * 0.8px) color-mix(in srgb, var(--m-accent) calc(var(--ui-glow-n, 50) * 0.36%), transparent);
+}
+
+.agent-dock::before {
+  box-shadow:
+    0 1px 0 var(--m-highlight) inset,
+    0 calc(var(--ui-shadow-n, 50) * 0.12px) calc(var(--ui-shadow-n, 50) * 0.56px) rgba(0, 0, 0, calc(var(--ui-shadow-n, 50) * 0.0065)),
+    0 0 calc(var(--ui-glow-n, 50) * 0.72px) color-mix(in srgb, var(--m-accent) calc(var(--ui-glow-n, 50) * 0.32%), transparent);
 }

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Podium } from './Podium';
+import { ArchivesShortcut } from './ArchivesShortcut';
 import { Camera, CheckCircle2, CircleAlert, ChevronDown, FileText, MapPin, PlusCircle, RefreshCw, Search, Star, Trophy, UsersRound, X, Zap } from 'lucide-react';
 import type { User } from '../types';
 import { runInBackground } from '../utils/backgroundOperations';
@@ -289,6 +290,7 @@ export const MpesaMikiliView: React.FC<MpesaMikiliViewProps> = ({ currentUser, a
         <h1>Bonjour, {currentUser.name.trim().split(/\s+/)[0]}</h1>
       </header>
       <Podium entries={[0, 1, 2].map((index) => { const entry = podium[index]; return entry ? { name: entry.name, score: `${entry.clients} clients · ${entry.transactions} Tx` } : null; })} emptyScore="0 client" />
+      <ArchivesShortcut />
       <div className="flex justify-center py-6" style={{minHeight:'min(43vh,380px)'}}>
         <label aria-label="Démarrer la journée" title="Démarrer la journée" className={`btl-power-button ${campaignId && !checkinPending && !error ? 'btl-power-button--ready' : 'btl-power-button--inactive'} flex flex-col items-center justify-center gap-3 text-center text-white`} >
           <svg viewBox="0 0 24 24" width="100" height="100" fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/><path d="M12 2v10"/></svg>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Podium } from './Podium';
+import { ArchivesShortcut } from './ArchivesShortcut';
 import { Banknote, Camera, CheckCircle2, FileCheck2, MapPin, Medal, PlusCircle, Trophy, UsersRound } from 'lucide-react';
 import type { BADailyAttendance, BAPosVisit, BATransaction, CampaignRun, PointOfSale, User } from '../types';
 import {
@@ -285,6 +286,7 @@ export const MerchantBAView: React.FC<MerchantBAViewProps> = ({ currentUser, onP
         <h1>Bonjour, {currentUser.name.trim().split(/\s+/)[0]}</h1>
       </header>
       <Podium entries={[0, 1, 2].map((index) => { const entry = leaders[index]; return entry ? { name: entry.activity.ba.name, photo: podiumPhotoUrls[entry.activity.ba.id] || undefined, score: `${entry.activity.transactionCount} Tx · ${entry.activity.visitedPosCount} POS` } : null; })} emptyScore="0 Tx" />
+      <ArchivesShortcut />
       <div className="flex justify-center py-6" style={{minHeight:'min(43vh,380px)'}}>
         <label aria-label="Démarrer la journée" title="Démarrer la journée" className={`btl-power-button ${run && !campaignPaused && !error ? 'btl-power-button--ready' : 'btl-power-button--inactive'} flex flex-col items-center justify-center gap-3 text-center text-white`} >
           <svg viewBox="0 0 24 24" width="100" height="100" fill="none" stroke="currentColor" strokeWidth="1.55" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M18.4 6.6a9 9 0 1 1-12.8 0"/><path d="M12 2v10"/></svg><span className="text-xs font-black uppercase tracking-widest">Démarrer la journée</span>

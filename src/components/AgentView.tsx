@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Podium } from './Podium';
+import { ArchivesShortcut } from './ArchivesShortcut';
 import { User, Shop, Lead, Checkin, DailyReport } from '../types';
 import { getShopById, checkDailyStatus, addCheckin, getLeads, getCheckins, getSyncPendingCount, isMatchAgent, toISO, getUsers, resolveStoredPhotoUrl, getEffectiveTargetsForDate } from '../utils/storage';
 import { TabType } from './BottomNav';
@@ -469,6 +470,7 @@ export const AgentView: React.FC<AgentViewProps> = ({
         entries={[0, 1, 2].map((index) => { const entry = globalActivityRanking[index]; return entry ? { name: entry.name, score: `${entry.total} client${entry.total > 1 ? 's' : ''}` } : null; })}
         emptyScore="0 client"
       />
+      <ArchivesShortcut />
     </section>
     );
   }
