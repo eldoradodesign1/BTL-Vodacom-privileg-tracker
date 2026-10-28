@@ -22,8 +22,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ currentUser, onDataChanged }
     };
 
     void refreshMessages();
+    // Pas de rafraîchissement en arrière-plan : la messagerie reprend dès le retour dans l'appli.
     const interval = window.setInterval(() => {
-      void refreshMessages();
+      if (document.visibilityState === 'visible') void refreshMessages();
     }, 4000);
 
     return () => {
