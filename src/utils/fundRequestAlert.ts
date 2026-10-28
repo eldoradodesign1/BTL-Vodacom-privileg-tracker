@@ -86,8 +86,8 @@ export async function showFundRequestSystemNotification(request: FundRequestAler
   const options: NotificationOptions = {
     body: `${request.baName} · $${request.amount.toLocaleString('fr-FR')} · ${request.posLabel}`,
     tag: `merchant-fund-${request.id}`,
-    icon: publicUrl('favicon-refined.png'),
-    badge: publicUrl('favicon-refined.png'),
+    icon: publicUrl('icon-any-192.png'),
+    badge: publicUrl('notification-badge.png'),
     requireInteraction: true,
     silent: muted,
   };
