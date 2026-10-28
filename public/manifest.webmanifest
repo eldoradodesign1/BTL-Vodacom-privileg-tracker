@@ -8,28 +8,52 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone"],
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
   "orientation": "portrait-primary",
   "background_color": "#09090b",
   "theme_color": "#6b0710",
-  "categories": ["business", "productivity"],
+  "categories": [
+    "business",
+    "productivity"
+  ],
   "prefer_related_applications": false,
   "related_applications": [
-    { "platform": "webapp", "url": "https://eldoradodesign1.github.io/btl-deployment-report/manifest.webmanifest" },
-    { "platform": "webapp", "url": "https://eldoradodesign1.github.io/btl-africa-user-registration/manifest.webmanifest" }
+    {
+      "platform": "webapp",
+      "url": "https://eldoradodesign1.github.io/btl-deployment-report/manifest.webmanifest"
+    },
+    {
+      "platform": "webapp",
+      "url": "https://eldoradodesign1.github.io/btl-africa-user-registration/manifest.webmanifest"
+    }
   ],
   "icons": [
     {
-      "src": "pwa-192.png",
+      "src": "icon-any-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "pwa-512.png",
+      "src": "icon-any-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

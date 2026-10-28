@@ -1,11 +1,15 @@
-const CACHE_NAME = 'btl-tracker-shell-v8';
+const CACHE_NAME = 'btl-tracker-shell-v9';
 const APP_SHELL = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './favicon-refined.png',
-  './pwa-192.png',
-  './pwa-512.png',
+  './favicon-64.png',
+  './apple-touch-icon.png',
+  './icon-any-192.png',
+  './icon-any-512.png',
+  './icon-maskable-192.png',
+  './icon-maskable-512.png',
+  './notification-badge.png',
 ];
 
 const isStaticAsset = (url) => url.pathname.includes('/assets/')

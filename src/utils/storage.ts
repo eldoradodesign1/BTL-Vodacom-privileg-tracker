@@ -149,7 +149,7 @@ function maybeShowBrowserNotification(message: string): void {
   if (typeof window === 'undefined' || !('Notification' in window)) return;
   if (window.Notification.permission !== 'granted') return;
   try {
-    new window.Notification('Vodacom Tracker', { body: message, icon: publicUrl('favicon.svg') });
+    new window.Notification('Vodacom Tracker', { body: message, icon: publicUrl('icon-any-192.png'), badge: publicUrl('notification-badge.png') });
   } catch {}
 }
 
