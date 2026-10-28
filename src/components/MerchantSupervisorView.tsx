@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Banknote, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, CircleDot, Download, FileText, Filter, MapPin, PauseCircle, PlayCircle, Plus, ReceiptText, Save, Search, Target, UserPlus, UserRound, UsersRound } from 'lucide-react';
 import type { CampaignPause, CampaignRun, MerchantFundRequest, User } from '../types';
 import { archiveRejectedMerchantFundRequests, createCampaignPause, deleteCampaignPause, endCampaignPause, getActiveCampaignRuns, getCampaignPauses, getMerchantCampaign, getMerchantFundRequests, getMerchantMonitoring, getMerchantPosControl, getMerchantTransactionsForRun, isCampaignPausedOn, MERCHANT_CAMPAIGN_START, merchantTodayIso, updateMerchantTargetSettings, type MerchantPosControlItem, type MerchantTeamActivity, type MerchantTransactionWithBa } from '../utils/merchantCampaign';
+import { useLiveRefresh } from '../utils/liveSync';
 import { DateIconPicker } from './DateIconPicker';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 import { MerchantBAOperationsModal } from './Modals/MerchantBAOperationsModal';
@@ -59,8 +60,8 @@ export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = ({ 
   const [isTransactionsReportOpen, setIsTransactionsReportOpen] = useState(false);
   const txRequestRef = useRef(0);
 
-  const load = async () => {
-    setLoading(true); setError('');
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true); setError('');
     try {
       const nextCampaign = await getMerchantCampaign();
       if (!nextCampaign) throw new Error('La campagne Merchant Educational Campaign est introuvable.');
@@ -73,10 +74,11 @@ export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = ({ 
         daily_pos_target: Number(activeRun.daily_pos_target || 15),
         transactions_per_pos_target: Number(activeRun.transactions_per_pos_target || 3),
       });
-    } catch (caught) { setError(caught instanceof Error ? caught.message : 'Chargement impossible.'); }
+    } catch (caught) { if (!silent) setError(caught instanceof Error ? caught.message : 'Chargement impossible.'); }
     finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, []);
+  useLiveRefresh(['ba_daily_attendance', 'ba_transactions', 'ba_pos_visits', 'merchant_fund_requests'], () => { void load(true); });
   useEffect(() => {
     if (!openFundRequestId) return;
     const request = fundRequests.find((item) => item.id === openFundRequestId);
@@ -115,6 +117,13 @@ export const MerchantSupervisorView: React.FC<MerchantSupervisorViewProps> = ({ 
       }
     })();
   }, [managementTab, run, txLoadedRunId]);
+  useLiveRefresh(['ba_transactions'], () => {
+    if (!run || txLoadedRunId !== run.id || txLoading) return;
+    const requestId = ++txRequestRef.current;
+    void getMerchantTransactionsForRun(run.id)
+      .then((items) => { if (txRequestRef.current === requestId) setAllTransactions(items); })
+      .catch((caught) => console.warn('Live Merchant transactions refresh failed', caught));
+  });
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();

@@ -6,6 +6,7 @@ import { DateIconPicker } from './DateIconPicker';
 import { CampaignProgressGauge } from './CampaignProgressGauge';
 import { TargetBars, TargetRings, TrendChart, WelcomeHeader } from './DashboardKit';
 import { getYouthCampaign, getYouthOperatorAgents, getYouthOperatorArchive, saveYouthTargets, youthTodayIso, type YouthOperatorAgent } from '../utils/youthCampaign';
+import { useLiveRefresh } from '../utils/liveSync';
 
 interface Props { currentUser: User; activeTab: 'home' | 'tab2' | 'tab3' | 'admin'; }
 const isoStart = (campaignStart?: string | null) => campaignStart || '2026-10-12';
@@ -61,8 +62,8 @@ export const YouthManagementView: React.FC<Props> = ({ currentUser, activeTab })
 
   const isSupervisor = currentUser.role === 'supervisor';
   const supervisorId = isSupervisor ? currentUser.id : undefined;
-  const load = async (soft = false) => {
-    if (soft) setRefreshing(true); else setLoading(true);
+  const load = async (soft = false, silent = false) => {
+    if (!silent) { if (soft) setRefreshing(true); else setLoading(true); }
     setError('');
     try {
       const campaign = await getYouthCampaign();
@@ -75,10 +76,11 @@ export const YouthManagementView: React.FC<Props> = ({ currentUser, activeTab })
       setAgents(rows);
       if (activeTab === 'home') setCampaignRows(await getYouthOperatorArchive(campaign.id, start, today, supervisorId));
       if (activeTab === 'tab3') setArchive(await getYouthOperatorArchive(campaign.id, startDate < start ? start : startDate, endDate < start ? start : endDate, supervisorId));
-    } catch (caught) { setError(caught instanceof Error ? caught.message : 'Chargement Youth F2F impossible.'); }
+    } catch (caught) { if (!silent) setError(caught instanceof Error ? caught.message : 'Chargement Youth F2F impossible.'); }
     finally { setLoading(false); setRefreshing(false); }
   };
   useEffect(() => { void load(); }, [date, startDate, endDate, activeTab, currentUser.id]);
+  useLiveRefresh(['youth_daily_attendance', 'youth_contact_reports'], () => { void load(true, true); });
 
   const metrics = useMemo(() => ({
     total: agents.length,

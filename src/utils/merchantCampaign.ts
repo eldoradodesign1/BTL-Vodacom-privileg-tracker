@@ -934,7 +934,16 @@ export async function recordPosArrival(input: Omit<BAPosVisit, 'id' | 'created_a
   return data as BAPosVisit;
 }
 
-export async function createTransaction(input: Omit<BATransaction, 'id' | 'created_at' | 'updated_at'>, target?: number): Promise<BATransaction> {
+// Un renvoi automatique peut rejouer une insertion dont seule la réponse
+// s’est perdue : avec un identifiant fixé sur l’appareil, la ligne déjà
+// enregistrée est simplement relue au lieu d’être dupliquée.
+async function readExistingAfterDuplicate<T>(table: string, id: string | undefined, error: { code?: string } | null): Promise<T | null> {
+  if (!id || error?.code !== '23505') return null;
+  const { data } = await getMerchantClient().from(table).select('*').eq('id', id).maybeSingle();
+  return (data as T | null) || null;
+}
+
+export async function createTransaction(input: Omit<BATransaction, 'id' | 'created_at' | 'updated_at'> & { id?: string }, target?: number): Promise<BATransaction> {
   const client = getMerchantClient();
   if (!input.pos_visit_id) throw new Error('Validez d’abord l’arrivée au POS avant d’enregistrer une transaction.');
   const { data: visit, error: visitError } = await client
@@ -944,8 +953,10 @@ export async function createTransaction(input: Omit<BATransaction, 'id' | 'creat
     .single();
   fail(visitError, 'Impossible de vérifier le statut opérationnel du POS.');
   if (visit?.operational_status === 'inactive') throw new Error('Ce POS est déclaré non actif. Aucune transaction ne peut y être saisie tant qu’il n’est pas réactivé.');
-  const { data, error } = await client.from('ba_transactions').insert(input).select().single();
-  fail(error, 'Impossible d’enregistrer la transaction');
+  const inserted = await client.from('ba_transactions').insert(input).select().single();
+  const replayed = await readExistingAfterDuplicate<BATransaction>('ba_transactions', input.id, inserted.error);
+  if (!replayed) fail(inserted.error, 'Impossible d’enregistrer la transaction');
+  const data = replayed || inserted.data;
 
   if (input.pos_visit_id) {
     const transactionTarget = target ?? await getMerchantTransactionTarget(input.campaign_run_id);
@@ -1182,8 +1193,10 @@ function getIncompleteMerchantVisitIds(
     .map((visit) => visit.id));
 }
 
-async function persistHistoricalIncompleteVisits(runId: string, incompleteIds: Set<string>): Promise<void> {
-  const visitIds = Array.from(incompleteIds);
+async function persistHistoricalIncompleteVisits(runId: string, incompleteIds: Set<string>, visits: BAPosVisit[]): Promise<void> {
+  // Seules les visites encore « visited » changent : sans cela, chaque lecture
+  // du tableau de bord renvoyait une écriture inutile et vidait le cache.
+  const visitIds = visits.filter((visit) => incompleteIds.has(visit.id) && visit.status === 'visited' && visit.operational_status !== 'inactive').map((visit) => visit.id);
   if (!visitIds.length) return;
   const client = getMerchantClient();
   const { error } = await client
@@ -1210,7 +1223,7 @@ export async function getMerchantDashboardSummary(run: CampaignRun, activityDate
     transactions_per_pos_target: Number(run.transactions_per_pos_target || 3),
   };
   const incompleteVisitIds = getIncompleteMerchantVisitIds(activity.visits, activity.transactions, activity.attendances, targets.transactions_per_pos_target);
-  await persistHistoricalIncompleteVisits(run.id, incompleteVisitIds);
+  await persistHistoricalIncompleteVisits(run.id, incompleteVisitIds, activity.visits);
   const todayVisits = activity.visits.filter((item) => item.activity_date === safeActivityDate);
   const todayTransactions = activity.transactions.filter((item) => item.occurred_at.slice(0, 10) === safeActivityDate);
   const activeBas = team.filter((item) => item.status !== 'absent').length;
@@ -1389,6 +1402,7 @@ export type MerchantFundRequestInput = {
   ba_phone?: string | null;
   amount: number;
   note?: string | null;
+  id?: string;
 };
 
 function mapMerchantFundRequest(data: Record<string, unknown>): MerchantFundRequest {
@@ -1419,12 +1433,14 @@ export async function createMerchantFundRequest(input: MerchantFundRequestInput)
       throw new Error(`Ce POS a déjà ${alreadyRequested.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $ de demandes non rejetées. Le quota par POS est limité à ${MERCHANT_FUND_REQUEST_POS_QUOTA.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $.`);
     }
   }
-  const { data, error } = await client
+  const inserted = await client
     .from('merchant_fund_requests')
     .insert({ ...input, amount: requestedAmount, status: 'pending' })
     .select('*')
     .single();
-  fail(error, 'Impossible d’envoyer la demande de fonds');
+  const replayed = await readExistingAfterDuplicate<Record<string, unknown>>('merchant_fund_requests', input.id, inserted.error);
+  if (!replayed) fail(inserted.error, 'Impossible d’envoyer la demande de fonds');
+  const data = replayed || inserted.data;
   invalidateMerchantCache();
   return mapMerchantFundRequest(data as Record<string, unknown>);
 }
@@ -1474,7 +1490,7 @@ export async function getMerchantPosControl(run: CampaignRun): Promise<MerchantP
   const incompleteVisitIds = getIncompleteMerchantVisitIds(activity.visits, activity.transactions, activity.attendances, target);
   // Cette écriture de rattrapage est utile, mais elle ne doit pas bloquer
   // l’ouverture de la gestion Merchant sur une connexion lente.
-  void persistHistoricalIncompleteVisits(run.id, incompleteVisitIds).catch(() => undefined);
+  void persistHistoricalIncompleteVisits(run.id, incompleteVisitIds, activity.visits).catch(() => undefined);
   const transactionsByPos = new Map<string, BATransaction[]>();
   activity.transactions.forEach((transaction) => {
     const rows = transactionsByPos.get(transaction.pos_id) || [];

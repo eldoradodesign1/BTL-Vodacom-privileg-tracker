@@ -270,22 +270,32 @@ export async function fetchSupervisorAgentCampaignAssignmentsFromSupabase(): Pro
   }));
 }
 
+// PostgREST plafonne chaque réponse (1 000 lignes par défaut) : au-delà, un
+// select('*') tronque l'historique sans erreur. Les lectures complètes sont
+// donc paginées.
+async function selectAllPages<T>(build: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: unknown }>, pageSize = 1000): Promise<T[]> {
+  const rows: T[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await build(offset, offset + pageSize - 1);
+    if (error) throw error;
+    const page = (data || []) as T[];
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
+}
+
 export async function fetchLeadsFromSupabase(): Promise<Lead[]> {
   const client = getSupabaseClient();
   if (!client) {
     throw new Error('Supabase is not configured.');
   }
 
-  const { data, error } = await client
+  return selectAllPages<Lead>((from, to) => client
     .from('leads')
     .select('*')
-    .order('timestamp', { ascending: false });
-
-  if (error) {
-    throw error;
-  }
-
-  return (data || []) as Lead[];
+    .order('timestamp', { ascending: false })
+    .order('id', { ascending: true })
+    .range(from, to));
 }
 
 
@@ -295,18 +305,12 @@ export async function fetchCheckinsFromSupabase(): Promise<Checkin[]> {
     throw new Error('Supabase is not configured.');
   }
 
-  const { data, error } = await client
+  return selectAllPages<Checkin>((from, to) => client
     .from('checkins')
     .select('*')
-    .order('timestamp', { ascending: false });
-
-  if (error) {
-    throw error;
-  }
-
-  return (data || []).map((item) => ({
-    ...item
-  })) as Checkin[];
+    .order('timestamp', { ascending: false })
+    .order('id', { ascending: true })
+    .range(from, to));
 }
 
 export async function fetchReportsFromSupabase(): Promise<DailyReport[]> {

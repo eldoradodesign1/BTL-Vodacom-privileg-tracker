@@ -29,6 +29,7 @@ import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 import { MikiliFeedback } from './MikiliFeedback';
 import { getLocationEmbedUrl } from '../utils/location';
 import { getMerchantEvidencePublicUrl } from '../utils/merchantCampaign';
+import { useLiveRefresh } from '../utils/liveSync';
 
 interface Props {
   currentUser: User;
@@ -124,9 +125,9 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
     return () => { cancelled = true; };
   }, [selectedAgent?.userId, agentModal, agentAttendance, today]);
 
-  const load = async (showLoader = true) => {
+  const load = async (showLoader = true, silent = false) => {
     if (showLoader) setLoading(true);
-    else setRefreshing(true);
+    else if (!silent) setRefreshing(true);
     setError('');
     try {
       const campaign = await getMikiliCampaign();
@@ -153,7 +154,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
       setPeriodClients(scopedClients);
       setArchiveClients(scopedClients);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Chargement M-Pesa Mikili impossible.');
+      if (!silent) setError(caught instanceof Error ? caught.message : 'Chargement M-Pesa Mikili impossible.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -161,6 +162,7 @@ export const MpesaMikiliManagementView: React.FC<Props> = ({ currentUser, active
   };
 
   useEffect(() => { void load(); }, [date, currentUser.id, activeTab]);
+  useLiveRefresh(['mpesa_mikili_daily_attendance', 'mpesa_mikili_clients'], () => { void load(false, true); });
 
   const metrics = useMemo(() => {
     const present = team.filter((item) => Boolean(item.attendance?.checkin_at)).length;
