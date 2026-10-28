@@ -1,4 +1,5 @@
 import { publicUrl } from './assets';
+import { applyCursors } from './cursors';
 
 // Catalogue des matières : les pierres précieuses et métaux de l'appli. Le CSS de chaque matière vit dans styles/themes.css.
 
@@ -125,6 +126,7 @@ export const applyThemeToDocument = (theme: ThemeMode) => {
   document.body.dataset.theme = theme;
   document.body.style.setProperty('--m-silk-image', `url("${publicUrl(`theme-backgrounds/silk-${theme}.jpg`)}")`);
   document.body.style.setProperty('--m-podium-image', `url("${publicUrl(`theme-backgrounds/${podiumAssetFor(theme)}`)}")`);
+  applyCursors(theme);
 };
 
 type ViewTransitionDocument = Document & { startViewTransition?: (update: () => void) => unknown };

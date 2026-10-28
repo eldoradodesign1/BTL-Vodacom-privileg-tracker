@@ -1477,3 +1477,30 @@ body[data-theme] .glass-card:hover {
   font-size: 1rem;
   font-weight: 800;
 }
+
+/* Curseurs précieux teintés par la matière (variables posées par utils/cursors.ts), souris uniquement. */
+@media (pointer: fine) {
+  body[data-theme] {
+    cursor: var(--cursor-default, default);
+  }
+
+  body[data-theme] :is(a[href], button, summary, label, select, [role="button"], [role="tab"], [role="radio"], [role="switch"], [role="checkbox"], [role="menuitem"], [role="option"], [role="slider"], input:is([type="checkbox"], [type="radio"], [type="range"], [type="submit"], [type="button"], [type="color"], [type="file"]), .cursor-pointer, .btn-neon, .vslider__track, .btl-power-button) {
+    cursor: var(--cursor-pointer, pointer) !important;
+  }
+
+  body[data-theme] :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="submit"], [type="button"], [type="color"], [type="file"]), textarea, [contenteditable="true"], .cursor-text) {
+    cursor: var(--cursor-text, text) !important;
+  }
+
+  body[data-theme] .cursor-default {
+    cursor: var(--cursor-default, default) !important;
+  }
+
+  body[data-theme] .cursor-move {
+    cursor: var(--cursor-move, move) !important;
+  }
+
+  body[data-theme] :is(:disabled, [aria-disabled="true"], .cursor-not-allowed, .btl-power-button--inactive) {
+    cursor: var(--cursor-not-allowed, not-allowed) !important;
+  }
+}
