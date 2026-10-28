@@ -256,3 +256,20 @@ button:is(.w-6, .h-6)::after {
   position: absolute;
   inset: -10px;
 }
+
+/* Fond de matière : même rendu que background-attachment: fixed, mais sur un calque fixe à part,
+   que le navigateur compose sans repeindre la page (ni re-flouter les cartes) à chaque défilement. */
+html body[data-theme] {
+  background-attachment: scroll;
+}
+
+html body[data-theme]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background: inherit;
+  background-attachment: scroll;
+  transform: translateZ(0);
+}
