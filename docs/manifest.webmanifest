@@ -14,6 +14,10 @@
   "theme_color": "#6b0710",
   "categories": ["business", "productivity"],
   "prefer_related_applications": false,
+  "related_applications": [
+    { "platform": "webapp", "url": "https://eldoradodesign1.github.io/btl-deployment-report/manifest.webmanifest" },
+    { "platform": "webapp", "url": "https://eldoradodesign1.github.io/btl-africa-user-registration/manifest.webmanifest" }
+  ],
   "icons": [
     {
       "src": "pwa-192.png",
