@@ -58,6 +58,7 @@ if ('serviceWorker' in navigator) {
     window.location.reload();
   });
   window.addEventListener('load', () => {
+    watchForNewVersion();
     const serviceWorkerUrl = `${import.meta.env.BASE_URL}service-worker.js`;
     void navigator.serviceWorker.register(serviceWorkerUrl, {
       scope: import.meta.env.BASE_URL,
@@ -69,6 +70,32 @@ if ('serviceWorker' in navigator) {
       // L'application reste totalement fonctionnelle si le cache PWA est indisponible.
     });
   });
+}
+
+// Sur téléphone, l'appli installée reprend depuis l'arrière-plan sans jamais se recharger :
+// au retour au premier plan, on compare le bundle publié au bundle chargé
+// et on recharge si une nouvelle version est en ligne — sauf pendant une saisie.
+function watchForNewVersion() {
+  const entryPattern = /assets\/index-[\w-]+\.js/;
+  const loaded = [...document.scripts].map((script) => script.src.match(entryPattern)?.[0]).find(Boolean);
+  if (!loaded) return;
+  let lastCheck = Date.now();
+  const check = async () => {
+    if (Date.now() - lastCheck < 60_000) return;
+    lastCheck = Date.now();
+    try {
+      const html = await (await fetch(import.meta.env.BASE_URL, { cache: 'no-store' })).text();
+      const published = html.match(entryPattern)?.[0];
+      if (!published || published === loaded) return;
+      const active = document.activeElement;
+      if (active instanceof HTMLInputElement || active instanceof HTMLTextAreaElement || active instanceof HTMLSelectElement) return;
+      await navigator.serviceWorker.getRegistration().then((registration) => registration?.update()).catch(() => undefined);
+      window.location.reload();
+    } catch {
+      // Hors ligne : nouvel essai au prochain retour.
+    }
+  };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') void check(); });
 }
 
 class AppRenderBoundary extends Component<{ children: ReactNode }, { crashed: boolean }> {
