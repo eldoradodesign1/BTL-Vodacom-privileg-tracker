@@ -5,6 +5,7 @@ import { TargetBars, TargetRings, TrendChart, WelcomeHeader } from './DashboardK
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { CampaignRun } from '../types';
 import { getActiveCampaignRuns, getMerchantCampaign, getMerchantDashboardSummary, type MerchantDashboardSummary } from '../utils/merchantCampaign';
+import { useLiveRefresh } from '../utils/liveSync';
 
 interface MerchantAdminDashboardProps {
   onOpenManagement: () => void;
@@ -22,8 +23,8 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
   const todayIso = new Date().toLocaleDateString('en-CA', { timeZone: 'Africa/Kinshasa' });
   const [date, setDate] = useState(todayIso);
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const campaign = await getMerchantCampaign();
@@ -35,13 +36,14 @@ export const MerchantAdminDashboard: React.FC<MerchantAdminDashboardProps> = ({ 
       setRun(activeRun);
       setSummary(metrics);
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Chargement du dashboard Merchant impossible.');
+      if (!silent) setError(caught instanceof Error ? caught.message : 'Chargement du dashboard Merchant impossible.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => { void load(); }, [date]);
+  useLiveRefresh(['ba_daily_attendance', 'ba_transactions', 'ba_pos_visits'], () => { void load(true); });
 
 
   if (loading) return <div className="glass-card p-6 text-center text-xs font-black uppercase tracking-widest text-gray-400">Chargement du pilotage Merchant…</div>;

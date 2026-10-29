@@ -200,10 +200,10 @@ export const MerchantTransactionModal: React.FC<MerchantTransactionModalProps> =
     const formattedClientNumber = formatMsisdn(cleanPhoneNumber(clientNumber));
     const transactionComment = comment.trim() || null;
     setIsComplete(true);
-    runInBackground('Transaction', async () => {
+    runInBackground('Transaction', async ({ key }) => {
       const { geo } = await resolveGeoForPatience();
       const path = await uploadMerchantEvidence(MERCHANT_CAMPAIGN_CODE, `${currentUser.id}/${activityDate}/transaction-${Date.now()}.jpg`, photo);
-      return createTransaction({ campaign_run_id: activeRun.id, ba_id: currentUser.id, pos_id: pos.id, pos_visit_id: visit.id, transaction_reference: transactionReference, client_number: formattedClientNumber, amount: numericAmount, evidence_path: path, occurred_at: new Date().toISOString(), latitude: geo.latitude, longitude: geo.longitude, accuracy_m: geo.accuracy, comment: transactionComment, status: 'recorded' }, Number(activeRun.transactions_per_pos_target || 3));
+      return createTransaction({ id: key, campaign_run_id: activeRun.id, ba_id: currentUser.id, pos_id: pos.id, pos_visit_id: visit.id, transaction_reference: transactionReference, client_number: formattedClientNumber, amount: numericAmount, evidence_path: path, occurred_at: new Date().toISOString(), latitude: geo.latitude, longitude: geo.longitude, accuracy_m: geo.accuracy, comment: transactionComment, status: 'recorded' }, Number(activeRun.transactions_per_pos_target || 3));
     }, {
       queued: 'Transaction lancée en arrière-plan.',
       success: 'Transaction synchronisée.',

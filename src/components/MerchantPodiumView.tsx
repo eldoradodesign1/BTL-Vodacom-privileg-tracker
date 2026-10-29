@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { CalendarDays, FileText, LockKeyhole, MapPin, Medal, RefreshCw, Trophy, UserRound } from 'lucide-react';
 import type { CampaignRun } from '../types';
 import { getActiveCampaignRuns, getMerchantCampaign, getMerchantPodium, merchantTodayIso, type MerchantPodiumEntry } from '../utils/merchantCampaign';
+import { useLiveRefresh } from '../utils/liveSync';
 import { MerchantBAOperationsModal } from './Modals/MerchantBAOperationsModal';
 import { publicUrl } from '../utils/assets';
 const MerchantCompiledReportModal = lazy(() => import('./Modals/MerchantCompiledReportModal').then((module) => ({ default: module.MerchantCompiledReportModal })));
@@ -21,8 +22,8 @@ export const MerchantPodiumView: React.FC = () => {
   const [operation, setOperation] = useState<{ mode: MerchantOperation; entry: MerchantPodiumEntry } | null>(null);
   const [isCompiledReportOpen, setIsCompiledReportOpen] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const campaign = await getMerchantCampaign();
@@ -33,13 +34,14 @@ export const MerchantPodiumView: React.FC = () => {
       setRun(activeRun);
       setPodium(await getMerchantPodium(activeRun.id));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Chargement du podium Merchant impossible.');
+      if (!silent) setError(caught instanceof Error ? caught.message : 'Chargement du podium Merchant impossible.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => { void load(); }, []);
+  useLiveRefresh(['ba_daily_attendance', 'ba_transactions', 'ba_pos_visits'], () => { void load(true); });
   if (loading) return <div className="glass-card p-6 text-center text-xs font-black uppercase tracking-widest text-gray-400">Classement Merchant en préparation…</div>;
 
   const leader = podium[0];

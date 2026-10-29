@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { CalendarDays, CheckCircle2, ClipboardList, Download, FileText, MapPin, RefreshCw, Search, UserRound } from 'lucide-react';
 import type { CampaignRun } from '../types';
 import { getActiveCampaignRuns, getMerchantArchives, getMerchantCampaign, MERCHANT_CAMPAIGN_START, merchantTodayIso, type MerchantArchiveSummary, type MerchantTeamActivity } from '../utils/merchantCampaign';
+import { useLiveRefresh } from '../utils/liveSync';
 import { DateRangeKnobSlider } from './DateRangeKnobSlider';
 import { MerchantBAOperationsModal } from './Modals/MerchantBAOperationsModal';
 
@@ -20,18 +21,19 @@ export const MerchantSupervisorArchivesView: React.FC = () => {
   const [compiledReportOpen, setCompiledReportOpen] = useState(false);
   const [operation, setOperation] = useState<{ mode: MerchantOperation; activity: MerchantTeamActivity } | null>(null);
 
-  const load = async () => {
-    setLoading(true); setError('');
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true); setError('');
     try {
       const campaign = await getMerchantCampaign();
       if (!campaign) throw new Error('La campagne Merchant Educational Campaign est introuvable.');
       const runs = await getActiveCampaignRuns(campaign.id);
       const activeRun = runs.find((item) => item.status === 'active') || runs[0] || null;
       setRun(activeRun); setArchives(activeRun ? await getMerchantArchives(activeRun.id, startDate, endDate) : []);
-    } catch (caught) { setError(caught instanceof Error ? caught.message : 'Chargement des archives Merchant impossible.'); }
+    } catch (caught) { if (!silent) setError(caught instanceof Error ? caught.message : 'Chargement des archives Merchant impossible.'); }
     finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, [startDate, endDate]);
+  useLiveRefresh(['ba_daily_attendance', 'ba_transactions', 'ba_pos_visits'], () => { void load(true); });
 
   const filtered = useMemo(() => { const needle = query.trim().toLowerCase(); return archives.filter((item) => !needle || `${item.ba.name} ${item.ba.phone} ${item.attendance.activity_date} ${item.attendance.closing_comment || ''}`.toLowerCase().includes(needle)); }, [archives, query]);
   const totals = useMemo(() => ({ reports: archives.length, pos: archives.reduce((total, item) => total + item.visitedPosCount, 0), transactions: archives.reduce((total, item) => total + item.transactionCount, 0), amount: archives.reduce((total, item) => total + item.totalAmount, 0) }), [archives]);

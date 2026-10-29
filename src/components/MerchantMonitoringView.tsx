@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Banknote, CalendarDays, CheckCircle2, Circle, FileText, MapPin, ReceiptText, RefreshCw, Search, Store, UserRound, UsersRound, XCircle } from 'lucide-react';
 import type { CampaignRun } from '../types';
 import { clampMerchantActivityDate, getActiveCampaignRuns, getCampaignAssignmentsOverview, getMerchantCampaign, getMerchantMonitoring, MERCHANT_CAMPAIGN_START, merchantTodayIso, type MerchantTeamActivity } from '../utils/merchantCampaign';
+import { useLiveRefresh } from '../utils/liveSync';
 import { DateIconPicker } from './DateIconPicker';
 import { MerchantBAOperationsModal } from './Modals/MerchantBAOperationsModal';
 import { MerchantVisitedPosModal } from './Modals/MerchantVisitedPosModal';
@@ -21,8 +22,8 @@ export const MerchantMonitoringView: React.FC = () => {
   const [visitedPosActivity, setVisitedPosActivity] = useState<MerchantTeamActivity | null>(null);
   const [transactionActivity, setTransactionActivity] = useState<MerchantTeamActivity | null>(null);
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const campaign = await getMerchantCampaign();
@@ -51,13 +52,14 @@ export const MerchantMonitoringView: React.FC = () => {
       );
       setTeam(monitoring.filter((item) => assignedBaIds.has(item.ba.id)));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Chargement du monitoring impossible.');
+      if (!silent) setError(caught instanceof Error ? caught.message : 'Chargement du monitoring impossible.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => { void load(); }, [date]);
+  useLiveRefresh(['ba_daily_attendance', 'ba_transactions', 'ba_pos_visits'], () => { void load(true); });
 
   const filteredTeam = useMemo(() => {
     const needle = query.trim().toLowerCase();

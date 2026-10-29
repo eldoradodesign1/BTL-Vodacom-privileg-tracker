@@ -54,26 +54,86 @@ function readOfflineOutbox(): OfflinePayload[] {
   }
 }
 
-function enqueueOfflinePayload(payload: OfflinePayload): void {
-  const queued = readOfflineOutbox();
-  queued.push(payload);
-  localStorage.setItem(OFFLINE_OUTBOX_KEY, JSON.stringify(queued.slice(-150)));
+const OFFLINE_OUTBOX_LIMIT = 500;
+const OUTBOX_RETRY_DELAYS_MS = [3_000, 10_000, 30_000, 60_000];
+let outboxFlushInFlight: Promise<void> | null = null;
+let outboxRetryTimer: number | null = null;
+let outboxRetryAttempt = 0;
+
+function writeOfflineOutbox(queued: OfflinePayload[]): void {
+  try {
+    if (queued.length) localStorage.setItem(OFFLINE_OUTBOX_KEY, JSON.stringify(queued.slice(-OFFLINE_OUTBOX_LIMIT)));
+    else localStorage.removeItem(OFFLINE_OUTBOX_KEY);
+  } catch (error) {
+    console.warn('Offline outbox write failed', error);
+  }
 }
 
-export async function flushOfflineOutbox(): Promise<void> {
-  if (!isSupabaseConfigured() || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+function enqueueOfflinePayload(payload: OfflinePayload): void {
   const queued = readOfflineOutbox();
-  if (!queued.length) return;
-  const remaining: OfflinePayload[] = [];
-  for (const payload of queued) {
-    try {
-      await syncLocalDataToSupabase(payload);
-    } catch {
-      remaining.push(payload);
+  const serialized = JSON.stringify(payload);
+  if (!queued.some((item) => JSON.stringify(item) === serialized)) queued.push(payload);
+  writeOfflineOutbox(queued);
+  scheduleOutboxRetry();
+}
+
+/** Identifiants encore en attente d’envoi pour une table locale donnée. */
+function getOutboxPendingIds(kind: 'leads' | 'checkins' | 'reports'): Set<string> {
+  const ids = new Set<string>();
+  readOfflineOutbox().forEach((payload) => (payload[kind] || []).forEach((item) => ids.add(String(item.id))));
+  return ids;
+}
+
+// Renvoi automatique : ne plus attendre le prochain rafraîchissement complet
+// (une heure) pour pousser une saisie restée dans la file.
+function scheduleOutboxRetry(): void {
+  if (typeof window === 'undefined' || outboxRetryTimer !== null) return;
+  const delay = OUTBOX_RETRY_DELAYS_MS[Math.min(outboxRetryAttempt, OUTBOX_RETRY_DELAYS_MS.length - 1)];
+  outboxRetryAttempt += 1;
+  outboxRetryTimer = window.setTimeout(() => {
+    outboxRetryTimer = null;
+    void flushOfflineOutbox().catch((error) => console.warn('Offline outbox retry failed', error));
+  }, delay);
+}
+
+export function flushOfflineOutbox(): Promise<void> {
+  // Un seul envoi à la fois : deux vidages simultanés renverraient les mêmes
+  // lignes et pourraient écraser une saisie ajoutée entre-temps.
+  if (outboxFlushInFlight) return outboxFlushInFlight;
+  outboxFlushInFlight = (async () => {
+    if (!isSupabaseConfigured() || (typeof navigator !== 'undefined' && !navigator.onLine)) return;
+    const queued = readOfflineOutbox();
+    if (!queued.length) { outboxRetryAttempt = 0; return; }
+    const sent = new Set<string>();
+    for (const payload of queued) {
+      try {
+        await syncLocalDataToSupabase(payload);
+        sent.add(JSON.stringify(payload));
+      } catch (error) {
+        console.warn('Offline outbox payload not sent yet', error);
+      }
     }
-  }
-  if (remaining.length) localStorage.setItem(OFFLINE_OUTBOX_KEY, JSON.stringify(remaining));
-  else localStorage.removeItem(OFFLINE_OUTBOX_KEY);
+    // Relire la file : une saisie a pu y être ajoutée pendant l’envoi.
+    const remaining = readOfflineOutbox().filter((payload) => !sent.has(JSON.stringify(payload)));
+    writeOfflineOutbox(remaining);
+    if (remaining.length) scheduleOutboxRetry();
+    else outboxRetryAttempt = 0;
+  })().finally(() => { outboxFlushInFlight = null; });
+  return outboxFlushInFlight;
+}
+
+/** Relance l’envoi de la file au retour du réseau ou de l’appli au premier plan. */
+export function startOutboxAutoFlush(): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const flush = () => { void flushOfflineOutbox().catch((error) => console.warn('Offline outbox flush failed', error)); };
+  const onVisible = () => { if (document.visibilityState === 'visible') flush(); };
+  window.addEventListener('online', flush);
+  document.addEventListener('visibilitychange', onVisible);
+  flush();
+  return () => {
+    window.removeEventListener('online', flush);
+    document.removeEventListener('visibilitychange', onVisible);
+  };
 }
 
 function persistOrQueue(payload: OfflinePayload): void {
@@ -81,7 +141,11 @@ function persistOrQueue(payload: OfflinePayload): void {
     enqueueOfflinePayload(payload);
     return;
   }
-  void syncLocalDataToSupabase(payload).catch(() => enqueueOfflinePayload(payload));
+  void syncLocalDataToSupabase(payload)
+    .catch((error) => {
+      console.warn('Supabase sync failed, payload queued for retry', error);
+      enqueueOfflinePayload(payload);
+    });
 }
 
 const SHARED_API_BASE = (() => {
@@ -248,9 +312,9 @@ function getAllAdmins(): User[] {
 }
 
 export function getSyncPendingCount(): number {
-  const pendingLeads = getLeads().filter(l => l.status === 'pending').length;
-  const pendingCheckins = getCheckins().filter(c => c.status === 'pending').length;
-  return pendingLeads + pendingCheckins;
+  // Le statut « pending » des lignes est aussi celui renvoyé par le serveur :
+  // seule la file d’envoi dit ce qui n’est réellement pas encore arrivé.
+  return getOutboxPendingIds('leads').size + getOutboxPendingIds('checkins').size;
 }
 
 export function runScheduledDailyReminders(now: Date = new Date(), privilegePaused = false): void {
@@ -954,7 +1018,10 @@ export async function refreshReportsFromSupabase(): Promise<void> {
   // La lecture distante est volontairement légère. Conserver les preuves déjà
   // présentes localement évite de dégrader les fiches déjà ouvertes.
   const cachedById = new Map(getReports().map((report) => [String(report.id), report]));
-  saveReports(reports.map((report) => {
+  const queuedIds = getOutboxPendingIds('reports');
+  const remoteIds = new Set(reports.map((report) => String(report.id)));
+  const localPending = Array.from(cachedById.values()).filter((report) => queuedIds.has(String(report.id)) && !remoteIds.has(String(report.id)));
+  saveReports([...localPending, ...reports.map((report) => {
     const cached = cachedById.get(String(report.id));
     if (!cached) return report;
     return {
@@ -967,14 +1034,19 @@ export async function refreshReportsFromSupabase(): Promise<void> {
         ? cached.report_photos_drive_urls
         : report.report_photos_drive_urls
     };
-  }));
+  })]);
 }
 
 export async function refreshLeadsFromSupabase(): Promise<void> {
   if (!isSupabaseConfigured()) return;
 
   const leads = await fetchLeadsFromSupabase();
-  saveLeads(leads);
+  // Un client saisi mais pas encore arrivé en base reste visible sur l’appareil
+  // jusqu’à son envoi, au lieu de disparaître au rafraîchissement.
+  const queuedIds = getOutboxPendingIds('leads');
+  const remoteIds = new Set(leads.map((lead) => String(lead.id)));
+  const localPending = queuedIds.size ? getLeads().filter((lead) => queuedIds.has(String(lead.id)) && !remoteIds.has(String(lead.id))) : [];
+  saveLeads([...localPending, ...leads]);
 }
 
 export function saveCheckins(checkins: Checkin[]): void {

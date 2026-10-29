@@ -71,7 +71,7 @@ export const MerchantFundRequestModal: React.FC<MerchantFundRequestModalProps> =
     setError('');
     onSubmitted();
     onClose();
-    runInBackground('Demande de fonds', () => createMerchantFundRequest(input), {
+    runInBackground('Demande de fonds', ({ key }) => createMerchantFundRequest({ ...input, id: key }), {
       queued: 'Demande de fonds envoyée depuis l’appareil.',
       success: 'Demande de fonds synchronisée avec le superviseur.',
       onError: (caught) => setError(caught.message),

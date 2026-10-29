@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Camera, CheckCircle2, Clock3, ExternalLink, MapPin, ShieldCheck, Users, X, XCircle } from 'lucide-react';
 import type { Campaign, User } from '../types';
+import { useLiveRefresh } from '../utils/liveSync';
 import {
   type EventAttendance,
   getEventAttendance,
@@ -45,16 +46,17 @@ export const SupplierForumView: React.FC<Props> = ({ currentUser, campaign, onRe
   const isEventDay = today === activeDate;
   const formattedEventDate = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'Africa/Kinshasa' }).format(new Date(`${activeDate}T12:00:00+01:00`));
 
-  const refresh = async () => {
+  const refresh = async (silent = false) => {
     if (!campaign) return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       if (isManager) setTeam(await getEventTeam(campaign.id, activeDate));
       else setAttendance(await getEventAttendance(campaign.id, currentUser.id, activeDate));
-    } catch (caught) { setError(caught instanceof Error ? caught.message : 'Impossible de charger l’Event.'); }
+    } catch (caught) { if (!silent) setError(caught instanceof Error ? caught.message : 'Impossible de charger l’Event.'); }
     finally { setLoading(false); }
   };
   useEffect(() => { void refresh(); }, [campaign?.id, currentUser.id, isManager, activeDate]);
+  useLiveRefresh(['event_attendance'], () => { void refresh(true); }, isManager);
 
   useEffect(() => {
     let cancelled = false;
