@@ -98,6 +98,7 @@ export const Header: React.FC<HeaderProps> = ({
     { key: 'merchant-educational' as const, label: 'Merchant Education', note: 'Brand Ambassadors' },
     { key: 'youth-f2f' as const, label: 'Youth F2F', note: 'Sensibilisation terrain' },
     { key: 'mpesa-mikili' as const, label: 'M-Pesa Mikili', note: 'Brand Ambassador · M-Pesa' },
+    { key: 'activation-wewa' as const, label: 'Activation WEWA', note: 'Motards · Stations ENGEN' },
   ];
   const syncState: 'ok' | 'progress' | 'late' = (() => {
     if (online && syncPendingCount === 0) return 'ok';

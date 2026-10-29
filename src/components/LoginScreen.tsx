@@ -11,6 +11,7 @@ interface LoginScreenProps {
 
 const toCampaignContext = (campaign?: Campaign | null): CampaignContext => {
   const code = (campaign?.code || '').trim().toLowerCase().replace(/_/g, '-');
+  if (code === 'activation-wewa') return 'activation-wewa';
   if (code === 'youth-f2f' || code === 'youth-f2f-campaign') return 'youth-f2f';
   if (code === 'mpesa-mikili' || code === 'm-pesa-mikili' || code === 'mpesa-mikili-campaign') return 'mpesa-mikili';
   if (code === 'vodacom-supplier-forum' || code === 'vodacom-supplier-forum-sept-2026' || code === 'supplier-forum') return 'vodacom-supplier-forum';

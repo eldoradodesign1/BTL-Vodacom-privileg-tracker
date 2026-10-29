@@ -5,6 +5,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig(() => {
   return {
+    server: { allowedHosts: ['terminal.local'] },
     base: process.env.GITHUB_PAGES === 'true' ? '/BTL-Vodacom-privileg-tracker/' : '/',
     plugins: [react(), tailwindcss()],
     build: {
